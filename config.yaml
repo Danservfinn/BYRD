@@ -165,6 +165,7 @@ coder:
   # Tools Claude Code is allowed to use
   allowed_tools:
     - Read
+    - Write
     - Edit
     - Bash
     - Glob

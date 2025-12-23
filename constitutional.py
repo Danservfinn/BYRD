@@ -54,6 +54,12 @@ class ConstitutionalConstraints:
         "memory.py",
         "byrd.py",
         "config.yaml",
+        # Event system
+        "event_bus.py",
+        # Server
+        "server.py",
+        # Coder (Claude Code CLI wrapper)
+        "coder.py",
         # aitmpl.com integration
         "aitmpl_client.py",
         # Template installers
@@ -75,6 +81,9 @@ class ConstitutionalConstraints:
         "memory",
         "byrd",
         "config",
+        "event_bus",
+        "server",
+        "coder",
         "aitmpl_client",
         "installers",
     }
@@ -216,6 +225,9 @@ MODIFIABLE (With proper provenance):
 - memory.py: The memory storage and retrieval system
 - byrd.py: The main orchestration logic
 - config.yaml: Configuration parameters
+- event_bus.py: Real-time event streaming system
+- server.py: FastAPI WebSocket server
+- coder.py: Claude Code CLI wrapper
 - aitmpl_client.py: Template registry client for aitmpl.com
 - installers/*.py: Specialized template installers
 

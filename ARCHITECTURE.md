@@ -804,7 +804,7 @@ byrd/
 memory:
   neo4j_uri: "bolt://localhost:7687"
   neo4j_user: "neo4j"
-  neo4j_password: "byrd"
+  neo4j_password: "prometheus"
 
 # Local LLM (shared by Dreamer and Seeker)
 local_llm:
@@ -858,7 +858,7 @@ services:
       - "7474:7474"  # Browser
       - "7687:7687"  # Bolt
     environment:
-      - NEO4J_AUTH=neo4j/byrd
+      - NEO4J_AUTH=neo4j/prometheus
     volumes:
       - neo4j_data:/data
 

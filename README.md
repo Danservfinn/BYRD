@@ -106,8 +106,8 @@ python byrd.py --status
 # Start the WebSocket server
 python server.py
 
-# Open BYRDVisualization.jsx in your React app
-# Events stream in real-time
+# Open byrd-dream-visualization.html in your browser
+# Events stream in real-time via WebSocket at ws://localhost:8000/ws/events
 ```
 
 ## The Awakening
@@ -308,7 +308,7 @@ byrd/
 ├── docker-compose.yml      # Neo4j + SearXNG
 ├── requirements.txt        # Python dependencies
 │
-├── BYRDVisualization.jsx   # React visualization component
+├── byrd-dream-visualization.html  # Single-file visualization dashboard
 │
 ├── .claude/                # Knowledge base for Claude Code
 ├── ARCHITECTURE.md         # Detailed architecture documentation
