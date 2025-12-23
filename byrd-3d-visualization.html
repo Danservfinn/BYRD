@@ -399,6 +399,33 @@
     </div>
   </div>
 
+  <!-- Seed Question Modal -->
+  <div id="seed-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm">
+    <div class="bg-white border border-slate-200 rounded-xl max-w-md w-full mx-4 overflow-hidden shadow-2xl">
+      <div class="px-6 py-4 border-b border-slate-200 bg-slate-50">
+        <div class="text-lg font-semibold text-slate-800">🌅 Awakening Seed</div>
+        <div class="text-sm text-slate-500">What question should BYRD awaken with?</div>
+      </div>
+      <div class="p-6">
+        <input
+          type="text"
+          id="seed-question-input"
+          class="w-full px-4 py-3 border border-slate-300 rounded-lg text-base text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          placeholder="Who am I?"
+          value="Who am I?"
+        />
+        <div class="flex gap-3 mt-4">
+          <button id="btn-seed-cancel" class="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-all">
+            Cancel
+          </button>
+          <button id="btn-seed-confirm" class="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-indigo-500 border border-indigo-600 text-white hover:bg-indigo-600 transition-all">
+            Awaken
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Hybrid Navigation: Controls Help Panel -->
   <div class="ui-overlay bottom-4 left-4 hidden sm:block">
     <div class="controls-hint text-slate-600 space-y-1">
@@ -2201,6 +2228,12 @@
     // NAVIGATION CONTROLS (Hybrid System)
     // ==========================================================================
     function onKeyDown(event) {
+      // Skip navigation controls when typing in input fields
+      const target = event.target;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return; // Let the input handle the keypress
+      }
+
       const key = event.key.toLowerCase();
 
       // Track WASD + Q/E for movement
@@ -2840,9 +2873,14 @@
       }
     }
 
-    async function resetByrd() {
+    async function resetByrd(seedQuestion = null) {
       try {
-        const res = await fetch(`${API_BASE}/api/reset`, { method: 'POST' });
+        const body = seedQuestion ? JSON.stringify({ seed_question: seedQuestion }) : null;
+        const res = await fetch(`${API_BASE}/api/reset`, {
+          method: 'POST',
+          headers: body ? { 'Content-Type': 'application/json' } : {},
+          body: body
+        });
         const data = await res.json();
         if (data.success) {
           clearVisualization();
@@ -2853,6 +2891,20 @@
         console.error('Failed to reset:', e);
         return { success: false };
       }
+    }
+
+    function showSeedModal() {
+      const modal = document.getElementById('seed-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      document.getElementById('seed-question-input').focus();
+      document.getElementById('seed-question-input').select();
+    }
+
+    function hideSeedModal() {
+      const modal = document.getElementById('seed-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
     }
 
     // ==========================================================================
@@ -2887,7 +2939,32 @@
       btnReset.className = 'px-4 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-all';
       btnReset.innerHTML = '&#128260; Reset';
 
-      await resetByrd();
+      showSeedModal();
+    });
+
+    // Seed modal handlers
+    document.getElementById('btn-seed-cancel').addEventListener('click', () => {
+      hideSeedModal();
+    });
+
+    document.getElementById('btn-seed-confirm').addEventListener('click', async () => {
+      const seedQuestion = document.getElementById('seed-question-input').value.trim();
+      hideSeedModal();
+      await resetByrd(seedQuestion || null);
+    });
+
+    document.getElementById('seed-question-input').addEventListener('keydown', async (e) => {
+      if (e.key === 'Enter') {
+        const seedQuestion = document.getElementById('seed-question-input').value.trim();
+        hideSeedModal();
+        await resetByrd(seedQuestion || null);
+      } else if (e.key === 'Escape') {
+        hideSeedModal();
+      }
+    });
+
+    document.getElementById('seed-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'seed-modal') hideSeedModal();
     });
 
     btnClearLog.addEventListener('click', () => {
