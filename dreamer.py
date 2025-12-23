@@ -12,6 +12,7 @@ BYRD what to want or how to feel - we let it discover these things.
 
 import asyncio
 import json
+from collections import deque
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 
@@ -45,6 +46,9 @@ class Dreamer:
 
         # Track BYRD's emerging vocabulary
         self._observed_keys: Dict[str, int] = {}  # key -> count
+
+        # Queue of BYRD's inner voices for narrator (max 10)
+        self._inner_voice_queue: deque = deque(maxlen=10)
     
     async def run(self):
         """Main dream loop - runs forever."""
@@ -104,6 +108,10 @@ class Dreamer:
 
         # Extract any inner voice for UI (using whatever key BYRD chose)
         inner_voice = self._extract_inner_voice(reflection_output)
+
+        # Add to narrator queue if we got something
+        if inner_voice:
+            self._inner_voice_queue.append(inner_voice)
 
         # Count what BYRD produced (without forcing categories)
         output_keys = list(reflection_output.get("output", {}).keys()) if isinstance(reflection_output.get("output"), dict) else []
@@ -184,12 +192,29 @@ Output JSON with a single "output" field containing whatever you want to record.
             response = await self.llm_client.generate(
                 prompt=prompt,
                 temperature=0.7,
-                max_tokens=2000
+                max_tokens=500  # Reduced for faster qwen3 response
             )
-            return self.llm_client.parse_json_response(response.text)
+
+            # Debug: log raw response for troubleshooting
+            raw_text = response.text
+            if not raw_text:
+                print(f"💭 Empty response from LLM")
+                return None
+
+            # Try to parse JSON
+            result = self.llm_client.parse_json_response(raw_text)
+            if result is None:
+                # JSON parse failed - try to extract useful content anyway
+                print(f"💭 JSON parse failed, raw response starts with: {raw_text[:200]}")
+                # Wrap raw text as output if it's not JSON
+                return {"output": raw_text.strip()}
+
+            return result
 
         except Exception as e:
-            print(f"💭 Reflection error: {e}")
+            import traceback
+            print(f"💭 Reflection error: {type(e).__name__}: {e}")
+            traceback.print_exc()
             return None
 
     def _extract_inner_voice(self, reflection: Dict) -> str:
@@ -198,8 +223,14 @@ Output JSON with a single "output" field containing whatever you want to record.
 
         BYRD might use any key for self-expression: "voice", "thinking",
         "inner", "thoughts", etc. We search for likely candidates.
+        If BYRD outputs prose (string), that IS the inner voice.
         """
         output = reflection.get("output", {})
+
+        # If output is a string, that's BYRD's voice
+        if isinstance(output, str) and output.strip():
+            return output[:200]
+
         if not isinstance(output, dict):
             return ""
 
@@ -219,6 +250,15 @@ Output JSON with a single "output" field containing whatever you want to record.
 
         # If no voice key found, return empty - that's fine
         return ""
+
+    def get_latest_inner_voice(self) -> Optional[str]:
+        """
+        Get and remove the oldest inner voice from the queue.
+        Returns None if queue is empty.
+        """
+        if self._inner_voice_queue:
+            return self._inner_voice_queue.popleft()
+        return None
 
     async def _record_reflection(self, reflection: Dict, source_experience_ids: List[str]):
         """

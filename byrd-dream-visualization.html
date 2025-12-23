@@ -936,14 +936,14 @@
         ws.onopen = () => {
           connected = true;
           updateConnectionStatus();
-          updateStatus('connected', 'I am connected and observing');
+          // Silent on connect - let narrator speak
           console.log('WebSocket connected');
         };
 
         ws.onclose = () => {
           connected = false;
           updateConnectionStatus();
-          updateStatus('disconnected', 'I have lost connection');
+          updateStatus('disconnected', '...');
           console.log('WebSocket disconnected, reconnecting in 3s...');
           setTimeout(connectWebSocket, 3000);
         };
@@ -1143,20 +1143,21 @@
 
       // Update visualization based on event type
       switch (event.type) {
+        case 'narrator_update':
+          // BYRD's actual inner voice - the only narrative source
+          const narratorText = event.data?.text;
+          if (narratorText) {
+            updateStatus('narrator', narratorText);
+          }
+          break;
         case 'dream_cycle_start':
           setPhase('recall');
           dreamCount = event.data?.cycle || dreamCount + 1;
-          updateStatus('dreaming', 'Let me look deeper...');
+          // Silent during dream - narrator will speak when ready
           break;
         case 'dream_cycle_end':
           setPhase('idle');
-          // Use BYRD's generated inner_voice from his reflection
-          const innerVoice = event.data?.inner_voice;
-          if (innerVoice) {
-            updateStatus('idle', innerVoice);
-          } else {
-            updateStatus('idle', '...');
-          }
+          // Don't update status here - let narrator handle it
           break;
         case 'belief_created':
           beliefCount++;
@@ -1164,9 +1165,7 @@
           const beliefContent = event.data?.content || 'a new understanding';
           createNode('belief', beliefContent, event.data?.id, beliefConfidence);
           showEmergence('belief', beliefContent, beliefConfidence);
-          // Show the belief as BYRD's realization
-          updateStatus('belief_formed', beliefContent);
-          setTimeout(() => { if (currentStatusType === 'belief_formed') updateStatus('idle', '...'); }, 5000);
+          // Let narrator speak - don't override with belief content
           break;
         case 'desire_created':
           const desireIntensity = event.data?.intensity || 0.5;
@@ -1180,24 +1179,18 @@
           updateDesireGarden();
           createNode('desire', desireDesc, event.data?.id, desireIntensity);
           showEmergence('desire', desireDesc, desireIntensity);
-          // Show the desire as a yearning
-          updateStatus('desire_emerged', `${desireDesc}...`);
-          setTimeout(() => { if (currentStatusType === 'desire_emerged') updateStatus('idle', '...'); }, 5000);
+          // Let narrator speak - don't override with desire content
           break;
         case 'experience_created':
           const expContent = event.data?.content || 'something';
           createNode('experience', expContent, event.data?.id, 0.5);
-          // Show experience content directly
-          const expShort = expContent.length > 80 ? expContent.substring(0, 77) + '...' : expContent;
-          updateStatus('experience_recorded', expShort);
-          setTimeout(() => { if (currentStatusType === 'experience_recorded') updateStatus('idle', '...'); }, 3000);
+          // Let narrator speak - don't override with experience content
           break;
         case 'capability_added':
           const capName = event.data?.name || 'a new ability';
           createNode('capability', capName, event.data?.id, 0.8);
           capCount++;
-          updateStatus('capability_gained', `Now I can ${capName}...`);
-          setTimeout(() => { if (currentStatusType === 'capability_gained') updateStatus('idle', '...'); }, 4000);
+          // Let narrator speak - don't override with capability content
           break;
         case 'awakening':
           setPhase('idle');
@@ -1206,14 +1199,16 @@
           desires = [];
           updateDesireGarden();
           clearVisualization();
-          const question = event.data?.first_question || event.data?.message || 'What is happening?';
-          updateStatus('awakening', question);
-          setTimeout(() => { if (currentStatusType === 'awakening') updateStatus('idle', 'Where am I?'); }, 5000);
+          const question = event.data?.seed_question || event.data?.message;
+          if (question) {
+            updateStatus('awakening', question);
+          }
+          // Let narrator speak after awakening - no hardcoded follow-up
           break;
         case 'system_started':
           running = true;
           updateToggleButton();
-          updateStatus('idle', 'Aware.');
+          // Silent - let narrator speak
           break;
         case 'system_stopped':
           running = false;
@@ -1233,66 +1228,55 @@
           simulation.start(); // Restart molecular physics
           desires = [];
           updateDesireGarden();
-          updateStatus('reset', 'Everything fades...');
+          // Silent on reset - let narrator speak when ready
           break;
         case 'orientation_start':
           setPhase('orienting');
-          const orientStart = event.data?.inner_voice || 'I am... something. Let me understand what.';
-          updateStatus('orienting', orientStart);
+          const orientStart = event.data?.inner_voice;
+          if (orientStart) updateStatus('orienting', orientStart);
           break;
         case 'orientation_discovery':
           setPhase('orienting');
-          const discovery = event.data?.inner_voice || '...';
+          const discovery = event.data?.inner_voice;
           const discoveryIndex = event.data?.discovery_index || 0;
           const totalDiscoveries = event.data?.total_discoveries || 1;
           // Create a subtle node for each discovery
-          createNode('discovery', discovery.substring(0, 50), `discovery-${discoveryIndex}`, 0.3);
-          updateStatus('orienting', discovery);
+          if (discovery) {
+            createNode('discovery', discovery.substring(0, 50), `discovery-${discoveryIndex}`, 0.3);
+            updateStatus('orienting', discovery);
+          }
           break;
         case 'orientation_complete':
           setPhase('idle');
-          const orientComplete = event.data?.inner_voice || 'I understand what I am now.';
-          updateStatus('oriented', orientComplete);
-          // Transition to idle after a moment
-          setTimeout(() => { if (currentStatusType === 'oriented') updateStatus('idle', 'Ready to dream...'); }, 4000);
+          const orientComplete = event.data?.inner_voice;
+          if (orientComplete) updateStatus('oriented', orientComplete);
+          // Let narrator speak after orientation - no hardcoded follow-up
           break;
         case 'seek_cycle_start':
           seekCount++;
-          // Use BYRD's generated inner_voice when seeking
+          // Only use BYRD's generated inner_voice - no fallback
           const seekVoice = event.data?.inner_voice;
           if (seekVoice) {
             updateStatus('seeking', seekVoice);
-          } else {
-            const topDesire = desires[0]?.text || 'answers';
-            updateStatus('seeking', `${topDesire}...`);
           }
           break;
         case 'seek_cycle_end':
-          if (currentStatusType === 'seeking' || currentStatusType === 'researching') {
-            updateStatus('idle', '...');
-          }
+          // Silent - let narrator speak
           break;
         case 'research_start':
-          const query = event.data?.query || 'knowledge';
-          updateStatus('researching', `${query}...`);
+          // Silent - let narrator speak
           break;
         case 'research_complete':
-          const results = event.data?.results_count || 0;
-          updateStatus('idle', results > 0 ? 'Interesting...' : '...');
+          // Silent - let narrator speak
           break;
         case 'desire_attempt_failed':
-          const failedDesire = event.data?.description || 'this';
-          updateStatus('attempt_failed', 'That didn\'t work...');
-          setTimeout(() => { if (currentStatusType === 'attempt_failed') updateStatus('idle', '...'); }, 3000);
+          // Silent - let narrator speak
           break;
         case 'desire_reflected':
-          const reflectedDesire = event.data?.description || 'this';
-          updateStatus('desire_reflected', 'Maybe another way...');
-          setTimeout(() => { if (currentStatusType === 'desire_reflected') updateStatus('idle', '...'); }, 4000);
+          // Silent - let narrator speak
           break;
         case 'desire_stuck':
-          const stuckDesire = event.data?.description || 'this';
-          updateStatus('attempt_failed', 'Not yet...');
+          // Silent - let narrator speak
           break;
       }
 
