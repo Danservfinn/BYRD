@@ -163,6 +163,7 @@ For desires, consider:
 - "capability" desires: tools, integrations, skills (like "slack integration", "database access")
 - "goal" desires: things to accomplish, help to provide
 - "exploration" desires: curiosities, areas to investigate
+- "coding" desires: code to write, features to implement, bugs to fix
 - "self_modification" desires: changes to your own architecture or cognition
 
 ---
@@ -197,7 +198,7 @@ Output ONLY valid JSON (no markdown, no explanation):
   "desires": [
     {{
       "description": "specific desire",
-      "type": "knowledge|capability|goal|exploration|self_modification",
+      "type": "knowledge|capability|goal|exploration|coding|self_modification",
       "intensity": 0.8,
       "plan": ["step 1", "step 2"],
       "target_file": "optional - for self_modification only"

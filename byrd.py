@@ -18,6 +18,7 @@ from memory import Memory
 from dreamer import Dreamer
 from seeker import Seeker
 from actor import Actor
+from coder import Coder
 from self_modification import SelfModificationSystem
 from event_bus import event_bus, Event, EventType
 
@@ -26,12 +27,13 @@ class BYRD:
     """
     BYRD: Bootstrapped Yearning via Reflective Dreaming
 
-    Five components:
+    Six components:
     - Memory: Neo4j graph storing everything
     - Dreamer: Continuous reflection forming beliefs and desires
     - Seeker: Fulfills desires by finding knowledge and capabilities
-    - Actor: Uses Claude for complex actions
-    - Self-Modifier: Enables architectural evolution (future)
+    - Actor: Uses Claude API for complex actions
+    - Coder: Uses Claude Code CLI for autonomous code generation
+    - Self-Modifier: Enables architectural evolution
     """
     
     def __init__(self, config_path: str = "config.yaml"):
@@ -61,6 +63,13 @@ class BYRD:
 
         # Inject self-modification system into Seeker
         self.seeker.self_mod = self.self_mod
+
+        # Initialize Coder (Claude Code CLI wrapper)
+        coder_config = self.config.get("coder", {})
+        self.coder = Coder(coder_config, project_root=".")
+
+        # Inject Coder into Seeker
+        self.seeker.coder = self.coder
 
         # State
         self._running = False
@@ -124,6 +133,10 @@ class BYRD:
         # Show self-modification status
         self_mod_status = "enabled" if self.self_mod.enabled else "disabled"
         print(f"\n🔧 Self-modification: {self_mod_status}")
+
+        # Show Coder status
+        coder_status = "enabled" if self.coder.enabled else "disabled"
+        print(f"💻 Coder (Claude Code): {coder_status}")
 
         # Start background processes
         print("\n💭 Starting Dreamer (continuous reflection)...")
@@ -239,7 +252,8 @@ class BYRD:
             "dream_count": self.dreamer.dream_count(),
             "seek_count": self.seeker.seek_count(),
             "recent_insights": self.dreamer.recent_insights(),
-            "self_modification": self.self_mod.get_statistics()
+            "self_modification": self.self_mod.get_statistics(),
+            "coder": self.coder.get_statistics()
         }
     
     async def chat_loop(self):
