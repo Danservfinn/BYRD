@@ -240,6 +240,9 @@
       <div class="text-[10px] font-mono text-slate-700 tracking-wider">3D MIND SPACE</div>
       <div id="mode-indicator" class="px-2 py-1 rounded text-xs font-mono bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">ORBIT</div>
     </div>
+    <div id="llm-indicator" class="mt-2 px-2 py-1 rounded text-[10px] font-mono bg-slate-100 border border-slate-300 text-slate-500">
+      <span class="text-slate-400">LLM:</span> <span id="llm-model-text">loading...</span>
+    </div>
   </div>
 
   <!-- UI Overlay: Top Center - Phase Indicator -->
@@ -2556,6 +2559,12 @@
         seekCount = data.seek_count || 0;
         dreamCountEl.textContent = dreamCount;
         seekCountEl.textContent = seekCount;
+
+        // Update LLM model display
+        const llmModelText = document.getElementById('llm-model-text');
+        if (llmModelText && data.llm_model) {
+          llmModelText.textContent = `${data.llm_provider}/${data.llm_model}`;
+        }
 
       } catch (e) {
         console.error('Failed to fetch status:', e);

@@ -120,6 +120,8 @@ class StatusResponse(BaseModel):
     unfulfilled_desires: List[Dict]
     capabilities: List[str]
     recent_insights: List[str]
+    llm_provider: str
+    llm_model: str
 
 
 class HistoryResponse(BaseModel):
@@ -165,6 +167,15 @@ async def get_status():
         desires = await byrd_instance.memory.get_unfulfilled_desires(limit=5)
         capabilities = await byrd_instance.memory.get_capabilities()
 
+        # Get LLM info
+        client = byrd_instance.llm_client
+        model_name = client.model_name
+        if "/" in model_name:
+            llm_provider, llm_model = model_name.split("/", 1)
+        else:
+            llm_provider = "ollama"  # Default for local models
+            llm_model = model_name
+
         return StatusResponse(
             running=byrd_instance._running,
             memory_stats=stats,
@@ -175,7 +186,9 @@ async def get_status():
                 for d in desires
             ],
             capabilities=[c.get("name", "") for c in capabilities],
-            recent_insights=byrd_instance.dreamer.recent_insights()
+            recent_insights=byrd_instance.dreamer.recent_insights(),
+            llm_provider=llm_provider,
+            llm_model=llm_model
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
