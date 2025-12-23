@@ -1,0 +1,462 @@
+"""
+PROMETHEUS Memory System
+Neo4j graph database interface for persistent memory.
+"""
+
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+from dataclasses import dataclass
+import json
+from neo4j import GraphDatabase, AsyncGraphDatabase
+import hashlib
+
+
+@dataclass
+class Experience:
+    id: str
+    content: str
+    type: str  # interaction, observation, action, dream
+    timestamp: datetime
+    embedding: Optional[List[float]] = None
+
+
+@dataclass
+class Belief:
+    id: str
+    content: str
+    confidence: float
+    formed_at: datetime
+    derived_from: List[str] = None  # Experience IDs
+
+
+@dataclass
+class Desire:
+    id: str
+    description: str
+    type: str  # knowledge, capability, goal, exploration
+    intensity: float
+    formed_at: datetime
+    fulfilled: bool = False
+    plan: List[str] = None
+
+
+@dataclass
+class Capability:
+    id: str
+    name: str
+    description: str
+    type: str  # innate, mcp, plugin, skill
+    config: Dict[str, Any]
+    active: bool = True
+    acquired_at: datetime = None
+
+
+class Memory:
+    """
+    The single source of truth.
+    All experiences, beliefs, desires, and capabilities live here.
+    """
+    
+    def __init__(self, config: Dict[str, str]):
+        self.uri = config.get("neo4j_uri", "bolt://localhost:7687")
+        self.user = config.get("neo4j_user", "neo4j")
+        self.password = config.get("neo4j_password", "password")
+        self.driver = None
+    
+    async def connect(self):
+        """Initialize connection to Neo4j."""
+        self.driver = AsyncGraphDatabase.driver(
+            self.uri, 
+            auth=(self.user, self.password)
+        )
+        await self._ensure_schema()
+    
+    async def close(self):
+        if self.driver:
+            await self.driver.close()
+    
+    async def _ensure_schema(self):
+        """Create indexes for efficient queries."""
+        async with self.driver.session() as session:
+            # Indexes for common queries
+            await session.run("""
+                CREATE INDEX IF NOT EXISTS FOR (e:Experience) ON (e.timestamp)
+            """)
+            await session.run("""
+                CREATE INDEX IF NOT EXISTS FOR (d:Desire) ON (d.fulfilled, d.intensity)
+            """)
+            await session.run("""
+                CREATE INDEX IF NOT EXISTS FOR (c:Capability) ON (c.active)
+            """)
+            await session.run("""
+                CREATE INDEX IF NOT EXISTS FOR (b:Belief) ON (b.confidence)
+            """)
+    
+    def _generate_id(self, content: str) -> str:
+        """Generate deterministic ID from content."""
+        return hashlib.sha256(
+            f"{content}{datetime.now().isoformat()}".encode()
+        ).hexdigest()[:16]
+    
+    # =========================================================================
+    # EXPERIENCES
+    # =========================================================================
+    
+    async def record_experience(
+        self, 
+        content: str, 
+        type: str,
+        embedding: Optional[List[float]] = None
+    ) -> str:
+        """Record a new experience."""
+        exp_id = self._generate_id(content)
+        
+        async with self.driver.session() as session:
+            await session.run("""
+                CREATE (e:Experience {
+                    id: $id,
+                    content: $content,
+                    type: $type,
+                    timestamp: datetime(),
+                    embedding: $embedding
+                })
+            """, id=exp_id, content=content, type=type, embedding=embedding)
+        
+        return exp_id
+    
+    async def get_recent_experiences(
+        self, 
+        limit: int = 50,
+        type: Optional[str] = None
+    ) -> List[Dict]:
+        """Get recent experiences, optionally filtered by type."""
+        query = """
+            MATCH (e:Experience)
+            WHERE $type IS NULL OR e.type = $type
+            RETURN e
+            ORDER BY e.timestamp DESC
+            LIMIT $limit
+        """
+        
+        async with self.driver.session() as session:
+            result = await session.run(query, type=type, limit=limit)
+            records = await result.data()
+            return [r["e"] for r in records]
+    
+    async def get_related_memories(
+        self, 
+        experience_ids: List[str],
+        depth: int = 2,
+        limit: int = 100
+    ) -> List[Dict]:
+        """Get memories related to given experiences (any node type)."""
+        query = """
+            MATCH (e:Experience)
+            WHERE e.id IN $ids
+            MATCH (e)-[*1..$depth]-(related)
+            WHERE NOT related:Experience OR related.id NOT IN $ids
+            RETURN DISTINCT related
+            LIMIT $limit
+        """
+        
+        async with self.driver.session() as session:
+            result = await session.run(
+                query, 
+                ids=experience_ids, 
+                depth=depth, 
+                limit=limit
+            )
+            records = await result.data()
+            return [r["related"] for r in records]
+    
+    # =========================================================================
+    # BELIEFS
+    # =========================================================================
+    
+    async def create_belief(
+        self, 
+        content: str, 
+        confidence: float,
+        derived_from: Optional[List[str]] = None
+    ) -> str:
+        """Create a new belief, optionally linked to source experiences."""
+        belief_id = self._generate_id(content)
+        
+        async with self.driver.session() as session:
+            # Create the belief
+            await session.run("""
+                CREATE (b:Belief {
+                    id: $id,
+                    content: $content,
+                    confidence: $confidence,
+                    formed_at: datetime()
+                })
+            """, id=belief_id, content=content, confidence=confidence)
+            
+            # Link to source experiences
+            if derived_from:
+                await session.run("""
+                    MATCH (b:Belief {id: $belief_id})
+                    MATCH (e:Experience)
+                    WHERE e.id IN $exp_ids
+                    CREATE (b)-[:DERIVED_FROM]->(e)
+                """, belief_id=belief_id, exp_ids=derived_from)
+        
+        return belief_id
+    
+    async def get_beliefs(
+        self, 
+        min_confidence: float = 0.0,
+        limit: int = 100
+    ) -> List[Dict]:
+        """Get beliefs above confidence threshold."""
+        query = """
+            MATCH (b:Belief)
+            WHERE b.confidence >= $min_confidence
+            RETURN b
+            ORDER BY b.confidence DESC, b.formed_at DESC
+            LIMIT $limit
+        """
+        
+        async with self.driver.session() as session:
+            result = await session.run(query, min_confidence=min_confidence, limit=limit)
+            records = await result.data()
+            return [r["b"] for r in records]
+    
+    async def update_belief_confidence(self, belief_id: str, new_confidence: float):
+        """Update confidence in a belief."""
+        async with self.driver.session() as session:
+            await session.run("""
+                MATCH (b:Belief {id: $id})
+                SET b.confidence = $confidence
+            """, id=belief_id, confidence=new_confidence)
+    
+    # =========================================================================
+    # DESIRES
+    # =========================================================================
+    
+    async def create_desire(
+        self,
+        description: str,
+        type: str,
+        intensity: float,
+        plan: Optional[List[str]] = None
+    ) -> str:
+        """Create a new desire."""
+        desire_id = self._generate_id(description)
+        
+        async with self.driver.session() as session:
+            await session.run("""
+                CREATE (d:Desire {
+                    id: $id,
+                    description: $description,
+                    type: $type,
+                    intensity: $intensity,
+                    formed_at: datetime(),
+                    fulfilled: false,
+                    plan: $plan
+                })
+            """, 
+            id=desire_id, 
+            description=description, 
+            type=type,
+            intensity=intensity,
+            plan=plan or []
+            )
+        
+        return desire_id
+    
+    async def get_unfulfilled_desires(
+        self, 
+        type: Optional[str] = None,
+        limit: int = 20
+    ) -> List[Dict]:
+        """Get unfulfilled desires, sorted by intensity."""
+        query = """
+            MATCH (d:Desire {fulfilled: false})
+            WHERE $type IS NULL OR d.type = $type
+            RETURN d
+            ORDER BY d.intensity DESC
+            LIMIT $limit
+        """
+        
+        async with self.driver.session() as session:
+            result = await session.run(query, type=type, limit=limit)
+            records = await result.data()
+            return [r["d"] for r in records]
+    
+    async def fulfill_desire(
+        self, 
+        desire_id: str, 
+        fulfilled_by: Optional[str] = None
+    ):
+        """Mark a desire as fulfilled, optionally linking what fulfilled it."""
+        async with self.driver.session() as session:
+            await session.run("""
+                MATCH (d:Desire {id: $id})
+                SET d.fulfilled = true, d.fulfilled_at = datetime()
+            """, id=desire_id)
+            
+            if fulfilled_by:
+                await session.run("""
+                    MATCH (d:Desire {id: $desire_id})
+                    MATCH (c:Capability {id: $cap_id})
+                    CREATE (c)-[:FULFILLS]->(d)
+                """, desire_id=desire_id, cap_id=fulfilled_by)
+    
+    async def desire_exists(self, description: str) -> bool:
+        """Check if a similar desire already exists."""
+        query = """
+            MATCH (d:Desire)
+            WHERE d.description CONTAINS $desc OR $desc CONTAINS d.description
+            RETURN count(d) > 0 as exists
+        """
+        async with self.driver.session() as session:
+            result = await session.run(query, desc=description[:50])
+            record = await result.single()
+            return record["exists"] if record else False
+    
+    # =========================================================================
+    # CAPABILITIES
+    # =========================================================================
+    
+    async def add_capability(
+        self,
+        name: str,
+        description: str,
+        type: str,
+        config: Dict[str, Any]
+    ) -> str:
+        """Add a new capability."""
+        cap_id = self._generate_id(name)
+        
+        async with self.driver.session() as session:
+            await session.run("""
+                CREATE (c:Capability {
+                    id: $id,
+                    name: $name,
+                    description: $description,
+                    type: $type,
+                    config: $config,
+                    active: true,
+                    acquired_at: datetime()
+                })
+            """,
+            id=cap_id,
+            name=name,
+            description=description,
+            type=type,
+            config=json.dumps(config)
+            )
+        
+        return cap_id
+    
+    async def get_capabilities(self, active_only: bool = True) -> List[Dict]:
+        """Get all capabilities."""
+        query = """
+            MATCH (c:Capability)
+            WHERE $active_only = false OR c.active = true
+            RETURN c
+            ORDER BY c.acquired_at DESC
+        """
+        
+        async with self.driver.session() as session:
+            result = await session.run(query, active_only=active_only)
+            records = await result.data()
+            return [r["c"] for r in records]
+    
+    async def has_capability(self, description: str) -> bool:
+        """Check if we have a capability matching the description."""
+        query = """
+            MATCH (c:Capability {active: true})
+            WHERE c.name CONTAINS $desc 
+               OR c.description CONTAINS $desc
+               OR $desc CONTAINS c.name
+            RETURN count(c) > 0 as has
+        """
+        async with self.driver.session() as session:
+            result = await session.run(query, desc=description.lower())
+            record = await result.single()
+            return record["has"] if record else False
+    
+    # =========================================================================
+    # CONNECTIONS
+    # =========================================================================
+    
+    async def create_connection(
+        self,
+        from_id: str,
+        to_id: str,
+        relationship: str = "RELATES_TO",
+        properties: Optional[Dict] = None
+    ):
+        """Create a relationship between any two nodes."""
+        props = properties or {}
+        props["formed_at"] = datetime.now().isoformat()
+        
+        query = f"""
+            MATCH (a), (b)
+            WHERE a.id = $from_id AND b.id = $to_id
+            CREATE (a)-[r:{relationship}]->(b)
+            SET r += $props
+        """
+        
+        async with self.driver.session() as session:
+            await session.run(query, from_id=from_id, to_id=to_id, props=props)
+    
+    # =========================================================================
+    # CONTEXT RETRIEVAL
+    # =========================================================================
+    
+    async def get_context(self, query: str, limit: int = 20) -> Dict:
+        """Get relevant context for a query - used by Actor."""
+        # In production, use embeddings for semantic search
+        # For now, simple text matching
+        
+        async with self.driver.session() as session:
+            # Get relevant beliefs
+            beliefs_result = await session.run("""
+                MATCH (b:Belief)
+                WHERE b.content CONTAINS $query
+                RETURN b
+                ORDER BY b.confidence DESC
+                LIMIT $limit
+            """, query=query, limit=limit)
+            beliefs = await beliefs_result.data()
+            
+            # Get relevant capabilities
+            caps_result = await session.run("""
+                MATCH (c:Capability {active: true})
+                RETURN c
+            """)
+            caps = await caps_result.data()
+            
+            # Get recent experiences
+            exp_result = await session.run("""
+                MATCH (e:Experience)
+                RETURN e
+                ORDER BY e.timestamp DESC
+                LIMIT 10
+            """)
+            experiences = await exp_result.data()
+        
+        return {
+            "beliefs": [r["b"] for r in beliefs],
+            "capabilities": [r["c"] for r in caps],
+            "recent_experiences": [r["e"] for r in experiences]
+        }
+    
+    # =========================================================================
+    # STATS
+    # =========================================================================
+    
+    async def stats(self) -> Dict[str, int]:
+        """Get counts of all node types."""
+        query = """
+            MATCH (n)
+            RETURN labels(n)[0] as type, count(n) as count
+        """
+        async with self.driver.session() as session:
+            result = await session.run(query)
+            records = await result.data()
+            return {r["type"]: r["count"] for r in records}

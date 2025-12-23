@@ -1,0 +1,86 @@
+# PROMETHEUS v2 Configuration
+# The Dreaming Architecture with Local LLM + SearXNG Research
+
+# =============================================================================
+# MEMORY (Neo4j)
+# =============================================================================
+memory:
+  neo4j_uri: "bolt://localhost:7687"
+  neo4j_user: "neo4j"
+  neo4j_password: "prometheus"  # Change this in production!
+
+# =============================================================================
+# LOCAL LLM (Shared by Dreamer and Seeker)
+# =============================================================================
+# One mind: the same model that dreams also synthesizes research.
+# This preserves emergence — all learning flows through one model.
+local_llm:
+  # Model to use (must be available via endpoint)
+  model: "llama3.2"
+  
+  # Ollama endpoint (default)
+  # For llama.cpp: "http://localhost:8080/completion"
+  endpoint: "http://localhost:11434/api/generate"
+
+# =============================================================================
+# DREAMER (Continuous Reflection)
+# =============================================================================
+# The Dreamer runs continuously on local hardware.
+# No API costs — dreams 24/7.
+dreamer:
+  # How often to dream (seconds)
+  # Lower = more active mind, higher token usage
+  interval_seconds: 60
+  
+  # How many recent experiences to consider
+  context_window: 50
+
+# =============================================================================
+# SEEKER (Desire Fulfillment)
+# =============================================================================
+# The Seeker fulfills desires through research and capability acquisition.
+seeker:
+  # ---------------------------------------------------------------------------
+  # KNOWLEDGE ACQUISITION (Local LLM + SearXNG)
+  # ---------------------------------------------------------------------------
+  research:
+    # SearXNG endpoint (self-hosted meta-search)
+    searxng_url: "http://localhost:8888"
+    
+    # Minimum desire intensity to trigger research (0-1)
+    # Lower = more research, higher = only strong desires
+    min_intensity: 0.4
+    
+    # Maximum search queries per desire
+    max_queries: 3
+    
+    # Maximum search results to synthesize
+    max_results: 10
+  
+  # ---------------------------------------------------------------------------
+  # CAPABILITY ACQUISITION (GitHub)
+  # ---------------------------------------------------------------------------
+  capabilities:
+    # Minimum trust score to consider installing (0-1)
+    trust_threshold: 0.5
+    
+    # Rate limit for safety
+    max_installs_per_day: 3
+    
+    # GitHub token for higher rate limits (optional)
+    # github_token: "ghp_..."
+  
+  # MCP config path for installing MCP servers
+  mcp_config_path: "~/.config/claude/mcp_config.json"
+
+# =============================================================================
+# ACTOR (Claude API)
+# =============================================================================
+# The Actor uses Claude for complex reasoning and user interactions.
+# This is the only component that requires an external API.
+actor:
+  # Model to use
+  model: "claude-sonnet-4-20250514"
+  
+  # API key (or set ANTHROPIC_API_KEY env var)
+  # api_key: "sk-ant-..."

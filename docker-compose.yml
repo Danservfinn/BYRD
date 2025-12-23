@@ -1,0 +1,59 @@
+# PROMETHEUS v2 Docker Compose
+# Provides Neo4j (memory) and SearXNG (search) services
+
+version: '3.8'
+
+services:
+  # ==========================================================================
+  # NEO4J - Memory Graph Database
+  # ==========================================================================
+  neo4j:
+    image: neo4j:latest
+    container_name: prometheus-neo4j
+    ports:
+      - "7474:7474"  # Browser UI
+      - "7687:7687"  # Bolt protocol
+    environment:
+      - NEO4J_AUTH=neo4j/prometheus
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7474"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # ==========================================================================
+  # SEARXNG - Self-Hosted Meta-Search Engine
+  # ==========================================================================
+  searxng:
+    image: searxng/searxng:latest
+    container_name: prometheus-searxng
+    ports:
+      - "8888:8080"
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8888
+    volumes:
+      - ./searxng:/etc/searxng:rw
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  neo4j_data:
+    driver: local
+  neo4j_logs:
+    driver: local
