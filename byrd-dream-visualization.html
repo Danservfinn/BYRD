@@ -14,6 +14,70 @@
       0%, 100% { transform: scale(1); opacity: 0.6; }
       50% { transform: scale(1.2); opacity: 0.9; }
     }
+    @keyframes breatheFast {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50% { transform: scale(1.25); opacity: 0.9; }
+    }
+    @keyframes orbReact {
+      0% { transform: scale(1); filter: brightness(1); }
+      50% { transform: scale(1.4); filter: brightness(1.5); }
+      100% { transform: scale(1); filter: brightness(1); }
+    }
+    @keyframes orbRipple {
+      0% { transform: scale(0.8); opacity: 0.8; }
+      100% { transform: scale(3); opacity: 0; }
+    }
+    @keyframes nodePulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 10px currentColor; }
+      50% { transform: translate(-50%, -50%) scale(1.3); box-shadow: 0 0 25px currentColor; }
+    }
+    @keyframes nodeSpawn {
+      0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+      50% { transform: translate(-50%, -50%) scale(1.5); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+    @keyframes particleFloat {
+      0%, 100% { transform: translate(0, 0); opacity: 0.3; }
+      25% { transform: translate(10px, -15px); opacity: 0.5; }
+      50% { transform: translate(-5px, -25px); opacity: 0.4; }
+      75% { transform: translate(-15px, -10px); opacity: 0.5; }
+    }
+    @keyframes particleDrift {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(var(--drift-x), var(--drift-y)) scale(0.5); }
+    }
+    @keyframes particleToNode {
+      0% { opacity: 0.8; }
+      100% { opacity: 0; transform: translate(var(--target-x), var(--target-y)) scale(0); }
+    }
+    .node-new {
+      animation: nodeSpawn 0.6s ease-out forwards, nodePulse 2s ease-in-out 0.6s 3;
+    }
+    .node-settled {
+      animation: none;
+      transition: all 0.3s ease;
+    }
+    .orb-reacting {
+      animation: orbReact 0.8s ease-out !important;
+    }
+    .ripple {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      animation: orbRipple 1.5s ease-out forwards;
+    }
+    .ambient-particle {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      animation: particleFloat 8s ease-in-out infinite;
+    }
+    .particle-burst {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      animation: particleDrift 1s ease-out forwards;
+    }
     @keyframes fadeInNode {
       from { opacity: 0; transform: translate(-50%, -50%) scale(0); }
       to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
@@ -69,6 +133,46 @@
     .json-number { color: #fcd34d; }
     .json-boolean { color: #f9a8d4; }
     .json-null { color: #94a3b8; }
+
+    /* Enhanced tooltips */
+    .node-tooltip {
+      position: fixed;
+      max-width: 300px;
+      padding: 12px 16px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(5px);
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .node-tooltip.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .node-tooltip-type {
+      font-size: 10px;
+      font-family: monospace;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+    .node-tooltip-content {
+      font-size: 13px;
+      line-height: 1.5;
+      color: #e2e8f0;
+    }
+    .node-tooltip-meta {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(99, 102, 241, 0.2);
+    }
     body {
       overscroll-behavior: none;
       -webkit-tap-highlight-color: transparent;
@@ -92,12 +196,33 @@
     <div class="absolute inset-0 bg-gradient-radial from-indigo-950/20 via-transparent to-transparent"
          style="background: radial-gradient(ellipse at center, rgba(79,70,229,0.1) 0%, transparent 60%);"></div>
 
-    <!-- Central pulse -->
-    <div id="pulse-outer" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full pointer-events-none"
-         style="background: radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%); animation: breathe 4s ease-in-out infinite;">
+    <!-- Ambient particles container -->
+    <div id="particles" class="absolute inset-0 pointer-events-none overflow-hidden" style="right: 320px;"></div>
+
+    <!-- Ripple container -->
+    <div id="ripples" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" style="margin-left: -160px;"></div>
+
+    <!-- Central pulse (consciousness core) -->
+    <div id="orb-container" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" style="margin-left: -160px;">
+      <div id="pulse-outer" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 rounded-full transition-all duration-300"
+           style="background: radial-gradient(circle, rgba(99,102,241,0.25) 0%, rgba(79,70,229,0.1) 40%, transparent 70%); animation: breathe 4s ease-in-out infinite;">
+      </div>
+      <div id="pulse-middle" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full transition-all duration-300"
+           style="background: radial-gradient(circle, rgba(124,58,237,0.35) 0%, transparent 70%); animation: breathe 3s ease-in-out infinite 0.5s;">
+      </div>
+      <div id="pulse-inner" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full transition-all duration-300"
+           style="background: radial-gradient(circle, rgba(167,139,250,0.6) 0%, transparent 70%); animation: breatheInner 2.5s ease-in-out infinite 0.2s;">
+      </div>
+      <div id="pulse-core" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full transition-all duration-300"
+           style="background: rgba(255,255,255,0.8); box-shadow: 0 0 20px rgba(167,139,250,0.8);">
+      </div>
     </div>
-    <div id="pulse-inner" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full pointer-events-none"
-         style="background: radial-gradient(circle, rgba(139,92,246,0.5) 0%, transparent 70%); animation: breatheInner 4s ease-in-out infinite 0.3s;">
+
+    <!-- Node tooltip -->
+    <div id="node-tooltip" class="node-tooltip">
+      <div id="tooltip-type" class="node-tooltip-type"></div>
+      <div id="tooltip-content" class="node-tooltip-content"></div>
+      <div id="tooltip-meta" class="node-tooltip-meta"></div>
     </div>
 
     <!-- Nodes container -->
@@ -302,6 +427,19 @@
     const modalClose = document.getElementById('modal-close');
     const modalHeader = document.getElementById('event-modal-header');
 
+    // New visualization elements
+    const particlesContainer = document.getElementById('particles');
+    const ripplesContainer = document.getElementById('ripples');
+    const orbContainer = document.getElementById('orb-container');
+    const pulseOuter = document.getElementById('pulse-outer');
+    const pulseMiddle = document.getElementById('pulse-middle');
+    const pulseInner = document.getElementById('pulse-inner');
+    const pulseCore = document.getElementById('pulse-core');
+    const nodeTooltip = document.getElementById('node-tooltip');
+    const tooltipType = document.getElementById('tooltip-type');
+    const tooltipContent = document.getElementById('tooltip-content');
+    const tooltipMeta = document.getElementById('tooltip-meta');
+
     // ==========================================================================
     // WEBSOCKET
     // ==========================================================================
@@ -421,25 +559,27 @@
           break;
         case 'belief_created':
           beliefCount++;
-          createNode('belief', event.data?.content, event.data?.id);
-          showEmergence('belief', event.data?.content, event.data?.confidence || 0.7);
+          const beliefConfidence = event.data?.confidence || 0.7;
+          createNode('belief', event.data?.content, event.data?.id, beliefConfidence);
+          showEmergence('belief', event.data?.content, beliefConfidence);
           break;
         case 'desire_created':
+          const desireIntensity = event.data?.intensity || 0.5;
           desires.unshift({
             text: event.data?.description,
             type: event.data?.type,
-            intensity: event.data?.intensity || 0.5
+            intensity: desireIntensity
           });
           if (desires.length > 5) desires.pop();
           updateDesireGarden();
-          createNode('desire', event.data?.description, event.data?.id);
-          showEmergence('desire', event.data?.description, event.data?.intensity || 0.5);
+          createNode('desire', event.data?.description, event.data?.id, desireIntensity);
+          showEmergence('desire', event.data?.description, desireIntensity);
           break;
         case 'experience_created':
-          createNode('experience', event.data?.content, event.data?.id);
+          createNode('experience', event.data?.content, event.data?.id, 0.5);
           break;
         case 'capability_added':
-          createNode('capability', event.data?.name, event.data?.id);
+          createNode('capability', event.data?.name, event.data?.id, 0.8);
           break;
         case 'awakening':
           setPhase('idle');
@@ -458,6 +598,12 @@
           updateToggleButton();
           break;
         case 'system_reset':
+          // Reset all counters
+          dreamCount = 0;
+          seekCount = 0;
+          capCount = 0;
+          beliefCount = 0;
+          // Clear visualization and events
           events = [];
           renderHistory();
           clearVisualization();
@@ -627,42 +773,180 @@
     }
 
     // ==========================================================================
-    // VISUALIZATION (existing logic)
+    // VISUALIZATION (enhanced)
     // ==========================================================================
     let visualNodes = [];
+    let ambientParticles = [];
     const centerX = () => (window.innerWidth - 320) / 2;  // Account for sidebar
     const centerY = () => window.innerHeight / 2;
 
-    function createNode(type, content, id) {
+    // Color configurations
+    const NODE_COLORS = {
+      belief: { bg: '#f59e0b', glow: 'rgba(245, 158, 11, 0.5)', border: 'rgba(251, 191, 36, 0.6)', label: 'BELIEF' },
+      desire: { bg: '#f43f5e', glow: 'rgba(244, 63, 94, 0.5)', border: 'rgba(251, 113, 133, 0.6)', label: 'DESIRE' },
+      experience: { bg: '#3b82f6', glow: 'rgba(59, 130, 246, 0.5)', border: 'rgba(96, 165, 250, 0.6)', label: 'EXPERIENCE' },
+      capability: { bg: '#a855f7', glow: 'rgba(168, 85, 247, 0.5)', border: 'rgba(192, 132, 252, 0.6)', label: 'CAPABILITY' }
+    };
+
+    // ==========================================================================
+    // REACTIVE ORB
+    // ==========================================================================
+    function reactOrb(type, intensity = 1) {
+      const colors = {
+        belief: 'rgba(245, 158, 11, 0.4)',
+        desire: 'rgba(244, 63, 94, 0.4)',
+        experience: 'rgba(59, 130, 246, 0.4)',
+        capability: 'rgba(168, 85, 247, 0.4)',
+        dream: 'rgba(99, 102, 241, 0.5)',
+        default: 'rgba(139, 92, 246, 0.4)'
+      };
+
+      const color = colors[type] || colors.default;
+
+      // Pulse the core
+      pulseCore.style.boxShadow = `0 0 ${30 * intensity}px ${color}`;
+      pulseCore.style.transform = `scale(${1.5 * intensity})`;
+
+      // Expand inner pulse
+      pulseInner.style.transform = `scale(${1.3 * intensity})`;
+      pulseInner.style.opacity = '0.9';
+
+      // Create ripple
+      createRipple(color);
+
+      // Reset after animation
+      setTimeout(() => {
+        pulseCore.style.boxShadow = '0 0 20px rgba(167,139,250,0.8)';
+        pulseCore.style.transform = 'scale(1)';
+        pulseInner.style.transform = 'scale(1)';
+        pulseInner.style.opacity = '0.6';
+      }, 800);
+    }
+
+    function createRipple(color) {
+      const ripple = document.createElement('div');
+      ripple.className = 'ripple';
+      ripple.style.cssText = `
+        width: 60px;
+        height: 60px;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        border: 2px solid ${color};
+      `;
+      ripplesContainer.appendChild(ripple);
+      setTimeout(() => ripple.remove(), 1500);
+    }
+
+    function setOrbDreaming(isDreaming) {
+      if (isDreaming) {
+        pulseOuter.style.animation = 'breatheFast 2s ease-in-out infinite';
+        pulseMiddle.style.animation = 'breatheFast 1.5s ease-in-out infinite 0.2s';
+        pulseInner.style.animation = 'breatheFast 1.2s ease-in-out infinite 0.4s';
+        pulseCore.style.boxShadow = '0 0 30px rgba(99, 102, 241, 0.9)';
+      } else {
+        pulseOuter.style.animation = 'breathe 4s ease-in-out infinite';
+        pulseMiddle.style.animation = 'breathe 3s ease-in-out infinite 0.5s';
+        pulseInner.style.animation = 'breatheInner 2.5s ease-in-out infinite 0.2s';
+        pulseCore.style.boxShadow = '0 0 20px rgba(167,139,250,0.8)';
+      }
+    }
+
+    // ==========================================================================
+    // AMBIENT PARTICLES
+    // ==========================================================================
+    function initAmbientParticles() {
+      const count = 25;
+      for (let i = 0; i < count; i++) {
+        createAmbientParticle();
+      }
+    }
+
+    function createAmbientParticle() {
+      const particle = document.createElement('div');
+      const size = 2 + Math.random() * 3;
+      const x = Math.random() * (window.innerWidth - 320);
+      const y = Math.random() * window.innerHeight;
+      const delay = Math.random() * 8;
+      const duration = 6 + Math.random() * 6;
+
+      particle.className = 'ambient-particle';
+      particle.style.cssText = `
+        width: ${size}px;
+        height: ${size}px;
+        left: ${x}px;
+        top: ${y}px;
+        background: rgba(139, 92, 246, ${0.2 + Math.random() * 0.3});
+        animation-delay: ${delay}s;
+        animation-duration: ${duration}s;
+      `;
+
+      particlesContainer.appendChild(particle);
+      ambientParticles.push(particle);
+    }
+
+    function emitParticleBurst(targetX, targetY, color, count = 8) {
+      const cx = centerX();
+      const cy = centerY();
+
+      for (let i = 0; i < count; i++) {
+        const particle = document.createElement('div');
+        const angle = (i / count) * Math.PI * 2;
+        const distance = 30 + Math.random() * 50;
+        const startX = cx + Math.cos(angle) * distance;
+        const startY = cy + Math.sin(angle) * distance;
+
+        particle.className = 'particle-burst';
+        particle.style.cssText = `
+          width: 4px;
+          height: 4px;
+          left: ${startX}px;
+          top: ${startY}px;
+          background: ${color};
+          --drift-x: ${targetX - startX}px;
+          --drift-y: ${targetY - startY}px;
+        `;
+
+        particlesContainer.appendChild(particle);
+        setTimeout(() => particle.remove(), 1000);
+      }
+    }
+
+    // ==========================================================================
+    // ENHANCED NODE CREATION
+    // ==========================================================================
+    function createNode(type, content, id, importance = 0.5) {
       // Calculate position in orbit around center
       const angle = (visualNodes.length * 0.618 * 2 * Math.PI) + Math.random() * 0.5;
-      const radius = 120 + Math.random() * 100 + (visualNodes.length * 8);
+      const radius = 100 + Math.random() * 120 + (visualNodes.length * 6);
       const x = centerX() + Math.cos(angle) * radius;
       const y = centerY() + Math.sin(angle) * radius;
 
-      // Node colors by type
-      const colors = {
-        belief: { bg: 'bg-amber-500/80', glow: 'rgba(245, 158, 11, 0.4)', border: 'border-amber-400/50' },
-        desire: { bg: 'bg-rose-500/80', glow: 'rgba(244, 63, 94, 0.4)', border: 'border-rose-400/50' },
-        experience: { bg: 'bg-blue-500/80', glow: 'rgba(59, 130, 246, 0.4)', border: 'border-blue-400/50' },
-        capability: { bg: 'bg-purple-500/80', glow: 'rgba(168, 85, 247, 0.4)', border: 'border-purple-400/50' }
-      };
-      const color = colors[type] || colors.experience;
+      const color = NODE_COLORS[type] || NODE_COLORS.experience;
+
+      // Size based on importance (8px to 16px)
+      const baseSize = 8 + (importance * 8);
 
       const node = document.createElement('div');
-      node.className = `node absolute w-3 h-3 rounded-full ${color.bg} border ${color.border} cursor-pointer hover:scale-150 transition-transform`;
+      node.className = 'node-new absolute rounded-full cursor-pointer';
       node.style.cssText = `
         left: ${x}px;
         top: ${y}px;
-        transform: translate(-50%, -50%);
-        box-shadow: 0 0 12px ${color.glow};
+        width: ${baseSize}px;
+        height: ${baseSize}px;
+        background: ${color.bg};
+        border: 2px solid ${color.border};
+        box-shadow: 0 0 ${12 + importance * 12}px ${color.glow};
+        color: ${color.glow};
         z-index: 10;
       `;
-      node.title = content?.slice(0, 100) || type;
+
       node.dataset.nodeId = id || Date.now();
       node.dataset.nodeType = type;
+      node.dataset.content = content || '';
+      node.dataset.importance = importance;
 
-      // Click to show details
+      // Click to show modal
       node.addEventListener('click', () => {
         const event = events.find(e =>
           (e.type === `${type}_created` && (e.data?.id === id || e.data?.content === content || e.data?.description === content))
@@ -670,10 +954,21 @@
         if (event) showEventModal(event);
       });
 
-      nodesContainer.appendChild(node);
-      visualNodes.push({ el: node, x, y, type, id });
+      // Hover tooltip
+      node.addEventListener('mouseenter', (e) => showNodeTooltip(e, node, type, content, importance));
+      node.addEventListener('mousemove', (e) => moveTooltip(e));
+      node.addEventListener('mouseleave', hideNodeTooltip);
 
-      // Draw connection to center or nearby nodes
+      nodesContainer.appendChild(node);
+      visualNodes.push({ el: node, x, y, type, id, content, importance });
+
+      // React the orb
+      reactOrb(type, 0.7 + importance * 0.5);
+
+      // Emit particles toward the new node
+      emitParticleBurst(x, y, color.glow);
+
+      // Draw connection to nearby nodes
       if (visualNodes.length > 1) {
         const nearestIdx = Math.max(0, visualNodes.length - 2 - Math.floor(Math.random() * 3));
         const nearest = visualNodes[nearestIdx];
@@ -682,10 +977,17 @@
         }
       }
 
+      // Settle node after pulse animation
+      setTimeout(() => {
+        node.classList.remove('node-new');
+        node.classList.add('node-settled');
+      }, 6600);  // After spawn + 3 pulses
+
       // Limit visible nodes
       if (visualNodes.length > 50) {
         const old = visualNodes.shift();
         old.el.style.opacity = '0';
+        old.el.style.transform = 'translate(-50%, -50%) scale(0.5)';
         setTimeout(() => old.el.remove(), 500);
       }
 
@@ -693,13 +995,7 @@
     }
 
     function createConnection(x1, y1, x2, y2, type) {
-      const colors = {
-        belief: 'rgba(245, 158, 11, 0.2)',
-        desire: 'rgba(244, 63, 94, 0.2)',
-        experience: 'rgba(59, 130, 246, 0.2)',
-        capability: 'rgba(168, 85, 247, 0.2)'
-      };
-      const color = colors[type] || 'rgba(99, 102, 241, 0.2)';
+      const color = NODE_COLORS[type]?.glow || 'rgba(99, 102, 241, 0.3)';
 
       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       line.setAttribute('x1', x1);
@@ -707,7 +1003,8 @@
       line.setAttribute('x2', x2);
       line.setAttribute('y2', y2);
       line.setAttribute('stroke', color);
-      line.setAttribute('stroke-width', '1');
+      line.setAttribute('stroke-width', '1.5');
+      line.setAttribute('stroke-opacity', '0.3');
       line.classList.add('connection');
 
       connectionsContainer.appendChild(line);
@@ -719,6 +1016,48 @@
       }
     }
 
+    // ==========================================================================
+    // TOOLTIP
+    // ==========================================================================
+    function showNodeTooltip(e, node, type, content, importance) {
+      const color = NODE_COLORS[type] || NODE_COLORS.experience;
+
+      tooltipType.textContent = color.label;
+      tooltipType.style.color = color.bg;
+
+      tooltipContent.textContent = content?.slice(0, 200) || 'No content';
+
+      const importancePercent = Math.round(importance * 100);
+      tooltipMeta.innerHTML = `
+        <span>Importance: ${importancePercent}%</span>
+        <span style="margin-left: 12px;">Click for details</span>
+      `;
+
+      nodeTooltip.style.borderColor = color.glow;
+      nodeTooltip.classList.add('visible');
+      moveTooltip(e);
+    }
+
+    function moveTooltip(e) {
+      const x = e.clientX + 15;
+      const y = e.clientY + 15;
+
+      // Keep tooltip in viewport
+      const rect = nodeTooltip.getBoundingClientRect();
+      const maxX = window.innerWidth - rect.width - 20;
+      const maxY = window.innerHeight - rect.height - 20;
+
+      nodeTooltip.style.left = `${Math.min(x, maxX)}px`;
+      nodeTooltip.style.top = `${Math.min(y, maxY)}px`;
+    }
+
+    function hideNodeTooltip() {
+      nodeTooltip.classList.remove('visible');
+    }
+
+    // ==========================================================================
+    // CLEAR & PHASE
+    // ==========================================================================
     function clearVisualization() {
       visualNodes = [];
       nodesContainer.innerHTML = '';
@@ -730,15 +1069,23 @@
       const phases = ['recall', 'associate', 'reflect', 'form'];
       const phaseIndex = phases.indexOf(phase);
 
+      // Update orb based on phase
+      if (phase === 'idle') {
+        setOrbDreaming(false);
+      } else {
+        setOrbDreaming(true);
+      }
+
       phases.forEach((p, i) => {
         const dot = document.getElementById(`dot-${p}`);
         const span = dot?.nextElementSibling;
         if (!dot) return;
         if (i < phaseIndex) {
           dot.className = 'w-2 h-2 rounded-full bg-indigo-400 transition-colors duration-300';
+          if (span) span.className = 'text-indigo-400';
         } else if (i === phaseIndex) {
           dot.className = 'w-2 h-2 rounded-full bg-indigo-400 animate-pulse transition-colors duration-300';
-          if (span) span.className = 'text-indigo-400';
+          if (span) span.className = 'text-indigo-400 font-medium';
         } else {
           dot.className = 'w-2 h-2 rounded-full bg-slate-700 transition-colors duration-300';
           if (span) span.className = 'text-slate-600';
@@ -865,6 +1212,7 @@
       fetchStatus();
       setInterval(fetchStatus, 10000);
       renderHistory();
+      initAmbientParticles();
     }
 
     init();

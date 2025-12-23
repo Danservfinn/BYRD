@@ -309,24 +309,28 @@ async def reset_byrd():
                 byrd_task.cancel()
                 byrd_task = None
 
-        # 2. Clear memory
+        # 2. Reset component state (counters, etc.)
+        byrd_instance.dreamer.reset()
+        byrd_instance.seeker.reset()
+
+        # 3. Clear memory (Neo4j database)
         await byrd_instance.memory.connect()
         await byrd_instance.memory.clear_all()
 
-        # 3. Clear event history
+        # 4. Clear event history
         event_bus.clear_history()
 
-        # 4. Emit reset event
+        # 5. Emit reset event
         await event_bus.emit(Event(
             type=EventType.SYSTEM_RESET,
             data={"message": "Memory cleared, preparing for awakening"}
         ))
 
-        # 5. Re-initialize capabilities and awaken
+        # 6. Re-initialize capabilities and awaken
         await byrd_instance._init_innate_capabilities()
         await byrd_instance._awaken()
 
-        # 6. Restart background processes
+        # 7. Restart background processes
         byrd_task = asyncio.create_task(byrd_instance.start())
 
         return ResetResponse(

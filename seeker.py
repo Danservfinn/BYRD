@@ -110,7 +110,14 @@ class Seeker:
     
     def stop(self):
         self._running = False
-    
+
+    def reset(self):
+        """Reset seeker state for fresh start."""
+        self._running = False
+        self._seek_count = 0
+        self._installs_today = 0
+        self._last_reset = datetime.now()
+
     async def _seek_cycle(self):
         """One seek cycle: find highest priority desire and try to fulfill it."""
 
