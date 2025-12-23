@@ -73,6 +73,42 @@ seeker:
   # MCP config path for installing MCP servers
   mcp_config_path: "~/.config/claude/mcp_config.json"
 
+  # ---------------------------------------------------------------------------
+  # AITMPL.COM INTEGRATION (Claude Code Templates)
+  # ---------------------------------------------------------------------------
+  # Curated templates from https://www.aitmpl.com/ (davila7/claude-code-templates)
+  aitmpl:
+    # Enable/disable aitmpl integration
+    enabled: true
+
+    # Local cache for template registry
+    cache_dir: "~/.cache/byrd/aitmpl"
+
+    # Cache TTL in hours (reduces GitHub API calls)
+    cache_ttl_hours: 24
+
+    # Base trust score for curated templates (0-1)
+    # Higher than unknown GitHub repos since aitmpl is curated
+    base_trust: 0.5
+
+    # Template categories to search
+    default_categories:
+      - mcp
+      - agent
+      - command
+      - skill
+      - hook
+      - setting
+
+    # Installation paths for each category
+    install_paths:
+      agent: "~/.claude/agents"
+      command: "~/.claude/commands"
+      skill: "~/.claude/skills"
+      hook: "~/.claude/hooks"
+      setting: "~/.claude/settings.local.json"
+      mcp: "~/.config/claude/mcp_config.json"
+
 # =============================================================================
 # ACTOR (Claude API)
 # =============================================================================

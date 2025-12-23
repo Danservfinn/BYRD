@@ -3,6 +3,7 @@ BYRD Seeker
 Fulfills desires by researching knowledge and acquiring capabilities.
 
 Uses Local LLM + SearXNG for autonomous research — no external AI services.
+Integrates with aitmpl.com for curated Claude Code templates.
 """
 
 import asyncio
@@ -14,6 +15,15 @@ from typing import Dict, List, Optional
 import httpx
 
 from memory import Memory
+from aitmpl_client import AitmplClient, AitmplTemplate
+from installers import get_installer
+
+# Try to import event_bus, but make it optional
+try:
+    from event_bus import event_bus, Event, EventType
+    HAS_EVENT_BUS = True
+except ImportError:
+    HAS_EVENT_BUS = False
 
 
 class Seeker:
@@ -60,6 +70,19 @@ class Seeker:
         # Self-modification system (injected later by BYRD)
         self.self_mod = None
 
+        # aitmpl.com integration
+        aitmpl_config = config.get("aitmpl", {})
+        self.aitmpl_enabled = aitmpl_config.get("enabled", True)
+        self.aitmpl_client = None
+        if self.aitmpl_enabled:
+            self.aitmpl_client = AitmplClient(
+                cache_dir=aitmpl_config.get("cache_dir", "~/.cache/byrd/aitmpl"),
+                cache_ttl_hours=aitmpl_config.get("cache_ttl_hours", 24),
+                github_token=self.github_token
+            )
+        self.aitmpl_base_trust = aitmpl_config.get("base_trust", 0.5)
+        self.aitmpl_install_config = aitmpl_config.get("install_paths", {})
+
         # Rate limiting
         self._installs_today = 0
         self._last_reset = datetime.now()
@@ -86,23 +109,33 @@ class Seeker:
     
     async def _seek_cycle(self):
         """One seek cycle: find highest priority desire and try to fulfill it."""
-        
+
         # Reset daily counter
         if datetime.now() - self._last_reset > timedelta(days=1):
             self._installs_today = 0
             self._last_reset = datetime.now()
-        
+
         # Get unfulfilled desires
         desires = await self.memory.get_unfulfilled_desires(limit=5)
-        
+
         if not desires:
             return
-        
+
         # Process highest intensity desire
         desire = desires[0]
         desire_type = desire.get("type", "")
         description = desire.get("description", "")
-        
+
+        # Emit event for real-time UI
+        await event_bus.emit(Event(
+            type=EventType.SEEK_CYCLE_START,
+            data={
+                "desire_id": desire.get("id"),
+                "type": desire_type,
+                "description": description[:100]
+            }
+        ))
+
         print(f"🔍 Seeking: [{desire_type}] {description[:50]}...")
         
         if desire_type == "knowledge":
@@ -440,14 +473,87 @@ Do not force coherence if none exists. Simply observe what the results contain."
         print(f"🔍 No suitable resource found for: {description[:50]}")
     
     async def _search_resources(self, query: str) -> List[Dict]:
-        """Search for resources matching the query."""
+        """Search for resources matching the query from multiple sources."""
         candidates = []
-        
-        # Search GitHub
+
+        # Search aitmpl.com first (curated, higher trust)
+        if self.aitmpl_enabled and self.aitmpl_client:
+            aitmpl_results = await self._search_aitmpl(query)
+            candidates.extend(aitmpl_results)
+
+        # Search GitHub for additional options
         github_results = await self._search_github(query)
         candidates.extend(github_results)
-        
+
+        # Sort by trust score (highest first)
+        candidates.sort(key=lambda x: x.get("trust", 0), reverse=True)
+
         return candidates
+
+    async def _search_aitmpl(self, query: str) -> List[Dict]:
+        """Search aitmpl.com (claude-code-templates) for relevant templates."""
+        if not self.aitmpl_client:
+            return []
+
+        try:
+            # Infer what categories to search based on query
+            categories = self.aitmpl_client.infer_categories(query)
+
+            # Search the registry
+            templates = await self.aitmpl_client.search(
+                query=query,
+                categories=categories
+            )
+
+            results = []
+            for template in templates[:10]:
+                trust = self._compute_aitmpl_trust(template)
+
+                if trust >= self.trust_threshold:
+                    results.append({
+                        "name": template.name,
+                        "full_name": f"aitmpl/{template.category}/{template.name}",
+                        "description": template.description,
+                        "url": template.url,
+                        "trust": trust,
+                        "type": template.category,
+                        "source": "aitmpl",
+                        "template": template,
+                        "config": {}
+                    })
+
+            return results
+
+        except Exception as e:
+            print(f"🔍 aitmpl search error: {e}")
+            return []
+
+    def _compute_aitmpl_trust(self, template: AitmplTemplate) -> float:
+        """Compute trust score for an aitmpl template."""
+        # Start with base trust (curated templates get higher base)
+        score = self.aitmpl_base_trust
+
+        # Recent update bonus (+0.2 if < 30 days)
+        if template.updated_at:
+            try:
+                updated_dt = datetime.fromisoformat(template.updated_at.replace("Z", "+00:00"))
+                days_ago = (datetime.now(updated_dt.tzinfo) - updated_dt).days
+                if days_ago < 30:
+                    score += 0.2
+                elif days_ago < 90:
+                    score += 0.1
+            except:
+                pass
+
+        # Has content bonus (+0.2)
+        if template.content:
+            score += 0.2
+
+        # Category match bonus (+0.1 for common/useful categories)
+        if template.category in ["mcp", "agent", "skill"]:
+            score += 0.1
+
+        return min(1.0, score)
     
     async def _search_github(self, query: str) -> List[Dict]:
         """Search GitHub for relevant tools."""
@@ -563,17 +669,69 @@ Do not force coherence if none exists. Simply observe what the results contain."
         return candidate.get("trust", 0) >= self.trust_threshold
     
     async def _install_resource(self, candidate: Dict) -> bool:
-        """Install a resource."""
+        """Install a resource from any source."""
+        source = candidate.get("source", "github")
         rtype = candidate.get("type", "unknown")
-        
+
+        # Route aitmpl templates to specialized installers
+        if source == "aitmpl":
+            return await self._install_aitmpl_template(candidate)
+
+        # GitHub/other sources use existing installers
         if rtype == "mcp":
             return await self._install_mcp(candidate)
         elif rtype == "npm":
             return await self._install_npm(candidate)
         elif rtype == "python":
             return await self._install_python(candidate)
-        
+
         return False
+
+    async def _install_aitmpl_template(self, candidate: Dict) -> bool:
+        """Install an aitmpl.com template using the appropriate installer."""
+        try:
+            template = candidate.get("template")
+            if not template:
+                print(f"🔍 No template in candidate: {candidate.get('name')}")
+                return False
+
+            category = template.category
+
+            # Get the appropriate installer
+            installer = get_installer(category, self.aitmpl_install_config)
+
+            if not installer:
+                print(f"🔍 No installer for category: {category}")
+                return False
+
+            # Fetch full content if not already present
+            if not template.content and self.aitmpl_client:
+                full_template = await self.aitmpl_client.get_template(
+                    category=category,
+                    name=template.name
+                )
+                if full_template:
+                    template = full_template
+
+            # Install the template
+            success, message = await installer.install(template)
+
+            if success:
+                # Verify installation
+                verified = await installer.verify(template)
+                if verified:
+                    print(f"✅ Installed aitmpl template: {template.name} ({category})")
+                    return True
+                else:
+                    print(f"⚠️ Installed but verification failed: {template.name}")
+                    return True  # Still counts as success
+            else:
+                print(f"❌ Failed to install {template.name}: {message}")
+                return False
+
+        except Exception as e:
+            print(f"🔍 aitmpl install error: {e}")
+            return False
     
     async def _install_mcp(self, candidate: Dict) -> bool:
         """Install an MCP server."""
