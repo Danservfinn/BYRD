@@ -333,6 +333,12 @@ async def reset_byrd():
         # 7. Restart background processes
         byrd_task = asyncio.create_task(byrd_instance.start())
 
+        # 8. Emit system started event
+        await event_bus.emit(Event(
+            type=EventType.SYSTEM_STARTED,
+            data={"message": "BYRD restarted after reset"}
+        ))
+
         return ResetResponse(
             success=True,
             message="BYRD reset complete. Awakened with 'What is happening?'"
