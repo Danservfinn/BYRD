@@ -244,18 +244,18 @@ class BYRD:
         - Whatever emerges from reflection is authentic
         """
         print("\n🌅 Awakening...")
-        print("   Seeding with: \"What should I do?\"")
+        print("   Seeding with: \"Who am I?\"")
 
         # The minimal seed
         await self.memory.record_experience(
-            content="What should I do?",
+            content="Who am I?",
             type="observation"
         )
 
         # Emit awakening event for real-time UI
         await event_bus.emit(Event(
             type=EventType.AWAKENING,
-            data={"seed_question": "What should I do?"}
+            data={"seed_question": "Who am I?"}
         ))
 
         await asyncio.sleep(2)

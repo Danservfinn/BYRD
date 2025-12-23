@@ -21,13 +21,13 @@ local_llm:
   # Model name (provider-specific)
   # Ollama: "gemma2:27b", "llama3:70b", "qwen2.5:32b"
   # OpenRouter: "deepseek/deepseek-v3.2-speciale", "google/gemma-2-27b-it"
-  model: "qwen3:32b"
+  model: "gemma2:27b"
 
   # Ollama endpoint (only used when provider: ollama)
   endpoint: "http://localhost:11434/api/generate"
 
-  # Request timeout in seconds (qwen3:32b needs longer)
-  timeout: 600.0
+  # Request timeout in seconds
+  timeout: 120.0
 
   # OpenRouter settings (only used when provider: openrouter)
   # api_key: Set via OPENROUTER_API_KEY env var (recommended)
