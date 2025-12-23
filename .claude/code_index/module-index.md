@@ -18,6 +18,7 @@ uuid: fa31d340-abcd-def0-1234-567890123456
 | `dreamer.py` | Continuous reflection loop (local LLM) | No |
 | `seeker.py` | Desire fulfillment, research, capability acquisition | No |
 | `actor.py` | Claude API interface for complex reasoning | No |
+| `coder.py` | Claude Code CLI wrapper for autonomous coding | No |
 
 ## Protected Modules
 

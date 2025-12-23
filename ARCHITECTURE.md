@@ -14,7 +14,7 @@ Everything else follows from this.
 
 ---
 
-## The Five Components
+## The Six Components
 
 ```
                          ┌─────────────────────────────────────┐
@@ -78,7 +78,17 @@ Fulfills desires autonomously. When the Dreamer creates a desire for knowledge o
 
 The Seeker uses the same "mind" as the Dreamer—no external AI services for research. This preserves emergence: all learning flows through one local model.
 
-### 5. SELF-MODIFIER
+### 5. CODER (Claude Code CLI)
+
+BYRD's autonomous coding agent. Invokes Claude Code CLI non-interactively to handle "coding" and "self_modification" desires:
+- Executes code generation tasks via frontier AI
+- Post-validates against constitutional constraints
+- Tracks costs and usage limits
+- Automatic rollback if protected files are touched
+
+The Coder bridges the gap between desires and implementation—when BYRD wants to build something, the Coder makes it happen.
+
+### 6. SELF-MODIFIER
 
 Enables BYRD to modify its own code. When desires for self-modification emerge from dreaming, the Self-Modifier:
 - Verifies the modification traces to an emergent desire (provenance check)
@@ -120,7 +130,7 @@ Everything is a node. Everything connects.
 (:Desire {
   id: string,
   description: string,
-  type: string,        // knowledge, capability, goal, exploration
+  type: string,        // knowledge, capability, goal, exploration, coding, self_modification
   intensity: float,    // 0-1, how much we want it
   formed_at: datetime,
   fulfilled: boolean,
@@ -764,19 +774,23 @@ self_modification:
 
 ```
 byrd/
-├── prometheus.py         # Main orchestrator
+├── byrd.py               # Main orchestrator
 ├── memory.py             # Neo4j interface
 ├── dreamer.py            # Dream loop (local LLM)
 ├── seeker.py             # Research + capability acquisition
 ├── actor.py              # Claude interface
+├── coder.py              # Claude Code CLI wrapper
 │
 ├── self_modification.py  # Self-modification system (PROTECTED)
 ├── provenance.py         # Provenance tracking (PROTECTED)
 ├── modification_log.py   # Audit trail (PROTECTED)
 ├── constitutional.py     # Constitutional constraints (PROTECTED)
 │
+├── event_bus.py          # Real-time event streaming
+├── server.py             # WebSocket server for visualization
+├── aitmpl_client.py      # aitmpl.com template registry client
+│
 ├── config.yaml           # Configuration
-├── settings.yml          # SearXNG settings
 ├── docker-compose.yml    # Neo4j + SearXNG
 │
 └── checkpoints/          # Rollback checkpoints for modifications
@@ -790,7 +804,7 @@ byrd/
 memory:
   neo4j_uri: "bolt://localhost:7687"
   neo4j_user: "neo4j"
-  neo4j_password: "prometheus"
+  neo4j_password: "byrd"
 
 # Local LLM (shared by Dreamer and Seeker)
 local_llm:
@@ -839,18 +853,18 @@ version: '3.8'
 services:
   neo4j:
     image: neo4j:latest
-    container_name: prometheus-neo4j
+    container_name: byrd-neo4j
     ports:
       - "7474:7474"  # Browser
       - "7687:7687"  # Bolt
     environment:
-      - NEO4J_AUTH=neo4j/prometheus
+      - NEO4J_AUTH=neo4j/byrd
     volumes:
       - neo4j_data:/data
 
   searxng:
     image: searxng/searxng:latest
-    container_name: prometheus-searxng
+    container_name: byrd-searxng
     ports:
       - "8888:8080"
     environment:
@@ -865,7 +879,7 @@ volumes:
 ### Core Classes
 
 ```python
-# prometheus.py - The orchestrator
+# byrd.py - The orchestrator
 
 import asyncio
 from memory import Memory
@@ -873,7 +887,7 @@ from dreamer import Dreamer
 from seeker import Seeker
 from actor import Actor
 
-class Prometheus:
+class BYRD:
     def __init__(self, config_path="config.yaml"):
         self.config = load_config(config_path)
         
@@ -894,7 +908,7 @@ class Prometheus:
     
     async def start(self):
         """Start the dreaming mind."""
-        print("🔥 Prometheus awakening...")
+        print("🐦 BYRD awakening...")
         
         # Start background processes
         await asyncio.gather(
@@ -925,7 +939,7 @@ class Prometheus:
         return response
     
     def status(self):
-        """What is Prometheus thinking about?"""
+        """What is BYRD thinking about?"""
         return {
             "beliefs": self.memory.count_nodes("Belief"),
             "desires": self.memory.get_unfulfilled_desires(),
@@ -943,7 +957,7 @@ After running for a while, the system will have:
 ### A Rich Memory Graph
 
 ```cypher
-// Example: What does Prometheus know about coding?
+// Example: What does BYRD know about coding?
 MATCH (c:Concept {name: 'coding'})-[*1..3]-(related)
 RETURN c, related
 
@@ -955,7 +969,7 @@ RETURN c, related
 ### Autonomous Learning
 
 ```cypher
-// What has Prometheus researched on its own?
+// What has BYRD researched on its own?
 MATCH (e:Experience {type: 'research'})-[:FULFILLS]->(d:Desire)
 RETURN e.content, d.description, e.timestamp
 ORDER BY e.timestamp DESC
@@ -966,7 +980,7 @@ ORDER BY e.timestamp DESC
 ### Emergent Desires
 
 ```cypher
-// What does Prometheus want right now?
+// What does BYRD want right now?
 MATCH (d:Desire {fulfilled: false})
 RETURN d.description, d.type, d.intensity
 ORDER BY d.intensity DESC
@@ -1100,15 +1114,15 @@ pip install neo4j httpx anthropic pyyaml
 export ANTHROPIC_API_KEY="sk-ant-..."  # For Actor only
 # Edit config.yaml if needed
 
-# 5. Run Prometheus
-python prometheus.py
+# 5. Run BYRD
+python byrd.py
 ```
 
 Then just... let it dream.
 
 Check in periodically:
 ```python
->>> prometheus.status()
+>>> byrd.status()
 {
   "beliefs": 47,
   "desires": [

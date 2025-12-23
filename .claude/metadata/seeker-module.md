@@ -26,14 +26,14 @@ seeker:
     github_token: ""  # Optional
 ```
 
-## Three Fulfillment Paths
+## Four Fulfillment Paths
 
 ### 1. Knowledge Desires (SearXNG + Local LLM)
 ```
 Generate queries → Search → Synthesize → Record → Mark fulfilled
 ```
 
-### 2. Capability Desires (GitHub)
+### 2. Capability Desires (GitHub + aitmpl.com)
 ```
 Search repos → Evaluate trust → Install → Record → Mark fulfilled
 ```
@@ -44,17 +44,31 @@ Search repos → Evaluate trust → Install → Record → Mark fulfilled
 - Trusted owners: +0.3 (anthropics, openai, microsoft, google, etc.)
 - Recent updates: +0.2 (<30 days) or +0.1 (<90 days)
 
-### 3. Self-Modification Desires
+### 3. Coding Desires (Claude Code CLI)
 ```
-Parse desire → Check modifiable → Generate change → Propose → Execute
+Build context → Format prompt → Execute Coder → Validate → Record → Mark fulfilled
+```
+
+**Key Features:**
+- Invokes Claude Code CLI non-interactively (`claude -p`)
+- Post-validates against constitutional constraints
+- Automatic rollback if protected files touched
+- Cost tracking and daily limits
+
+### 4. Self-Modification Desires (Coder + Provenance)
+```
+Parse desire → Check modifiable → Generate via Coder → Validate provenance → Execute
 ```
 
 ## Key Methods
 | Method | Purpose |
 |--------|---------|
 | `_seek_knowledge()` | Research via SearXNG |
-| `_seek_capability()` | Install from GitHub |
-| `_seek_self_modification()` | Handle self-mod desires |
+| `_seek_capability()` | Install from GitHub/aitmpl.com |
+| `_seek_with_coder()` | Handle coding/self-mod desires via Coder |
+| `_build_coder_context()` | Prepare context for Coder prompt |
+| `_format_coder_prompt()` | Format prompt for Claude Code CLI |
+| `_validate_coder_result()` | Post-validate constitutional constraints |
 | `_generate_search_queries()` | LLM query generation |
 | `_synthesize_results()` | LLM synthesis |
 | `_compute_trust()` | GitHub trust scoring |

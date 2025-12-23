@@ -48,6 +48,22 @@ actor:
   model: "claude-sonnet-4-20250514"
   # api_key via ANTHROPIC_API_KEY env var
 
+# Coder Settings (Claude Code CLI)
+coder:
+  enabled: true
+  cli_path: "claude"
+  max_turns: 10
+  timeout_seconds: 300
+  max_cost_per_day_usd: 10.0
+  max_cost_per_invocation_usd: 2.0
+  allowed_tools:
+    - Read
+    - Edit
+    - Bash
+    - Glob
+    - Grep
+  output_format: json
+
 # Self-Modification Settings
 self_modification:
   enabled: true
