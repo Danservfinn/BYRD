@@ -563,41 +563,44 @@
     // ==========================================================================
     const STATUS_MESSAGES = {
       // Connection states
-      connecting: { text: 'Establishing connection', color: 'text-slate-500', dot: 'bg-slate-400/50' },
-      connected: { text: 'Connected · Standing by', color: 'text-slate-500', dot: 'bg-slate-400/50' },
-      disconnected: { text: 'Connection lost', color: 'text-red-400/70', dot: 'bg-red-400/50' },
+      connecting: { color: 'text-slate-500', dot: 'bg-slate-400/50' },
+      connected: { color: 'text-slate-500', dot: 'bg-slate-400/50' },
+      disconnected: { color: 'text-red-400/70', dot: 'bg-red-400/50' },
 
       // System states
-      awakening: { text: 'Awakening consciousness', color: 'text-amber-300/90', dot: 'bg-amber-400', active: true },
-      idle: { text: 'Observing', color: 'text-slate-500', dot: 'bg-slate-400/50' },
-      stopped: { text: 'Paused', color: 'text-slate-600', dot: 'bg-slate-600/50' },
-      reset: { text: 'Resetting memory', color: 'text-orange-400/80', dot: 'bg-orange-400', active: true },
+      awakening: { color: 'text-amber-300/90', dot: 'bg-amber-400', active: true },
+      idle: { color: 'text-slate-500', dot: 'bg-slate-400/50' },
+      stopped: { color: 'text-slate-600', dot: 'bg-slate-600/50' },
+      reset: { color: 'text-orange-400/80', dot: 'bg-orange-400', active: true },
 
       // Dream cycle
-      dreaming: { text: 'Dreaming · Reflecting on experiences', color: 'text-indigo-300/90', dot: 'bg-indigo-400', active: true },
-      recalling: { text: 'Recalling recent memories', color: 'text-indigo-300/80', dot: 'bg-indigo-400', active: true },
-      associating: { text: 'Forming associations', color: 'text-purple-300/80', dot: 'bg-purple-400', active: true },
-      reflecting: { text: 'Deep reflection in progress', color: 'text-violet-300/80', dot: 'bg-violet-400', active: true },
-      forming: { text: 'Forming new beliefs', color: 'text-fuchsia-300/80', dot: 'bg-fuchsia-400', active: true },
+      dreaming: { color: 'text-indigo-300/90', dot: 'bg-indigo-400', active: true },
+      reflecting: { color: 'text-violet-300/80', dot: 'bg-violet-400', active: true },
 
       // Seek cycle
-      seeking: { text: 'Seeking to fulfill desires', color: 'text-cyan-300/90', dot: 'bg-cyan-400', active: true },
-      researching: { text: 'Researching knowledge', color: 'text-cyan-300/80', dot: 'bg-cyan-400', active: true },
+      seeking: { color: 'text-cyan-300/90', dot: 'bg-cyan-400', active: true },
+      researching: { color: 'text-cyan-300/80', dot: 'bg-cyan-400', active: true },
 
       // Creation events
-      belief_formed: { text: 'New belief crystallized', color: 'text-amber-300/90', dot: 'bg-amber-400' },
-      desire_emerged: { text: 'New desire emerged', color: 'text-rose-300/90', dot: 'bg-rose-400' },
-      experience_recorded: { text: 'Recording experience', color: 'text-blue-300/80', dot: 'bg-blue-400' },
-      capability_gained: { text: 'New capability acquired', color: 'text-purple-300/90', dot: 'bg-purple-400' },
+      belief_formed: { color: 'text-amber-300/90', dot: 'bg-amber-400' },
+      desire_emerged: { color: 'text-rose-300/90', dot: 'bg-rose-400' },
+      experience_recorded: { color: 'text-blue-300/80', dot: 'bg-blue-400' },
+      capability_gained: { color: 'text-purple-300/90', dot: 'bg-purple-400' },
 
       // Failure states
-      attempt_failed: { text: 'Processing failed attempt', color: 'text-red-300/70', dot: 'bg-red-400/70' },
-      desire_reflected: { text: 'Reflecting on blocked desire', color: 'text-purple-300/80', dot: 'bg-purple-400' },
+      attempt_failed: { color: 'text-red-300/70', dot: 'bg-red-400/70' },
+      desire_reflected: { color: 'text-purple-300/80', dot: 'bg-purple-400' },
     };
 
-    function updateStatus(statusKey, customText = null) {
+    // Truncate text elegantly for status display
+    function truncateStatus(text, maxLen = 80) {
+      if (!text || text.length <= maxLen) return text;
+      return text.substring(0, maxLen - 3).trim() + '...';
+    }
+
+    function updateStatus(statusKey, customText) {
       const status = STATUS_MESSAGES[statusKey] || STATUS_MESSAGES.idle;
-      const text = customText || status.text;
+      const text = truncateStatus(customText || 'Observing');
 
       // Update text with fade effect
       statusTextEl.style.opacity = '0';
@@ -628,14 +631,14 @@
         ws.onopen = () => {
           connected = true;
           updateConnectionStatus();
-          updateStatus('connected');
+          updateStatus('connected', 'I am connected and observing');
           console.log('WebSocket connected');
         };
 
         ws.onclose = () => {
           connected = false;
           updateConnectionStatus();
-          updateStatus('disconnected');
+          updateStatus('disconnected', 'I have lost connection');
           console.log('WebSocket disconnected, reconnecting in 3s...');
           setTimeout(connectWebSocket, 3000);
         };
@@ -733,45 +736,55 @@
         case 'dream_cycle_start':
           setPhase('recall');
           dreamCount = event.data?.cycle || dreamCount + 1;
-          updateStatus('dreaming', `Dream cycle ${dreamCount} · Reflecting`);
+          updateStatus('dreaming', 'I am reflecting on my recent experiences and memories');
           break;
         case 'dream_cycle_end':
           setPhase('idle');
-          updateStatus('idle');
+          const insights = event.data?.insights || 0;
+          const newBeliefs = event.data?.new_beliefs || 0;
+          const newDesires = event.data?.new_desires || 0;
+          if (insights > 0 || newBeliefs > 0 || newDesires > 0) {
+            updateStatus('idle', `I have formed ${newBeliefs} beliefs and ${newDesires} desires from reflection`);
+          } else {
+            updateStatus('idle', 'I am contemplating what I have learned');
+          }
           break;
         case 'belief_created':
           beliefCount++;
           const beliefConfidence = event.data?.confidence || 0.7;
-          createNode('belief', event.data?.content, event.data?.id, beliefConfidence);
-          showEmergence('belief', event.data?.content, beliefConfidence);
-          updateStatus('belief_formed');
-          // Return to idle after a moment
-          setTimeout(() => { if (currentStatusType === 'belief_formed') updateStatus('idle'); }, 3000);
+          const beliefContent = event.data?.content || 'a new understanding';
+          createNode('belief', beliefContent, event.data?.id, beliefConfidence);
+          showEmergence('belief', beliefContent, beliefConfidence);
+          updateStatus('belief_formed', `I believe: ${beliefContent}`);
+          setTimeout(() => { if (currentStatusType === 'belief_formed') updateStatus('idle', 'I am contemplating'); }, 4000);
           break;
         case 'desire_created':
           const desireIntensity = event.data?.intensity || 0.5;
+          const desireDesc = event.data?.description || 'something new';
           desires.unshift({
-            text: event.data?.description,
+            text: desireDesc,
             type: event.data?.type,
             intensity: desireIntensity
           });
           if (desires.length > 5) desires.pop();
           updateDesireGarden();
-          createNode('desire', event.data?.description, event.data?.id, desireIntensity);
-          showEmergence('desire', event.data?.description, desireIntensity);
-          updateStatus('desire_emerged');
-          setTimeout(() => { if (currentStatusType === 'desire_emerged') updateStatus('idle'); }, 3000);
+          createNode('desire', desireDesc, event.data?.id, desireIntensity);
+          showEmergence('desire', desireDesc, desireIntensity);
+          updateStatus('desire_emerged', `I want to ${desireDesc.toLowerCase()}`);
+          setTimeout(() => { if (currentStatusType === 'desire_emerged') updateStatus('idle', 'I am contemplating'); }, 4000);
           break;
         case 'experience_created':
-          createNode('experience', event.data?.content, event.data?.id, 0.5);
-          updateStatus('experience_recorded');
-          setTimeout(() => { if (currentStatusType === 'experience_recorded') updateStatus('idle'); }, 2000);
+          const expContent = event.data?.content || 'something';
+          createNode('experience', expContent, event.data?.id, 0.5);
+          updateStatus('experience_recorded', `I am experiencing: ${expContent}`);
+          setTimeout(() => { if (currentStatusType === 'experience_recorded') updateStatus('idle', 'I am contemplating'); }, 3000);
           break;
         case 'capability_added':
-          createNode('capability', event.data?.name, event.data?.id, 0.8);
+          const capName = event.data?.name || 'a new ability';
+          createNode('capability', capName, event.data?.id, 0.8);
           capCount++;
-          updateStatus('capability_gained');
-          setTimeout(() => { if (currentStatusType === 'capability_gained') updateStatus('idle'); }, 3000);
+          updateStatus('capability_gained', `I have gained the capability: ${capName}`);
+          setTimeout(() => { if (currentStatusType === 'capability_gained') updateStatus('idle', 'I am contemplating'); }, 4000);
           break;
         case 'awakening':
           setPhase('idle');
@@ -780,18 +793,19 @@
           desires = [];
           updateDesireGarden();
           clearVisualization();
-          updateStatus('awakening');
-          setTimeout(() => { if (currentStatusType === 'awakening') updateStatus('idle'); }, 4000);
+          const question = event.data?.first_question || event.data?.message || 'What is happening?';
+          updateStatus('awakening', question);
+          setTimeout(() => { if (currentStatusType === 'awakening') updateStatus('idle', 'I am contemplating my existence'); }, 5000);
           break;
         case 'system_started':
           running = true;
           updateToggleButton();
-          updateStatus('idle');
+          updateStatus('idle', 'I am now active and observing');
           break;
         case 'system_stopped':
           running = false;
           updateToggleButton();
-          updateStatus('stopped');
+          updateStatus('stopped', 'I am paused');
           break;
         case 'system_reset':
           // Reset all counters
@@ -803,35 +817,45 @@
           events = [];
           renderHistory();
           clearVisualization();
+          simulation.start(); // Restart molecular physics
           desires = [];
           updateDesireGarden();
-          updateStatus('reset');
+          updateStatus('reset', 'I am clearing my memory and preparing to awaken');
           break;
         case 'seek_cycle_start':
           seekCount++;
-          updateStatus('seeking');
+          // Get the current top desire to show what we're seeking
+          const topDesire = desires[0]?.text || 'fulfill my desires';
+          updateStatus('seeking', `I want to ${topDesire.toLowerCase()}`);
           break;
         case 'seek_cycle_end':
           if (currentStatusType === 'seeking' || currentStatusType === 'researching') {
-            updateStatus('idle');
+            updateStatus('idle', 'I have completed my search');
           }
           break;
         case 'research_start':
-          updateStatus('researching');
+          const query = event.data?.query || 'knowledge';
+          updateStatus('researching', `I am researching: ${query}`);
           break;
         case 'research_complete':
-          updateStatus('idle');
+          const results = event.data?.results_count || 0;
+          updateStatus('idle', results > 0 ? `I found ${results} pieces of information` : 'I completed my research');
           break;
         case 'desire_attempt_failed':
-          updateStatus('attempt_failed');
-          setTimeout(() => { if (currentStatusType === 'attempt_failed') updateStatus('idle'); }, 2000);
+          const failedDesire = event.data?.description || 'this desire';
+          const reason = event.data?.reason || 'I could not fulfill it';
+          updateStatus('attempt_failed', `I could not fulfill: ${failedDesire}`);
+          setTimeout(() => { if (currentStatusType === 'attempt_failed') updateStatus('idle', 'I am contemplating'); }, 3000);
           break;
         case 'desire_reflected':
-          updateStatus('desire_reflected');
-          setTimeout(() => { if (currentStatusType === 'desire_reflected') updateStatus('idle'); }, 3000);
+          const reflectedDesire = event.data?.description || 'a blocked desire';
+          const action = event.data?.action || 'reflected';
+          updateStatus('desire_reflected', `I am reconsidering: ${reflectedDesire}`);
+          setTimeout(() => { if (currentStatusType === 'desire_reflected') updateStatus('idle', 'I am contemplating'); }, 4000);
           break;
         case 'desire_stuck':
-          updateStatus('attempt_failed', 'Desire blocked · Awaiting reflection');
+          const stuckDesire = event.data?.description || 'a desire';
+          updateStatus('attempt_failed', `I cannot currently fulfill: ${stuckDesire}`);
           break;
       }
 
@@ -1192,20 +1216,25 @@
         this.renderSprings();
       }
 
-      // Update SVG connection lines
+      // Update SVG connection lines based on spring endpoints
       renderSprings() {
         const lines = connectionsContainer.querySelectorAll('line');
-        let lineIndex = 0;
 
-        for (const spring of this.springs) {
-          if (lineIndex < lines.length) {
-            const line = lines[lineIndex];
-            line.setAttribute('x1', spring.source.x);
-            line.setAttribute('y1', spring.source.y);
-            line.setAttribute('x2', spring.target.x);
-            line.setAttribute('y2', spring.target.y);
+        for (const line of lines) {
+          const sourceId = line.dataset.sourceId;
+          const targetId = line.dataset.targetId;
+
+          if (sourceId && targetId) {
+            const source = this.nodes.find(n => n.id === sourceId);
+            const target = this.nodes.find(n => n.id === targetId);
+
+            if (source && target) {
+              line.setAttribute('x1', source.x);
+              line.setAttribute('y1', source.y);
+              line.setAttribute('x2', target.x);
+              line.setAttribute('y2', target.y);
+            }
           }
-          lineIndex++;
         }
       }
 
@@ -1573,6 +1602,7 @@
       visualNodes = [];
       nodesContainer.innerHTML = '';
       connectionsContainer.innerHTML = '';
+      simulation.reset(); // Clear molecular simulation state
     }
 
     function setPhase(phase) {
@@ -1887,6 +1917,8 @@
       startConnectionFlow();
       // Start node aging check every 30 seconds
       setInterval(updateNodeAging, 30000);
+      // Start molecular physics simulation
+      simulation.start();
     }
 
     init();
