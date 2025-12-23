@@ -294,18 +294,18 @@ Output JSON with a single "output" field containing whatever you want to record.
     def _summarize_reflection(self, output: Any) -> str:
         """Create a brief summary of the reflection for the experience stream."""
         if not isinstance(output, dict):
-            return str(output)[:200] if output else ""
+            return str(output) if output else ""
 
         parts = []
-        for key, value in list(output.items())[:3]:
+        for key, value in list(output.items())[:5]:
             if isinstance(value, str):
-                parts.append(f"{key}: {value[:50]}")
+                parts.append(f"{key}: {value}")
             elif isinstance(value, list) and value:
                 parts.append(f"{key}: [{len(value)} items]")
             elif isinstance(value, dict):
                 parts.append(f"{key}: {{...}}")
 
-        return "; ".join(parts)[:200]
+        return "; ".join(parts)
 
     def get_observed_vocabulary(self) -> Dict[str, int]:
         """Return the vocabulary BYRD has developed in its reflections."""

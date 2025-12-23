@@ -1037,11 +1037,11 @@
       const nodeId = id || `node_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       const colors = NODE_COLORS[type] || NODE_COLORS.experience;
 
-      // Calculate position - golden ratio spiral, well spaced
+      // Calculate position - tighter golden ratio spiral for dense neural cluster
       const goldenAngle = Math.PI * (3 - Math.sqrt(5)); // ~137.5 degrees
       const angle = nodes3D.length * goldenAngle;
-      const radius = 25 + Math.sqrt(nodes3D.length) * 8;
-      const height = (Math.sin(nodes3D.length * 0.5) * 15) + (Math.random() - 0.5) * 10;
+      const radius = 8 + Math.sqrt(nodes3D.length) * 4; // Tighter cluster
+      const height = (Math.sin(nodes3D.length * 0.5) * 8) + (Math.random() - 0.5) * 5;
 
       const x = Math.cos(angle) * radius;
       const y = height;
@@ -1096,17 +1096,39 @@
 
       // Create connections to nearby nodes with cascade effect
       if (nodes3D.length > 1) {
-        const connectCount = Math.min(nodes3D.length - 1, 1 + Math.floor(Math.random() * 2));
-        const candidates = nodes3D.slice(0, -1).slice(-5);
+        // More connections for a denser neural network
+        const baseConnections = 2 + Math.floor(Math.random() * 2); // 2-3 connections
+        const connectCount = Math.min(nodes3D.length - 1, baseConnections);
+
+        // Consider more candidates - recent nodes and same-type nodes
+        const recentCandidates = nodes3D.slice(0, -1).slice(-10);
+        const sameTypeCandidates = nodes3D.slice(0, -1).filter(n => n.userData.type === type).slice(-5);
+
+        // Combine and deduplicate
+        const allCandidates = [...new Set([...recentCandidates, ...sameTypeCandidates])];
         const connectedTargets = [];
 
-        for (let i = 0; i < connectCount && i < candidates.length; i++) {
-          const targetIdx = Math.floor(Math.random() * candidates.length);
-          const target = candidates[targetIdx];
+        for (let i = 0; i < connectCount && allCandidates.length > 0; i++) {
+          const targetIdx = Math.floor(Math.random() * allCandidates.length);
+          const target = allCandidates[targetIdx];
           if (target) {
             createConnection3D(mesh, target, type);
             connectedTargets.push(target);
-            candidates.splice(targetIdx, 1);
+            allCandidates.splice(targetIdx, 1);
+          }
+        }
+
+        // Also connect to core/central area occasionally for hub structure
+        if (nodes3D.length > 5 && Math.random() < 0.3) {
+          const centralNodes = nodes3D.slice(0, -1).filter(n =>
+            Math.abs(n.position.x) < 10 && Math.abs(n.position.z) < 10
+          );
+          if (centralNodes.length > 0) {
+            const hubTarget = centralNodes[Math.floor(Math.random() * centralNodes.length)];
+            if (!connectedTargets.includes(hubTarget)) {
+              createConnection3D(mesh, hubTarget, type);
+              connectedTargets.push(hubTarget);
+            }
           }
         }
 
