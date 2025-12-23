@@ -74,6 +74,9 @@ async def lifespan(app: FastAPI):
     # Initialize BYRD (but don't start yet - let API control that)
     byrd_instance = BYRD()
 
+    # Connect to Neo4j immediately to avoid "Driver closed" on first request
+    await byrd_instance.memory.connect()
+
     yield
 
     # Cleanup
