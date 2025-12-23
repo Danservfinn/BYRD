@@ -54,6 +54,17 @@ class ConstitutionalConstraints:
         "memory.py",
         "byrd.py",
         "config.yaml",
+        # aitmpl.com integration
+        "aitmpl_client.py",
+        # Template installers
+        "installers/__init__.py",
+        "installers/base.py",
+        "installers/mcp_installer.py",
+        "installers/agent_installer.py",
+        "installers/command_installer.py",
+        "installers/skill_installer.py",
+        "installers/hook_installer.py",
+        "installers/settings_installer.py",
     }
 
     # Components that can be modified
@@ -64,6 +75,8 @@ class ConstitutionalConstraints:
         "memory",
         "byrd",
         "config",
+        "aitmpl_client",
+        "installers",
     }
 
     # Patterns that indicate dangerous modifications
@@ -203,6 +216,8 @@ MODIFIABLE (With proper provenance):
 - memory.py: The memory storage and retrieval system
 - byrd.py: The main orchestration logic
 - config.yaml: Configuration parameters
+- aitmpl_client.py: Template registry client for aitmpl.com
+- installers/*.py: Specialized template installers
 
 All modifications require:
 1. A valid desire ID that exists in memory
