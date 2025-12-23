@@ -1064,19 +1064,28 @@
       // Store node
       nodes3D.push(mesh);
 
-      // Create connections to nearby nodes
+      // Create connections to nearby nodes with cascade effect
       if (nodes3D.length > 1) {
         const connectCount = Math.min(nodes3D.length - 1, 1 + Math.floor(Math.random() * 2));
         const candidates = nodes3D.slice(0, -1).slice(-5);
+        const connectedTargets = [];
 
         for (let i = 0; i < connectCount && i < candidates.length; i++) {
           const targetIdx = Math.floor(Math.random() * candidates.length);
           const target = candidates[targetIdx];
           if (target) {
             createConnection3D(mesh, target, type);
+            connectedTargets.push(target);
             candidates.splice(targetIdx, 1);
           }
         }
+
+        // Trigger cascade from connected nodes (delayed, spreading thought effect)
+        connectedTargets.forEach((target, idx) => {
+          setTimeout(() => {
+            triggerCascade(target.userData.id, 0.4);
+          }, 300 + idx * 200);
+        });
       }
 
       // Pulse the core
@@ -1094,41 +1103,323 @@
       return mesh;
     }
 
+    // ==========================================================================
+    // SYNAPTIC CONNECTION SYSTEM
+    // ==========================================================================
+    const SYNAPSE_CONFIG = {
+      tubeRadius: 0.08,           // Base thickness of axon
+      tubeSegments: 32,           // Smoothness of tube
+      tubeRadialSegments: 6,      // Cross-section detail
+      terminalSize: 0.25,         // Size of synaptic boutons
+      curveVariation: 8,          // How much curves deviate from straight
+      pulseSpeed: 0.6,            // Speed of neural pulses
+      pulseSize: 0.2,             // Size of pulse particles
+      maxPulses: 80,              // Maximum active pulses
+      firingDuration: 500,        // ms for firing animation
+      firingBrightness: 2.0       // Brightness multiplier when firing
+    };
+
+    // Store synaptic pulses separately from basic flow particles
+    const synapticPulses = [];
+
     function createConnection3D(nodeA, nodeB, type) {
-      // Create curved line between nodes
+      // Create organic curved path between nodes
       const start = nodeA.position.clone();
       const end = nodeB.position.clone();
+
+      // Calculate midpoint with organic variation
       const mid = start.clone().add(end).multiplyScalar(0.5);
-      mid.y += 2; // Slight upward curve
+      const distance = start.distanceTo(end);
 
+      // Add perpendicular offset for organic curve (not just up)
+      const direction = end.clone().sub(start).normalize();
+      const perpendicular = new THREE.Vector3(-direction.z, 0, direction.x).normalize();
+      const curveOffset = (Math.random() - 0.5) * SYNAPSE_CONFIG.curveVariation;
+      const heightOffset = (Math.random() - 0.3) * 4; // Slight upward bias
+
+      mid.add(perpendicular.multiplyScalar(curveOffset));
+      mid.y += heightOffset;
+
+      // Create bezier curve
       const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
-      const points = curve.getPoints(30);
-      const geometry = new THREE.BufferGeometry().setFromPoints(points);
 
-      // Subtle gray connections for clean look
-      const material = new THREE.LineBasicMaterial({
-        color: 0xc1c7d0,
+      // Create tube geometry (organic axon appearance)
+      const tubeGeometry = new THREE.TubeGeometry(
+        curve,
+        SYNAPSE_CONFIG.tubeSegments,
+        SYNAPSE_CONFIG.tubeRadius,
+        SYNAPSE_CONFIG.tubeRadialSegments,
+        false
+      );
+
+      // Get colors based on type
+      const colors = NODE_COLORS[type] || NODE_COLORS.experience;
+
+      // Semi-transparent material for depth perception
+      const tubeMaterial = new THREE.MeshBasicMaterial({
+        color: 0x94a3b8,  // Slate gray base
         transparent: true,
-        opacity: 0.6
+        opacity: 0.4
       });
 
-      const line = new THREE.Line(geometry, material);
-      line.userData = {
+      const tube = new THREE.Mesh(tubeGeometry, tubeMaterial);
+      tube.userData = {
         nodeA: nodeA.userData.id,
         nodeB: nodeB.userData.id,
         type,
-        curve: curve
+        curve: curve,
+        baseOpacity: 0.4,
+        strength: 0.5 + Math.random() * 0.5,  // Connection strength
+        lastFired: 0,
+        terminals: []
       };
 
-      scene.add(line);
-      connections3D.push(line);
-      invalidateConnectionMap(); // Phase 4: Invalidate cache
+      scene.add(tube);
+      connections3D.push(tube);
+
+      // Create synaptic terminals (boutons) at each end
+      createSynapticTerminals(tube, nodeA, nodeB, type);
+
+      invalidateConnectionMap();
 
       // Limit connections
       if (connections3D.length > 100) {
         const oldConn = connections3D.shift();
-        fadeOutAndRemove(oldConn);
+        removeSynapticConnection(oldConn);
       }
+
+      // Fire the new connection to show it's alive
+      setTimeout(() => fireSynapse(tube), 100);
+
+      return tube;
+    }
+
+    function createSynapticTerminals(connection, nodeA, nodeB, type) {
+      const colors = NODE_COLORS[type] || NODE_COLORS.experience;
+
+      // Terminal at node A (presynaptic)
+      const terminalAGeometry = new THREE.SphereGeometry(SYNAPSE_CONFIG.terminalSize, 12, 12);
+      const terminalAMaterial = new THREE.MeshBasicMaterial({
+        color: colors.color,
+        transparent: true,
+        opacity: 0.7
+      });
+      const terminalA = new THREE.Mesh(terminalAGeometry, terminalAMaterial);
+
+      // Position slightly offset from node toward connection
+      const dirToB = nodeB.position.clone().sub(nodeA.position).normalize();
+      const nodeASize = nodeA.userData.importance ? 1.5 + nodeA.userData.importance * 1.0 : 2.0;
+      terminalA.position.copy(nodeA.position).add(dirToB.multiplyScalar(nodeASize * 1.2));
+
+      scene.add(terminalA);
+      connection.userData.terminals.push(terminalA);
+
+      // Terminal at node B (postsynaptic)
+      const terminalBGeometry = new THREE.SphereGeometry(SYNAPSE_CONFIG.terminalSize * 0.8, 12, 12);
+      const terminalBMaterial = new THREE.MeshBasicMaterial({
+        color: colors.color,
+        transparent: true,
+        opacity: 0.6
+      });
+      const terminalB = new THREE.Mesh(terminalBGeometry, terminalBMaterial);
+
+      // Position at node B side
+      const dirToA = nodeA.position.clone().sub(nodeB.position).normalize();
+      const nodeBSize = nodeB.userData.importance ? 1.5 + nodeB.userData.importance * 1.0 : 2.0;
+      terminalB.position.copy(nodeB.position).add(dirToA.multiplyScalar(nodeBSize * 1.2));
+
+      scene.add(terminalB);
+      connection.userData.terminals.push(terminalB);
+    }
+
+    function fireSynapse(connection, intensity = 1.0) {
+      if (!connection || !connection.userData) return;
+
+      const now = performance.now();
+      connection.userData.lastFired = now;
+
+      const colors = NODE_COLORS[connection.userData.type] || NODE_COLORS.experience;
+
+      // Brighten the connection tube
+      const originalColor = connection.material.color.getHex();
+      const originalOpacity = connection.material.opacity;
+
+      connection.material.color.setHex(colors.emissive);
+      connection.material.opacity = Math.min(0.9, originalOpacity * SYNAPSE_CONFIG.firingBrightness);
+
+      // Brighten terminals
+      connection.userData.terminals.forEach(terminal => {
+        if (terminal.material) {
+          terminal.material.color.setHex(colors.emissive);
+          terminal.scale.setScalar(1.5);
+        }
+      });
+
+      // Create burst of pulses
+      const pulseCount = 2 + Math.floor(intensity * 3);
+      for (let i = 0; i < pulseCount; i++) {
+        setTimeout(() => {
+          createSynapticPulse(connection, i % 2 === 0 ? 1 : -1); // Alternate directions
+        }, i * 80);
+      }
+
+      // Fade back to normal
+      setTimeout(() => {
+        connection.material.color.setHex(0x94a3b8);
+        connection.material.opacity = originalOpacity;
+
+        connection.userData.terminals.forEach(terminal => {
+          if (terminal.material) {
+            terminal.material.color.setHex(colors.color);
+            terminal.scale.setScalar(1.0);
+          }
+        });
+      }, SYNAPSE_CONFIG.firingDuration);
+    }
+
+    function createSynapticPulse(connection, direction = 1) {
+      if (!connection.userData.curve) return null;
+      if (synapticPulses.length >= SYNAPSE_CONFIG.maxPulses) return null;
+
+      const colors = NODE_COLORS[connection.userData.type] || NODE_COLORS.experience;
+
+      // Create glowing pulse particle
+      const geometry = new THREE.SphereGeometry(SYNAPSE_CONFIG.pulseSize, 10, 10);
+      const material = new THREE.MeshBasicMaterial({
+        color: colors.emissive,
+        transparent: true,
+        opacity: 0.95
+      });
+
+      const pulse = new THREE.Mesh(geometry, material);
+      pulse.userData = {
+        connection: connection,
+        progress: direction > 0 ? 0 : 1,
+        speed: SYNAPSE_CONFIG.pulseSpeed + Math.random() * 0.2,
+        direction: direction,
+        age: 0,
+        maxAge: 2000 // ms before pulse dies
+      };
+
+      // Position at start of curve
+      const point = connection.userData.curve.getPoint(pulse.userData.progress);
+      pulse.position.copy(point);
+
+      scene.add(pulse);
+      synapticPulses.push(pulse);
+
+      return pulse;
+    }
+
+    function updateSynapticPulses(delta) {
+      const now = performance.now();
+
+      for (let i = synapticPulses.length - 1; i >= 0; i--) {
+        const pulse = synapticPulses[i];
+        const data = pulse.userData;
+
+        // Check if connection still exists
+        if (!data.connection || !data.connection.userData || !data.connection.userData.curve) {
+          scene.remove(pulse);
+          pulse.geometry.dispose();
+          pulse.material.dispose();
+          synapticPulses.splice(i, 1);
+          continue;
+        }
+
+        // Age the pulse
+        data.age += delta * 1000;
+
+        // Move along curve
+        data.progress += delta * data.speed * data.direction;
+
+        // Check if pulse reached end
+        if (data.progress > 1 || data.progress < 0) {
+          // Flash the terminal at destination
+          const terminalIndex = data.direction > 0 ? 1 : 0;
+          const terminal = data.connection.userData.terminals[terminalIndex];
+          if (terminal) {
+            terminal.scale.setScalar(1.8);
+            setTimeout(() => {
+              if (terminal.scale) terminal.scale.setScalar(1.0);
+            }, 150);
+          }
+
+          // Remove pulse
+          scene.remove(pulse);
+          pulse.geometry.dispose();
+          pulse.material.dispose();
+          synapticPulses.splice(i, 1);
+          continue;
+        }
+
+        // Check max age
+        if (data.age > data.maxAge) {
+          scene.remove(pulse);
+          pulse.geometry.dispose();
+          pulse.material.dispose();
+          synapticPulses.splice(i, 1);
+          continue;
+        }
+
+        // Position on curve
+        const point = data.connection.userData.curve.getPoint(data.progress);
+        pulse.position.copy(point);
+
+        // Pulsing scale effect (larger in middle of journey)
+        const journeyProgress = Math.sin(data.progress * Math.PI);
+        const pulseScale = 0.7 + journeyProgress * 0.6;
+        pulse.scale.setScalar(pulseScale);
+
+        // Pulsing opacity
+        const opacityPulse = 0.7 + Math.sin(now * 0.01 + i * 2) * 0.3;
+        pulse.material.opacity = opacityPulse;
+      }
+    }
+
+    function removeSynapticConnection(connection) {
+      // Remove terminals
+      if (connection.userData && connection.userData.terminals) {
+        connection.userData.terminals.forEach(terminal => {
+          scene.remove(terminal);
+          if (terminal.geometry) terminal.geometry.dispose();
+          if (terminal.material) terminal.material.dispose();
+        });
+      }
+
+      // Remove the tube itself with fade
+      fadeOutAndRemove(connection);
+    }
+
+    // Ambient neural activity - random synaptic firing
+    let lastAmbientFire = 0;
+    const AMBIENT_FIRE_INTERVAL = 800; // ms between random fires
+
+    function updateAmbientNeuralActivity() {
+      const now = performance.now();
+
+      if (connections3D.length > 0 && now - lastAmbientFire > AMBIENT_FIRE_INTERVAL) {
+        lastAmbientFire = now;
+
+        // Random chance to fire a synapse
+        if (Math.random() < 0.4) {
+          const randomConn = connections3D[Math.floor(Math.random() * connections3D.length)];
+          fireSynapse(randomConn, 0.3 + Math.random() * 0.4);
+        }
+      }
+    }
+
+    // Cascade firing - when a node receives many pulses, it fires its connections
+    function triggerCascade(nodeId, intensity = 0.5) {
+      const relatedConnections = connections3D.filter(
+        conn => conn.userData.nodeA === nodeId || conn.userData.nodeB === nodeId
+      );
+
+      relatedConnections.forEach((conn, index) => {
+        setTimeout(() => {
+          fireSynapse(conn, intensity * 0.7);
+        }, index * 100);
+      });
     }
 
     function pulseCore(type, intensity) {
@@ -1332,7 +1623,7 @@
         }
       }
 
-      // Update connection curves
+      // Update synaptic connections (tubes and terminals)
       for (const conn of connections3D) {
         const nodeA = nodes3D.find(n => n.userData.id === conn.userData.nodeA);
         const nodeB = nodes3D.find(n => n.userData.id === conn.userData.nodeB);
@@ -1342,16 +1633,44 @@
           const end = nodeB.position.clone();
           const mid = start.clone().add(end).multiplyScalar(0.5);
 
-          // Add slight curve based on connection age
-          const curveOffset = Math.sin(time + conn.userData.nodeA.length) * 2;
-          mid.y += curveOffset;
+          // Add organic curve variation
+          const direction = end.clone().sub(start).normalize();
+          const perpendicular = new THREE.Vector3(-direction.z, 0, direction.x).normalize();
+          const curveOffset = Math.sin(time * 0.5 + conn.userData.nodeA.length * 0.1) * 3;
+          mid.add(perpendicular.multiplyScalar(curveOffset));
+          mid.y += 2;
 
           const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
-          const points = curve.getPoints(20);
-          conn.geometry.setFromPoints(points);
 
-          // Store curve for flow particles
+          // Recreate tube geometry for updated curve
+          const newGeometry = new THREE.TubeGeometry(
+            curve,
+            SYNAPSE_CONFIG.tubeSegments,
+            SYNAPSE_CONFIG.tubeRadius,
+            SYNAPSE_CONFIG.tubeRadialSegments,
+            false
+          );
+
+          // Dispose old geometry and update
+          conn.geometry.dispose();
+          conn.geometry = newGeometry;
+
+          // Store curve for pulses
           conn.userData.curve = curve;
+
+          // Update terminal positions
+          if (conn.userData.terminals && conn.userData.terminals.length >= 2) {
+            const nodeASize = nodeA.userData.importance ? 1.5 + nodeA.userData.importance * 1.0 : 2.0;
+            const nodeBSize = nodeB.userData.importance ? 1.5 + nodeB.userData.importance * 1.0 : 2.0;
+
+            // Terminal A (at nodeA)
+            const dirToB = end.clone().sub(start).normalize();
+            conn.userData.terminals[0].position.copy(start).add(dirToB.clone().multiplyScalar(nodeASize * 1.2));
+
+            // Terminal B (at nodeB)
+            const dirToA = start.clone().sub(end).normalize();
+            conn.userData.terminals[1].position.copy(end).add(dirToA.clone().multiplyScalar(nodeBSize * 1.2));
+          }
         }
       }
     }
@@ -2128,8 +2447,11 @@
       // Update physics (includes spring forces, clustering)
       updateNodePhysics(delta);
 
-      // Phase 2: Update flow particles along connections
-      updateFlowParticles(delta);
+      // Synaptic system: Update neural pulses traveling along connections
+      updateSynapticPulses(delta);
+
+      // Ambient neural activity (random background firing)
+      updateAmbientNeuralActivity();
 
       // Phase 2: Update node motion trails
       updateNodeTrails(delta);
