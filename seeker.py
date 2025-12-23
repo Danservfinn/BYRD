@@ -79,11 +79,11 @@ class Seeker:
         self.aitmpl_enabled = aitmpl_config.get("enabled", True)
         self.aitmpl_client = None
         if self.aitmpl_enabled:
-            self.aitmpl_client = AitmplClient(
-                cache_dir=aitmpl_config.get("cache_dir", "~/.cache/byrd/aitmpl"),
-                cache_ttl_hours=aitmpl_config.get("cache_ttl_hours", 24),
-                github_token=self.github_token
-            )
+            self.aitmpl_client = AitmplClient({
+                "cache_dir": aitmpl_config.get("cache_dir", "~/.cache/byrd/aitmpl"),
+                "cache_ttl_hours": aitmpl_config.get("cache_ttl_hours", 24),
+                "github_token": self.github_token
+            })
         self.aitmpl_base_trust = aitmpl_config.get("base_trust", 0.5)
         self.aitmpl_install_config = aitmpl_config.get("install_paths", {})
 
