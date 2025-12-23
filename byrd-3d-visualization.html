@@ -229,10 +229,13 @@
   <!-- Three.js Canvas Container -->
   <div id="canvas-container"></div>
 
-  <!-- UI Overlay: Top Left - Logo -->
+  <!-- UI Overlay: Top Left - Logo + Mode Indicator -->
   <div class="ui-overlay top-4 left-4">
     <div class="text-lg font-light tracking-widest text-slate-600">BYRD</div>
-    <div class="text-[10px] font-mono text-slate-700 tracking-wider mt-1">3D MIND SPACE</div>
+    <div class="flex items-center gap-2 mt-1">
+      <div class="text-[10px] font-mono text-slate-700 tracking-wider">3D MIND SPACE</div>
+      <div id="mode-indicator" class="px-2 py-1 rounded text-xs font-mono bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">ORBIT</div>
+    </div>
   </div>
 
   <!-- UI Overlay: Top Center - Phase Indicator -->
@@ -369,9 +372,31 @@
     <span id="camera-indicator-text">Focusing on node...</span>
   </div>
 
-  <!-- Phase 4: Updated Controls Hint with Keyboard shortcuts -->
+  <!-- Hybrid Navigation: Controls Help Panel -->
   <div class="ui-overlay bottom-4 left-4 hidden sm:block">
     <div class="controls-hint text-slate-600 space-y-1">
+      <div class="text-[9px] text-slate-500 uppercase tracking-widest mb-2">Navigation</div>
+      <div class="flex items-center gap-2">
+        <span class="keyboard-hint">WASD</span>
+        <span>Move camera</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="keyboard-hint">Q/E</span>
+        <span>Up / Down</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="keyboard-hint">Shift</span>
+        <span>Speed boost</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="keyboard-hint">F</span>
+        <span>Fly mode</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="keyboard-hint">1-5</span>
+        <span>Camera presets</span>
+      </div>
+      <div class="text-[9px] text-slate-500 uppercase tracking-widest mt-3 mb-2">Actions</div>
       <div class="flex items-center gap-2">
         <span class="keyboard-hint">↑↓</span>
         <span>Cycle nodes</span>
@@ -381,13 +406,12 @@
         <span>Reset view</span>
       </div>
       <div class="flex items-center gap-2">
-        <span class="keyboard-hint">SPACE</span>
-        <span>Pause/Resume</span>
-      </div>
-      <div class="flex items-center gap-2">
         <span class="keyboard-hint">R</span>
-        <span>Toggle rotation</span>
+        <span>Auto-rotate</span>
       </div>
+      <div class="text-[9px] text-slate-500 uppercase tracking-widest mt-3 mb-2">Mouse</div>
+      <div class="text-[9px]">Drag: Orbit · Scroll: Zoom</div>
+      <div class="text-[9px]">Right-drag: Pan · Dbl-click: Fly to</div>
     </div>
   </div>
 
@@ -700,6 +724,30 @@
     let isTransitioning = false;
 
     // ==========================================================================
+    // NAVIGATION STATE (Hybrid Controls)
+    // ==========================================================================
+    const NAV = {
+      // Key states
+      keys: {
+        w: false, a: false, s: false, d: false,
+        q: false, e: false, shift: false
+      },
+      // Mode
+      flyMode: false,
+      // Movement settings
+      baseSpeed: 40,
+      boostMultiplier: 2.5,
+      // Camera presets
+      presets: {
+        1: { pos: [0, 30, 80], target: [0, 0, 0], name: 'Default' },
+        2: { pos: [0, 120, 0], target: [0, 0, 0], name: 'Top Down' },
+        3: { pos: [120, 30, 0], target: [0, 0, 0], name: 'Side View' },
+        4: { pos: [0, 10, 60], target: [0, 0, 0], name: 'Front' },
+        5: { pos: [60, 60, 60], target: [0, 0, 0], name: 'Isometric' }
+      }
+    };
+
+    // ==========================================================================
     // THREE.JS SETUP
     // ==========================================================================
     function initThree() {
@@ -772,16 +820,19 @@
       vignettePass.uniforms.offset.value = 1.2;
       composer.addPass(vignettePass);
 
-      // Controls
+      // Controls (Hybrid Navigation)
       controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.05;
-      controls.minDistance = 30;
-      controls.maxDistance = 200;
+      controls.minDistance = 5;          // Get very close to nodes
+      controls.maxDistance = 500;        // See entire mind space
       controls.autoRotate = true;
       controls.autoRotateSpeed = 0.3;
-      controls.maxPolarAngle = Math.PI * 0.85;
-      controls.minPolarAngle = Math.PI * 0.15;
+      controls.maxPolarAngle = Math.PI * 0.95;  // Almost full vertical range
+      controls.minPolarAngle = Math.PI * 0.05;
+      controls.enablePan = true;         // Enable right-click panning
+      controls.panSpeed = 1.0;
+      controls.zoomSpeed = 1.2;
 
       // Ambient light
       const ambientLight = new THREE.AmbientLight(0x404060, 0.5);
@@ -800,8 +851,10 @@
       // Event listeners
       window.addEventListener('resize', onWindowResize);
       window.addEventListener('keydown', onKeyDown);
+      window.addEventListener('keyup', onKeyUp);
       renderer.domElement.addEventListener('mousemove', onMouseMove);
       renderer.domElement.addEventListener('click', onMouseClick);
+      renderer.domElement.addEventListener('dblclick', onDoubleClick);
 
       // Phase 4: Detail panel close button
       btnCloseDetail.addEventListener('click', () => {
@@ -1668,6 +1721,39 @@
       }
     }
 
+    // Double-click to fly directly to a node
+    function onDoubleClick(event) {
+      if (isTransitioning) return;
+
+      // Raycast to find node
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(nodes3D);
+
+      if (intersects.length > 0) {
+        const node = intersects[0].object;
+        flyToNode(node);
+      }
+    }
+
+    // Fly camera directly to a node (gets closer than selectNode)
+    function flyToNode(node) {
+      if (isTransitioning) return;
+
+      const targetPos = node.position.clone();
+      const direction = targetPos.clone().sub(camera.position).normalize();
+      const newCameraPos = targetPos.clone().sub(direction.multiplyScalar(15));
+
+      showCameraIndicator('Flying to node...');
+      controls.autoRotate = false;
+
+      animateCameraTo(newCameraPos, targetPos, 1500, () => {
+        hideCameraIndicator();
+        showDetailPanel(node);
+        selectedNode = node;
+        selectedNodeIndex = nodes3D.indexOf(node);
+      });
+    }
+
     // Phase 4: Node selection with detail panel
     function selectNode(node) {
       if (isTransitioning) return;
@@ -1829,15 +1915,28 @@
     }
 
     // Phase 4: Keyboard navigation
+    // ==========================================================================
+    // NAVIGATION CONTROLS (Hybrid System)
+    // ==========================================================================
     function onKeyDown(event) {
+      const key = event.key.toLowerCase();
+
+      // Track WASD + Q/E for movement
+      if (key === 'w') { NAV.keys.w = true; event.preventDefault(); }
+      if (key === 'a') { NAV.keys.a = true; event.preventDefault(); }
+      if (key === 's') { NAV.keys.s = true; event.preventDefault(); }
+      if (key === 'd') { NAV.keys.d = true; event.preventDefault(); }
+      if (key === 'q') { NAV.keys.q = true; event.preventDefault(); }
+      if (key === 'e') { NAV.keys.e = true; event.preventDefault(); }
+      if (event.key === 'Shift') { NAV.keys.shift = true; }
+
+      // Action keys
       switch (event.key) {
         case 'ArrowUp':
-        case 'ArrowRight':
           event.preventDefault();
           cycleNodes(1);
           break;
         case 'ArrowDown':
-        case 'ArrowLeft':
           event.preventDefault();
           cycleNodes(-1);
           break;
@@ -1853,7 +1952,127 @@
         case 'R':
           event.preventDefault();
           controls.autoRotate = !controls.autoRotate;
+          showCameraIndicator(controls.autoRotate ? 'Auto-rotation ON' : 'Auto-rotation OFF');
+          setTimeout(hideCameraIndicator, 1500);
           break;
+        case 'f':
+        case 'F':
+          event.preventDefault();
+          toggleFlyMode();
+          break;
+        case '1': case '2': case '3': case '4': case '5':
+          event.preventDefault();
+          goToPreset(parseInt(event.key));
+          break;
+        case 'Home':
+          event.preventDefault();
+          goToPreset(1); // Default view
+          break;
+      }
+    }
+
+    function onKeyUp(event) {
+      const key = event.key.toLowerCase();
+
+      // Release WASD + Q/E
+      if (key === 'w') NAV.keys.w = false;
+      if (key === 'a') NAV.keys.a = false;
+      if (key === 's') NAV.keys.s = false;
+      if (key === 'd') NAV.keys.d = false;
+      if (key === 'q') NAV.keys.q = false;
+      if (key === 'e') NAV.keys.e = false;
+      if (event.key === 'Shift') NAV.keys.shift = false;
+    }
+
+    // Toggle between Orbit and Fly modes
+    function toggleFlyMode() {
+      NAV.flyMode = !NAV.flyMode;
+      controls.enabled = !NAV.flyMode;
+
+      if (NAV.flyMode) {
+        controls.autoRotate = false;
+        showModeIndicator('FLY');
+        showCameraIndicator('Fly Mode: WASD to move, Q/E up/down');
+      } else {
+        showModeIndicator('ORBIT');
+        showCameraIndicator('Orbit Mode: Drag to rotate, scroll to zoom');
+      }
+      setTimeout(hideCameraIndicator, 2500);
+    }
+
+    // Go to camera preset position
+    function goToPreset(num) {
+      const preset = NAV.presets[num];
+      if (!preset) return;
+
+      showCameraIndicator(`Camera: ${preset.name}`);
+      animateCameraTo(
+        new THREE.Vector3(...preset.pos),
+        new THREE.Vector3(...preset.target),
+        1000,
+        () => {
+          hideCameraIndicator();
+        }
+      );
+    }
+
+    // Update camera position based on key states
+    function updateCameraMovement(delta) {
+      const keys = NAV.keys;
+
+      // Check if any movement key is pressed
+      const isMoving = keys.w || keys.a || keys.s || keys.d || keys.q || keys.e;
+      if (!isMoving) return;
+
+      // Stop auto-rotation when manually moving
+      if (controls.autoRotate) {
+        controls.autoRotate = false;
+      }
+
+      // Calculate speed
+      const speed = NAV.baseSpeed * (keys.shift ? NAV.boostMultiplier : 1) * delta;
+
+      // Get camera direction vectors
+      const forward = new THREE.Vector3();
+      camera.getWorldDirection(forward);
+
+      const right = new THREE.Vector3();
+      right.crossVectors(forward, camera.up).normalize();
+
+      const up = new THREE.Vector3(0, 1, 0);
+
+      // Build movement vector
+      const movement = new THREE.Vector3();
+
+      if (keys.w) movement.add(forward);
+      if (keys.s) movement.sub(forward);
+      if (keys.d) movement.add(right);
+      if (keys.a) movement.sub(right);
+      if (keys.q) movement.add(up);
+      if (keys.e) movement.sub(up);
+
+      // Normalize and apply speed
+      if (movement.length() > 0) {
+        movement.normalize().multiplyScalar(speed);
+
+        // Move camera
+        camera.position.add(movement);
+
+        // In orbit mode, also move the target to maintain relative position
+        if (!NAV.flyMode) {
+          controls.target.add(movement);
+        }
+      }
+    }
+
+    // Show mode indicator in UI
+    function showModeIndicator(mode) {
+      const indicator = document.getElementById('mode-indicator');
+      if (indicator) {
+        indicator.textContent = mode;
+        indicator.className = mode === 'FLY'
+          ? 'px-2 py-1 rounded text-xs font-mono bg-amber-500/20 text-amber-400 border border-amber-500/30'
+          : 'px-2 py-1 rounded text-xs font-mono bg-indigo-500/20 text-indigo-400 border border-indigo-500/30';
       }
     }
 
@@ -1936,6 +2155,9 @@
 
       // Update controls
       controls.update();
+
+      // Hybrid Navigation: Update camera movement from WASD keys
+      updateCameraMovement(delta);
 
       // Animate core
       animateCore(time);
