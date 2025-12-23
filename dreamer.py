@@ -71,6 +71,7 @@ class Dreamer:
         self._running = False
         self._dream_count = 0
         self._observed_keys = {}
+        self._inner_voice_queue.clear()  # Clear narrator queue
 
     async def _dream_cycle(self):
         """One complete dream cycle: recall, reflect, record."""
