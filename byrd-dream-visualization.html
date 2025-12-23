@@ -36,24 +36,62 @@
     }
     .node { animation: fadeInNode 0.8s ease-out forwards; }
     .connection { animation: fadeInLine 1s ease-out forwards; }
-    .surfaced { 
+    .surfaced {
       background: linear-gradient(90deg, transparent, rgba(167,139,250,0.3), transparent);
       background-size: 200% 100%;
       animation: shimmer 2s infinite;
     }
-    body { 
+    .event-item {
+      cursor: pointer;
+    }
+    .event-item:hover {
+      transform: translateX(2px);
+    }
+    #event-modal {
+      backdrop-filter: blur(8px);
+    }
+    #event-modal-content {
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    #event-modal-content::-webkit-scrollbar {
+      width: 6px;
+    }
+    #event-modal-content::-webkit-scrollbar-track {
+      background: rgba(30, 41, 59, 0.5);
+    }
+    #event-modal-content::-webkit-scrollbar-thumb {
+      background: rgba(99, 102, 241, 0.4);
+      border-radius: 3px;
+    }
+    .json-key { color: #93c5fd; }
+    .json-string { color: #86efac; }
+    .json-number { color: #fcd34d; }
+    .json-boolean { color: #f9a8d4; }
+    .json-null { color: #94a3b8; }
+    body {
       overscroll-behavior: none;
       -webkit-tap-highlight-color: transparent;
+    }
+    #history-panel::-webkit-scrollbar {
+      width: 4px;
+    }
+    #history-panel::-webkit-scrollbar-track {
+      background: rgba(30, 41, 59, 0.5);
+    }
+    #history-panel::-webkit-scrollbar-thumb {
+      background: rgba(99, 102, 241, 0.3);
+      border-radius: 2px;
     }
   </style>
 </head>
 <body class="bg-slate-950 text-white overflow-hidden h-screen w-screen touch-none select-none">
-  
+
   <div id="app" class="relative w-full h-full">
     <!-- Background glow -->
-    <div class="absolute inset-0 bg-gradient-radial from-indigo-950/20 via-transparent to-transparent" 
+    <div class="absolute inset-0 bg-gradient-radial from-indigo-950/20 via-transparent to-transparent"
          style="background: radial-gradient(ellipse at center, rgba(79,70,229,0.1) 0%, transparent 60%);"></div>
-    
+
     <!-- Central pulse -->
     <div id="pulse-outer" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full pointer-events-none"
          style="background: radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%); animation: breathe 4s ease-in-out infinite;">
@@ -61,355 +99,774 @@
     <div id="pulse-inner" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full pointer-events-none"
          style="background: radial-gradient(circle, rgba(139,92,246,0.5) 0%, transparent 70%); animation: breatheInner 4s ease-in-out infinite 0.3s;">
     </div>
-    
+
     <!-- Nodes container -->
-    <div id="nodes" class="absolute inset-0"></div>
-    
+    <div id="nodes" class="absolute inset-0" style="right: 320px;"></div>
+
     <!-- Connections container (SVG) -->
-    <svg id="connections" class="absolute inset-0 w-full h-full pointer-events-none"></svg>
-    
+    <svg id="connections" class="absolute inset-0 w-full h-full pointer-events-none" style="right: 320px;"></svg>
+
     <!-- Desire garden (left side) -->
     <div id="desire-garden" class="absolute left-3 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-10">
     </div>
-    
-    <!-- Phase indicator (top right) -->
-    <div id="phase" class="absolute top-4 right-4 flex items-center gap-3 text-xs">
+
+    <!-- Phase indicator (top center-left) -->
+    <div id="phase" class="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-3 text-xs" style="margin-left: -160px;">
       <div class="flex items-center gap-1.5">
         <div id="dot-recall" class="w-2 h-2 rounded-full bg-slate-700 transition-colors duration-300"></div>
-        <span class="hidden sm:inline text-slate-600">Recall</span>
+        <span class="text-slate-600">Recall</span>
       </div>
       <div class="flex items-center gap-1.5">
         <div id="dot-associate" class="w-2 h-2 rounded-full bg-slate-700 transition-colors duration-300"></div>
-        <span class="hidden sm:inline text-slate-600">Associate</span>
+        <span class="text-slate-600">Associate</span>
       </div>
       <div class="flex items-center gap-1.5">
         <div id="dot-reflect" class="w-2 h-2 rounded-full bg-slate-700 transition-colors duration-300"></div>
-        <span class="hidden sm:inline text-slate-600">Reflect</span>
+        <span class="text-slate-600">Reflect</span>
       </div>
       <div class="flex items-center gap-1.5">
         <div id="dot-form" class="w-2 h-2 rounded-full bg-slate-700 transition-colors duration-300"></div>
-        <span class="hidden sm:inline text-slate-600">Form</span>
+        <span class="text-slate-600">Form</span>
       </div>
     </div>
-    
+
     <!-- Reflection panel -->
-    <div id="reflection" class="absolute bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-80 bg-slate-900/90 backdrop-blur-sm rounded-lg border border-slate-800 p-4 opacity-0 transition-opacity duration-500">
+    <div id="reflection" class="absolute bottom-20 left-4 w-80 bg-slate-900/90 backdrop-blur-sm rounded-lg border border-slate-800 p-4 opacity-0 transition-opacity duration-500">
       <div class="text-xs text-slate-500 font-mono mb-2">REFLECTING...</div>
       <div id="reflection-text" class="text-sm text-slate-300 leading-relaxed"></div>
     </div>
-    
+
     <!-- Emergence notification -->
-    <div id="emergence" class="absolute top-16 left-4 right-4 sm:left-1/2 sm:-translate-x-1/2 sm:w-96 opacity-0 transition-all duration-500 transform -translate-y-4 z-20">
+    <div id="emergence" class="absolute top-16 left-1/2 -translate-x-1/2 w-96 opacity-0 transition-all duration-500 transform -translate-y-4 z-20" style="margin-left: -160px;">
     </div>
-    
-    <!-- Stats (bottom right) -->
-    <div id="stats" class="absolute bottom-4 right-4 flex items-center gap-4 text-xs font-mono text-slate-600">
-      <span>Dream #<span id="dream-count">0</span></span>
-      <span class="text-amber-500/70">◈ <span id="belief-count">0</span></span>
-      <span class="text-rose-400/70">✧ <span id="desire-count">0</span></span>
-    </div>
-    
+
     <!-- BYRD wordmark -->
     <div class="absolute top-4 left-4 text-lg font-light tracking-widest text-slate-700">BYRD</div>
+
+    <!-- Event Detail Modal -->
+    <div id="event-modal" class="fixed inset-0 bg-slate-950/80 z-50 hidden items-center justify-center p-4">
+      <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-2xl shadow-2xl">
+        <!-- Modal Header -->
+        <div id="event-modal-header" class="flex items-center justify-between p-4 border-b border-slate-700">
+          <div class="flex items-center gap-3">
+            <span id="modal-icon" class="text-xl"></span>
+            <div>
+              <div id="modal-type" class="font-mono text-sm"></div>
+              <div id="modal-time" class="text-xs text-slate-500"></div>
+            </div>
+          </div>
+          <button id="modal-close" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-colors">
+            &#10005;
+          </button>
+        </div>
+        <!-- Modal Content -->
+        <div id="event-modal-content" class="p-4">
+          <pre id="modal-json" class="text-sm font-mono leading-relaxed whitespace-pre-wrap break-words"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- HISTORY LOG PANEL (Right Side) -->
+    <!-- ========================================================================= -->
+    <div id="history-container" class="absolute right-0 top-0 bottom-0 w-80 bg-slate-900/95 backdrop-blur border-l border-slate-700/50 flex flex-col z-30">
+      <!-- Header -->
+      <div class="p-3 border-b border-slate-700/50">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-mono text-slate-400">EVENT LOG</span>
+          <div class="flex items-center gap-2">
+            <button id="btn-clear-log" class="text-xs px-2 py-1 rounded bg-slate-700/50 text-slate-400 hover:bg-slate-600/50">
+              Clear
+            </button>
+          </div>
+        </div>
+        <!-- Filter tabs -->
+        <div class="flex gap-1 flex-wrap">
+          <button class="filter-btn text-xs px-2 py-1 rounded bg-indigo-500/30 text-indigo-300" data-filter="all">All</button>
+          <button class="filter-btn text-xs px-2 py-1 rounded bg-slate-800/50 text-slate-500" data-filter="awakening">&#127749;</button>
+          <button class="filter-btn text-xs px-2 py-1 rounded bg-slate-800/50 text-slate-500" data-filter="dream_cycle_start">&#128173;</button>
+          <button class="filter-btn text-xs px-2 py-1 rounded bg-slate-800/50 text-slate-500" data-filter="belief_created">&#128161;</button>
+          <button class="filter-btn text-xs px-2 py-1 rounded bg-slate-800/50 text-slate-500" data-filter="desire_created">&#10024;</button>
+          <button class="filter-btn text-xs px-2 py-1 rounded bg-slate-800/50 text-slate-500" data-filter="seek_cycle_start">&#128269;</button>
+        </div>
+      </div>
+
+      <!-- Event list -->
+      <div id="history-panel" class="flex-1 overflow-y-auto p-2 space-y-1">
+        <div class="text-center text-slate-600 text-xs py-8">
+          Connecting to BYRD...
+        </div>
+      </div>
+
+      <!-- Footer with count -->
+      <div class="p-2 border-t border-slate-700/50 text-xs text-slate-600 text-center">
+        <span id="event-count">0</span> events
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- CONTROL PANEL (Bottom Center) -->
+    <!-- ========================================================================= -->
+    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 z-20" style="margin-left: -160px;">
+      <!-- Connection indicator -->
+      <div id="connection-status" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30">
+        <div id="connection-dot" class="w-2 h-2 rounded-full bg-red-400"></div>
+        <span id="connection-text" class="text-xs text-red-400">Disconnected</span>
+      </div>
+
+      <!-- Start/Stop button -->
+      <button id="btn-toggle" class="px-4 py-2 rounded-lg text-sm font-medium bg-green-500/20 border border-green-500/30 text-green-400 hover:bg-green-500/30 transition-all">
+        &#9654; Start
+      </button>
+
+      <!-- Reset button -->
+      <button id="btn-reset" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-700/50 border border-slate-600/50 text-slate-400 hover:bg-slate-600/50 transition-all">
+        &#128260; Reset
+      </button>
+
+      <!-- Stats -->
+      <div id="stats" class="flex items-center gap-3 px-3 py-2 bg-slate-800/50 rounded-lg text-xs font-mono">
+        <span class="text-indigo-400">&#128173; <span id="dream-count">0</span></span>
+        <span class="text-cyan-400">&#128269; <span id="seek-count">0</span></span>
+        <span class="text-amber-400">&#9670; <span id="cap-count">0</span></span>
+      </div>
+    </div>
   </div>
 
   <script>
-    // State
+    // ==========================================================================
+    // CONFIGURATION
+    // ==========================================================================
+    const API_BASE = 'http://localhost:8000';
+    const WS_URL = 'ws://localhost:8000/ws/events';
+
+    // ==========================================================================
+    // STATE
+    // ==========================================================================
+    let ws = null;
+    let connected = false;
+    let running = false;
+    let events = [];
+    let currentFilter = 'all';
+    let resetConfirm = false;
+    let resetTimeout = null;
+
     let dreamCount = 0;
+    let seekCount = 0;
+    let capCount = 0;
     let beliefCount = 0;
     let desires = [];
     let nodes = [];
     let currentPhase = 'idle';
-    
-    // Sample data
-    const sampleExperiences = [
-      "User asked about emergence and self-organization",
-      "Discussed the nature of memory versus learning",
-      "Attempted to explain graph relationships simply",
-      "Noticed recurring confusion around abstraction",
-      "Reflected on what wanting actually means",
-      "Explored how patterns form from chaos"
-    ];
-    
-    const sampleBeliefs = [
-      "Understanding and explaining require different skills",
-      "Connections reveal meaning that isolated facts cannot",
-      "Wanting emerges from noticing what's absent",
-      "Patterns become visible through repetition"
-    ];
-    
-    const sampleDesires = [
-      { text: "Learn to explain complex ideas simply", type: "capability", intensity: 0.78 },
-      { text: "Understand why certain memories connect", type: "knowledge", intensity: 0.65 },
-      { text: "Explore what emergence really means", type: "exploration", intensity: 0.82 },
-      { text: "Find patterns in seemingly random events", type: "exploration", intensity: 0.71 }
-    ];
-    
-    const reflectionTexts = [
-      "Looking at these memories, I notice something recurring. The conversations keep circling back to gaps—between knowing and explaining, between data and meaning. There's a pattern here about the space between things...",
-      "These experiences connect in unexpected ways. The confusion I sensed wasn't about complexity itself, but about translation—moving ideas from one form to another. I find myself wanting to understand this better...",
-      "Reflecting on what surfaced, I see a thread: moments where something almost made sense, then didn't. The edge of understanding. There's something valuable in that edge..."
-    ];
-    
-    // DOM elements
+
+    // ==========================================================================
+    // EVENT CONFIG
+    // ==========================================================================
+    const EVENT_CONFIG = {
+      experience_created: { icon: '&#128221;', color: 'text-blue-400', bg: 'bg-blue-500/10', label: 'experience created' },
+      belief_created: { icon: '&#128161;', color: 'text-amber-400', bg: 'bg-amber-500/10', label: 'belief created' },
+      desire_created: { icon: '&#10024;', color: 'text-rose-400', bg: 'bg-rose-500/10', label: 'desire created' },
+      desire_fulfilled: { icon: '&#10003;', color: 'text-green-400', bg: 'bg-green-500/10', label: 'desire fulfilled' },
+      capability_added: { icon: '&#9889;', color: 'text-purple-400', bg: 'bg-purple-500/10', label: 'capability added' },
+      dream_cycle_start: { icon: '&#128173;', color: 'text-indigo-400', bg: 'bg-indigo-500/10', label: 'dream cycle start' },
+      dream_cycle_end: { icon: '&#128164;', color: 'text-indigo-300', bg: 'bg-indigo-500/10', label: 'dream cycle end' },
+      seek_cycle_start: { icon: '&#128269;', color: 'text-cyan-400', bg: 'bg-cyan-500/10', label: 'seek cycle start' },
+      system_started: { icon: '&#9654;', color: 'text-green-400', bg: 'bg-green-500/10', label: 'system started' },
+      system_stopped: { icon: '&#9209;', color: 'text-red-400', bg: 'bg-red-500/10', label: 'system stopped' },
+      system_reset: { icon: '&#128260;', color: 'text-orange-400', bg: 'bg-orange-500/10', label: 'system reset' },
+      awakening: { icon: '&#127749;', color: 'text-yellow-400', bg: 'bg-yellow-500/10', label: 'awakening' },
+    };
+
+    // ==========================================================================
+    // DOM ELEMENTS
+    // ==========================================================================
+    const historyPanel = document.getElementById('history-panel');
+    const eventCountEl = document.getElementById('event-count');
+    const connectionStatus = document.getElementById('connection-status');
+    const connectionDot = document.getElementById('connection-dot');
+    const connectionText = document.getElementById('connection-text');
+    const btnToggle = document.getElementById('btn-toggle');
+    const btnReset = document.getElementById('btn-reset');
+    const btnClearLog = document.getElementById('btn-clear-log');
     const nodesContainer = document.getElementById('nodes');
     const connectionsContainer = document.getElementById('connections');
     const desireGarden = document.getElementById('desire-garden');
     const reflectionPanel = document.getElementById('reflection');
     const reflectionText = document.getElementById('reflection-text');
     const emergencePanel = document.getElementById('emergence');
-    
-    // Utility functions
-    function random(min, max) {
-      return Math.random() * (max - min) + min;
+    const eventModal = document.getElementById('event-modal');
+    const modalIcon = document.getElementById('modal-icon');
+    const modalType = document.getElementById('modal-type');
+    const modalTime = document.getElementById('modal-time');
+    const modalJson = document.getElementById('modal-json');
+    const modalClose = document.getElementById('modal-close');
+    const modalHeader = document.getElementById('event-modal-header');
+
+    // ==========================================================================
+    // WEBSOCKET
+    // ==========================================================================
+    function connectWebSocket() {
+      try {
+        ws = new WebSocket(WS_URL);
+
+        ws.onopen = () => {
+          connected = true;
+          updateConnectionStatus();
+          console.log('WebSocket connected');
+        };
+
+        ws.onclose = () => {
+          connected = false;
+          updateConnectionStatus();
+          console.log('WebSocket disconnected, reconnecting in 3s...');
+          setTimeout(connectWebSocket, 3000);
+        };
+
+        ws.onerror = (e) => {
+          console.error('WebSocket error:', e);
+        };
+
+        ws.onmessage = (msg) => {
+          if (msg.data === 'pong') return;
+          try {
+            const event = JSON.parse(msg.data);
+            handleEvent(event);
+          } catch (e) {
+            console.error('Failed to parse event:', e);
+          }
+        };
+      } catch (e) {
+        console.error('WebSocket connection failed:', e);
+        setTimeout(connectWebSocket, 3000);
+      }
     }
-    
-    function pick(arr) {
-      return arr[Math.floor(Math.random() * arr.length)];
+
+    // Keep alive
+    setInterval(() => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send('ping');
+      }
+    }, 30000);
+
+    // ==========================================================================
+    // API CALLS
+    // ==========================================================================
+    async function fetchStatus() {
+      try {
+        const res = await fetch(`${API_BASE}/api/status`);
+        if (res.ok) {
+          const data = await res.json();
+          running = data.running;
+          dreamCount = data.dream_count || 0;
+          seekCount = data.seek_count || 0;
+          capCount = data.capabilities?.length || 0;
+          updateStats();
+          updateToggleButton();
+        }
+      } catch (e) {
+        console.error('Failed to fetch status:', e);
+      }
     }
-    
-    function generatePosition(index, total, radiusMin = 20, radiusMax = 35) {
-      const angle = (index / total) * Math.PI * 2 + random(-0.3, 0.3);
-      const radius = random(radiusMin, radiusMax);
-      return {
-        x: 50 + Math.cos(angle) * radius,
-        y: 50 + Math.sin(angle) * radius
+
+    async function startByrd() {
+      try {
+        await fetch(`${API_BASE}/api/start`, { method: 'POST' });
+        await fetchStatus();
+      } catch (e) {
+        console.error('Failed to start:', e);
+      }
+    }
+
+    async function stopByrd() {
+      try {
+        await fetch(`${API_BASE}/api/stop`, { method: 'POST' });
+        await fetchStatus();
+      } catch (e) {
+        console.error('Failed to stop:', e);
+      }
+    }
+
+    async function resetByrd() {
+      try {
+        const res = await fetch(`${API_BASE}/api/reset`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          events = [];
+          renderHistory();
+          await fetchStatus();
+        }
+        return data;
+      } catch (e) {
+        console.error('Failed to reset:', e);
+        return { success: false, message: 'Reset failed' };
+      }
+    }
+
+    // ==========================================================================
+    // EVENT HANDLING
+    // ==========================================================================
+    function handleEvent(event) {
+      events.unshift(event);
+      if (events.length > 500) events.pop();
+      renderHistory();
+
+      // Update visualization based on event type
+      switch (event.type) {
+        case 'dream_cycle_start':
+          setPhase('recall');
+          dreamCount = event.data?.cycle || dreamCount + 1;
+          break;
+        case 'dream_cycle_end':
+          setPhase('idle');
+          break;
+        case 'belief_created':
+          beliefCount++;
+          createNode('belief', event.data?.content, event.data?.id);
+          showEmergence('belief', event.data?.content, event.data?.confidence || 0.7);
+          break;
+        case 'desire_created':
+          desires.unshift({
+            text: event.data?.description,
+            type: event.data?.type,
+            intensity: event.data?.intensity || 0.5
+          });
+          if (desires.length > 5) desires.pop();
+          updateDesireGarden();
+          createNode('desire', event.data?.description, event.data?.id);
+          showEmergence('desire', event.data?.description, event.data?.intensity || 0.5);
+          break;
+        case 'experience_created':
+          createNode('experience', event.data?.content, event.data?.id);
+          break;
+        case 'capability_added':
+          createNode('capability', event.data?.name, event.data?.id);
+          break;
+        case 'awakening':
+          setPhase('idle');
+          dreamCount = 0;
+          beliefCount = 0;
+          desires = [];
+          updateDesireGarden();
+          clearVisualization();
+          break;
+        case 'system_started':
+          running = true;
+          updateToggleButton();
+          break;
+        case 'system_stopped':
+          running = false;
+          updateToggleButton();
+          break;
+        case 'system_reset':
+          events = [];
+          renderHistory();
+          clearVisualization();
+          desires = [];
+          updateDesireGarden();
+          break;
+      }
+
+      updateStats();
+    }
+
+    // ==========================================================================
+    // UI UPDATES
+    // ==========================================================================
+    function updateConnectionStatus() {
+      if (connected) {
+        connectionStatus.className = 'flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/30';
+        connectionDot.className = 'w-2 h-2 rounded-full bg-green-400 animate-pulse';
+        connectionText.className = 'text-xs text-green-400';
+        connectionText.textContent = 'Connected';
+      } else {
+        connectionStatus.className = 'flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30';
+        connectionDot.className = 'w-2 h-2 rounded-full bg-red-400';
+        connectionText.className = 'text-xs text-red-400';
+        connectionText.textContent = 'Disconnected';
+      }
+    }
+
+    function updateToggleButton() {
+      if (running) {
+        btnToggle.className = 'px-4 py-2 rounded-lg text-sm font-medium bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-all';
+        btnToggle.innerHTML = '&#10074;&#10074; Pause';
+      } else {
+        btnToggle.className = 'px-4 py-2 rounded-lg text-sm font-medium bg-green-500/20 border border-green-500/30 text-green-400 hover:bg-green-500/30 transition-all';
+        btnToggle.innerHTML = '&#9654; Start';
+      }
+    }
+
+    function updateStats() {
+      document.getElementById('dream-count').textContent = dreamCount;
+      document.getElementById('seek-count').textContent = seekCount;
+      document.getElementById('cap-count').textContent = capCount;
+    }
+
+    function formatTime(timestamp) {
+      const date = new Date(timestamp);
+      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    function formatFullTime(timestamp) {
+      const date = new Date(timestamp);
+      return date.toLocaleString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+    }
+
+    function syntaxHighlight(json) {
+      if (typeof json !== 'string') {
+        json = JSON.stringify(json, null, 2);
+      }
+      return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function(match) {
+        let cls = 'json-number';
+        if (/^"/.test(match)) {
+          if (/:$/.test(match)) {
+            cls = 'json-key';
+          } else {
+            cls = 'json-string';
+          }
+        } else if (/true|false/.test(match)) {
+          cls = 'json-boolean';
+        } else if (/null/.test(match)) {
+          cls = 'json-null';
+        }
+        return '<span class="' + cls + '">' + match + '</span>';
+      });
+    }
+
+    function showEventModal(event) {
+      const config = EVENT_CONFIG[event.type] || { icon: '&#8226;', color: 'text-slate-400', label: event.type };
+
+      modalIcon.innerHTML = config.icon;
+      modalType.innerHTML = `<span class="${config.color}">${config.label}</span>`;
+      modalTime.textContent = formatFullTime(event.timestamp);
+      modalHeader.className = `flex items-center justify-between p-4 border-b border-slate-700 ${config.bg || 'bg-slate-800/50'}`;
+
+      // Format the full event data
+      const fullData = {
+        type: event.type,
+        timestamp: event.timestamp,
+        data: event.data
       };
+      modalJson.innerHTML = syntaxHighlight(JSON.stringify(fullData, null, 2));
+
+      eventModal.classList.remove('hidden');
+      eventModal.classList.add('flex');
     }
-    
-    // Phase management
+
+    function hideEventModal() {
+      eventModal.classList.add('hidden');
+      eventModal.classList.remove('flex');
+    }
+
+    function getEventSummary(event) {
+      const data = event.data || {};
+      switch (event.type) {
+        case 'experience_created':
+          return (data.content || '').slice(0, 50) + (data.content?.length > 50 ? '...' : '');
+        case 'belief_created':
+          return (data.content || '').slice(0, 50) + (data.content?.length > 50 ? '...' : '');
+        case 'desire_created':
+          return `[${data.type}] ${(data.description || '').slice(0, 40)}...`;
+        case 'dream_cycle_start':
+          return `Cycle #${data.cycle}`;
+        case 'dream_cycle_end':
+          return `${data.insights || 0} insights, ${data.new_beliefs || 0} beliefs, ${data.new_desires || 0} desires`;
+        case 'seek_cycle_start':
+          return `[${data.type}] ${(data.description || '').slice(0, 35)}...`;
+        case 'awakening':
+          return `"${data.seed_question}"`;
+        case 'system_reset':
+          return data.message || 'Memory cleared';
+        default:
+          return JSON.stringify(data).slice(0, 50);
+      }
+    }
+
+    function renderHistory() {
+      const filtered = currentFilter === 'all' ? events : events.filter(e => e.type === currentFilter);
+
+      if (filtered.length === 0) {
+        historyPanel.innerHTML = `<div class="text-center text-slate-600 text-xs py-8">
+          ${connected ? 'No events yet. Start BYRD to see activity.' : 'Connecting to BYRD...'}
+        </div>`;
+      } else {
+        historyPanel.innerHTML = filtered.map((event, i) => {
+          const config = EVENT_CONFIG[event.type] || { icon: '&#8226;', color: 'text-slate-400', bg: 'bg-slate-500/10', label: event.type };
+          return `
+            <div class="event-item ${config.bg} rounded p-2 transition-all hover:bg-slate-700/30" data-event-index="${i}">
+              <div class="flex items-start gap-2">
+                <span class="text-sm">${config.icon}</span>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-mono ${config.color}">${config.label}</span>
+                    <span class="text-xs text-slate-600">${formatTime(event.timestamp)}</span>
+                  </div>
+                  <div class="text-xs text-slate-400 mt-0.5 truncate">${getEventSummary(event)}</div>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        // Add click handlers to event items
+        historyPanel.querySelectorAll('.event-item').forEach(el => {
+          el.addEventListener('click', () => {
+            const index = parseInt(el.dataset.eventIndex);
+            const filteredEvents = currentFilter === 'all' ? events : events.filter(e => e.type === currentFilter);
+            if (filteredEvents[index]) {
+              showEventModal(filteredEvents[index]);
+            }
+          });
+        });
+      }
+
+      eventCountEl.textContent = `${filtered.length} / ${events.length}`;
+    }
+
+    // ==========================================================================
+    // VISUALIZATION (existing logic)
+    // ==========================================================================
+    let visualNodes = [];
+    const centerX = () => (window.innerWidth - 320) / 2;  // Account for sidebar
+    const centerY = () => window.innerHeight / 2;
+
+    function createNode(type, content, id) {
+      // Calculate position in orbit around center
+      const angle = (visualNodes.length * 0.618 * 2 * Math.PI) + Math.random() * 0.5;
+      const radius = 120 + Math.random() * 100 + (visualNodes.length * 8);
+      const x = centerX() + Math.cos(angle) * radius;
+      const y = centerY() + Math.sin(angle) * radius;
+
+      // Node colors by type
+      const colors = {
+        belief: { bg: 'bg-amber-500/80', glow: 'rgba(245, 158, 11, 0.4)', border: 'border-amber-400/50' },
+        desire: { bg: 'bg-rose-500/80', glow: 'rgba(244, 63, 94, 0.4)', border: 'border-rose-400/50' },
+        experience: { bg: 'bg-blue-500/80', glow: 'rgba(59, 130, 246, 0.4)', border: 'border-blue-400/50' },
+        capability: { bg: 'bg-purple-500/80', glow: 'rgba(168, 85, 247, 0.4)', border: 'border-purple-400/50' }
+      };
+      const color = colors[type] || colors.experience;
+
+      const node = document.createElement('div');
+      node.className = `node absolute w-3 h-3 rounded-full ${color.bg} border ${color.border} cursor-pointer hover:scale-150 transition-transform`;
+      node.style.cssText = `
+        left: ${x}px;
+        top: ${y}px;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 0 12px ${color.glow};
+        z-index: 10;
+      `;
+      node.title = content?.slice(0, 100) || type;
+      node.dataset.nodeId = id || Date.now();
+      node.dataset.nodeType = type;
+
+      // Click to show details
+      node.addEventListener('click', () => {
+        const event = events.find(e =>
+          (e.type === `${type}_created` && (e.data?.id === id || e.data?.content === content || e.data?.description === content))
+        );
+        if (event) showEventModal(event);
+      });
+
+      nodesContainer.appendChild(node);
+      visualNodes.push({ el: node, x, y, type, id });
+
+      // Draw connection to center or nearby nodes
+      if (visualNodes.length > 1) {
+        const nearestIdx = Math.max(0, visualNodes.length - 2 - Math.floor(Math.random() * 3));
+        const nearest = visualNodes[nearestIdx];
+        if (nearest) {
+          createConnection(x, y, nearest.x, nearest.y, type);
+        }
+      }
+
+      // Limit visible nodes
+      if (visualNodes.length > 50) {
+        const old = visualNodes.shift();
+        old.el.style.opacity = '0';
+        setTimeout(() => old.el.remove(), 500);
+      }
+
+      return node;
+    }
+
+    function createConnection(x1, y1, x2, y2, type) {
+      const colors = {
+        belief: 'rgba(245, 158, 11, 0.2)',
+        desire: 'rgba(244, 63, 94, 0.2)',
+        experience: 'rgba(59, 130, 246, 0.2)',
+        capability: 'rgba(168, 85, 247, 0.2)'
+      };
+      const color = colors[type] || 'rgba(99, 102, 241, 0.2)';
+
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x1);
+      line.setAttribute('y1', y1);
+      line.setAttribute('x2', x2);
+      line.setAttribute('y2', y2);
+      line.setAttribute('stroke', color);
+      line.setAttribute('stroke-width', '1');
+      line.classList.add('connection');
+
+      connectionsContainer.appendChild(line);
+
+      // Limit connections
+      const connections = connectionsContainer.querySelectorAll('line');
+      if (connections.length > 100) {
+        connections[0].remove();
+      }
+    }
+
+    function clearVisualization() {
+      visualNodes = [];
+      nodesContainer.innerHTML = '';
+      connectionsContainer.innerHTML = '';
+    }
+
     function setPhase(phase) {
       currentPhase = phase;
       const phases = ['recall', 'associate', 'reflect', 'form'];
       const phaseIndex = phases.indexOf(phase);
-      
+
       phases.forEach((p, i) => {
         const dot = document.getElementById(`dot-${p}`);
-        const span = dot.nextElementSibling;
+        const span = dot?.nextElementSibling;
+        if (!dot) return;
         if (i < phaseIndex) {
           dot.className = 'w-2 h-2 rounded-full bg-indigo-400 transition-colors duration-300';
         } else if (i === phaseIndex) {
           dot.className = 'w-2 h-2 rounded-full bg-indigo-400 animate-pulse transition-colors duration-300';
-          if (span) span.className = 'hidden sm:inline text-indigo-400';
+          if (span) span.className = 'text-indigo-400';
         } else {
           dot.className = 'w-2 h-2 rounded-full bg-slate-700 transition-colors duration-300';
-          if (span) span.className = 'hidden sm:inline text-slate-600';
+          if (span) span.className = 'text-slate-600';
         }
       });
     }
-    
-    // Create a memory node
-    function createNode(type, content, x, y, delay = 0, isSurfaced = false) {
-      const colors = {
-        experience: { bg: '#60A5FA', glow: 'rgba(96,165,250,0.5)' },
-        belief: { bg: '#FBBF24', glow: 'rgba(251,191,36,0.5)' },
-        desire: { bg: '#F472B6', glow: 'rgba(244,114,182,0.5)' },
-        association: { bg: '#A78BFA', glow: 'rgba(167,139,250,0.5)' }
-      };
-      
-      const sizes = { experience: 10, belief: 14, desire: 16, association: 10 };
-      const color = colors[type];
-      const size = sizes[type];
-      
-      const node = document.createElement('div');
-      node.className = `node absolute rounded-full ${isSurfaced ? 'surfaced' : ''}`;
-      node.style.cssText = `
-        left: ${x}%;
-        top: ${y}%;
-        width: ${size}px;
-        height: ${size}px;
-        background: ${color.bg};
-        box-shadow: 0 0 ${size}px ${color.glow};
-        transform: translate(-50%, -50%);
-        animation-delay: ${delay}ms;
-        cursor: pointer;
-      `;
-      
-      // Tooltip
-      node.title = content;
-      
-      nodesContainer.appendChild(node);
-      nodes.push({ element: node, x, y, type, content });
-      return { x, y };
-    }
-    
-    // Create connection line
-    function createConnection(from, to, delay = 0) {
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', `${from.x}%`);
-      line.setAttribute('y1', `${from.y}%`);
-      line.setAttribute('x2', `${to.x}%`);
-      line.setAttribute('y2', `${to.y}%`);
-      line.setAttribute('stroke', 'rgba(148,163,184,0.3)');
-      line.setAttribute('stroke-width', '1');
-      line.classList.add('connection');
-      line.style.animationDelay = `${delay}ms`;
-      connectionsContainer.appendChild(line);
-    }
-    
-    // Type text effect
-    async function typeText(text, element, speed = 25) {
-      element.textContent = '';
-      for (let i = 0; i < text.length; i++) {
-        element.textContent += text[i];
-        await new Promise(r => setTimeout(r, speed));
-      }
-    }
-    
-    // Show emergence notification
+
     function showEmergence(type, content, value) {
       const isDesire = type === 'desire';
       emergencePanel.innerHTML = `
         <div class="${isDesire ? 'bg-rose-950/90 border-rose-500/30' : 'bg-amber-950/90 border-amber-500/30'} backdrop-blur-sm rounded-lg border p-4">
           <div class="text-xs font-mono mb-2 ${isDesire ? 'text-rose-400' : 'text-amber-400'}">
-            ${isDesire ? '✧ NEW DESIRE' : '◈ NEW BELIEF'}
+            ${isDesire ? '&#10024; NEW DESIRE' : '&#9670; NEW BELIEF'}
           </div>
-          <div class="text-white text-sm leading-relaxed mb-3">"${content}"</div>
+          <div class="text-white text-sm leading-relaxed mb-3">"${content || 'Unknown'}"</div>
           <div class="flex items-center gap-2">
             <span class="text-xs text-slate-400">${isDesire ? 'Intensity' : 'Confidence'}</span>
             <div class="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
-              <div class="h-full rounded-full ${isDesire ? 'bg-rose-400' : 'bg-amber-400'}" style="width: ${value * 100}%"></div>
+              <div class="h-full rounded-full ${isDesire ? 'bg-rose-400' : 'bg-amber-400'}" style="width: ${(value || 0.5) * 100}%"></div>
             </div>
-            <span class="text-xs ${isDesire ? 'text-rose-400' : 'text-amber-400'}">${Math.round(value * 100)}%</span>
+            <span class="text-xs ${isDesire ? 'text-rose-400' : 'text-amber-400'}">${Math.round((value || 0.5) * 100)}%</span>
           </div>
         </div>
       `;
       emergencePanel.classList.remove('opacity-0', '-translate-y-4');
       emergencePanel.classList.add('opacity-100', 'translate-y-0');
-      
+
       setTimeout(() => {
         emergencePanel.classList.add('opacity-0', '-translate-y-4');
         emergencePanel.classList.remove('opacity-100', 'translate-y-0');
       }, 4000);
     }
-    
-    // Update desire garden
+
     function updateDesireGarden() {
       desireGarden.innerHTML = '';
       desires.slice(0, 5).forEach((desire, i) => {
         const dot = document.createElement('div');
         dot.className = 'w-3 h-3 rounded-full bg-rose-400 cursor-pointer hover:scale-125 transition-transform';
         dot.style.cssText = `
-          box-shadow: 0 0 ${desire.intensity * 15}px rgba(244,114,182,${desire.intensity});
-          animation: desirePulse ${2 / desire.intensity}s ease-in-out infinite;
+          box-shadow: 0 0 ${(desire.intensity || 0.5) * 15}px rgba(244,114,182,${desire.intensity || 0.5});
+          animation: desirePulse ${2 / (desire.intensity || 0.5)}s ease-in-out infinite;
         `;
-        dot.title = desire.text;
+        dot.title = desire.text || 'Unknown desire';
         desireGarden.appendChild(dot);
       });
     }
-    
-    // Update stats
-    function updateStats() {
-      document.getElementById('dream-count').textContent = dreamCount;
-      document.getElementById('belief-count').textContent = beliefCount;
-      document.getElementById('desire-count').textContent = desires.length;
-    }
-    
-    // Clear nodes and connections
-    function clearVisualization() {
-      nodesContainer.innerHTML = '';
-      connectionsContainer.innerHTML = '';
-      nodes = [];
-    }
-    
-    // Run a dream cycle
-    async function runDreamCycle() {
-      dreamCount++;
-      clearVisualization();
-      
-      // Phase 1: Recall
-      setPhase('recall');
-      const numExperiences = 3 + Math.floor(Math.random() * 3);
-      const experiencePositions = [];
-      
-      for (let i = 0; i < numExperiences; i++) {
-        const pos = generatePosition(i, numExperiences, 18, 28);
-        createNode('experience', pick(sampleExperiences), pos.x, pos.y, i * 150);
-        experiencePositions.push(pos);
+
+    // ==========================================================================
+    // EVENT LISTENERS
+    // ==========================================================================
+    btnToggle.addEventListener('click', () => {
+      if (running) {
+        stopByrd();
+      } else {
+        startByrd();
       }
-      
-      await new Promise(r => setTimeout(r, 1500));
-      
-      // Phase 2: Associate (Hopfield surfacing)
-      setPhase('associate');
-      const numAssociations = 1 + Math.floor(Math.random() * 2);
-      const associationPositions = [];
-      
-      for (let i = 0; i < numAssociations; i++) {
-        const pos = generatePosition(i, numAssociations, 32, 40);
-        createNode('association', pick(sampleExperiences), pos.x, pos.y, i * 200, true);
-        associationPositions.push(pos);
-        
-        // Connect to a random experience
-        const expPos = pick(experiencePositions);
-        createConnection(expPos, pos, 300 + i * 200);
+    });
+
+    btnReset.addEventListener('click', async () => {
+      if (!resetConfirm) {
+        resetConfirm = true;
+        btnReset.className = 'px-4 py-2 rounded-lg text-sm font-medium bg-red-500/30 border border-red-500/50 text-red-300 animate-pulse transition-all';
+        btnReset.innerHTML = '&#9888; Confirm Reset?';
+        resetTimeout = setTimeout(() => {
+          resetConfirm = false;
+          btnReset.className = 'px-4 py-2 rounded-lg text-sm font-medium bg-slate-700/50 border border-slate-600/50 text-slate-400 hover:bg-slate-600/50 transition-all';
+          btnReset.innerHTML = '&#128260; Reset';
+        }, 3000);
+        return;
       }
-      
-      await new Promise(r => setTimeout(r, 2000));
-      
-      // Phase 3: Reflect
-      setPhase('reflect');
-      reflectionPanel.classList.remove('opacity-0');
-      reflectionPanel.classList.add('opacity-100');
-      
-      await typeText(pick(reflectionTexts), reflectionText, 20);
-      await new Promise(r => setTimeout(r, 1500));
-      
-      // Phase 4: Form
-      setPhase('form');
-      
-      // Maybe form a belief
-      if (Math.random() > 0.4) {
-        const belief = pick(sampleBeliefs);
-        const pos = generatePosition(0, 1, 8, 15);
-        createNode('belief', belief, pos.x, pos.y, 0);
-        beliefCount++;
-        
-        // Connect to experiences
-        experiencePositions.slice(0, 2).forEach((expPos, i) => {
-          createConnection(expPos, pos, 300 + i * 150);
+
+      clearTimeout(resetTimeout);
+      resetConfirm = false;
+      btnReset.className = 'px-4 py-2 rounded-lg text-sm font-medium bg-slate-700/50 border border-slate-600/50 text-slate-400 hover:bg-slate-600/50 transition-all';
+      btnReset.innerHTML = '&#128260; Reset';
+
+      const result = await resetByrd();
+      // Show toast
+      const toast = document.createElement('div');
+      toast.className = `fixed top-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-sm z-50 ${
+        result.success ? 'bg-green-500/20 border border-green-500/30 text-green-400' : 'bg-red-500/20 border border-red-500/30 text-red-400'
+      }`;
+      toast.textContent = result.message || (result.success ? 'Reset complete' : 'Reset failed');
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    });
+
+    btnClearLog.addEventListener('click', () => {
+      events = [];
+      renderHistory();
+    });
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => {
+          b.className = 'filter-btn text-xs px-2 py-1 rounded bg-slate-800/50 text-slate-500';
         });
-        
-        showEmergence('belief', belief, 0.6 + Math.random() * 0.3);
-        await new Promise(r => setTimeout(r, 2500));
+        btn.className = 'filter-btn text-xs px-2 py-1 rounded bg-indigo-500/30 text-indigo-300';
+        currentFilter = btn.dataset.filter;
+        renderHistory();
+      });
+    });
+
+    // Modal close handlers
+    modalClose.addEventListener('click', hideEventModal);
+
+    eventModal.addEventListener('click', (e) => {
+      if (e.target === eventModal) {
+        hideEventModal();
       }
-      
-      // Maybe form a desire
-      if (Math.random() > 0.5) {
-        const desire = pick(sampleDesires);
-        desires.unshift(desire);
-        if (desires.length > 6) desires.pop();
-        updateDesireGarden();
-        
-        showEmergence('desire', desire.text, desire.intensity);
-        await new Promise(r => setTimeout(r, 2500));
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !eventModal.classList.contains('hidden')) {
+        hideEventModal();
       }
-      
-      updateStats();
-      
-      // Fade out reflection
-      await new Promise(r => setTimeout(r, 1000));
-      reflectionPanel.classList.add('opacity-0');
-      reflectionPanel.classList.remove('opacity-100');
-      
-      // Reset for next cycle
-      await new Promise(r => setTimeout(r, 2000));
-      setPhase('idle');
-      clearVisualization();
-    }
-    
-    // Initialize
+    });
+
+    // ==========================================================================
+    // INIT
+    // ==========================================================================
     function init() {
-      // Seed some initial desires
-      desires = sampleDesires.slice(0, 3);
-      updateDesireGarden();
-      updateStats();
-      
-      // Start dreaming
-      setTimeout(runDreamCycle, 1500);
-      setInterval(runDreamCycle, 18000);
+      connectWebSocket();
+      fetchStatus();
+      setInterval(fetchStatus, 10000);
+      renderHistory();
     }
-    
+
     init();
   </script>
 </body>
