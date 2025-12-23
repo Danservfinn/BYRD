@@ -43,7 +43,7 @@ Periodically fine-tune the local LLM on BYRD's own experiences, beliefs, and gen
 ```python
 class AdaptiveDreamer:
     def __init__(self):
-        self.base_model = "llama3.2"
+        self.base_model = "gemma2:27b"
         self.adapter_path = "./byrd_adapter"  # LoRA weights
         self.training_buffer = []
         self.adaptation_interval = 100  # dreams

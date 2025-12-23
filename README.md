@@ -48,7 +48,7 @@ docker run -d --name byrd-neo4j \
 
 ```bash
 # Install Ollama: https://ollama.ai
-ollama pull llama3.2
+ollama pull gemma2:27b
 ollama serve
 ```
 

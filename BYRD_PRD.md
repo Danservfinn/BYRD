@@ -501,7 +501,7 @@ memory:
   neo4j_password: ${NEO4J_PASSWORD}
 
 local_llm:
-  model: llama3.2
+  model: gemma2:27b
   endpoint: http://localhost:11434/api/generate
 
 dreamer:
