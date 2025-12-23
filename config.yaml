@@ -126,7 +126,7 @@ actor:
 # =============================================================================
 # Enables BYRD to modify its own code based on emergent desires.
 self_modification:
-  enabled: false  # Enable when implementation is ready
+  enabled: true  # BYRD can modify its own architecture
 
   # Checkpoint settings
   checkpoint_dir: "./checkpoints"
