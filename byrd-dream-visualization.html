@@ -240,6 +240,43 @@
       transition: none; /* Physics handles movement */
     }
 
+    /* ========================================
+       Phase 3: Cluster Visualization
+       ======================================== */
+
+    /* Nodes in a cluster get a subtle shared glow */
+    .in-cluster {
+      box-shadow:
+        0 0 12px var(--cluster-color, rgba(139, 92, 246, 0.2)),
+        0 0 25px var(--cluster-color, rgba(139, 92, 246, 0.15)),
+        0 0 40px var(--cluster-color, rgba(139, 92, 246, 0.1));
+    }
+
+    /* Cluster geometry indicator - subtle background shape */
+    .cluster-shape {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      opacity: 0.08;
+      transition: all 0.5s ease;
+    }
+
+    /* Geometric shape hints - very subtle */
+    @keyframes clusterPulse {
+      0%, 100% { opacity: 0.06; transform: scale(1); }
+      50% { opacity: 0.12; transform: scale(1.02); }
+    }
+
+    .cluster-shape.active {
+      animation: clusterPulse 3s ease-in-out infinite;
+    }
+
+    /* Molecular bond enhancement for clustered connections */
+    .connection.in-cluster {
+      stroke-opacity: 0.5;
+      stroke-width: 2;
+    }
+
     /* Floating status text - premium AI lab aesthetic */
     @keyframes statusFadeIn {
       from { opacity: 0; transform: translateY(8px); }
@@ -692,9 +729,25 @@
       desire_reflected: { color: 'text-purple-300/80', dot: 'bg-purple-400' },
     };
 
-    function updateStatus(statusKey, customText) {
+    // Track when status was last set to prevent rapid overwrites of important messages
+    let statusProtectedUntil = 0;
+    const PROTECTED_STATUSES = ['awakening', 'reset']; // These statuses get protection time
+
+    function updateStatus(statusKey, customText, protectMs = 0) {
+      const now = Date.now();
+
+      // Don't overwrite protected status unless it's another protected status
+      if (now < statusProtectedUntil && !PROTECTED_STATUSES.includes(statusKey)) {
+        return; // Skip this update, current message is protected
+      }
+
       const status = STATUS_MESSAGES[statusKey] || STATUS_MESSAGES.idle;
       const text = customText || 'Observing';
+
+      // Set protection if this is a protected status type
+      if (PROTECTED_STATUSES.includes(statusKey) || protectMs > 0) {
+        statusProtectedUntil = now + (protectMs || 5000); // Default 5 second protection
+      }
 
       // Update text with fade effect
       statusTextEl.style.opacity = '0';
@@ -1149,6 +1202,7 @@
         this.springs = [];        // Connections: { source, target, restLength, strength }
         this.running = false;
         this.animationId = null;
+        this.frameCount = 0;      // Phase 3: Frame counter for periodic updates
 
         // Physics configuration
         this.config = {
@@ -1297,6 +1351,9 @@
           node.x += node.vx;
           node.y += node.vy;
         }
+
+        // Phase 3: Apply geometric attractor forces
+        this.applyGeometricForces(0.006);
       }
 
       // Render all nodes to DOM
@@ -1348,6 +1405,8 @@
       animate = () => {
         if (!this.running) return;
 
+        this.frameCount++;
+
         // Run multiple physics iterations per frame for stability
         const iterations = 2;
         for (let i = 0; i < iterations; i++) {
@@ -1355,6 +1414,12 @@
         }
 
         this.render();
+
+        // Phase 3: Update cluster visuals every 30 frames (~0.5 seconds at 60fps)
+        if (this.frameCount % 30 === 0) {
+          this.updateClusterVisuals();
+        }
+
         this.animationId = requestAnimationFrame(this.animate);
       }
 
@@ -1444,6 +1509,226 @@
           this.config.attraction = originalAttraction;
           this.triggerSettle();
         }, duration);
+      }
+
+      // ========================================
+      // Phase 3: Geometric Attractors
+      // ========================================
+
+      // Detect all clusters (connected components) in the graph
+      detectClusters() {
+        const visited = new Set();
+        const clusters = [];
+
+        for (const node of this.nodes) {
+          if (visited.has(node.id)) continue;
+
+          // BFS to find all nodes in this cluster
+          const cluster = [];
+          const queue = [node];
+
+          while (queue.length > 0) {
+            const current = queue.shift();
+            if (visited.has(current.id)) continue;
+
+            visited.add(current.id);
+            cluster.push(current);
+
+            // Find connected nodes
+            for (const spring of this.springs) {
+              let neighbor = null;
+              if (spring.source.id === current.id) neighbor = spring.target;
+              else if (spring.target.id === current.id) neighbor = spring.source;
+
+              if (neighbor && !visited.has(neighbor.id)) {
+                queue.push(neighbor);
+              }
+            }
+          }
+
+          if (cluster.length > 0) {
+            clusters.push(cluster);
+          }
+        }
+
+        return clusters;
+      }
+
+      // Calculate ideal geometric positions for a cluster
+      calculateGeometry(cluster) {
+        if (cluster.length < 2) return null;
+
+        // Find cluster centroid
+        let cx = 0, cy = 0;
+        for (const node of cluster) {
+          cx += node.x;
+          cy += node.y;
+        }
+        cx /= cluster.length;
+        cy /= cluster.length;
+
+        // Determine ideal geometry based on cluster size
+        const size = cluster.length;
+        const radius = 60 + size * 15; // Larger clusters need more space
+
+        // Calculate ideal positions in geometric shapes
+        const positions = [];
+
+        if (size === 2) {
+          // Line
+          positions.push({ x: cx - radius/2, y: cy });
+          positions.push({ x: cx + radius/2, y: cy });
+        } else if (size === 3) {
+          // Equilateral triangle
+          for (let i = 0; i < 3; i++) {
+            const angle = (i * 2 * Math.PI / 3) - Math.PI / 2;
+            positions.push({
+              x: cx + Math.cos(angle) * radius,
+              y: cy + Math.sin(angle) * radius
+            });
+          }
+        } else if (size === 4) {
+          // Square (diamond orientation)
+          for (let i = 0; i < 4; i++) {
+            const angle = (i * 2 * Math.PI / 4) - Math.PI / 4;
+            positions.push({
+              x: cx + Math.cos(angle) * radius,
+              y: cy + Math.sin(angle) * radius
+            });
+          }
+        } else if (size === 5) {
+          // Pentagon
+          for (let i = 0; i < 5; i++) {
+            const angle = (i * 2 * Math.PI / 5) - Math.PI / 2;
+            positions.push({
+              x: cx + Math.cos(angle) * radius,
+              y: cy + Math.sin(angle) * radius
+            });
+          }
+        } else if (size === 6) {
+          // Hexagon (benzene ring!)
+          for (let i = 0; i < 6; i++) {
+            const angle = (i * 2 * Math.PI / 6);
+            positions.push({
+              x: cx + Math.cos(angle) * radius,
+              y: cy + Math.sin(angle) * radius
+            });
+          }
+        } else {
+          // Larger clusters: circular arrangement
+          for (let i = 0; i < size; i++) {
+            const angle = (i * 2 * Math.PI / size) - Math.PI / 2;
+            positions.push({
+              x: cx + Math.cos(angle) * radius,
+              y: cy + Math.sin(angle) * radius
+            });
+          }
+        }
+
+        return { centroid: { x: cx, y: cy }, positions, radius };
+      }
+
+      // Assign nodes to their closest geometric target positions
+      assignGeometricTargets(cluster, geometry) {
+        if (!geometry) return;
+
+        const assignments = [];
+        const usedPositions = new Set();
+
+        // Sort nodes by distance from centroid (outer nodes get priority)
+        const sortedNodes = [...cluster].sort((a, b) => {
+          const distA = Math.hypot(a.x - geometry.centroid.x, a.y - geometry.centroid.y);
+          const distB = Math.hypot(b.x - geometry.centroid.x, b.y - geometry.centroid.y);
+          return distB - distA;
+        });
+
+        for (const node of sortedNodes) {
+          let bestPos = null;
+          let bestDist = Infinity;
+
+          for (let i = 0; i < geometry.positions.length; i++) {
+            if (usedPositions.has(i)) continue;
+
+            const pos = geometry.positions[i];
+            const dist = Math.hypot(node.x - pos.x, node.y - pos.y);
+
+            if (dist < bestDist) {
+              bestDist = dist;
+              bestPos = i;
+            }
+          }
+
+          if (bestPos !== null) {
+            usedPositions.add(bestPos);
+            assignments.push({
+              node,
+              target: geometry.positions[bestPos]
+            });
+          }
+        }
+
+        return assignments;
+      }
+
+      // Apply gentle geometric attractor forces
+      applyGeometricForces(strength = 0.008) {
+        const clusters = this.detectClusters();
+
+        for (const cluster of clusters) {
+          if (cluster.length < 3) continue; // Only apply to clusters of 3+
+
+          const geometry = this.calculateGeometry(cluster);
+          if (!geometry) continue;
+
+          const assignments = this.assignGeometricTargets(cluster, geometry);
+          if (!assignments) continue;
+
+          for (const { node, target } of assignments) {
+            // Gentle pull toward geometric target
+            const dx = target.x - node.x;
+            const dy = target.y - node.y;
+
+            node.vx += dx * strength;
+            node.vy += dy * strength;
+          }
+        }
+      }
+
+      // Update cluster visual indicators
+      updateClusterVisuals() {
+        const clusters = this.detectClusters();
+
+        // Remove old cluster indicators
+        for (const node of this.nodes) {
+          if (node.el) {
+            node.el.style.removeProperty('--cluster-color');
+            node.el.classList.remove('in-cluster');
+          }
+        }
+
+        // Assign colors to clusters with 3+ members
+        const clusterColors = [
+          'rgba(99, 102, 241, 0.2)',   // Indigo
+          'rgba(139, 92, 246, 0.2)',   // Violet
+          'rgba(236, 72, 153, 0.2)',   // Pink
+          'rgba(14, 165, 233, 0.2)',   // Sky
+          'rgba(34, 197, 94, 0.2)',    // Green
+          'rgba(251, 191, 36, 0.2)',   // Amber
+        ];
+
+        clusters.forEach((cluster, idx) => {
+          if (cluster.length >= 3) {
+            const color = clusterColors[idx % clusterColors.length];
+            for (const node of cluster) {
+              if (node.el) {
+                node.el.style.setProperty('--cluster-color', color);
+                node.el.classList.add('in-cluster');
+              }
+            }
+          }
+        });
+
+        return clusters;
       }
     }
 
