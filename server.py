@@ -361,8 +361,8 @@ async def reset_byrd(request: ResetRequest = None):
             data={"message": "Memory cleared, preparing for awakening"}
         ))
 
-        # 6. Re-initialize capabilities and awaken
-        await byrd_instance._init_innate_capabilities()
+        # 6. Record capability experiences and awaken
+        await byrd_instance._record_capability_experiences()
         await byrd_instance._awaken(seed_question=seed_question)
 
         # 7. Restart background processes
