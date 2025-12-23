@@ -26,8 +26,8 @@ local_llm:
   # Ollama endpoint (only used when provider: ollama)
   endpoint: "http://localhost:11434/api/generate"
 
-  # Request timeout in seconds
-  timeout: 120.0
+  # Request timeout in seconds (qwen3:32b needs longer)
+  timeout: 600.0
 
   # OpenRouter settings (only used when provider: openrouter)
   # api_key: Set via OPENROUTER_API_KEY env var (recommended)
