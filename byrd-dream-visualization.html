@@ -140,6 +140,106 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
+    /* ========================================
+       Phase 2: Entry Choreography Animations
+       ======================================== */
+
+    /* Node emerging from void - elegant entrance with blur-to-focus */
+    @keyframes nodeEmerge {
+      0% {
+        opacity: 0;
+        transform: scale(0.1);
+        filter: blur(8px) brightness(2);
+      }
+      40% {
+        opacity: 0.7;
+        transform: scale(0.5);
+        filter: blur(3px) brightness(1.4);
+      }
+      70% {
+        opacity: 0.95;
+        transform: scale(1.15);
+        filter: blur(0) brightness(1.15);
+      }
+      85% {
+        transform: scale(0.95);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+        filter: blur(0) brightness(1);
+      }
+    }
+
+    /* Connection grows from source toward target */
+    @keyframes connectionGrow {
+      0% {
+        stroke-dasharray: 0, 500;
+        stroke-opacity: 0;
+      }
+      30% {
+        stroke-opacity: 0.5;
+      }
+      100% {
+        stroke-dasharray: 500, 0;
+        stroke-opacity: 0.4;
+      }
+    }
+
+    /* Settling oscillation - gentle wobble after position change */
+    @keyframes settleOscillate {
+      0%, 100% { transform: translate(0, 0); }
+      15% { transform: translate(3px, -2px); }
+      30% { transform: translate(-2px, 2px); }
+      45% { transform: translate(1.5px, -1px); }
+      60% { transform: translate(-1px, 0.5px); }
+      75% { transform: translate(0.5px, -0.3px); }
+    }
+
+    /* Elastic overshoot when node reaches destination */
+    @keyframes elasticArrive {
+      0% { transform: scale(0.8); opacity: 0.6; }
+      50% { transform: scale(1.12); opacity: 1; }
+      70% { transform: scale(0.96); }
+      85% { transform: scale(1.03); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Pulse wave that ripples outward when structure changes */
+    @keyframes structureRipple {
+      0% {
+        box-shadow: 0 0 0 0 var(--ripple-color, rgba(139, 92, 246, 0.4));
+      }
+      100% {
+        box-shadow: 0 0 0 20px transparent;
+      }
+    }
+
+    .node-emerging {
+      animation: nodeEmerge 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    .node-settling {
+      animation: settleOscillate 0.5s ease-out;
+    }
+
+    .node-arriving {
+      animation: elasticArrive 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .connection-growing {
+      animation: connectionGrow 0.5s ease-out forwards;
+    }
+
+    .structure-ripple {
+      animation: structureRipple 0.6s ease-out;
+    }
+
+    /* Smooth physics-driven transitions for nodes */
+    .node-physics {
+      transition: none; /* Physics handles movement */
+    }
+
     /* Floating status text - premium AI lab aesthetic */
     @keyframes statusFadeIn {
       from { opacity: 0; transform: translateY(8px); }
@@ -420,10 +520,10 @@
     <!-- ========================================================================= -->
     <!-- FLOATING STATUS TEXT (Above Control Panel) -->
     <!-- ========================================================================= -->
-    <div id="status-container" class="status-container absolute bottom-20 left-1/2 -translate-x-1/2 z-20" style="margin-left: -160px;">
-      <div class="flex items-center gap-3">
-        <div id="status-dot" class="status-dot w-1.5 h-1.5 rounded-full bg-indigo-400/50"></div>
-        <span id="status-text" class="status-text text-xs text-slate-500 tracking-wider uppercase">Awaiting connection</span>
+    <div id="status-container" class="status-container absolute bottom-20 left-1/2 -translate-x-1/2 z-20 max-w-2xl text-center" style="margin-left: -160px;">
+      <div class="flex items-center justify-center gap-3">
+        <div id="status-dot" class="status-dot w-1.5 h-1.5 rounded-full bg-indigo-400/50 flex-shrink-0"></div>
+        <span id="status-text" class="status-text text-xs text-slate-500 tracking-wider">Awaiting connection</span>
       </div>
     </div>
 
@@ -592,15 +692,9 @@
       desire_reflected: { color: 'text-purple-300/80', dot: 'bg-purple-400' },
     };
 
-    // Truncate text elegantly for status display
-    function truncateStatus(text, maxLen = 80) {
-      if (!text || text.length <= maxLen) return text;
-      return text.substring(0, maxLen - 3).trim() + '...';
-    }
-
     function updateStatus(statusKey, customText) {
       const status = STATUS_MESSAGES[statusKey] || STATUS_MESSAGES.idle;
-      const text = truncateStatus(customText || 'Observing');
+      const text = customText || 'Observing';
 
       // Update text with fade effect
       statusTextEl.style.opacity = '0';
@@ -608,7 +702,7 @@
 
       setTimeout(() => {
         statusTextEl.textContent = text;
-        statusTextEl.className = `status-text text-xs tracking-wider uppercase ${status.color}`;
+        statusTextEl.className = `status-text text-sm tracking-wide ${status.color}`;
         if (status.active) {
           statusTextEl.classList.add('active');
         }
@@ -1294,6 +1388,63 @@
           node.vy += (Math.random() - 0.5) * strength;
         }
       }
+
+      // Phase 2: Open structure - push existing nodes away from new node location
+      openStructure(newX, newY, radius = 80, strength = 3) {
+        for (const node of this.nodes) {
+          const dx = node.x - newX;
+          const dy = node.y - newY;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+          if (dist < radius) {
+            // Push away from the new node's location
+            const pushForce = (radius - dist) / radius * strength;
+            node.vx += (dx / dist) * pushForce;
+            node.vy += (dy / dist) * pushForce;
+
+            // Add ripple class to element
+            if (node.el) {
+              node.el.classList.add('structure-ripple');
+              node.el.style.setProperty('--ripple-color', 'rgba(139, 92, 246, 0.3)');
+              setTimeout(() => node.el.classList.remove('structure-ripple'), 600);
+            }
+          }
+        }
+      }
+
+      // Phase 2: Trigger settling oscillation on all nodes
+      triggerSettle() {
+        for (const node of this.nodes) {
+          if (node.el) {
+            node.el.classList.add('node-settling');
+            setTimeout(() => node.el.classList.remove('node-settling'), 500);
+          }
+        }
+      }
+
+      // Phase 2: Get connected nodes for a given node
+      getConnectedNodes(nodeId) {
+        const connected = [];
+        for (const spring of this.springs) {
+          if (spring.source.id === nodeId) {
+            connected.push(spring.target);
+          } else if (spring.target.id === nodeId) {
+            connected.push(spring.source);
+          }
+        }
+        return connected;
+      }
+
+      // Phase 2: Increase attraction temporarily for dramatic reorganization
+      pulseAttraction(duration = 500) {
+        const originalAttraction = this.config.attraction;
+        this.config.attraction = originalAttraction * 2.5;
+
+        setTimeout(() => {
+          this.config.attraction = originalAttraction;
+          this.triggerSettle();
+        }, duration);
+      }
     }
 
     // Create global simulation instance
@@ -1424,7 +1575,7 @@
     }
 
     // ==========================================================================
-    // ENHANCED NODE CREATION (with Molecular Simulation)
+    // ENHANCED NODE CREATION (with Molecular Simulation + Phase 2 Choreography)
     // ==========================================================================
     function createNode(type, content, id, importance = 0.5) {
       const nodeId = id || `node_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -1435,13 +1586,19 @@
       const x = centerX() + Math.cos(angle) * radius;
       const y = centerY() + Math.sin(angle) * radius;
 
+      // Phase 2: Open structure - push existing nodes away before new node appears
+      if (simulation.nodes.length > 0) {
+        simulation.openStructure(x, y, 100, 2.5);
+      }
+
       const color = NODE_COLORS[type] || NODE_COLORS.experience;
 
       // Size based on importance (8px to 16px)
       const baseSize = 8 + (importance * 8);
 
       const node = document.createElement('div');
-      node.className = 'node-new absolute rounded-full cursor-pointer';
+      // Phase 2: Use nodeEmerge animation for elegant entry
+      node.className = 'node-emerging absolute rounded-full cursor-pointer';
       node.style.cssText = `
         left: ${x}px;
         top: ${y}px;
@@ -1452,7 +1609,6 @@
         box-shadow: 0 0 ${12 + importance * 12}px ${color.glow};
         color: ${color.glow};
         z-index: 10;
-        transition: width 0.3s, height 0.3s, box-shadow 0.3s;
       `;
 
       node.dataset.nodeId = nodeId;
@@ -1488,6 +1644,7 @@
       emitParticleBurst(x, y, color.glow);
 
       // Create connections to nearby nodes (using node IDs for springs)
+      let connectionsCreated = 0;
       if (visualNodes.length > 1) {
         // Connect to 1-2 nearby nodes for molecular structure
         const connectCount = Math.min(visualNodes.length - 1, 1 + Math.floor(Math.random() * 2));
@@ -1498,16 +1655,29 @@
           const target = candidates[targetIdx];
           if (target && target.id !== nodeId) {
             createConnection(nodeId, target.id, type);
+            connectionsCreated++;
             candidates.splice(targetIdx, 1); // Don't connect twice
           }
         }
       }
 
-      // Settle node after pulse animation
+      // Phase 2: Pulse attraction for dramatic reorganization when new connections form
+      if (connectionsCreated > 0) {
+        setTimeout(() => {
+          simulation.pulseAttraction(400);
+        }, 200);
+      }
+
+      // Phase 2: Transition from emerging to settled with elastic arrive effect
       setTimeout(() => {
-        node.classList.remove('node-new');
+        node.classList.remove('node-emerging');
+        node.classList.add('node-arriving');
+      }, 700);
+
+      setTimeout(() => {
+        node.classList.remove('node-arriving');
         node.classList.add('node-settled');
-      }, 6600);
+      }, 1100);
 
       // Limit visible nodes - remove from simulation too
       if (visualNodes.length > 50) {
@@ -1517,9 +1687,6 @@
         old.el.style.transform = 'scale(0.5)';
         setTimeout(() => old.el.remove(), 500);
       }
-
-      // Give a little nudge to reorganize
-      simulation.nudge(1);
 
       return node;
     }
@@ -1535,6 +1702,11 @@
       // Add spring to simulation
       simulation.addSpring(sourceId, targetId);
 
+      // Calculate line length for proper dash animation
+      const dx = targetNode.x - sourceNode.x;
+      const dy = targetNode.y - sourceNode.y;
+      const length = Math.sqrt(dx * dx + dy * dy);
+
       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       line.setAttribute('x1', sourceNode.x);
       line.setAttribute('y1', sourceNode.y);
@@ -1542,12 +1714,26 @@
       line.setAttribute('y2', targetNode.y);
       line.setAttribute('stroke', color);
       line.setAttribute('stroke-width', '1.5');
-      line.setAttribute('stroke-opacity', '0.4');
-      line.classList.add('connection');
+      line.setAttribute('stroke-opacity', '0');
+      line.setAttribute('stroke-dasharray', `0, ${length}`);
+      line.classList.add('connection', 'connection-growing');
       line.dataset.sourceId = sourceId;
       line.dataset.targetId = targetId;
 
       connectionsContainer.appendChild(line);
+
+      // Phase 2: Animate the connection growing
+      requestAnimationFrame(() => {
+        line.style.transition = 'stroke-dasharray 0.5s ease-out, stroke-opacity 0.3s ease-out';
+        line.setAttribute('stroke-opacity', '0.4');
+        line.setAttribute('stroke-dasharray', `${length}, 0`);
+      });
+
+      // Remove growing class after animation
+      setTimeout(() => {
+        line.classList.remove('connection-growing');
+        line.removeAttribute('stroke-dasharray');
+      }, 550);
 
       // Limit connections
       const connections = connectionsContainer.querySelectorAll('line');
