@@ -688,9 +688,9 @@ Do not force coherence if none exists. Simply observe what the results contain."
         score = self.aitmpl_base_trust
 
         # Recent update bonus (+0.2 if < 30 days)
-        if template.updated_at:
+        if template.last_updated:
             try:
-                updated_dt = datetime.fromisoformat(template.updated_at.replace("Z", "+00:00"))
+                updated_dt = template.last_updated if isinstance(template.last_updated, datetime) else datetime.fromisoformat(str(template.last_updated).replace("Z", "+00:00"))
                 days_ago = (datetime.now(updated_dt.tzinfo) - updated_dt).days
                 if days_ago < 30:
                     score += 0.2
