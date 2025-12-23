@@ -309,7 +309,10 @@
           <span class="text-sm font-semibold text-slate-700">EVENT LOG</span>
           <span id="event-count" class="text-xs text-slate-500 bg-slate-200 px-2 py-0.5 rounded-full">0 events</span>
         </div>
-        <button id="btn-clear-log" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-200">Clear</button>
+        <div class="flex items-center gap-1">
+          <button id="btn-export-log" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-200">Export</button>
+          <button id="btn-clear-log" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-200">Clear</button>
+        </div>
       </div>
       <div id="event-list" class="flex-1 overflow-y-auto p-2 space-y-1">
         <div class="text-sm text-slate-500 text-center py-4">Connecting to BYRD...</div>
@@ -678,11 +681,11 @@
     const WS_URL = 'ws://localhost:8000/ws/events';
 
     const NODE_COLORS = {
-      belief: { color: 0xf59e0b, emissive: 0xfbbf24, label: 'Belief' },       // Amber/Orange
-      desire: { color: 0xe11d48, emissive: 0xf43f5e, label: 'Desire' },       // Rose/Red
-      experience: { color: 0x0284c7, emissive: 0x0ea5e9, label: 'Experience' }, // Sky blue
-      capability: { color: 0x7c3aed, emissive: 0xa855f7, label: 'Capability' }, // Violet
-      reflection: { color: 0x059669, emissive: 0x10b981, label: 'Reflection' }  // Emerald
+      belief: { color: 0xd97706, emissive: 0xfbbf24, label: 'Belief' },       // Dark amber
+      desire: { color: 0xbe123c, emissive: 0xf43f5e, label: 'Desire' },       // Dark rose
+      experience: { color: 0x0369a1, emissive: 0x38bdf8, label: 'Experience' }, // Dark sky blue
+      capability: { color: 0x6d28d9, emissive: 0xa855f7, label: 'Capability' }, // Dark violet
+      reflection: { color: 0x047857, emissive: 0x34d399, label: 'Reflection' }  // Dark emerald
     };
 
     // ==========================================================================
@@ -716,6 +719,7 @@
     const btnToggle = document.getElementById('btn-toggle');
     const btnReset = document.getElementById('btn-reset');
     const btnClearLog = document.getElementById('btn-clear-log');
+    const btnExportLog = document.getElementById('btn-export-log');
     const statusDot = document.getElementById('status-dot');
     const statusText = document.getElementById('status-text');
     const eventList = document.getElementById('event-list');
@@ -1072,54 +1076,25 @@
       const nodeId = id || `node_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       const colors = NODE_COLORS[type] || NODE_COLORS.experience;
 
-      // Calculate position - spiral outward from center
-      const angle = nodes3D.length * 0.618 * Math.PI * 2 + Math.random() * 0.5;
-      const radius = 15 + nodes3D.length * 1.5 + Math.random() * 10;
-      const height = (Math.random() - 0.5) * 30;
+      // Calculate position - closer to center for visibility
+      const angle = nodes3D.length * 0.618 * Math.PI * 2;
+      const radius = 20 + (nodes3D.length % 10) * 3;
+      const height = (Math.random() - 0.5) * 20;
 
       const x = Math.cos(angle) * radius;
       const y = height;
       const z = Math.sin(angle) * radius;
 
-      // Size based on importance - MUCH BIGGER
-      const size = 2.0 + importance * 2.5;
+      // Larger size for visibility
+      const size = 3.0 + importance * 2.0;
 
-      // Create geometry based on type
-      let geometry;
-      switch (type) {
-        case 'belief':
-          geometry = new THREE.IcosahedronGeometry(size, 1);
-          break;
-        case 'desire':
-          geometry = new THREE.SphereGeometry(size, 32, 32);
-          break;
-        case 'capability':
-          geometry = new THREE.OctahedronGeometry(size, 1);
-          break;
-        case 'reflection':
-          geometry = new THREE.TetrahedronGeometry(size, 1);
-          break;
-        default:
-          geometry = new THREE.SphereGeometry(size, 24, 24);
-      }
+      // Simple sphere geometry for all types
+      const geometry = new THREE.SphereGeometry(size, 32, 32);
 
-      // Create BRIGHT material that doesn't need lighting
+      // Simple bright material
       const material = new THREE.MeshBasicMaterial({
-        color: colors.emissive,
-        transparent: true,
-        opacity: 0
+        color: colors.color
       });
-
-      // Add glow effect with second larger transparent sphere
-      const glowGeometry = new THREE.SphereGeometry(size * 1.8, 16, 16);
-      const glowMaterial = new THREE.MeshBasicMaterial({
-        color: colors.emissive,
-        transparent: true,
-        opacity: 0.15
-      });
-      const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
-      scene.add(glowMesh);
-      glowMesh.position.set(x, y, z);
 
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.set(x, y, z);
@@ -1131,21 +1106,11 @@
         createdAt: Date.now(),
         targetPosition: new THREE.Vector3(x, y, z),
         velocity: new THREE.Vector3(0, 0, 0),
-        glowMesh: glowMesh  // Store reference to glow
+        glowMesh: null
       };
 
       scene.add(mesh);
-
-      // Animate fade in
-      const fadeIn = { opacity: 0, scale: 0 };
-      animateValue(fadeIn, 'opacity', 0.95, 800, (val) => {
-        material.opacity = val;
-        glowMaterial.opacity = val * 0.2;
-      });
-      animateValue(fadeIn, 'scale', 1, 600, (val) => {
-        mesh.scale.setScalar(val);
-        glowMesh.scale.setScalar(val);
-      }, easeOutElastic);
+      console.log('Node created:', type, 'position:', x.toFixed(1), y.toFixed(1), z.toFixed(1), 'color:', colors.color.toString(16));
 
       // Store node
       nodes3D.push(mesh);
@@ -1711,30 +1676,27 @@
     }
 
     function fadeOutAndRemove(object) {
-      if (object.material) {
-        animateValue({ opacity: object.material.opacity }, 'opacity', 0, 500, (val) => {
-          object.material.opacity = val;
-        });
-      }
-      // Also fade out glow mesh if present
+      // Animate scale down
+      animateValue({ scale: object.scale.x }, 'scale', 0, 400, (val) => {
+        object.scale.setScalar(val);
+      });
+      // Also scale down glow mesh if present
       if (object.userData?.glowMesh) {
         const glow = object.userData.glowMesh;
-        if (glow.material) {
-          animateValue({ opacity: glow.material.opacity }, 'opacity', 0, 500, (val) => {
-            glow.material.opacity = val;
-          });
-        }
+        animateValue({ scale: glow.scale.x }, 'scale', 0, 400, (val) => {
+          glow.scale.setScalar(val);
+        });
         setTimeout(() => {
           scene.remove(glow);
           if (glow.geometry) glow.geometry.dispose();
           if (glow.material) glow.material.dispose();
-        }, 500);
+        }, 400);
       }
       setTimeout(() => {
         scene.remove(object);
         if (object.geometry) object.geometry.dispose();
         if (object.material) object.material.dispose();
-      }, 500);
+      }, 400);
     }
 
     // ==========================================================================
@@ -2391,6 +2353,11 @@
           createNode3D('experience', event.data?.content, event.data?.id, 0.4);
           break;
 
+        case 'reflection_created':
+          createNode3D('reflection', event.data?.content || event.data?.raw_output, event.data?.id, 0.6);
+          updateStatus('New reflection formed', 'green');
+          break;
+
         case 'capability_created':
           createNode3D('capability', event.data?.name, event.data?.id, 0.6);
           updateStatus('New capability acquired', 'purple');
@@ -2660,6 +2627,27 @@
     btnClearLog.addEventListener('click', () => {
       events = [];
       renderEventLog();
+    });
+
+    btnExportLog.addEventListener('click', () => {
+      if (events.length === 0) {
+        alert('No events to export');
+        return;
+      }
+      const exportData = {
+        exported_at: new Date().toISOString(),
+        event_count: events.length,
+        events: events
+      };
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `byrd-events-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     });
 
     // ==========================================================================
