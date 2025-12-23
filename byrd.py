@@ -222,11 +222,21 @@ class BYRD:
             capabilities.append("System: self-modification exists (with provenance tracking)")
 
         for cap in capabilities:
-            await self.memory.record_experience(
+            exp_id = await self.memory.record_experience(
                 content=cap,
                 type="system"
             )
             print(f"   📌 {cap}")
+
+            # Emit event for UI visibility
+            await event_bus.emit(Event(
+                type=EventType.EXPERIENCE_CREATED,
+                data={
+                    "id": exp_id,
+                    "content": cap,
+                    "type": "system"
+                }
+            ))
 
     async def _awaken(self, seed_question: str = None):
         """
