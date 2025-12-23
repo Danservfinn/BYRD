@@ -70,12 +70,29 @@ class Memory:
         self.driver = None
     
     async def connect(self):
-        """Initialize connection to Neo4j."""
-        self.driver = AsyncGraphDatabase.driver(
-            self.uri, 
-            auth=(self.user, self.password)
-        )
-        await self._ensure_schema()
+        """Initialize connection to Neo4j (idempotent - safe to call multiple times)."""
+        if self.driver is None:
+            self.driver = AsyncGraphDatabase.driver(
+                self.uri,
+                auth=(self.user, self.password)
+            )
+            await self._ensure_schema()
+        else:
+            # Verify the connection is still alive
+            try:
+                async with self.driver.session() as session:
+                    await session.run("RETURN 1")
+            except Exception:
+                # Driver exists but connection is dead - recreate
+                try:
+                    await self.driver.close()
+                except Exception:
+                    pass
+                self.driver = AsyncGraphDatabase.driver(
+                    self.uri,
+                    auth=(self.user, self.password)
+                )
+                await self._ensure_schema()
     
     async def close(self):
         if self.driver:
