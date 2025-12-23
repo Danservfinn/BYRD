@@ -177,7 +177,7 @@ class Memory:
             type=EventType.EXPERIENCE_CREATED,
             data={
                 "id": exp_id,
-                "content": content[:200],
+                "content": content,
                 "type": type
             }
         ))
@@ -380,7 +380,7 @@ class Memory:
             type=EventType.BELIEF_CREATED,
             data={
                 "id": belief_id,
-                "content": content[:200],
+                "content": content,
                 "confidence": confidence
             }
         ))
@@ -455,7 +455,7 @@ class Memory:
             type=EventType.DESIRE_CREATED,
             data={
                 "id": desire_id,
-                "description": description[:200],
+                "description": description,
                 "type": type,
                 "intensity": intensity
             }
@@ -713,7 +713,7 @@ class Memory:
             data={
                 "id": cap_id,
                 "name": name,
-                "description": description[:200],
+                "description": description,
                 "type": type
             }
         ))

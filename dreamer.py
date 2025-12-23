@@ -231,7 +231,7 @@ Output JSON with a single "output" field containing whatever you want to record.
 
         # If output is a string, that's BYRD's voice
         if isinstance(output, str) and output.strip():
-            return output[:200]
+            return output
 
         if not isinstance(output, dict):
             return ""
@@ -246,9 +246,9 @@ Output JSON with a single "output" field containing whatever you want to record.
             if key in output:
                 val = output[key]
                 if isinstance(val, str):
-                    return val[:200]
+                    return val
                 elif isinstance(val, list) and val:
-                    return str(val[0])[:200]
+                    return str(val[0])
 
         # If no voice key found, return empty - that's fine
         return ""
