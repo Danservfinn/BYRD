@@ -1,11 +1,16 @@
 """
 BYRD Memory System
 Neo4j graph database interface for persistent memory.
+
+EMERGENCE PRINCIPLE:
+Type fields are open strings - the examples in comments are not exhaustive.
+BYRD can create experiences, beliefs, desires, and reflections with any type
+value. We do not constrain what categories BYRD can use.
 """
 
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import json
 from neo4j import GraphDatabase, AsyncGraphDatabase
 import hashlib
@@ -17,7 +22,7 @@ from event_bus import event_bus, Event, EventType
 class Experience:
     id: str
     content: str
-    type: str  # interaction, observation, action, dream
+    type: str  # Examples: interaction, observation, action, dream, reflection, system
     timestamp: datetime
     embedding: Optional[List[float]] = None
 
@@ -35,7 +40,7 @@ class Belief:
 class Desire:
     id: str
     description: str
-    type: str  # knowledge, capability, goal, exploration, coding, self_modification
+    type: str  # Examples: knowledge, capability, goal, exploration - BYRD may use any type
     intensity: float
     formed_at: datetime
     fulfilled: bool = False
@@ -51,10 +56,25 @@ class Capability:
     id: str
     name: str
     description: str
-    type: str  # innate, mcp, plugin, skill
+    type: str  # Examples: innate, mcp, plugin, skill - extensible
     config: Dict[str, Any]
     active: bool = True
     acquired_at: datetime = None
+
+
+@dataclass
+class Reflection:
+    """
+    A reflection is BYRD's raw output from a dream cycle.
+
+    EMERGENCE PRINCIPLE:
+    We store whatever BYRD outputs without forcing it into our categories.
+    The raw_output preserves BYRD's own vocabulary and structure.
+    """
+    id: str
+    raw_output: Dict[str, Any]  # BYRD's unmodified output
+    timestamp: datetime
+    source_experiences: List[str] = field(default_factory=list)  # Experience IDs
 
 
 class Memory:
@@ -116,6 +136,10 @@ class Memory:
             """)
             await session.run("""
                 CREATE INDEX IF NOT EXISTS FOR (b:Belief) ON (b.confidence)
+            """)
+            # Index for Reflections (emergence-compliant storage)
+            await session.run("""
+                CREATE INDEX IF NOT EXISTS FOR (r:Reflection) ON (r.timestamp)
             """)
     
     def _generate_id(self, content: str) -> str:
@@ -205,7 +229,119 @@ class Memory:
             )
             records = await result.data()
             return [r["related"] for r in records]
-    
+
+    # =========================================================================
+    # REFLECTIONS (Emergence-Compliant Storage)
+    # =========================================================================
+
+    async def record_reflection(
+        self,
+        raw_output: Dict[str, Any],
+        source_experience_ids: Optional[List[str]] = None
+    ) -> str:
+        """
+        Record a reflection in BYRD's own vocabulary.
+
+        EMERGENCE PRINCIPLE:
+        We store whatever BYRD outputs without forcing it into our categories.
+        The raw_output is stored as-is, preserving BYRD's vocabulary.
+        """
+        # Generate ID from serialized output
+        output_str = json.dumps(raw_output, sort_keys=True, default=str)
+        ref_id = self._generate_id(output_str)
+
+        async with self.driver.session() as session:
+            # Store reflection with raw JSON output
+            await session.run("""
+                CREATE (r:Reflection {
+                    id: $id,
+                    raw_output: $raw_output,
+                    output_keys: $output_keys,
+                    timestamp: datetime()
+                })
+            """,
+            id=ref_id,
+            raw_output=output_str,  # Store as JSON string
+            output_keys=list(raw_output.keys()) if isinstance(raw_output, dict) else []
+            )
+
+            # Link to source experiences
+            if source_experience_ids:
+                await session.run("""
+                    MATCH (r:Reflection {id: $ref_id})
+                    MATCH (e:Experience)
+                    WHERE e.id IN $exp_ids
+                    CREATE (r)-[:DERIVED_FROM]->(e)
+                """, ref_id=ref_id, exp_ids=source_experience_ids[:10])
+
+        # Emit event for real-time UI
+        await event_bus.emit(Event(
+            type=EventType.REFLECTION_CREATED,
+            data={
+                "id": ref_id,
+                "output_keys": list(raw_output.keys()) if isinstance(raw_output, dict) else []
+            }
+        ))
+
+        return ref_id
+
+    async def get_recent_reflections(self, limit: int = 10) -> List[Dict]:
+        """
+        Get recent reflections.
+
+        Returns reflections with raw_output parsed back to dict.
+        """
+        query = """
+            MATCH (r:Reflection)
+            RETURN r
+            ORDER BY r.timestamp DESC
+            LIMIT $limit
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(query, limit=limit)
+            records = await result.data()
+
+            reflections = []
+            for r in records:
+                ref = r["r"]
+                # Parse raw_output back to dict
+                try:
+                    ref["raw_output"] = json.loads(ref.get("raw_output", "{}"))
+                except (json.JSONDecodeError, TypeError):
+                    ref["raw_output"] = {}
+                reflections.append(ref)
+
+            return reflections
+
+    async def get_reflection_patterns(self, min_occurrences: int = 3) -> Dict[str, int]:
+        """
+        Analyze what keys BYRD has been using in reflections.
+
+        Returns a count of how often each key appears across reflections.
+        Useful for detecting BYRD's emerging vocabulary.
+        """
+        query = """
+            MATCH (r:Reflection)
+            RETURN r.output_keys as keys
+            ORDER BY r.timestamp DESC
+            LIMIT 100
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(query)
+            records = await result.data()
+
+            key_counts: Dict[str, int] = {}
+            for r in records:
+                keys = r.get("keys", [])
+                if keys:
+                    for key in keys:
+                        key_counts[key] = key_counts.get(key, 0) + 1
+
+            # Filter to keys that appear at least min_occurrences times
+            return {k: v for k, v in key_counts.items() if v >= min_occurrences}
+
     # =========================================================================
     # BELIEFS
     # =========================================================================

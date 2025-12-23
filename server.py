@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 from byrd import BYRD
 from event_bus import EventBus, Event, EventType, event_bus
+from llm_client import create_llm_client, LLMError
 
 
 # =============================================================================
@@ -129,6 +130,17 @@ class HistoryResponse(BaseModel):
 class ResetResponse(BaseModel):
     success: bool
     message: str
+
+
+class LLMConfigResponse(BaseModel):
+    provider: str
+    model: str
+    available_providers: List[str]
+
+
+class LLMConfigUpdate(BaseModel):
+    provider: str
+    model: str
 
 
 # =============================================================================
@@ -352,6 +364,83 @@ async def reset_byrd():
             success=False,
             message=f"Reset failed: {str(e)}"
         )
+
+
+# =============================================================================
+# LLM CONFIGURATION ENDPOINTS
+# =============================================================================
+
+@app.get("/api/llm-config", response_model=LLMConfigResponse)
+async def get_llm_config():
+    """Get current LLM configuration."""
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    client = byrd_instance.llm_client
+    # Extract provider and model from model_name (format: "provider/model")
+    model_name = client.model_name
+    if "/" in model_name:
+        provider, model = model_name.split("/", 1)
+    else:
+        provider = "unknown"
+        model = model_name
+
+    return LLMConfigResponse(
+        provider=provider,
+        model=model,
+        available_providers=["ollama", "openrouter"]
+    )
+
+
+@app.post("/api/llm-config", response_model=LLMConfigResponse)
+async def update_llm_config(config: LLMConfigUpdate):
+    """Update LLM configuration (hot-swap provider/model)."""
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        # Build config dict for new client
+        new_config = {
+            "provider": config.provider,
+            "model": config.model,
+            "timeout": 120.0
+        }
+
+        # Add provider-specific settings
+        if config.provider == "ollama":
+            new_config["endpoint"] = "http://localhost:11434/api/generate"
+        # OpenRouter uses env var for API key
+
+        # Create new client
+        new_client = create_llm_client(new_config)
+
+        # Hot-swap: replace client in BYRD, Dreamer, and Seeker
+        byrd_instance.llm_client = new_client
+        byrd_instance.dreamer.llm_client = new_client
+        byrd_instance.seeker.llm_client = new_client
+
+        print(f"🧠 LLM switched to: {new_client.model_name}")
+
+        # Emit event for UI
+        await event_bus.emit(Event(
+            type=EventType.SYSTEM_STARTED,
+            data={"message": f"LLM switched to {new_client.model_name}"}
+        ))
+
+        return LLMConfigResponse(
+            provider=config.provider,
+            model=config.model,
+            available_providers=["ollama", "openrouter"]
+        )
+
+    except LLMError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update LLM: {str(e)}")
 
 
 # =============================================================================

@@ -29,12 +29,13 @@ An autonomous AI system that dreams, desires, and grows. BYRD develops emergent 
 
 > "A system that truly wants must be able to change itself."
 
-The system dreams continuously using a local LLM. From dreams come:
-- **Beliefs**: Conclusions drawn from experiences
-- **Connections**: Relationships between memories
-- **Desires**: Things it wants (knowledge, capabilities, goals, coding, self-modification)
+BYRD follows strict **emergence principles**:
+- **No prescribed categories**: BYRD defines its own vocabulary
+- **No leading questions**: Pure data presentation
+- **No personality injection**: Factual discovery only
+- **Pattern detection**: Observe before acting, require stability
 
-The Seeker then works to fulfill those desires autonomously.
+The system dreams continuously using a local LLM. From dreams come whatever BYRD produces in its own vocabulary. The Seeker observes patterns and executes BYRD's own strategies.
 
 ## Features
 
@@ -110,6 +111,31 @@ python server.py
 # Events stream in real-time via WebSocket at ws://localhost:8000/ws/events
 ```
 
+## LLM Provider Options
+
+BYRD supports local and cloud LLM providers:
+
+### Ollama (Default - Free, Local)
+
+```bash
+ollama serve
+ollama pull gemma2:27b
+```
+
+### OpenRouter (Cloud - Pay-per-use)
+
+1. Get API key from [openrouter.ai](https://openrouter.ai)
+2. Set environment variable:
+   ```bash
+   export OPENROUTER_API_KEY="sk-or-..."
+   ```
+3. Update `config.yaml`:
+   ```yaml
+   local_llm:
+     provider: "openrouter"
+     model: "deepseek/deepseek-v3.2-speciale"  # or any OpenRouter model
+   ```
+
 ## The Awakening
 
 BYRD begins with nothing. But emptiness produces nothing—the Dreamer needs something to reflect on.
@@ -142,17 +168,18 @@ Graph database storing everything BYRD knows:
 
 ### Dreamer (Local LLM)
 
-Runs continuously, reflecting on recent experiences:
-1. **Recall**: Gather recent experiences and related memories
-2. **Reflect**: Ask local LLM to find patterns, draw conclusions
-3. **Record**: Store new beliefs, connections, desires
+Runs continuously with pure data presentation:
+1. **Recall**: Gather recent experiences, memories, previous reflections
+2. **Present**: Show data with minimal prompt (no questions, no categories)
+3. **Record**: Store raw output in BYRD's own vocabulary
 
 ### Seeker (Local LLM + SearXNG)
 
-Fulfills desires autonomously:
-- **Knowledge desires**: Research via SearXNG, synthesize with local LLM
-- **Capability desires**: Search GitHub and aitmpl.com, install tools
-- **Self-modification desires**: Propose and execute code changes
+Observes and executes patterns:
+- **Pattern detection**: Track themes across reflections
+- **Stability check**: Require N occurrences before acting
+- **Strategy execution**: Run BYRD's own reasoning about how to fulfill
+- **Outcome recording**: Store results as experiences for next reflection
 
 ### Actor (Claude API)
 
@@ -365,6 +392,8 @@ This is closer to how minds work.
 
 - **[ARCHITECTURE.md](ARCHITECTURE.md)**: Deep dive into system design
 - **[CLAUDE.md](CLAUDE.md)**: Development guide for Claude Code
+- **[EMERGENCE_PRINCIPLES.md](EMERGENCE_PRINCIPLES.md)**: Core philosophical principles
+- **[EMERGENCE_AUDIT.md](EMERGENCE_AUDIT.md)**: Compliance status
 - **[.claude/manifest.md](.claude/manifest.md)**: Knowledge base index
 
 ## Troubleshooting

@@ -32,6 +32,7 @@ class EventType(Enum):
     DREAM_CYCLE_START = "dream_cycle_start"
     DREAM_CYCLE_END = "dream_cycle_end"
     REFLECTION_TEXT = "reflection_text"
+    REFLECTION_CREATED = "reflection_created"  # Emergence-compliant storage
 
     # Seeker events
     SEEK_CYCLE_START = "seek_cycle_start"
@@ -55,6 +56,11 @@ class EventType(Enum):
     SYSTEM_STOPPED = "system_stopped"
     SYSTEM_RESET = "system_reset"
     AWAKENING = "awakening"
+
+    # Orientation events (self-discovery after awakening)
+    ORIENTATION_START = "orientation_start"
+    ORIENTATION_DISCOVERY = "orientation_discovery"
+    ORIENTATION_COMPLETE = "orientation_complete"
 
 
 @dataclass

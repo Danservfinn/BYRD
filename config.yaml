@@ -10,17 +10,29 @@ memory:
   neo4j_password: "prometheus"  # Change this in production!
 
 # =============================================================================
-# LOCAL LLM (Shared by Dreamer and Seeker)
+# LLM PROVIDER (Shared by Dreamer and Seeker)
 # =============================================================================
 # One mind: the same model that dreams also synthesizes research.
 # This preserves emergence — all learning flows through one model.
 local_llm:
-  # Model to use (must be available via endpoint)
-  model: "gemma2:27b"
-  
-  # Ollama endpoint (default)
-  # For llama.cpp: "http://localhost:8080/completion"
+  # Provider: "ollama" (local) or "openrouter" (cloud)
+  provider: "ollama"
+
+  # Model name (provider-specific)
+  # Ollama: "gemma2:27b", "llama3:70b", "qwen2.5:32b"
+  # OpenRouter: "deepseek/deepseek-v3.2-speciale", "google/gemma-2-27b-it"
+  model: "qwen3:32b"
+
+  # Ollama endpoint (only used when provider: ollama)
   endpoint: "http://localhost:11434/api/generate"
+
+  # Request timeout in seconds
+  timeout: 120.0
+
+  # OpenRouter settings (only used when provider: openrouter)
+  # api_key: Set via OPENROUTER_API_KEY env var (recommended)
+  # site_url: "https://github.com/yourname/byrd"
+  # app_name: "BYRD"
 
 # =============================================================================
 # DREAMER (Continuous Reflection)
