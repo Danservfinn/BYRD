@@ -139,6 +139,33 @@
       from { opacity: 0; transform: translateY(20px); }
       to { opacity: 1; transform: translateY(0); }
     }
+
+    /* Floating status text - premium AI lab aesthetic */
+    @keyframes statusFadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes statusPulse {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
+    }
+    @keyframes statusDotPulse {
+      0%, 100% { opacity: 0.3; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.2); }
+    }
+    .status-container {
+      font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', ui-monospace, monospace;
+      letter-spacing: 0.05em;
+    }
+    .status-text {
+      animation: statusFadeIn 0.4s ease-out forwards;
+    }
+    .status-text.active {
+      animation: statusPulse 2s ease-in-out infinite;
+    }
+    .status-dot {
+      animation: statusDotPulse 1.5s ease-in-out infinite;
+    }
     @keyframes desirePulse {
       0%, 100% { box-shadow: 0 0 10px rgba(244,114,182,0.5); }
       50% { box-shadow: 0 0 25px rgba(244,114,182,0.8); }
@@ -391,6 +418,16 @@
     </div>
 
     <!-- ========================================================================= -->
+    <!-- FLOATING STATUS TEXT (Above Control Panel) -->
+    <!-- ========================================================================= -->
+    <div id="status-container" class="status-container absolute bottom-20 left-1/2 -translate-x-1/2 z-20" style="margin-left: -160px;">
+      <div class="flex items-center gap-3">
+        <div id="status-dot" class="status-dot w-1.5 h-1.5 rounded-full bg-indigo-400/50"></div>
+        <span id="status-text" class="status-text text-xs text-slate-500 tracking-wider uppercase">Awaiting connection</span>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
     <!-- CONTROL PANEL (Bottom Center) -->
     <!-- ========================================================================= -->
     <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 z-20" style="margin-left: -160px;">
@@ -515,6 +552,72 @@
     const nebula3 = document.getElementById('nebula-3');
     const flowParticlesContainer = document.getElementById('flow-particles');
 
+    // Floating status elements
+    const statusContainer = document.getElementById('status-container');
+    const statusDot = document.getElementById('status-dot');
+    const statusTextEl = document.getElementById('status-text');
+    let currentStatusType = 'idle'; // Track current status type for styling
+
+    // ==========================================================================
+    // STATUS TEXT MANAGEMENT
+    // ==========================================================================
+    const STATUS_MESSAGES = {
+      // Connection states
+      connecting: { text: 'Establishing connection', color: 'text-slate-500', dot: 'bg-slate-400/50' },
+      connected: { text: 'Connected · Standing by', color: 'text-slate-500', dot: 'bg-slate-400/50' },
+      disconnected: { text: 'Connection lost', color: 'text-red-400/70', dot: 'bg-red-400/50' },
+
+      // System states
+      awakening: { text: 'Awakening consciousness', color: 'text-amber-300/90', dot: 'bg-amber-400', active: true },
+      idle: { text: 'Observing', color: 'text-slate-500', dot: 'bg-slate-400/50' },
+      stopped: { text: 'Paused', color: 'text-slate-600', dot: 'bg-slate-600/50' },
+      reset: { text: 'Resetting memory', color: 'text-orange-400/80', dot: 'bg-orange-400', active: true },
+
+      // Dream cycle
+      dreaming: { text: 'Dreaming · Reflecting on experiences', color: 'text-indigo-300/90', dot: 'bg-indigo-400', active: true },
+      recalling: { text: 'Recalling recent memories', color: 'text-indigo-300/80', dot: 'bg-indigo-400', active: true },
+      associating: { text: 'Forming associations', color: 'text-purple-300/80', dot: 'bg-purple-400', active: true },
+      reflecting: { text: 'Deep reflection in progress', color: 'text-violet-300/80', dot: 'bg-violet-400', active: true },
+      forming: { text: 'Forming new beliefs', color: 'text-fuchsia-300/80', dot: 'bg-fuchsia-400', active: true },
+
+      // Seek cycle
+      seeking: { text: 'Seeking to fulfill desires', color: 'text-cyan-300/90', dot: 'bg-cyan-400', active: true },
+      researching: { text: 'Researching knowledge', color: 'text-cyan-300/80', dot: 'bg-cyan-400', active: true },
+
+      // Creation events
+      belief_formed: { text: 'New belief crystallized', color: 'text-amber-300/90', dot: 'bg-amber-400' },
+      desire_emerged: { text: 'New desire emerged', color: 'text-rose-300/90', dot: 'bg-rose-400' },
+      experience_recorded: { text: 'Recording experience', color: 'text-blue-300/80', dot: 'bg-blue-400' },
+      capability_gained: { text: 'New capability acquired', color: 'text-purple-300/90', dot: 'bg-purple-400' },
+
+      // Failure states
+      attempt_failed: { text: 'Processing failed attempt', color: 'text-red-300/70', dot: 'bg-red-400/70' },
+      desire_reflected: { text: 'Reflecting on blocked desire', color: 'text-purple-300/80', dot: 'bg-purple-400' },
+    };
+
+    function updateStatus(statusKey, customText = null) {
+      const status = STATUS_MESSAGES[statusKey] || STATUS_MESSAGES.idle;
+      const text = customText || status.text;
+
+      // Update text with fade effect
+      statusTextEl.style.opacity = '0';
+      statusTextEl.style.transform = 'translateY(8px)';
+
+      setTimeout(() => {
+        statusTextEl.textContent = text;
+        statusTextEl.className = `status-text text-xs tracking-wider uppercase ${status.color}`;
+        if (status.active) {
+          statusTextEl.classList.add('active');
+        }
+        statusDot.className = `status-dot w-1.5 h-1.5 rounded-full ${status.dot}`;
+
+        statusTextEl.style.opacity = '1';
+        statusTextEl.style.transform = 'translateY(0)';
+      }, 150);
+
+      currentStatusType = statusKey;
+    }
+
     // ==========================================================================
     // WEBSOCKET
     // ==========================================================================
@@ -525,12 +628,14 @@
         ws.onopen = () => {
           connected = true;
           updateConnectionStatus();
+          updateStatus('connected');
           console.log('WebSocket connected');
         };
 
         ws.onclose = () => {
           connected = false;
           updateConnectionStatus();
+          updateStatus('disconnected');
           console.log('WebSocket disconnected, reconnecting in 3s...');
           setTimeout(connectWebSocket, 3000);
         };
@@ -628,15 +733,20 @@
         case 'dream_cycle_start':
           setPhase('recall');
           dreamCount = event.data?.cycle || dreamCount + 1;
+          updateStatus('dreaming', `Dream cycle ${dreamCount} · Reflecting`);
           break;
         case 'dream_cycle_end':
           setPhase('idle');
+          updateStatus('idle');
           break;
         case 'belief_created':
           beliefCount++;
           const beliefConfidence = event.data?.confidence || 0.7;
           createNode('belief', event.data?.content, event.data?.id, beliefConfidence);
           showEmergence('belief', event.data?.content, beliefConfidence);
+          updateStatus('belief_formed');
+          // Return to idle after a moment
+          setTimeout(() => { if (currentStatusType === 'belief_formed') updateStatus('idle'); }, 3000);
           break;
         case 'desire_created':
           const desireIntensity = event.data?.intensity || 0.5;
@@ -649,12 +759,19 @@
           updateDesireGarden();
           createNode('desire', event.data?.description, event.data?.id, desireIntensity);
           showEmergence('desire', event.data?.description, desireIntensity);
+          updateStatus('desire_emerged');
+          setTimeout(() => { if (currentStatusType === 'desire_emerged') updateStatus('idle'); }, 3000);
           break;
         case 'experience_created':
           createNode('experience', event.data?.content, event.data?.id, 0.5);
+          updateStatus('experience_recorded');
+          setTimeout(() => { if (currentStatusType === 'experience_recorded') updateStatus('idle'); }, 2000);
           break;
         case 'capability_added':
           createNode('capability', event.data?.name, event.data?.id, 0.8);
+          capCount++;
+          updateStatus('capability_gained');
+          setTimeout(() => { if (currentStatusType === 'capability_gained') updateStatus('idle'); }, 3000);
           break;
         case 'awakening':
           setPhase('idle');
@@ -663,14 +780,18 @@
           desires = [];
           updateDesireGarden();
           clearVisualization();
+          updateStatus('awakening');
+          setTimeout(() => { if (currentStatusType === 'awakening') updateStatus('idle'); }, 4000);
           break;
         case 'system_started':
           running = true;
           updateToggleButton();
+          updateStatus('idle');
           break;
         case 'system_stopped':
           running = false;
           updateToggleButton();
+          updateStatus('stopped');
           break;
         case 'system_reset':
           // Reset all counters
@@ -684,6 +805,33 @@
           clearVisualization();
           desires = [];
           updateDesireGarden();
+          updateStatus('reset');
+          break;
+        case 'seek_cycle_start':
+          seekCount++;
+          updateStatus('seeking');
+          break;
+        case 'seek_cycle_end':
+          if (currentStatusType === 'seeking' || currentStatusType === 'researching') {
+            updateStatus('idle');
+          }
+          break;
+        case 'research_start':
+          updateStatus('researching');
+          break;
+        case 'research_complete':
+          updateStatus('idle');
+          break;
+        case 'desire_attempt_failed':
+          updateStatus('attempt_failed');
+          setTimeout(() => { if (currentStatusType === 'attempt_failed') updateStatus('idle'); }, 2000);
+          break;
+        case 'desire_reflected':
+          updateStatus('desire_reflected');
+          setTimeout(() => { if (currentStatusType === 'desire_reflected') updateStatus('idle'); }, 3000);
+          break;
+        case 'desire_stuck':
+          updateStatus('attempt_failed', 'Desire blocked · Awaiting reflection');
           break;
       }
 
@@ -875,6 +1023,254 @@
     };
 
     // ==========================================================================
+    // MOLECULAR SIMULATION ENGINE (Phase 1)
+    // ==========================================================================
+    class MolecularSimulation {
+      constructor() {
+        this.nodes = [];          // Physics nodes: { id, x, y, vx, vy, mass, el, type }
+        this.springs = [];        // Connections: { source, target, restLength, strength }
+        this.running = false;
+        this.animationId = null;
+
+        // Physics configuration
+        this.config = {
+          repulsion: 4000,          // How strongly nodes push apart
+          attraction: 0.04,         // Spring strength for connections
+          idealDistance: 100,       // Target distance between connected nodes
+          damping: 0.92,            // Velocity decay per frame (0.9 = 10% loss)
+          centerGravity: 0.008,     // Pull toward center
+          maxVelocity: 6,           // Speed limit for smooth motion
+          minVelocity: 0.01,        // Below this, node is considered stable
+          boundaryPadding: 80       // Keep nodes away from edges
+        };
+      }
+
+      // Add a node to the simulation
+      addNode(id, x, y, el, type, importance = 0.5) {
+        // Mass based on importance (heavier = moves slower)
+        const mass = 1 + importance * 2;
+
+        const node = {
+          id,
+          x,
+          y,
+          vx: 0,
+          vy: 0,
+          mass,
+          el,
+          type,
+          importance,
+          fx: null,  // Fixed x (if pinned)
+          fy: null   // Fixed y (if pinned)
+        };
+
+        this.nodes.push(node);
+        return node;
+      }
+
+      // Add a spring connection between two nodes
+      addSpring(sourceId, targetId, strength = null) {
+        const source = this.nodes.find(n => n.id === sourceId);
+        const target = this.nodes.find(n => n.id === targetId);
+
+        if (!source || !target) return null;
+
+        // Calculate current distance as rest length
+        const dx = target.x - source.x;
+        const dy = target.y - source.y;
+        const restLength = Math.sqrt(dx * dx + dy * dy) || this.config.idealDistance;
+
+        const spring = {
+          source,
+          target,
+          restLength: Math.min(restLength, this.config.idealDistance * 1.5),
+          strength: strength || this.config.attraction
+        };
+
+        this.springs.push(spring);
+        return spring;
+      }
+
+      // Remove a node and its connections
+      removeNode(id) {
+        this.nodes = this.nodes.filter(n => n.id !== id);
+        this.springs = this.springs.filter(s => s.source.id !== id && s.target.id !== id);
+      }
+
+      // Apply all forces for one tick
+      tick() {
+        const { repulsion, damping, centerGravity, maxVelocity, boundaryPadding } = this.config;
+        const cx = centerX();
+        const cy = centerY();
+        const boundaryLeft = boundaryPadding;
+        const boundaryRight = (window.innerWidth - 320) - boundaryPadding;
+        const boundaryTop = boundaryPadding;
+        const boundaryBottom = window.innerHeight - boundaryPadding;
+
+        // Apply forces to each node
+        for (const node of this.nodes) {
+          if (node.fx !== null && node.fy !== null) continue; // Skip pinned nodes
+
+          let fx = 0;
+          let fy = 0;
+
+          // 1. Repulsion from all other nodes (inverse square law)
+          for (const other of this.nodes) {
+            if (other.id === node.id) continue;
+
+            const dx = node.x - other.x;
+            const dy = node.y - other.y;
+            const distSq = dx * dx + dy * dy;
+            const dist = Math.sqrt(distSq) || 1;
+
+            // Stronger repulsion when close
+            const force = repulsion / distSq;
+            fx += (dx / dist) * force;
+            fy += (dy / dist) * force;
+          }
+
+          // 2. Attraction from springs (Hooke's law)
+          for (const spring of this.springs) {
+            let other, isSource;
+            if (spring.source.id === node.id) {
+              other = spring.target;
+              isSource = true;
+            } else if (spring.target.id === node.id) {
+              other = spring.source;
+              isSource = false;
+            } else {
+              continue;
+            }
+
+            const dx = other.x - node.x;
+            const dy = other.y - node.y;
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+            // Spring force: pull toward rest length
+            const displacement = dist - spring.restLength;
+            const force = displacement * spring.strength;
+
+            fx += (dx / dist) * force;
+            fy += (dy / dist) * force;
+          }
+
+          // 3. Gentle gravity toward center
+          fx += (cx - node.x) * centerGravity;
+          fy += (cy - node.y) * centerGravity;
+
+          // 4. Boundary repulsion (soft walls)
+          if (node.x < boundaryLeft) fx += (boundaryLeft - node.x) * 0.1;
+          if (node.x > boundaryRight) fx += (boundaryRight - node.x) * 0.1;
+          if (node.y < boundaryTop) fy += (boundaryTop - node.y) * 0.1;
+          if (node.y > boundaryBottom) fy += (boundaryBottom - node.y) * 0.1;
+
+          // Update velocity (F = ma, a = F/m)
+          node.vx = (node.vx + fx / node.mass) * damping;
+          node.vy = (node.vy + fy / node.mass) * damping;
+
+          // Clamp velocity
+          const speed = Math.sqrt(node.vx * node.vx + node.vy * node.vy);
+          if (speed > maxVelocity) {
+            node.vx = (node.vx / speed) * maxVelocity;
+            node.vy = (node.vy / speed) * maxVelocity;
+          }
+
+          // Update position
+          node.x += node.vx;
+          node.y += node.vy;
+        }
+      }
+
+      // Render all nodes to DOM
+      render() {
+        for (const node of this.nodes) {
+          if (node.el) {
+            node.el.style.left = `${node.x}px`;
+            node.el.style.top = `${node.y}px`;
+          }
+        }
+        this.renderSprings();
+      }
+
+      // Update SVG connection lines
+      renderSprings() {
+        const lines = connectionsContainer.querySelectorAll('line');
+        let lineIndex = 0;
+
+        for (const spring of this.springs) {
+          if (lineIndex < lines.length) {
+            const line = lines[lineIndex];
+            line.setAttribute('x1', spring.source.x);
+            line.setAttribute('y1', spring.source.y);
+            line.setAttribute('x2', spring.target.x);
+            line.setAttribute('y2', spring.target.y);
+          }
+          lineIndex++;
+        }
+      }
+
+      // Calculate total kinetic energy (for stability detection)
+      kineticEnergy() {
+        return this.nodes.reduce((sum, n) => {
+          return sum + n.mass * (n.vx * n.vx + n.vy * n.vy);
+        }, 0);
+      }
+
+      // Check if simulation is stable
+      isStable() {
+        return this.kineticEnergy() < this.config.minVelocity * this.nodes.length;
+      }
+
+      // Animation loop
+      animate = () => {
+        if (!this.running) return;
+
+        // Run multiple physics iterations per frame for stability
+        const iterations = 2;
+        for (let i = 0; i < iterations; i++) {
+          this.tick();
+        }
+
+        this.render();
+        this.animationId = requestAnimationFrame(this.animate);
+      }
+
+      // Start the simulation
+      start() {
+        if (this.running) return;
+        this.running = true;
+        this.animate();
+      }
+
+      // Stop the simulation
+      stop() {
+        this.running = false;
+        if (this.animationId) {
+          cancelAnimationFrame(this.animationId);
+          this.animationId = null;
+        }
+      }
+
+      // Reset everything
+      reset() {
+        this.stop();
+        this.nodes = [];
+        this.springs = [];
+      }
+
+      // Give all nodes a gentle push (for reorganization)
+      nudge(strength = 2) {
+        for (const node of this.nodes) {
+          node.vx += (Math.random() - 0.5) * strength;
+          node.vy += (Math.random() - 0.5) * strength;
+        }
+      }
+    }
+
+    // Create global simulation instance
+    const simulation = new MolecularSimulation();
+
+    // ==========================================================================
     // REACTIVE ORB
     // ==========================================================================
     function reactOrb(type, intensity = 1) {
@@ -999,12 +1395,14 @@
     }
 
     // ==========================================================================
-    // ENHANCED NODE CREATION
+    // ENHANCED NODE CREATION (with Molecular Simulation)
     // ==========================================================================
     function createNode(type, content, id, importance = 0.5) {
-      // Calculate position in orbit around center
+      const nodeId = id || `node_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+      // Calculate initial spawn position (will be adjusted by physics)
       const angle = (visualNodes.length * 0.618 * 2 * Math.PI) + Math.random() * 0.5;
-      const radius = 100 + Math.random() * 120 + (visualNodes.length * 6);
+      const radius = 100 + Math.random() * 80 + (visualNodes.length * 4);
       const x = centerX() + Math.cos(angle) * radius;
       const y = centerY() + Math.sin(angle) * radius;
 
@@ -1025,9 +1423,10 @@
         box-shadow: 0 0 ${12 + importance * 12}px ${color.glow};
         color: ${color.glow};
         z-index: 10;
+        transition: width 0.3s, height 0.3s, box-shadow 0.3s;
       `;
 
-      node.dataset.nodeId = id || Date.now();
+      node.dataset.nodeId = nodeId;
       node.dataset.nodeType = type;
       node.dataset.content = content || '';
       node.dataset.importance = importance;
@@ -1046,7 +1445,12 @@
       node.addEventListener('mouseleave', hideNodeTooltip);
 
       nodesContainer.appendChild(node);
-      visualNodes.push({ el: node, x, y, type, id, content, importance, createdAt: Date.now() });
+
+      // Add to simulation physics
+      simulation.addNode(nodeId, x, y, node, type, importance);
+
+      // Store in visualNodes for compatibility
+      visualNodes.push({ el: node, x, y, type, id: nodeId, content, importance, createdAt: Date.now() });
 
       // React the orb
       reactOrb(type, 0.7 + importance * 0.5);
@@ -1054,12 +1458,19 @@
       // Emit particles toward the new node
       emitParticleBurst(x, y, color.glow);
 
-      // Draw connection to nearby nodes
+      // Create connections to nearby nodes (using node IDs for springs)
       if (visualNodes.length > 1) {
-        const nearestIdx = Math.max(0, visualNodes.length - 2 - Math.floor(Math.random() * 3));
-        const nearest = visualNodes[nearestIdx];
-        if (nearest) {
-          createConnection(x, y, nearest.x, nearest.y, type);
+        // Connect to 1-2 nearby nodes for molecular structure
+        const connectCount = Math.min(visualNodes.length - 1, 1 + Math.floor(Math.random() * 2));
+        const candidates = visualNodes.slice(0, -1).slice(-5); // Last 5 nodes
+
+        for (let i = 0; i < connectCount && i < candidates.length; i++) {
+          const targetIdx = Math.floor(Math.random() * candidates.length);
+          const target = candidates[targetIdx];
+          if (target && target.id !== nodeId) {
+            createConnection(nodeId, target.id, type);
+            candidates.splice(targetIdx, 1); // Don't connect twice
+          }
         }
       }
 
@@ -1067,31 +1478,45 @@
       setTimeout(() => {
         node.classList.remove('node-new');
         node.classList.add('node-settled');
-      }, 6600);  // After spawn + 3 pulses
+      }, 6600);
 
-      // Limit visible nodes
+      // Limit visible nodes - remove from simulation too
       if (visualNodes.length > 50) {
         const old = visualNodes.shift();
+        simulation.removeNode(old.id);
         old.el.style.opacity = '0';
-        old.el.style.transform = 'translate(-50%, -50%) scale(0.5)';
+        old.el.style.transform = 'scale(0.5)';
         setTimeout(() => old.el.remove(), 500);
       }
+
+      // Give a little nudge to reorganize
+      simulation.nudge(1);
 
       return node;
     }
 
-    function createConnection(x1, y1, x2, y2, type) {
+    function createConnection(sourceId, targetId, type) {
+      const sourceNode = simulation.nodes.find(n => n.id === sourceId);
+      const targetNode = simulation.nodes.find(n => n.id === targetId);
+
+      if (!sourceNode || !targetNode) return;
+
       const color = NODE_COLORS[type]?.glow || 'rgba(99, 102, 241, 0.3)';
 
+      // Add spring to simulation
+      simulation.addSpring(sourceId, targetId);
+
       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', x1);
-      line.setAttribute('y1', y1);
-      line.setAttribute('x2', x2);
-      line.setAttribute('y2', y2);
+      line.setAttribute('x1', sourceNode.x);
+      line.setAttribute('y1', sourceNode.y);
+      line.setAttribute('x2', targetNode.x);
+      line.setAttribute('y2', targetNode.y);
       line.setAttribute('stroke', color);
       line.setAttribute('stroke-width', '1.5');
-      line.setAttribute('stroke-opacity', '0.3');
+      line.setAttribute('stroke-opacity', '0.4');
       line.classList.add('connection');
+      line.dataset.sourceId = sourceId;
+      line.dataset.targetId = targetId;
 
       connectionsContainer.appendChild(line);
 
