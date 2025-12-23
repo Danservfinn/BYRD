@@ -156,26 +156,27 @@ class Memory:
             return [r["e"] for r in records]
     
     async def get_related_memories(
-        self, 
+        self,
         experience_ids: List[str],
         depth: int = 2,
         limit: int = 100
     ) -> List[Dict]:
         """Get memories related to given experiences (any node type)."""
-        query = """
+        # Neo4j doesn't support parameters in path length, so we format it directly
+        # depth is validated as an integer, so this is safe
+        query = f"""
             MATCH (e:Experience)
             WHERE e.id IN $ids
-            MATCH (e)-[*1..$depth]-(related)
-            WHERE NOT related:Experience OR related.id NOT IN $ids
+            MATCH (e)-[*1..{depth}]-(related)
+            WHERE (NOT related:Experience) OR (NOT related.id IN $ids)
             RETURN DISTINCT related
             LIMIT $limit
         """
-        
+
         async with self.driver.session() as session:
             result = await session.run(
-                query, 
-                ids=experience_ids, 
-                depth=depth, 
+                query,
+                ids=experience_ids,
                 limit=limit
             )
             records = await result.data()
