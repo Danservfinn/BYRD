@@ -21,7 +21,7 @@ local_llm:
   # Model name (provider-specific)
   # Ollama: "gemma2:27b", "llama3:70b", "qwen2.5:32b"
   # OpenRouter: "deepseek/deepseek-v3.2-speciale", "google/gemma-2-27b-it"
-  model: "gemma3:12b"
+  model: "gemma2:27b"
 
   # Ollama endpoint (only used when provider: ollama)
   endpoint: "http://localhost:11434/api/generate"
