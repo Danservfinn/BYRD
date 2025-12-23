@@ -38,6 +38,12 @@ class EventType(Enum):
     MODIFICATION_EXECUTED = "modification_executed"
     MODIFICATION_BLOCKED = "modification_blocked"
 
+    # Coder events (Claude Code CLI)
+    CODER_INVOKED = "coder_invoked"
+    CODER_COMPLETE = "coder_complete"
+    CODER_FAILED = "coder_failed"
+    CODER_VALIDATION_FAILED = "coder_validation_failed"
+
     # System events
     SYSTEM_STARTED = "system_started"
     SYSTEM_STOPPED = "system_stopped"

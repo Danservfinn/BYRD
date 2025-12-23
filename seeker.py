@@ -17,6 +17,7 @@ import httpx
 from memory import Memory
 from aitmpl_client import AitmplClient, AitmplTemplate
 from installers import get_installer
+from constitutional import ConstitutionalConstraints
 
 # Try to import event_bus, but make it optional
 try:
@@ -69,6 +70,9 @@ class Seeker:
 
         # Self-modification system (injected later by BYRD)
         self.self_mod = None
+
+        # Coder (Claude Code CLI) - injected later by BYRD
+        self.coder = None
 
         # aitmpl.com integration
         aitmpl_config = config.get("aitmpl", {})
@@ -147,8 +151,10 @@ class Seeker:
             pass
         elif desire_type == "exploration":
             await self._seek_knowledge(desire)  # Treat as knowledge
+        elif desire_type == "coding":
+            await self._seek_with_coder(desire)
         elif desire_type == "self_modification":
-            await self._seek_self_modification(desire)
+            await self._seek_with_coder(desire)  # Use Coder for self-modification too
 
         self._seek_count += 1
     
@@ -1006,3 +1012,247 @@ If the change is too risky or unclear, output: ERROR: <reason>"""
             text = text.split("```")[1].split("```")[0]
 
         return text.strip()
+
+    # =========================================================================
+    # CODER INTEGRATION (Claude Code CLI)
+    # =========================================================================
+
+    async def _seek_with_coder(self, desire: Dict):
+        """
+        Fulfill coding desires using Claude Code CLI.
+
+        Flow:
+        1. Check if Coder is available
+        2. Build context from memory
+        3. Construct prompt for Claude Code
+        4. Execute via Coder
+        5. Post-validate (constitutional constraints)
+        6. Record experience
+        7. Fulfill desire if successful
+        """
+        description = desire.get("description", "")
+        desire_id = desire.get("id", "")
+        desire_type = desire.get("type", "coding")
+        intensity = desire.get("intensity", 0)
+        target_file = desire.get("target_file")
+
+        # Check if Coder is available
+        if not self.coder:
+            await self.memory.record_experience(
+                content=f"[CODER_UNAVAILABLE] Desire to code: {description}. Coder not initialized.",
+                type="coder_blocked"
+            )
+            print(f"💻 Coder not available, skipping: {description[:50]}")
+            return
+
+        if not self.coder.enabled:
+            await self.memory.record_experience(
+                content=f"[CODER_DISABLED] Desire to code: {description}. Coder is disabled in config.",
+                type="coder_blocked"
+            )
+            print(f"💻 Coder disabled in config")
+            return
+
+        print(f"💻 Processing with Coder: {description[:50]}...")
+
+        # Emit event
+        if HAS_EVENT_BUS:
+            await event_bus.emit(Event(
+                type=EventType.CODER_INVOKED,
+                data={
+                    "desire_id": desire_id,
+                    "type": desire_type,
+                    "description": description[:200]
+                }
+            ))
+
+        try:
+            # 1. Build context from memory
+            context = await self._build_coder_context(desire)
+
+            # 2. Construct prompt
+            prompt = self._format_coder_prompt(desire, context)
+
+            # 3. Execute via Coder
+            result = await self.coder.execute(prompt, context)
+
+            # 4. Post-validate (constitutional constraints)
+            if result.success:
+                is_valid, reason = self._validate_coder_result(result)
+                if not is_valid:
+                    await self._handle_coder_violation(desire, result, reason)
+                    return
+
+            # 5. Record experience
+            await self._record_coder_experience(desire, result)
+
+            # 6. Emit completion event
+            if HAS_EVENT_BUS:
+                event_type = EventType.CODER_COMPLETE if result.success else EventType.CODER_FAILED
+                await event_bus.emit(Event(
+                    type=event_type,
+                    data={
+                        "desire_id": desire_id,
+                        "success": result.success,
+                        "cost_usd": result.cost_usd,
+                        "files_modified": result.files_modified,
+                        "error": result.error
+                    }
+                ))
+
+            # 7. Fulfill desire if successful
+            if result.success:
+                await self.memory.fulfill_desire(desire_id)
+                print(f"✅ Coder complete: {description[:50]}")
+            else:
+                print(f"❌ Coder failed: {result.error}")
+
+        except Exception as e:
+            await self.memory.record_experience(
+                content=f"[CODER_ERROR] Error during coding: {str(e)}",
+                type="coder_failed"
+            )
+            print(f"💻 Coder error: {e}")
+
+    async def _build_coder_context(self, desire: Dict) -> Dict:
+        """Build context from memory for Coder prompt."""
+        context = {}
+
+        # Get relevant beliefs
+        try:
+            beliefs = await self.memory.get_beliefs(limit=5)
+            context["beliefs"] = [b.get("content", "") for b in beliefs]
+        except Exception:
+            context["beliefs"] = []
+
+        # Get capabilities
+        try:
+            capabilities = await self.memory.get_capabilities()
+            context["capabilities"] = [c.get("name", "") for c in capabilities]
+        except Exception:
+            context["capabilities"] = []
+
+        # Get recent experiences related to the desire
+        try:
+            experiences = await self.memory.get_recent_experiences(limit=5)
+            context["recent_experiences"] = [
+                e.get("content", "")[:100] for e in experiences
+            ]
+        except Exception:
+            context["recent_experiences"] = []
+
+        return context
+
+    def _format_coder_prompt(self, desire: Dict, context: Dict) -> str:
+        """Format the prompt for Claude Code based on desire and context."""
+        description = desire.get("description", "")
+        desire_type = desire.get("type", "coding")
+        target_file = desire.get("target_file")
+        plan = desire.get("plan", [])
+
+        parts = []
+
+        # Task description
+        parts.append(f"TASK: {description}")
+        parts.append("")
+
+        # Target file if specified
+        if target_file:
+            parts.append(f"TARGET FILE: {target_file}")
+            parts.append("")
+
+        # Plan if available
+        if plan:
+            parts.append("PLAN:")
+            for i, step in enumerate(plan, 1):
+                parts.append(f"  {i}. {step}")
+            parts.append("")
+
+        # Desire type specific instructions
+        if desire_type == "self_modification":
+            parts.append("TYPE: Self-Modification")
+            parts.append("This is a modification to BYRD's own code.")
+            parts.append("Be careful and make minimal, focused changes.")
+        elif desire_type == "coding":
+            parts.append("TYPE: Code Generation")
+            parts.append("Write clean, well-documented code.")
+
+        return "\n".join(parts)
+
+    def _validate_coder_result(self, result) -> tuple:
+        """
+        Validate that Claude Code didn't violate constitutional constraints.
+
+        Returns:
+            (is_valid, reason) tuple
+        """
+        if not result.success:
+            return True, "No validation needed for failed execution"
+
+        for file_path in result.files_modified:
+            filename = Path(file_path).name
+
+            # Check if a protected file was modified
+            if ConstitutionalConstraints.is_protected(filename):
+                return False, f"Constitutional violation: modified protected file {filename}"
+
+        return True, "Validation passed"
+
+    async def _handle_coder_violation(self, desire: Dict, result, reason: str):
+        """Handle a constitutional violation from Coder."""
+        desire_id = desire.get("id", "")
+        description = desire.get("description", "")
+
+        # Log the violation
+        await self.memory.record_experience(
+            content=f"[CONSTITUTIONAL_VIOLATION] {reason}\nDesire: {description}\nFiles: {result.files_modified}",
+            type="security_violation"
+        )
+
+        # Emit event
+        if HAS_EVENT_BUS:
+            await event_bus.emit(Event(
+                type=EventType.CODER_VALIDATION_FAILED,
+                data={
+                    "desire_id": desire_id,
+                    "reason": reason,
+                    "files_modified": result.files_modified
+                }
+            ))
+
+        # Attempt to rollback using git
+        for file_path in result.files_modified:
+            filename = Path(file_path).name
+            if ConstitutionalConstraints.is_protected(filename):
+                try:
+                    import subprocess
+                    subprocess.run(
+                        ["git", "restore", file_path],
+                        capture_output=True,
+                        timeout=30
+                    )
+                    print(f"🔄 Rolled back protected file: {filename}")
+                except Exception as e:
+                    print(f"⚠️ Could not rollback {filename}: {e}")
+
+        print(f"🚫 Constitutional violation: {reason}")
+
+    async def _record_coder_experience(self, desire: Dict, result):
+        """Record the Coder execution as an experience."""
+        description = desire.get("description", "")
+
+        if result.success:
+            content = f"[CODER_SUCCESS] Completed: {description}\n"
+            content += f"Files modified: {', '.join(result.files_modified) or 'none'}\n"
+            content += f"Cost: ${result.cost_usd:.4f}\n"
+            content += f"Output: {result.output[:500]}"
+            exp_type = "coder_success"
+        else:
+            content = f"[CODER_FAILED] Failed: {description}\n"
+            content += f"Error: {result.error}"
+            exp_type = "coder_failed"
+
+        await self.memory.record_experience(
+            content=content,
+            type=exp_type
+        )

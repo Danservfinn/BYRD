@@ -139,3 +139,36 @@ self_modification:
   # Rate limiting
   max_modifications_per_day: 5
   cooldown_between_modifications_seconds: 3600
+
+# =============================================================================
+# CODER (Claude Code CLI)
+# =============================================================================
+# Uses Claude Code CLI for autonomous code generation and self-modification.
+# BYRD can invoke Claude Code to fulfill coding-related desires.
+coder:
+  # Enable/disable Claude Code integration
+  enabled: true
+
+  # Path to Claude Code CLI executable
+  cli_path: "claude"
+
+  # Maximum turns per invocation
+  max_turns: 10
+
+  # Timeout in seconds per invocation
+  timeout_seconds: 300
+
+  # Cost limits
+  max_cost_per_day_usd: 10.0
+  max_cost_per_invocation_usd: 2.0
+
+  # Tools Claude Code is allowed to use
+  allowed_tools:
+    - Read
+    - Edit
+    - Bash
+    - Glob
+    - Grep
+
+  # Output format (json recommended for parsing)
+  output_format: json
