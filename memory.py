@@ -1,5 +1,5 @@
 """
-PROMETHEUS Memory System
+BYRD Memory System
 Neo4j graph database interface for persistent memory.
 """
 

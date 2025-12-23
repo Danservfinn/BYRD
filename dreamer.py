@@ -1,5 +1,5 @@
 """
-PROMETHEUS Dreamer
+BYRD Dreamer
 The continuous reflection process that forms beliefs and desires.
 Runs on local LLM to enable 24/7 operation without API costs.
 """

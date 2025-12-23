@@ -1,4 +1,4 @@
-# PROMETHEUS v2 Docker Compose
+# BYRD Docker Compose
 # Provides Neo4j (memory) and SearXNG (search) services
 
 version: '3.8'
@@ -9,7 +9,7 @@ services:
   # ==========================================================================
   neo4j:
     image: neo4j:latest
-    container_name: prometheus-neo4j
+    container_name: byrd-neo4j
     ports:
       - "7474:7474"  # Browser UI
       - "7687:7687"  # Bolt protocol
@@ -32,7 +32,7 @@ services:
   # ==========================================================================
   searxng:
     image: searxng/searxng:latest
-    container_name: prometheus-searxng
+    container_name: byrd-searxng
     ports:
       - "8888:8080"
     environment:

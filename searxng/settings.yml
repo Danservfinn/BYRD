@@ -1,11 +1,11 @@
-# SearXNG Configuration for PROMETHEUS
+# SearXNG Configuration for BYRD
 # Self-hosted meta-search engine for knowledge acquisition
 
 use_default_settings: true
 
 general:
   debug: false
-  instance_name: "PROMETHEUS Search"
+  instance_name: "BYRD Search"
 
 search:
   safe_search: 0
@@ -103,4 +103,4 @@ outgoing:
   request_timeout: 10.0
   
   # User agent
-  useragent_suffix: "PROMETHEUS Research Agent"
+  useragent_suffix: "BYRD Research Agent"

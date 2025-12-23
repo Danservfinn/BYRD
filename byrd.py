@@ -1,11 +1,11 @@
 """
-PROMETHEUS v2: The Dreaming Architecture
+BYRD: Bootstrapped Yearning via Reflective Dreaming
 Main orchestrator that ties everything together.
 
 Usage:
-    python prometheus.py              # Start the system
-    python prometheus.py --status     # Check status
-    python prometheus.py --chat       # Interactive chat mode
+    python byrd.py              # Start the system
+    python byrd.py --status     # Check status
+    python byrd.py --chat       # Interactive chat mode
 """
 
 import asyncio
@@ -20,15 +20,16 @@ from seeker import Seeker
 from actor import Actor
 
 
-class Prometheus:
+class BYRD:
     """
-    The complete Prometheus system.
-    
-    Four components:
+    BYRD: Bootstrapped Yearning via Reflective Dreaming
+
+    Five components:
     - Memory: Neo4j graph storing everything
     - Dreamer: Continuous reflection forming beliefs and desires
     - Seeker: Fulfills desires by finding knowledge and capabilities
     - Actor: Uses Claude for complex actions
+    - Self-Modifier: Enables architectural evolution (future)
     """
     
     def __init__(self, config_path: str = "config.yaml"):
@@ -74,10 +75,10 @@ class Prometheus:
         }
     
     async def start(self):
-        """Start Prometheus - begins dreaming and seeking."""
+        """Start BYRD - begins dreaming and seeking."""
         print("""
-🔥 PROMETHEUS v2 - The Dreaming Architecture
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🐦 BYRD - Bootstrapped Yearning via Reflective Dreaming
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         """)
         
         # Connect to memory
@@ -149,7 +150,7 @@ class Prometheus:
         return response
     
     async def status(self) -> Dict:
-        """Get current status of Prometheus."""
+        """Get current status of BYRD."""
         await self.memory.connect()
         
         stats = await self.memory.stats()
@@ -175,8 +176,8 @@ class Prometheus:
     async def chat_loop(self):
         """Interactive chat mode."""
         print("""
-🔥 PROMETHEUS Chat Mode
-━━━━━━━━━━━━━━━━━━━━━━━
+🐦 BYRD Chat Mode
+━━━━━━━━━━━━━━━━━
 Type 'quit' to exit, 'status' for system status.
         """)
         
@@ -213,7 +214,7 @@ Type 'quit' to exit, 'status' for system status.
                     continue
                 
                 response = await self.interact(user_input)
-                print(f"\n🔥 Prometheus: {response}")
+                print(f"\n🐦 BYRD: {response}")
                 
         finally:
             self.dreamer.stop()
@@ -224,30 +225,30 @@ Type 'quit' to exit, 'status' for system status.
 
 
 async def main():
-    parser = argparse.ArgumentParser(description="PROMETHEUS v2 - The Dreaming Architecture")
+    parser = argparse.ArgumentParser(description="BYRD - Bootstrapped Yearning via Reflective Dreaming")
     parser.add_argument("--config", default="config.yaml", help="Config file path")
     parser.add_argument("--status", action="store_true", help="Show status and exit")
     parser.add_argument("--chat", action="store_true", help="Interactive chat mode")
-    
+
     args = parser.parse_args()
-    
-    prometheus = Prometheus(args.config)
-    
+
+    byrd = BYRD(args.config)
+
     if args.status:
-        status = await prometheus.status()
-        print("\n🔥 PROMETHEUS Status")
+        status = await byrd.status()
+        print("\n🐦 BYRD Status")
         print("━" * 40)
         print(f"Memory: {status['memory_stats']}")
         print(f"Capabilities: {status['capabilities']}")
         print(f"Desires: {len(status['unfulfilled_desires'])} unfulfilled")
         for d in status['unfulfilled_desires']:
             print(f"  - [{d['type']}] {d['description'][:60]}")
-    
+
     elif args.chat:
-        await prometheus.chat_loop()
-    
+        await byrd.chat_loop()
+
     else:
-        await prometheus.start()
+        await byrd.start()
 
 
 if __name__ == "__main__":
