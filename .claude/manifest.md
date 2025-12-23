@@ -11,3 +11,6 @@
 | Memory Schema (Neo4j) | metadata | ./.claude/metadata/memory-schema.md | neo4j, graph, schema, nodes, relationships | — | 2025-12-23 |
 | Seeker Module | metadata | ./.claude/metadata/seeker-module.md | seeker, research, searxng, github, capabilities, knowledge | — | 2025-12-23 |
 | Self-Modification System | metadata | ./.claude/metadata/self-modification-system.md | self-modification, provenance, constitutional, protected, checkpoints | — | 2025-12-23 |
+| aitmpl Integration | metadata | ./.claude/metadata/aitmpl-integration.md | aitmpl, templates, mcp, agents, skills, hooks, capability-acquisition | — | 2025-12-23 |
+| Actor Module | metadata | ./.claude/metadata/actor-module.md | actor, claude-api, reasoning, user-interaction, goals | — | 2025-12-23 |
+| Development Guide (CLAUDE.md) | reference | ./CLAUDE.md | development, patterns, conventions, async, protected-files | — | 2025-12-23 |
