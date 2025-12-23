@@ -62,6 +62,9 @@ class EventType(Enum):
     ORIENTATION_DISCOVERY = "orientation_discovery"
     ORIENTATION_COMPLETE = "orientation_complete"
 
+    # Narrator events (BYRD's inner voice for UI)
+    NARRATOR_UPDATE = "narrator_update"
+
 
 @dataclass
 class Event:

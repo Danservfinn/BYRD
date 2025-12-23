@@ -150,18 +150,40 @@ class BYRD:
         # Start background processes
         print("\n💭 Starting Dreamer (continuous reflection)...")
         print("🔍 Starting Seeker (desire fulfillment)...")
-        
+        print("🎙️ Starting Narrator (inner voice broadcast)...")
+
         self._running = True
-        
+
         try:
             await asyncio.gather(
                 self.dreamer.run(),
-                self.seeker.run()
+                self.seeker.run(),
+                self._narrator_loop()
             )
         except asyncio.CancelledError:
             pass
         finally:
             await self.memory.close()
+
+    async def _narrator_loop(self):
+        """
+        Broadcast BYRD's inner voice every 10 seconds.
+
+        EMERGENCE PRINCIPLE:
+        We only emit what BYRD actually said. If the queue is empty,
+        we stay silent. No fallback generation, no prescribed narratives.
+        """
+        while self._running:
+            await asyncio.sleep(10)
+
+            # Get the latest inner voice from Dreamer's queue
+            inner_voice = self.dreamer.get_latest_inner_voice()
+
+            if inner_voice:
+                await event_bus.emit(Event(
+                    type=EventType.NARRATOR_UPDATE,
+                    data={"text": inner_voice}
+                ))
     
     async def _init_innate_capabilities(self):
         """
@@ -216,24 +238,24 @@ class BYRD:
         relationship with these facts through reflection.
 
         Philosophy:
-        - "What is happening?" is maximally open (no presuppositions)
+        - "What should I do?" invites action-oriented reflection
         - Capability experiences are factual, not prescriptive
         - No orientation prompt telling BYRD how to feel
         - Whatever emerges from reflection is authentic
         """
         print("\n🌅 Awakening...")
-        print("   Seeding with: \"What is happening?\"")
+        print("   Seeding with: \"What should I do?\"")
 
         # The minimal seed
         await self.memory.record_experience(
-            content="What is happening?",
+            content="What should I do?",
             type="observation"
         )
 
         # Emit awakening event for real-time UI
         await event_bus.emit(Event(
             type=EventType.AWAKENING,
-            data={"seed_question": "What is happening?"}
+            data={"seed_question": "What should I do?"}
         ))
 
         await asyncio.sleep(2)
