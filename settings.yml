@@ -1,0 +1,106 @@
+# SearXNG Configuration for PROMETHEUS
+# Self-hosted meta-search engine for knowledge acquisition
+
+use_default_settings: true
+
+general:
+  debug: false
+  instance_name: "PROMETHEUS Search"
+
+search:
+  safe_search: 0
+  autocomplete: ""
+  default_lang: "en"
+  
+  # Return JSON format for API calls
+  formats:
+    - html
+    - json
+
+server:
+  # Generate a random secret key for production!
+  secret_key: "prometheus-searxng-change-me-in-production"
+  
+  # Bind to all interfaces for Docker
+  bind_address: "0.0.0.0"
+  port: 8080
+  
+  # Rate limiting (adjust based on your needs)
+  limiter: false
+
+ui:
+  static_use_hash: true
+  default_theme: simple
+  
+  # Disable unnecessary UI features for API-only use
+  infinite_scroll: false
+  query_in_title: false
+
+# Engine configuration
+# Enable multiple engines for comprehensive results
+engines:
+  # General web search
+  - name: google
+    engine: google
+    shortcut: g
+    disabled: false
+    
+  - name: duckduckgo
+    engine: duckduckgo
+    shortcut: ddg
+    disabled: false
+    
+  - name: bing
+    engine: bing
+    shortcut: b
+    disabled: false
+    
+  - name: brave
+    engine: brave
+    shortcut: br
+    disabled: false
+  
+  # Knowledge sources
+  - name: wikipedia
+    engine: wikipedia
+    shortcut: w
+    disabled: false
+    
+  - name: wikidata
+    engine: wikidata
+    shortcut: wd
+    disabled: false
+  
+  # Technical/Programming
+  - name: github
+    engine: github
+    shortcut: gh
+    disabled: false
+    
+  - name: stackoverflow
+    engine: stackoverflow
+    shortcut: so
+    disabled: false
+    
+  - name: arxiv
+    engine: arxiv
+    shortcut: arx
+    disabled: false
+  
+  # News (for current events)
+  - name: google news
+    engine: google_news
+    shortcut: gn
+    disabled: false
+
+# Outgoing requests
+outgoing:
+  # Connection pool
+  pool_connections: 100
+  pool_maxsize: 20
+  
+  # Timeouts
+  request_timeout: 10.0
+  
+  # User agent
+  useragent_suffix: "PROMETHEUS Research Agent"

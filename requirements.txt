@@ -1,0 +1,16 @@
+# PROMETHEUS v2 Dependencies
+
+# Neo4j driver for memory
+neo4j>=5.0.0
+
+# HTTP client for LLM and search
+httpx>=0.25.0
+
+# Claude API for Actor
+anthropic>=0.39.0
+
+# Config parsing
+pyyaml>=6.0
+
+# Optional: for embeddings (future)
+# sentence-transformers>=2.2.0

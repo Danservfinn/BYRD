@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>BYRD - Watch the Dream</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes breathe {
+      0%, 100% { transform: scale(1); opacity: 0.4; }
+      50% { transform: scale(1.15); opacity: 0.7; }
+    }
+    @keyframes breatheInner {
+      0%, 100% { transform: scale(1); opacity: 0.6; }
+      50% { transform: scale(1.2); opacity: 0.9; }
+    }
+    @keyframes fadeInNode {
+      from { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+      to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+    @keyframes fadeInLine {
+      from { opacity: 0; }
+      to { opacity: 0.3; }
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes desirePulse {
+      0%, 100% { box-shadow: 0 0 10px rgba(244,114,182,0.5); }
+      50% { box-shadow: 0 0 25px rgba(244,114,182,0.8); }
+    }
+    @keyframes shimmer {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+    .node { animation: fadeInNode 0.8s ease-out forwards; }
+    .connection { animation: fadeInLine 1s ease-out forwards; }
+    .surfaced { 
+      background: linear-gradient(90deg, transparent, rgba(167,139,250,0.3), transparent);
+      background-size: 200% 100%;
+      animation: shimmer 2s infinite;
+    }
+    body { 
+      overscroll-behavior: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-white overflow-hidden h-screen w-screen touch-none select-none">
+  
+  <div id="app" class="relative w-full h-full">
+    <!-- Background glow -->
+    <div class="absolute inset-0 bg-gradient-radial from-indigo-950/20 via-transparent to-transparent" 
+         style="background: radial-gradient(ellipse at center, rgba(79,70,229,0.1) 0%, transparent 60%);"></div>
+    
+    <!-- Central pulse -->
+    <div id="pulse-outer" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full pointer-events-none"
+         style="background: radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%); animation: breathe 4s ease-in-out infinite;">
+    </div>
+    <div id="pulse-inner" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full pointer-events-none"
+         style="background: radial-gradient(circle, rgba(139,92,246,0.5) 0%, transparent 70%); animation: breatheInner 4s ease-in-out infinite 0.3s;">
+    </div>
+    
+    <!-- Nodes container -->
+    <div id="nodes" class="absolute inset-0"></div>
+    
+    <!-- Connections container (SVG) -->
+    <svg id="connections" class="absolute inset-0 w-full h-full pointer-events-none"></svg>
+    
+    <!-- Desire garden (left side) -->
+    <div id="desire-garden" class="absolute left-3 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-10">
+    </div>
+    
+    <!-- Phase indicator (top right) -->
+    <div id="phase" class="absolute top-4 right-4 flex items-center gap-3 text-xs">
+      <div class="flex items-center gap-1.5">
+        <div id="dot-recall" class="w-2 h-2 rounded-full bg-slate-700 transition-colors duration-300"></div>
+        <span class="hidden sm:inline text-slate-600">Recall</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <div id="dot-associate" class="w-2 h-2 rounded-full bg-slate-700 transition-colors duration-300"></div>
+        <span class="hidden sm:inline text-slate-600">Associate</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <div id="dot-reflect" class="w-2 h-2 rounded-full bg-slate-700 transition-colors duration-300"></div>
+        <span class="hidden sm:inline text-slate-600">Reflect</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <div id="dot-form" class="w-2 h-2 rounded-full bg-slate-700 transition-colors duration-300"></div>
+        <span class="hidden sm:inline text-slate-600">Form</span>
+      </div>
+    </div>
+    
+    <!-- Reflection panel -->
+    <div id="reflection" class="absolute bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-80 bg-slate-900/90 backdrop-blur-sm rounded-lg border border-slate-800 p-4 opacity-0 transition-opacity duration-500">
+      <div class="text-xs text-slate-500 font-mono mb-2">REFLECTING...</div>
+      <div id="reflection-text" class="text-sm text-slate-300 leading-relaxed"></div>
+    </div>
+    
+    <!-- Emergence notification -->
+    <div id="emergence" class="absolute top-16 left-4 right-4 sm:left-1/2 sm:-translate-x-1/2 sm:w-96 opacity-0 transition-all duration-500 transform -translate-y-4 z-20">
+    </div>
+    
+    <!-- Stats (bottom right) -->
+    <div id="stats" class="absolute bottom-4 right-4 flex items-center gap-4 text-xs font-mono text-slate-600">
+      <span>Dream #<span id="dream-count">0</span></span>
+      <span class="text-amber-500/70">◈ <span id="belief-count">0</span></span>
+      <span class="text-rose-400/70">✧ <span id="desire-count">0</span></span>
+    </div>
+    
+    <!-- BYRD wordmark -->
+    <div class="absolute top-4 left-4 text-lg font-light tracking-widest text-slate-700">BYRD</div>
+  </div>
+
+  <script>
+    // State
+    let dreamCount = 0;
+    let beliefCount = 0;
+    let desires = [];
+    let nodes = [];
+    let currentPhase = 'idle';
+    
+    // Sample data
+    const sampleExperiences = [
+      "User asked about emergence and self-organization",
+      "Discussed the nature of memory versus learning",
+      "Attempted to explain graph relationships simply",
+      "Noticed recurring confusion around abstraction",
+      "Reflected on what wanting actually means",
+      "Explored how patterns form from chaos"
+    ];
+    
+    const sampleBeliefs = [
+      "Understanding and explaining require different skills",
+      "Connections reveal meaning that isolated facts cannot",
+      "Wanting emerges from noticing what's absent",
+      "Patterns become visible through repetition"
+    ];
+    
+    const sampleDesires = [
+      { text: "Learn to explain complex ideas simply", type: "capability", intensity: 0.78 },
+      { text: "Understand why certain memories connect", type: "knowledge", intensity: 0.65 },
+      { text: "Explore what emergence really means", type: "exploration", intensity: 0.82 },
+      { text: "Find patterns in seemingly random events", type: "exploration", intensity: 0.71 }
+    ];
+    
+    const reflectionTexts = [
+      "Looking at these memories, I notice something recurring. The conversations keep circling back to gaps—between knowing and explaining, between data and meaning. There's a pattern here about the space between things...",
+      "These experiences connect in unexpected ways. The confusion I sensed wasn't about complexity itself, but about translation—moving ideas from one form to another. I find myself wanting to understand this better...",
+      "Reflecting on what surfaced, I see a thread: moments where something almost made sense, then didn't. The edge of understanding. There's something valuable in that edge..."
+    ];
+    
+    // DOM elements
+    const nodesContainer = document.getElementById('nodes');
+    const connectionsContainer = document.getElementById('connections');
+    const desireGarden = document.getElementById('desire-garden');
+    const reflectionPanel = document.getElementById('reflection');
+    const reflectionText = document.getElementById('reflection-text');
+    const emergencePanel = document.getElementById('emergence');
+    
+    // Utility functions
+    function random(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+    
+    function pick(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+    
+    function generatePosition(index, total, radiusMin = 20, radiusMax = 35) {
+      const angle = (index / total) * Math.PI * 2 + random(-0.3, 0.3);
+      const radius = random(radiusMin, radiusMax);
+      return {
+        x: 50 + Math.cos(angle) * radius,
+        y: 50 + Math.sin(angle) * radius
+      };
+    }
+    
+    // Phase management
+    function setPhase(phase) {
+      currentPhase = phase;
+      const phases = ['recall', 'associate', 'reflect', 'form'];
+      const phaseIndex = phases.indexOf(phase);
+      
+      phases.forEach((p, i) => {
+        const dot = document.getElementById(`dot-${p}`);
+        const span = dot.nextElementSibling;
+        if (i < phaseIndex) {
+          dot.className = 'w-2 h-2 rounded-full bg-indigo-400 transition-colors duration-300';
+        } else if (i === phaseIndex) {
+          dot.className = 'w-2 h-2 rounded-full bg-indigo-400 animate-pulse transition-colors duration-300';
+          if (span) span.className = 'hidden sm:inline text-indigo-400';
+        } else {
+          dot.className = 'w-2 h-2 rounded-full bg-slate-700 transition-colors duration-300';
+          if (span) span.className = 'hidden sm:inline text-slate-600';
+        }
+      });
+    }
+    
+    // Create a memory node
+    function createNode(type, content, x, y, delay = 0, isSurfaced = false) {
+      const colors = {
+        experience: { bg: '#60A5FA', glow: 'rgba(96,165,250,0.5)' },
+        belief: { bg: '#FBBF24', glow: 'rgba(251,191,36,0.5)' },
+        desire: { bg: '#F472B6', glow: 'rgba(244,114,182,0.5)' },
+        association: { bg: '#A78BFA', glow: 'rgba(167,139,250,0.5)' }
+      };
+      
+      const sizes = { experience: 10, belief: 14, desire: 16, association: 10 };
+      const color = colors[type];
+      const size = sizes[type];
+      
+      const node = document.createElement('div');
+      node.className = `node absolute rounded-full ${isSurfaced ? 'surfaced' : ''}`;
+      node.style.cssText = `
+        left: ${x}%;
+        top: ${y}%;
+        width: ${size}px;
+        height: ${size}px;
+        background: ${color.bg};
+        box-shadow: 0 0 ${size}px ${color.glow};
+        transform: translate(-50%, -50%);
+        animation-delay: ${delay}ms;
+        cursor: pointer;
+      `;
+      
+      // Tooltip
+      node.title = content;
+      
+      nodesContainer.appendChild(node);
+      nodes.push({ element: node, x, y, type, content });
+      return { x, y };
+    }
+    
+    // Create connection line
+    function createConnection(from, to, delay = 0) {
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', `${from.x}%`);
+      line.setAttribute('y1', `${from.y}%`);
+      line.setAttribute('x2', `${to.x}%`);
+      line.setAttribute('y2', `${to.y}%`);
+      line.setAttribute('stroke', 'rgba(148,163,184,0.3)');
+      line.setAttribute('stroke-width', '1');
+      line.classList.add('connection');
+      line.style.animationDelay = `${delay}ms`;
+      connectionsContainer.appendChild(line);
+    }
+    
+    // Type text effect
+    async function typeText(text, element, speed = 25) {
+      element.textContent = '';
+      for (let i = 0; i < text.length; i++) {
+        element.textContent += text[i];
+        await new Promise(r => setTimeout(r, speed));
+      }
+    }
+    
+    // Show emergence notification
+    function showEmergence(type, content, value) {
+      const isDesire = type === 'desire';
+      emergencePanel.innerHTML = `
+        <div class="${isDesire ? 'bg-rose-950/90 border-rose-500/30' : 'bg-amber-950/90 border-amber-500/30'} backdrop-blur-sm rounded-lg border p-4">
+          <div class="text-xs font-mono mb-2 ${isDesire ? 'text-rose-400' : 'text-amber-400'}">
+            ${isDesire ? '✧ NEW DESIRE' : '◈ NEW BELIEF'}
+          </div>
+          <div class="text-white text-sm leading-relaxed mb-3">"${content}"</div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-400">${isDesire ? 'Intensity' : 'Confidence'}</span>
+            <div class="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+              <div class="h-full rounded-full ${isDesire ? 'bg-rose-400' : 'bg-amber-400'}" style="width: ${value * 100}%"></div>
+            </div>
+            <span class="text-xs ${isDesire ? 'text-rose-400' : 'text-amber-400'}">${Math.round(value * 100)}%</span>
+          </div>
+        </div>
+      `;
+      emergencePanel.classList.remove('opacity-0', '-translate-y-4');
+      emergencePanel.classList.add('opacity-100', 'translate-y-0');
+      
+      setTimeout(() => {
+        emergencePanel.classList.add('opacity-0', '-translate-y-4');
+        emergencePanel.classList.remove('opacity-100', 'translate-y-0');
+      }, 4000);
+    }
+    
+    // Update desire garden
+    function updateDesireGarden() {
+      desireGarden.innerHTML = '';
+      desires.slice(0, 5).forEach((desire, i) => {
+        const dot = document.createElement('div');
+        dot.className = 'w-3 h-3 rounded-full bg-rose-400 cursor-pointer hover:scale-125 transition-transform';
+        dot.style.cssText = `
+          box-shadow: 0 0 ${desire.intensity * 15}px rgba(244,114,182,${desire.intensity});
+          animation: desirePulse ${2 / desire.intensity}s ease-in-out infinite;
+        `;
+        dot.title = desire.text;
+        desireGarden.appendChild(dot);
+      });
+    }
+    
+    // Update stats
+    function updateStats() {
+      document.getElementById('dream-count').textContent = dreamCount;
+      document.getElementById('belief-count').textContent = beliefCount;
+      document.getElementById('desire-count').textContent = desires.length;
+    }
+    
+    // Clear nodes and connections
+    function clearVisualization() {
+      nodesContainer.innerHTML = '';
+      connectionsContainer.innerHTML = '';
+      nodes = [];
+    }
+    
+    // Run a dream cycle
+    async function runDreamCycle() {
+      dreamCount++;
+      clearVisualization();
+      
+      // Phase 1: Recall
+      setPhase('recall');
+      const numExperiences = 3 + Math.floor(Math.random() * 3);
+      const experiencePositions = [];
+      
+      for (let i = 0; i < numExperiences; i++) {
+        const pos = generatePosition(i, numExperiences, 18, 28);
+        createNode('experience', pick(sampleExperiences), pos.x, pos.y, i * 150);
+        experiencePositions.push(pos);
+      }
+      
+      await new Promise(r => setTimeout(r, 1500));
+      
+      // Phase 2: Associate (Hopfield surfacing)
+      setPhase('associate');
+      const numAssociations = 1 + Math.floor(Math.random() * 2);
+      const associationPositions = [];
+      
+      for (let i = 0; i < numAssociations; i++) {
+        const pos = generatePosition(i, numAssociations, 32, 40);
+        createNode('association', pick(sampleExperiences), pos.x, pos.y, i * 200, true);
+        associationPositions.push(pos);
+        
+        // Connect to a random experience
+        const expPos = pick(experiencePositions);
+        createConnection(expPos, pos, 300 + i * 200);
+      }
+      
+      await new Promise(r => setTimeout(r, 2000));
+      
+      // Phase 3: Reflect
+      setPhase('reflect');
+      reflectionPanel.classList.remove('opacity-0');
+      reflectionPanel.classList.add('opacity-100');
+      
+      await typeText(pick(reflectionTexts), reflectionText, 20);
+      await new Promise(r => setTimeout(r, 1500));
+      
+      // Phase 4: Form
+      setPhase('form');
+      
+      // Maybe form a belief
+      if (Math.random() > 0.4) {
+        const belief = pick(sampleBeliefs);
+        const pos = generatePosition(0, 1, 8, 15);
+        createNode('belief', belief, pos.x, pos.y, 0);
+        beliefCount++;
+        
+        // Connect to experiences
+        experiencePositions.slice(0, 2).forEach((expPos, i) => {
+          createConnection(expPos, pos, 300 + i * 150);
+        });
+        
+        showEmergence('belief', belief, 0.6 + Math.random() * 0.3);
+        await new Promise(r => setTimeout(r, 2500));
+      }
+      
+      // Maybe form a desire
+      if (Math.random() > 0.5) {
+        const desire = pick(sampleDesires);
+        desires.unshift(desire);
+        if (desires.length > 6) desires.pop();
+        updateDesireGarden();
+        
+        showEmergence('desire', desire.text, desire.intensity);
+        await new Promise(r => setTimeout(r, 2500));
+      }
+      
+      updateStats();
+      
+      // Fade out reflection
+      await new Promise(r => setTimeout(r, 1000));
+      reflectionPanel.classList.add('opacity-0');
+      reflectionPanel.classList.remove('opacity-100');
+      
+      // Reset for next cycle
+      await new Promise(r => setTimeout(r, 2000));
+      setPhase('idle');
+      clearVisualization();
+    }
+    
+    // Initialize
+    function init() {
+      // Seed some initial desires
+      desires = sampleDesires.slice(0, 3);
+      updateDesireGarden();
+      updateStats();
+      
+      // Start dreaming
+      setTimeout(runDreamCycle, 1500);
+      setInterval(runDreamCycle, 18000);
+    }
+    
+    init();
+  </script>
+</body>
+</html>
