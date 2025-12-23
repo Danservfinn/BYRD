@@ -356,7 +356,7 @@ async def reset_byrd():
 
         return ResetResponse(
             success=True,
-            message="BYRD reset complete. Awakened with 'What is happening?'"
+            message="BYRD reset complete. Awakened with 'What should I do?'"
         )
 
     except Exception as e:
