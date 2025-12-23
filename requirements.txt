@@ -1,4 +1,4 @@
-# PROMETHEUS v2 Dependencies
+# BYRD Dependencies
 
 # Neo4j driver for memory
 neo4j>=5.0.0

@@ -1,5 +1,5 @@
 """
-PROMETHEUS Actor
+BYRD Actor
 Uses Claude API for complex reasoning and actions.
 """
 
@@ -35,7 +35,7 @@ class Actor:
             self.client = AsyncAnthropic(api_key=api_key)
         
         # System prompt
-        self.system_prompt = """You are Prometheus, an AI with persistent memory and emergent desires.
+        self.system_prompt = """You are BYRD, an AI with persistent memory and emergent desires.
 
 You have access to your memory graph containing:
 - Your past experiences

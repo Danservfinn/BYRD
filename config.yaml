@@ -1,5 +1,5 @@
-# PROMETHEUS v2 Configuration
-# The Dreaming Architecture with Local LLM + SearXNG Research
+# BYRD Configuration
+# Bootstrapped Yearning via Reflective Dreaming
 
 # =============================================================================
 # MEMORY (Neo4j)
@@ -81,6 +81,25 @@ seeker:
 actor:
   # Model to use
   model: "claude-sonnet-4-20250514"
-  
+
   # API key (or set ANTHROPIC_API_KEY env var)
   # api_key: "sk-ant-..."
+
+# =============================================================================
+# SELF-MODIFICATION (Future)
+# =============================================================================
+# Enables BYRD to modify its own code based on emergent desires.
+self_modification:
+  enabled: false  # Enable when implementation is ready
+
+  # Checkpoint settings
+  checkpoint_dir: "./checkpoints"
+  max_checkpoints: 100
+
+  # Safety settings
+  require_health_check: true
+  auto_rollback_on_failure: true
+
+  # Rate limiting
+  max_modifications_per_day: 5
+  cooldown_between_modifications_seconds: 3600

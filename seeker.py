@@ -1,5 +1,5 @@
 """
-PROMETHEUS Seeker
+BYRD Seeker
 Fulfills desires by researching knowledge and acquiring capabilities.
 
 Uses Local LLM + SearXNG for autonomous research — no external AI services.
