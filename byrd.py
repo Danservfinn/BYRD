@@ -79,7 +79,7 @@ class BYRD:
                 "neo4j_password": "password"
             },
             "dreamer": {
-                "model": "llama3.2",
+                "model": "gemma2:27b",
                 "endpoint": "http://localhost:11434/api/generate",
                 "interval_seconds": 60,
                 "context_window": 50

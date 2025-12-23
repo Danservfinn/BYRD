@@ -27,7 +27,7 @@ class Dreamer:
         self.memory = memory
         
         # Local LLM config (Ollama, llama.cpp, etc.)
-        self.model = config.get("model", "llama3.2")
+        self.model = config.get("model", "gemma2:27b")
         self.endpoint = config.get("endpoint", "http://localhost:11434/api/generate")
         
         # Timing

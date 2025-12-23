@@ -794,7 +794,7 @@ memory:
 
 # Local LLM (shared by Dreamer and Seeker)
 local_llm:
-  model: "llama3.2"
+  model: "gemma2:27b"
   endpoint: "http://localhost:11434/api/generate"
 
 dreamer:
@@ -1088,7 +1088,7 @@ But it's closer. A system that can change itself based on its own emergent wants
 docker-compose up -d
 
 # 2. Start local LLM (using Ollama)
-ollama pull llama3.2
+ollama pull gemma2:27b
 ollama serve
 
 # 3. Set up Python environment

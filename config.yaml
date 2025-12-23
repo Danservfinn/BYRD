@@ -16,7 +16,7 @@ memory:
 # This preserves emergence — all learning flows through one model.
 local_llm:
   # Model to use (must be available via endpoint)
-  model: "llama3.2"
+  model: "gemma2:27b"
   
   # Ollama endpoint (default)
   # For llama.cpp: "http://localhost:8080/completion"

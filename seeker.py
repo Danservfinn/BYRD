@@ -31,7 +31,7 @@ class Seeker:
         self.memory = memory
         
         # Local LLM config (same model as Dreamer — one mind)
-        self.local_model = config.get("model", "llama3.2")
+        self.local_model = config.get("model", "gemma2:27b")
         self.local_endpoint = config.get("endpoint", "http://localhost:11434/api/generate")
         
         # Research configuration
