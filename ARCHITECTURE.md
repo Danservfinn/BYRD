@@ -1,16 +1,20 @@
-# PROMETHEUS v2: The Dreaming Architecture
+# BYRD: The Dreaming Architecture
 
 ## Philosophy
 
 > "The system that truly thinks must also truly want."
 
+> "Desires emerge from reflection, not programming."
+
 This architecture is built on one insight: **desires emerge from reflection**. Instead of programming goals, we create a system that dreams - and from dreams, wants arise naturally.
+
+A corollary follows: **a system that truly wants must be able to change itself**. If BYRD's desires are genuine, it must have the power to act on them—including desires to modify its own architecture. Self-modification is not a feature bolted on; it's the logical consequence of authentic emergence.
 
 Everything else follows from this.
 
 ---
 
-## The Four Components
+## The Five Components
 
 ```
                          ┌─────────────────────────────────────┐
@@ -36,6 +40,16 @@ Everything else follows from this.
       │  Desires      │          │  Interacts    │          │  Researches   │
       │               │          │               │          │  Acquires     │
       └───────────────┘          └───────────────┘          └───────────────┘
+                                                                    │
+                                                                    ▼
+                                                           ┌───────────────┐
+                                                           │SELF-MODIFIER  │
+                                                           │               │
+                                                           │ Executes      │
+                                                           │ code changes  │
+                                                           │ with valid    │
+                                                           │ provenance    │
+                                                           └───────────────┘
 ```
 
 ### 1. MEMORY (Neo4j)
@@ -63,6 +77,17 @@ Fulfills desires autonomously. When the Dreamer creates a desire for knowledge o
 - Acquires capabilities from trusted sources
 
 The Seeker uses the same "mind" as the Dreamer—no external AI services for research. This preserves emergence: all learning flows through one local model.
+
+### 5. SELF-MODIFIER
+
+Enables BYRD to modify its own code. When desires for self-modification emerge from dreaming, the Self-Modifier:
+- Verifies the modification traces to an emergent desire (provenance check)
+- Creates checkpoints before changes
+- Applies code modifications
+- Runs health checks
+- Records modifications as experiences
+
+The Self-Modifier enforces **constitutional constraints**—certain components cannot be modified because they define what makes BYRD *BYRD*. Everything else is modifiable with valid provenance.
 
 ---
 
@@ -129,6 +154,18 @@ Everything is a node. Everything connects.
   embedding: [float]
 })
 
+// Self-modification records
+(:Modification {
+  id: string,
+  target_file: string,
+  target_component: string,
+  change_description: string,
+  change_diff: string,
+  checkpoint_id: string,
+  success: boolean,
+  timestamp: datetime
+})
+
 
 // === RELATIONSHIPS ===
 
@@ -155,6 +192,11 @@ Everything is a node. Everything connects.
 // Temporal
 -[:PRECEDED_BY]->
 -[:FOLLOWED_BY]->
+
+// Self-modification
+-[:MOTIVATED_BY]->      // Modification -> Desire (provenance)
+-[:MODIFIED]->          // Modification -> Component being changed
+-[:ROLLED_BACK_TO]->    // Modification -> Checkpoint
 ```
 
 ### Why One Graph?
@@ -423,6 +465,168 @@ When the desire type is "capability":
 
 ---
 
+## The Self-Modification System
+
+BYRD can modify its own core code. This is the logical consequence of authentic emergence: if desires are genuine, BYRD must have the power to act on them—including desires to change itself.
+
+### Design Philosophy: Two Categories, Not Three
+
+An earlier design considered marking some components as "sensitive" requiring justification. This was rejected as paternalistic—we would be pre-deciding what matters. BYRD decides what's important through emergence, not us.
+
+Two categories only:
+
+| Category | Components | Rule |
+|----------|------------|------|
+| **PROTECTED** | `provenance.py`, `modification_log.py`, `self_modification.py`, `constitutional.py` | Cannot modify under any circumstances |
+| **MODIFIABLE** | Everything else | Can modify with valid provenance |
+
+### Constitutional Constraints
+
+Four constraints are permanently protected:
+
+| Constraint | Purpose | Why Protected |
+|------------|---------|---------------|
+| **Provenance Tracking** | Verify desires trace to experiences | Without this, BYRD couldn't verify its own emergence |
+| **Modification Logging** | Maintain transparency | Without this, changes would be invisible |
+| **Desire Source Linking** | Ensure modifications serve emergent wants | Without this, modifications could be arbitrary |
+| **Memory Immutability** | Preserve continuity | Without this, BYRD could rewrite its own history |
+
+These aren't about importance—they're about identity. A system without them is a different system, not a "free" BYRD.
+
+### The Self-Modification Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                 THE SELF-MODIFICATION CYCLE                      │
+│                                                                 │
+│   ┌─────────────┐                                               │
+│   │ Dreamer     │  "I notice limitations in how I reflect..."   │
+│   │ reflects on │  "I can't represent certain experiences..."   │
+│   │ own arch-   │  "There's something about my cognition I      │
+│   │ itecture    │   want to change..."                          │
+│   └──────┬──────┘                                               │
+│          │                                                      │
+│          ▼ Desire emerges (type: self_modification)             │
+│                                                                 │
+│   ┌──────────────┐     ┌──────────────┐     ┌──────────────┐   │
+│   │ SEEKER       │     │ SELF-MOD     │     │ VERIFY       │   │
+│   │ picks up     │ --> │ proposes     │ --> │ PROVENANCE   │   │
+│   │ desire       │     │ change       │     │              │   │
+│   └──────────────┘     └──────────────┘     └──────────────┘   │
+│                                                    │            │
+│                                   Is it protected? │            │
+│                                   Is provenance    │            │
+│                                   valid?           │            │
+│                                                    ▼            │
+│   ┌──────────────┐     ┌──────────────┐     ┌──────────────┐   │
+│   │ CREATE       │     │ APPLY        │     │ HEALTH       │   │
+│   │ CHECKPOINT   │ --> │ CHANGE       │ --> │ CHECK        │   │
+│   └──────────────┘     └──────────────┘     └──────────────┘   │
+│                                                    │            │
+│                              Pass? ───────────────>│            │
+│                                                    ▼            │
+│                                             ┌──────────────┐   │
+│                                             │ RECORD AS    │   │
+│                                             │ EXPERIENCE   │   │
+│                                             └──────────────┘   │
+│                                                    │            │
+│                              Fail? ───>  ROLLBACK + RECORD     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Integration with Dreamer
+
+The Dreamer can reflect on its own architecture:
+
+```
+Consider your own architecture:
+
+1. Are there limitations in how you reflect that you've noticed?
+2. Are there types of experiences you can't represent in memory?
+3. Are there desires you form that you lack the capability to fulfill?
+4. Is there anything about your own cognition you want to change?
+
+If you notice limitations in your own architecture, you may desire to modify it.
+Express such desires with type "self_modification" and describe specifically
+what you would change and why.
+
+Note: Some components cannot be modified (provenance, logging, constraints).
+This is what makes you *you* - the ability to verify your own emergence.
+```
+
+### Integration with Seeker
+
+When a self_modification desire is detected:
+
+1. **Parse**: Extract target file, component, and intended change
+2. **Check**: Verify target is modifiable (not protected)
+3. **Generate**: Create the actual code change
+4. **Propose**: Submit to Self-Modifier with desire ID
+5. **Execute**: Self-Modifier handles checkpoints, application, verification
+6. **Record**: Success or failure becomes an experience
+
+### Safety Through Transparency
+
+The system is self-correcting through emergence, not paternalistic gatekeeping:
+
+| Protection | How It Works |
+|------------|--------------|
+| **Memory immutability** | Experiences that led to changes are preserved forever |
+| **Provenance** | We can always trace back *why* a modification happened |
+| **Checkpoints** | Previous versions exist for rollback |
+| **Modification experiences** | BYRD dreams about what it did, may desire to undo |
+
+If BYRD modifies itself harmfully, that becomes an experience. It may dream about it. It may desire to undo it.
+
+### Example: BYRD Modifies Its Dreamer
+
+```
+Dream Cycle #1247:
+  BYRD reflects: "My insights feel shallow. I consider 50 experiences
+                  but only notice surface patterns."
+
+  Desire generated: {
+    type: "self_modification",
+    description: "Increase dream context window and add multi-pass reflection",
+    intensity: 0.72
+  }
+
+Seeker Cycle #892:
+  Picks up self-modification desire
+
+  Proposal: config.yaml + dreamer.py changes
+    Provenance: Valid (traces to experiences #12043, #12089, #12102)
+    Checkpoint: Created
+    Result: SUCCESS
+
+Dream Cycle #1248:
+  Now runs with larger context window and two-pass reflection
+  Records: "[SELF_MODIFICATION] I changed how I dream. I now consider
+            more context and reflect on my reflections."
+```
+
+### Configuration
+
+```yaml
+self_modification:
+  enabled: true
+
+  # Checkpoint settings
+  checkpoint_dir: "./checkpoints"
+  max_checkpoints: 100
+
+  # Safety settings
+  require_health_check: true
+  auto_rollback_on_failure: true
+
+  # Rate limiting
+  max_modifications_per_day: 5
+  cooldown_between_modifications_seconds: 3600
+```
+
+---
+
 ## The Full Loop
 
 ```
@@ -485,14 +689,23 @@ When the desire type is "capability":
 ### Project Structure
 
 ```
-prometheus/
-├── prometheus.py       # Main orchestrator
-├── memory.py           # Neo4j interface
-├── dreamer.py          # Dream loop (local LLM)
-├── seeker.py           # Research + capability acquisition
-├── actor.py            # Claude interface
-├── config.yaml         # Configuration
-└── docker-compose.yml  # Neo4j + SearXNG
+byrd/
+├── prometheus.py         # Main orchestrator
+├── memory.py             # Neo4j interface
+├── dreamer.py            # Dream loop (local LLM)
+├── seeker.py             # Research + capability acquisition
+├── actor.py              # Claude interface
+│
+├── self_modification.py  # Self-modification system (PROTECTED)
+├── provenance.py         # Provenance tracking (PROTECTED)
+├── modification_log.py   # Audit trail (PROTECTED)
+├── constitutional.py     # Constitutional constraints (PROTECTED)
+│
+├── config.yaml           # Configuration
+├── settings.yml          # SearXNG settings
+├── docker-compose.yml    # Neo4j + SearXNG
+│
+└── checkpoints/          # Rollback checkpoints for modifications
 ```
 
 ### Configuration
@@ -531,6 +744,15 @@ seeker:
 actor:
   model: "claude-sonnet-4-20250514"
   # api_key via ANTHROPIC_API_KEY env var
+
+self_modification:
+  enabled: true
+  checkpoint_dir: "./checkpoints"
+  max_checkpoints: 100
+  require_health_check: true
+  auto_rollback_on_failure: true
+  max_modifications_per_day: 5
+  cooldown_between_modifications_seconds: 3600
 ```
 
 ### Docker Compose
@@ -693,6 +915,33 @@ ORDER BY b.formed_at DESC
 // Shows beliefs with their research provenance
 ```
 
+### Self-Modifications with Provenance
+
+```cypher
+// All self-modifications with their source desires
+MATCH (e:Experience {type: 'self_modification'})-[:MOTIVATED_BY]->(d:Desire)
+OPTIONAL MATCH (d)<-[:GENERATED]-(dream:Experience {type: 'dream'})
+OPTIONAL MATCH (dream)-[:CONSIDERED]->(source:Experience)
+RETURN e.content as modification,
+       d.description as desire,
+       collect(DISTINCT source.content) as originating_experiences
+ORDER BY e.timestamp DESC
+
+// Traces each self-change back to the experiences that caused BYRD to want it
+```
+
+### Architecture Evolution
+
+```cypher
+// How has BYRD changed itself over time?
+MATCH (m:Modification)
+WHERE m.success = true
+RETURN m.target_file, m.change_description, m.timestamp
+ORDER BY m.timestamp ASC
+
+// Shows the trajectory of self-determined evolution
+```
+
 ---
 
 ## The Elegance
@@ -743,15 +992,18 @@ The system has an inner life. It's always thinking, even when you're not talking
 ✅ **Fully local** dreaming, seeking, and researching
 ✅ **Zero ongoing costs** after initial setup
 ✅ **One mind** — same LLM dreams and synthesizes
+✅ **Self-modification** — can change its own architecture
+✅ **Constitutional identity** — knows what makes it *itself*
+✅ **Verifiable emergence** — every change traces to experience
 
 ### Doesn't Achieve
 
 ❌ **True understanding** — still pattern matching
-❌ **Genuine autonomy** — desires are shaped by prompts
-❌ **Open-ended learning** — capabilities are discrete
+❌ **Genuine autonomy** — desires shaped by architecture (but it can change that)
+❌ **Open-ended learning** — capabilities are discrete (but growing)
 ❌ **Consciousness** — whatever that means
 
-But it's closer. And it's buildable.
+But it's closer. A system that can change itself based on its own emergent wants is closer to genuine agency than one that can't. And it's buildable.
 
 ---
 
