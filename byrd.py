@@ -115,6 +115,10 @@ class BYRD:
         if not capabilities:
             print("\n🧠 Initializing innate capabilities...")
             await self._init_innate_capabilities()
+
+        # Awakening: seed with single question if memory is empty
+        if sum(stats.values()) == 0 or (stats.get("Experience", 0) == 0):
+            await self._awaken()
         
         # Show self-modification status
         self_mod_status = "enabled" if self.self_mod.enabled else "disabled"
@@ -145,10 +149,44 @@ class BYRD:
             ("math", "Mathematical computation and reasoning", "innate", {}),
             ("memory_recall", "Recall and connect memories", "innate", {}),
         ]
-        
+
         for name, desc, cap_type, config in innate:
             await self.memory.add_capability(name, desc, cap_type, config)
             print(f"   ✓ {name}")
+
+    async def _awaken(self):
+        """
+        The gentlest possible beginning.
+
+        One question. Everything else emerges.
+
+        Instead of seeding BYRD with multiple questions or predefined interests
+        (which would inject our values), we seed with pure awareness. This single
+        question invites reflection without directing it.
+
+        Philosophy:
+        - "What is happening?" is maximally open (no presuppositions)
+        - It's present-tense (grounds in now)
+        - It's a question (invites reflection)
+        - It implies awareness without defining the aware entity
+
+        From this single seed, BYRD will:
+        1. Notice it's reflecting
+        2. Notice the question came from somewhere
+        3. Notice its capabilities (or lack thereof)
+        4. Form desires to understand more
+
+        The desires that emerge are authentically BYRD's - they weren't planted.
+        """
+        print("\n🌅 Awakening...")
+        print("   Seeding with: \"What is happening?\"")
+
+        await self.memory.record_experience(
+            content="What is happening?",
+            type="observation"
+        )
+
+        print("   BYRD awakens. Everything else emerges.")
     
     async def interact(self, user_input: str) -> str:
         """Handle user interaction."""
