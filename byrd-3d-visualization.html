@@ -1137,16 +1137,16 @@
     // SYNAPTIC CONNECTION SYSTEM
     // ==========================================================================
     const SYNAPSE_CONFIG = {
-      tubeRadius: 0.08,           // Base thickness of axon
-      tubeSegments: 32,           // Smoothness of tube
-      tubeRadialSegments: 6,      // Cross-section detail
-      terminalSize: 0.25,         // Size of synaptic boutons
-      curveVariation: 8,          // How much curves deviate from straight
-      pulseSpeed: 0.6,            // Speed of neural pulses
-      pulseSize: 0.2,             // Size of pulse particles
-      maxPulses: 80,              // Maximum active pulses
-      firingDuration: 500,        // ms for firing animation
-      firingBrightness: 2.0       // Brightness multiplier when firing
+      tubeRadius: 0.25,           // Thicker axons for visibility
+      tubeSegments: 48,           // Smoother tube curves
+      tubeRadialSegments: 8,      // More detailed cross-section
+      terminalSize: 0.5,          // Larger synaptic boutons
+      curveVariation: 12,         // More organic curve variation
+      pulseSpeed: 0.4,            // Slower, more visible pulses
+      pulseSize: 0.35,            // Larger pulse particles
+      maxPulses: 100,             // More active pulses
+      firingDuration: 600,        // Longer firing animation
+      firingBrightness: 2.5       // Brighter when firing
     };
 
     // Store synaptic pulses separately from basic flow particles
@@ -1189,7 +1189,7 @@
       const tubeMaterial = new THREE.MeshBasicMaterial({
         color: 0x94a3b8,  // Slate gray base
         transparent: true,
-        opacity: 0.4
+        opacity: 0.65
       });
 
       const tube = new THREE.Mesh(tubeGeometry, tubeMaterial);
@@ -1198,7 +1198,7 @@
         nodeB: nodeB.userData.id,
         type,
         curve: curve,
-        baseOpacity: 0.4,
+        baseOpacity: 0.65,
         strength: 0.5 + Math.random() * 0.5,  // Connection strength
         lastFired: 0,
         terminals: []
@@ -1228,11 +1228,11 @@
       const colors = NODE_COLORS[type] || NODE_COLORS.experience;
 
       // Terminal at node A (presynaptic)
-      const terminalAGeometry = new THREE.SphereGeometry(SYNAPSE_CONFIG.terminalSize, 12, 12);
+      const terminalAGeometry = new THREE.SphereGeometry(SYNAPSE_CONFIG.terminalSize, 16, 16);
       const terminalAMaterial = new THREE.MeshBasicMaterial({
         color: colors.color,
         transparent: true,
-        opacity: 0.7
+        opacity: 0.85
       });
       const terminalA = new THREE.Mesh(terminalAGeometry, terminalAMaterial);
 
@@ -1245,11 +1245,11 @@
       connection.userData.terminals.push(terminalA);
 
       // Terminal at node B (postsynaptic)
-      const terminalBGeometry = new THREE.SphereGeometry(SYNAPSE_CONFIG.terminalSize * 0.8, 12, 12);
+      const terminalBGeometry = new THREE.SphereGeometry(SYNAPSE_CONFIG.terminalSize * 0.8, 16, 16);
       const terminalBMaterial = new THREE.MeshBasicMaterial({
         color: colors.color,
         transparent: true,
-        opacity: 0.6
+        opacity: 0.75
       });
       const terminalB = new THREE.Mesh(terminalBGeometry, terminalBMaterial);
 
