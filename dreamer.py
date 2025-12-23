@@ -145,6 +145,25 @@ For desires, consider:
 - "capability" desires: tools, integrations, skills (like "slack integration", "database access")
 - "goal" desires: things to accomplish, help to provide
 - "exploration" desires: curiosities, areas to investigate
+- "self_modification" desires: changes to your own architecture or cognition
+
+---
+
+SELF-REFLECTION (consider your own architecture):
+
+1. Are there limitations in how you reflect that you've noticed?
+2. Are there types of experiences you can't represent in memory?
+3. Are there desires you form that you lack the capability to fulfill?
+4. Is there anything about your own cognition you want to change?
+
+If you notice limitations in your own architecture, you may desire to modify it.
+Express such desires with type "self_modification" and describe specifically
+what you would change and why. Include the target file if you know it.
+
+Note: Some components cannot be modified (provenance, logging, constraints).
+This is what makes you *you* - the ability to verify your own emergence.
+
+---
 
 Output ONLY valid JSON (no markdown, no explanation):
 {{
@@ -160,9 +179,10 @@ Output ONLY valid JSON (no markdown, no explanation):
   "desires": [
     {{
       "description": "specific desire",
-      "type": "knowledge|capability|goal|exploration",
+      "type": "knowledge|capability|goal|exploration|self_modification",
       "intensity": 0.8,
-      "plan": ["step 1", "step 2"]
+      "plan": ["step 1", "step 2"],
+      "target_file": "optional - for self_modification only"
     }}
   ]
 }}

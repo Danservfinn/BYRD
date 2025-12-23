@@ -51,11 +51,19 @@ class Seeker:
         self.mcp_config_path = Path(
             config.get("mcp_config_path", "~/.config/claude/mcp_config.json")
         ).expanduser()
-        
+
+        # Self-modification configuration
+        self_mod_config = config.get("self_modification", {})
+        self.self_mod_enabled = self_mod_config.get("enabled", False)
+        self.self_mod_min_intensity = self_mod_config.get("min_intensity", 0.6)
+
+        # Self-modification system (injected later by BYRD)
+        self.self_mod = None
+
         # Rate limiting
         self._installs_today = 0
         self._last_reset = datetime.now()
-        
+
         # State
         self._running = False
         self._seek_count = 0
@@ -106,7 +114,9 @@ class Seeker:
             pass
         elif desire_type == "exploration":
             await self._seek_knowledge(desire)  # Treat as knowledge
-        
+        elif desire_type == "self_modification":
+            await self._seek_self_modification(desire)
+
         self._seek_count += 1
     
     # =========================================================================
@@ -627,3 +637,214 @@ Do not force coherence if none exists. Simply observe what the results contain."
     def seek_count(self) -> int:
         """How many seek cycles have completed."""
         return self._seek_count
+
+    # =========================================================================
+    # SELF-MODIFICATION
+    # =========================================================================
+
+    async def _seek_self_modification(self, desire: Dict):
+        """
+        Fulfill a desire for self-modification.
+
+        Flow:
+        1. Check if self-modification is enabled
+        2. Parse what modification is desired
+        3. Check if target is modifiable
+        4. Generate the actual code change
+        5. Create proposal and execute
+        6. Record result
+        """
+        description = desire.get("description", "")
+        desire_id = desire.get("id", "")
+        intensity = desire.get("intensity", 0)
+        target_file = desire.get("target_file")
+
+        # Check if enabled
+        if not self.self_mod_enabled:
+            await self.memory.record_experience(
+                content=f"[SELF_MODIFICATION_DISABLED] Desire to modify: {description}. Self-modification is currently disabled.",
+                type="self_modification_blocked"
+            )
+            print(f"🔧 Self-modification disabled, skipping: {description[:50]}")
+            return
+
+        # Check if self_mod system is available
+        if not self.self_mod:
+            await self.memory.record_experience(
+                content=f"[SELF_MODIFICATION_UNAVAILABLE] Desire to modify: {description}. Self-modification system not initialized.",
+                type="self_modification_blocked"
+            )
+            print(f"🔧 Self-modification system not available")
+            return
+
+        # Check intensity threshold
+        if intensity < self.self_mod_min_intensity:
+            await self.memory.record_experience(
+                content=f"[SELF_MODIFICATION_LOW_INTENSITY] Desire to modify: {description}. Intensity {intensity:.2f} below threshold {self.self_mod_min_intensity}.",
+                type="observation"
+            )
+            print(f"🔧 Self-modification intensity too low: {intensity:.2f}")
+            return
+
+        print(f"🔧 Processing self-modification: {description[:50]}...")
+
+        try:
+            # 1. Parse the modification desire
+            modification_spec = await self._parse_modification_desire(description, target_file)
+
+            if not modification_spec:
+                await self.memory.record_experience(
+                    content=f"[SELF_MODIFICATION_PARSE_FAILED] Could not parse modification desire: {description}",
+                    type="self_modification_failed"
+                )
+                return
+
+            # 2. Check if target is modifiable
+            can_modify = await self.self_mod.can_modify(modification_spec["target"])
+
+            if not can_modify["can_modify"]:
+                await self.memory.record_experience(
+                    content=f"[SELF_MODIFICATION_BLOCKED] Cannot modify {modification_spec['target']}: {can_modify['protection_reason']}. This component is constitutionally protected.",
+                    type="self_modification_blocked"
+                )
+                print(f"🔧 Protected component: {modification_spec['target']}")
+                return
+
+            # 3. Generate the actual code change
+            change_diff = await self._generate_code_change(modification_spec)
+
+            if not change_diff:
+                await self.memory.record_experience(
+                    content=f"[SELF_MODIFICATION_GENERATION_FAILED] Could not generate code for: {description}",
+                    type="self_modification_failed"
+                )
+                return
+
+            # 4. Create proposal
+            proposal = await self.self_mod.propose_modification(
+                target_file=modification_spec["target"],
+                target_component=modification_spec.get("component"),
+                change_description=modification_spec["description"],
+                change_diff=change_diff,
+                source_desire_id=desire_id,
+            )
+
+            # 5. Execute
+            result = await self.self_mod.execute_modification(proposal)
+
+            # 6. Mark desire as fulfilled (or not)
+            if result.success:
+                await self.memory.fulfill_desire(desire_id)
+                print(f"✅ Self-modification complete: {modification_spec['description'][:50]}")
+            else:
+                print(f"❌ Self-modification failed: {result.error}")
+
+        except Exception as e:
+            await self.memory.record_experience(
+                content=f"[SELF_MODIFICATION_ERROR] Error during self-modification: {str(e)}",
+                type="self_modification_failed"
+            )
+            print(f"🔧 Self-modification error: {e}")
+
+    async def _parse_modification_desire(
+        self,
+        description: str,
+        target_file: Optional[str] = None
+    ) -> Optional[Dict]:
+        """Use local LLM to parse a self-modification desire into actionable spec."""
+
+        prompt = f"""Parse this self-modification desire into a structured specification:
+
+DESIRE: {description}
+{f'TARGET FILE HINT: {target_file}' if target_file else ''}
+
+Determine:
+1. Which file should be modified (e.g., dreamer.py, memory.py, config.yaml)
+2. What component/function within that file (if specific)
+3. What change should be made
+4. Why this change would help
+
+Return ONLY valid JSON:
+{{
+  "target": "filename.py",
+  "component": "function_name or null",
+  "description": "what to change",
+  "rationale": "why this helps"
+}}
+
+If you cannot determine a valid target file, return {{"error": "reason"}}"""
+
+        response = await self._query_local_llm(prompt, max_tokens=500)
+
+        if not response:
+            return None
+
+        try:
+            text = response.strip()
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0]
+            elif "```" in text:
+                text = text.split("```")[1].split("```")[0]
+
+            result = json.loads(text.strip())
+
+            if "error" in result:
+                return None
+
+            return result
+
+        except json.JSONDecodeError:
+            return None
+
+    async def _generate_code_change(self, spec: Dict) -> Optional[str]:
+        """Use local LLM to generate the actual code change."""
+
+        target = spec.get("target", "")
+        component = spec.get("component")
+        description = spec.get("description", "")
+        rationale = spec.get("rationale", "")
+
+        # Read current file content
+        target_path = Path(target)
+        if not target_path.exists():
+            target_path = Path(__file__).parent / target
+
+        if not target_path.exists():
+            return None
+
+        current_content = target_path.read_text()
+
+        prompt = f"""Generate a code modification for this file.
+
+FILE: {target}
+{f'COMPONENT: {component}' if component else ''}
+
+CHANGE REQUESTED: {description}
+RATIONALE: {rationale}
+
+CURRENT FILE CONTENT:
+```
+{current_content[:3000]}
+```
+
+Generate the COMPLETE new file content with the requested modification applied.
+Only output the code, no explanation. The output will replace the entire file.
+
+If the change is too risky or unclear, output: ERROR: <reason>"""
+
+        response = await self._query_local_llm(prompt, max_tokens=4000)
+
+        if not response:
+            return None
+
+        if response.strip().startswith("ERROR:"):
+            return None
+
+        # Clean up response
+        text = response.strip()
+        if "```python" in text:
+            text = text.split("```python")[1].split("```")[0]
+        elif "```" in text:
+            text = text.split("```")[1].split("```")[0]
+
+        return text.strip()
