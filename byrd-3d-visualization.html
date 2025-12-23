@@ -784,70 +784,26 @@
       raycaster = new THREE.Raycaster();
       mouse = new THREE.Vector2();
 
-      // Scene - Light theme
+      // Scene - Light theme (clean, no fog)
       scene = new THREE.Scene();
       scene.background = new THREE.Color(0xf8fafc);
-      scene.fog = new THREE.FogExp2(0xf8fafc, 0.008);
+      // No fog for light theme
 
       // Camera
       camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
       camera.position.set(0, 30, 80);
       camera.lookAt(0, 0, 0);
 
-      // Renderer
+      // Renderer - simple, clean rendering for light theme
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.2;
       container.appendChild(renderer.domElement);
 
-      // Post-processing (Phase 3: Enhanced pipeline)
+      // No post-processing for light theme - use simple render pass only
       composer = new EffectComposer(renderer);
       composer.addPass(new RenderPass(scene, camera));
-
-      // 1. Bloom - creates glow around bright areas
-      const bloomPass = new UnrealBloomPass(
-        new THREE.Vector2(window.innerWidth, window.innerHeight),
-        1.0,   // strength (increased for more dramatic glow)
-        0.5,   // radius
-        0.75   // threshold (lowered to catch more highlights)
-      );
-      composer.addPass(bloomPass);
-
-      // 2. God Rays - volumetric light emanating from center
-      const godRaysPass = new ShaderPass(GodRaysShader);
-      godRaysPass.uniforms.exposure.value = 0.15;
-      godRaysPass.uniforms.decay.value = 0.93;
-      godRaysPass.uniforms.density.value = 0.4;
-      godRaysPass.uniforms.weight.value = 0.25;
-      composer.addPass(godRaysPass);
-      scene.userData.godRaysPass = godRaysPass; // Store for dynamic updates
-
-      // 3. Chromatic Aberration - subtle RGB splitting at edges
-      const chromaticPass = new ShaderPass(ChromaticAberrationShader);
-      chromaticPass.uniforms.amount.value = 0.002;
-      composer.addPass(chromaticPass);
-      scene.userData.chromaticPass = chromaticPass;
-
-      // 4. Color Grading - cinematic color treatment
-      const colorGradingPass = new ShaderPass(ColorGradingShader);
-      colorGradingPass.uniforms.saturation.value = 1.15;
-      colorGradingPass.uniforms.contrast.value = 1.08;
-      colorGradingPass.uniforms.brightness.value = -0.02;
-      composer.addPass(colorGradingPass);
-
-      // 5. Film Grain - adds texture and life
-      const filmGrainPass = new ShaderPass(FilmGrainShader);
-      filmGrainPass.uniforms.intensity.value = 0.06;
-      composer.addPass(filmGrainPass);
-      scene.userData.filmGrainPass = filmGrainPass;
-
-      // 6. Vignette - focuses attention on center (last pass)
-      const vignettePass = new ShaderPass(VignetteShader);
-      vignettePass.uniforms.darkness.value = 0.5;
-      vignettePass.uniforms.offset.value = 1.2;
-      composer.addPass(vignettePass);
+      // All other effects disabled for clean light theme
 
       // Controls (Hybrid Navigation)
       controls = new OrbitControls(camera, renderer.domElement);
@@ -872,10 +828,10 @@
       centerLight.position.set(0, 0, 0);
       scene.add(centerLight);
 
-      // Create environment
-      createStarField();
+      // Create environment (no star field for light theme)
+      // createStarField();
       createConsciousnessCore();
-      createAmbientParticles();
+      // createAmbientParticles();  // Skip for cleaner light theme
 
       // Event listeners
       window.addEventListener('resize', onWindowResize);
@@ -993,75 +949,50 @@
     // CONSCIOUSNESS CORE
     // ==========================================================================
     function createConsciousnessCore() {
-      // Outer glow sphere
-      const outerGeometry = new THREE.SphereGeometry(8, 64, 64);
-      const outerMaterial = new THREE.MeshBasicMaterial({
+      // Small, subtle center point for light theme
+      const coreGeometry = new THREE.SphereGeometry(1.5, 32, 32);
+      const coreMaterial = new THREE.MeshBasicMaterial({
         color: 0x6366f1,
         transparent: true,
-        opacity: 0.1,
-        side: THREE.BackSide
-      });
-      const outerSphere = new THREE.Mesh(outerGeometry, outerMaterial);
-      scene.add(outerSphere);
-
-      // Middle sphere
-      const middleGeometry = new THREE.SphereGeometry(5, 64, 64);
-      const middleMaterial = new THREE.MeshBasicMaterial({
-        color: 0x7c3aed,
-        transparent: true,
-        opacity: 0.15
-      });
-      const middleSphere = new THREE.Mesh(middleGeometry, middleMaterial);
-      scene.add(middleSphere);
-
-      // Inner core
-      const coreGeometry = new THREE.SphereGeometry(2, 64, 64);
-      const coreMaterial = new THREE.MeshStandardMaterial({
-        color: 0xa78bfa,
-        emissive: 0x8b5cf6,
-        emissiveIntensity: 0.8,
-        metalness: 0.3,
-        roughness: 0.2
+        opacity: 0.3
       });
       consciousnessCore = new THREE.Mesh(coreGeometry, coreMaterial);
       scene.add(consciousnessCore);
 
-      // Bright center point
-      const centerGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+      // Tiny bright center
+      const centerGeometry = new THREE.SphereGeometry(0.3, 16, 16);
       const centerMaterial = new THREE.MeshBasicMaterial({
-        color: 0xffffff
+        color: 0x6366f1
       });
       coreGlow = new THREE.Mesh(centerGeometry, centerMaterial);
       scene.add(coreGlow);
 
-      // Particle ring around core
-      createCoreParticleRing();
-
-      // Store references for animation
-      scene.userData.outerSphere = outerSphere;
-      scene.userData.middleSphere = middleSphere;
+      // Store empty refs for compatibility
+      scene.userData.outerSphere = null;
+      scene.userData.middleSphere = null;
     }
 
     function createCoreParticleRing() {
-      const particleCount = 100;
+      // Minimal particle ring for light theme
+      const particleCount = 30;
       const geometry = new THREE.BufferGeometry();
       const positions = new Float32Array(particleCount * 3);
 
       for (let i = 0; i < particleCount; i++) {
         const angle = (i / particleCount) * Math.PI * 2;
-        const radius = 10 + Math.random() * 2;
+        const radius = 8 + Math.random() * 1;
         positions[i * 3] = Math.cos(angle) * radius;
-        positions[i * 3 + 1] = (Math.random() - 0.5) * 2;
+        positions[i * 3 + 1] = (Math.random() - 0.5) * 1;
         positions[i * 3 + 2] = Math.sin(angle) * radius;
       }
 
       geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
       const material = new THREE.PointsMaterial({
-        size: 0.3,
-        color: 0xa78bfa,
+        size: 0.15,
+        color: 0x94a3b8,
         transparent: true,
-        opacity: 0.6,
+        opacity: 0.4,
         sizeAttenuation: true
       });
 
@@ -1076,24 +1007,43 @@
       const nodeId = id || `node_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       const colors = NODE_COLORS[type] || NODE_COLORS.experience;
 
-      // Calculate position - closer to center for visibility
-      const angle = nodes3D.length * 0.618 * Math.PI * 2;
-      const radius = 20 + (nodes3D.length % 10) * 3;
-      const height = (Math.random() - 0.5) * 20;
+      // Calculate position - golden ratio spiral, well spaced
+      const goldenAngle = Math.PI * (3 - Math.sqrt(5)); // ~137.5 degrees
+      const angle = nodes3D.length * goldenAngle;
+      const radius = 25 + Math.sqrt(nodes3D.length) * 8;
+      const height = (Math.sin(nodes3D.length * 0.5) * 15) + (Math.random() - 0.5) * 10;
 
       const x = Math.cos(angle) * radius;
       const y = height;
       const z = Math.sin(angle) * radius;
 
-      // Larger size for visibility
-      const size = 3.0 + importance * 2.0;
+      // Smaller, consistent size
+      const size = 1.5 + importance * 1.0;
 
-      // Simple sphere geometry for all types
-      const geometry = new THREE.SphereGeometry(size, 32, 32);
+      // Geometry based on type for visual distinction
+      let geometry;
+      switch (type) {
+        case 'belief':
+          geometry = new THREE.IcosahedronGeometry(size, 0);
+          break;
+        case 'desire':
+          geometry = new THREE.OctahedronGeometry(size, 0);
+          break;
+        case 'reflection':
+          geometry = new THREE.TetrahedronGeometry(size * 1.2, 0);
+          break;
+        case 'capability':
+          geometry = new THREE.BoxGeometry(size * 1.5, size * 1.5, size * 1.5);
+          break;
+        default: // experience
+          geometry = new THREE.SphereGeometry(size, 24, 24);
+      }
 
-      // Simple bright material
+      // Clean material with slight transparency for depth
       const material = new THREE.MeshBasicMaterial({
-        color: colors.color
+        color: colors.color,
+        transparent: true,
+        opacity: 0.9
       });
 
       const mesh = new THREE.Mesh(geometry, material);
@@ -1110,7 +1060,6 @@
       };
 
       scene.add(mesh);
-      console.log('Node created:', type, 'position:', x.toFixed(1), y.toFixed(1), z.toFixed(1), 'color:', colors.color.toString(16));
 
       // Store node
       nodes3D.push(mesh);
@@ -1146,39 +1095,34 @@
     }
 
     function createConnection3D(nodeA, nodeB, type) {
-      const colors = NODE_COLORS[type] || NODE_COLORS.experience;
-
       // Create curved line between nodes
       const start = nodeA.position.clone();
       const end = nodeB.position.clone();
       const mid = start.clone().add(end).multiplyScalar(0.5);
-      mid.y += (Math.random() - 0.5) * 5;
+      mid.y += 2; // Slight upward curve
 
       const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
-      const points = curve.getPoints(20);
+      const points = curve.getPoints(30);
       const geometry = new THREE.BufferGeometry().setFromPoints(points);
 
+      // Subtle gray connections for clean look
       const material = new THREE.LineBasicMaterial({
-        color: colors.color,
+        color: 0xc1c7d0,
         transparent: true,
-        opacity: 0
+        opacity: 0.6
       });
 
       const line = new THREE.Line(geometry, material);
       line.userData = {
         nodeA: nodeA.userData.id,
         nodeB: nodeB.userData.id,
-        type
+        type,
+        curve: curve
       };
 
       scene.add(line);
       connections3D.push(line);
       invalidateConnectionMap(); // Phase 4: Invalidate cache
-
-      // Animate fade in
-      animateValue({ opacity: 0 }, 'opacity', 0.3, 500, (val) => {
-        material.opacity = val;
-      });
 
       // Limit connections
       if (connections3D.length > 100) {
