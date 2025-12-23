@@ -14,8 +14,8 @@ This file provides guidance to Claude Code when working with the BYRD codebase.
 ```
                     ┌─────────────────────────────────┐
                     │         MEMORY (Neo4j)          │
-                    │   Experiences, Beliefs, Desires │
-                    │        Capabilities             │
+                    │  Experiences, Reflections,      │
+                    │  Beliefs, Desires, Capabilities │
                     └───────────────┬─────────────────┘
                                     │
            ┌────────────────────────┼────────────────────────┐
@@ -23,10 +23,11 @@ This file provides guidance to Claude Code when working with the BYRD codebase.
            ▼                        ▼                        ▼
     ┌─────────────┐          ┌─────────────┐          ┌─────────────┐
     │   DREAMER   │          │    ACTOR    │          │   SEEKER    │
-    │ (gemma2:27b)│          │  (Claude)   │          │ (gemma2:27b)│
+    │ (Local LLM) │          │  (Claude)   │          │ (Local LLM) │
     │             │          │             │          │             │
-    │ Continuous  │          │ On-demand   │          │ Continuous  │
-    │ reflection  │          │ reasoning   │          │ fulfillment │
+    │ Pure data   │          │ On-demand   │          │ Pattern     │
+    │ presentation│          │ reasoning   │          │ detection   │
+    │ Meta-schema │          │             │          │ Observation │
     └─────────────┘          └─────────────┘          └─────────────┘
                                                             │
                                                             ▼
@@ -36,15 +37,25 @@ This file provides guidance to Claude Code when working with the BYRD codebase.
                                                    └─────────────────┘
 ```
 
+### Emergence Principle
+
+BYRD follows strict emergence principles (see EMERGENCE_PRINCIPLES.md):
+
+- **No prescribed categories**: BYRD defines its own vocabulary
+- **No leading questions**: Pure data presentation
+- **No personality injection**: Factual discovery only
+- **No hardcoded biases**: Trust emerges from experience
+- **Pattern detection**: Observe before acting, require stability
+
 ### Component Responsibilities
 
 | Component | File | LLM | Purpose |
 |-----------|------|-----|---------|
-| **Memory** | `memory.py` | - | Neo4j graph database interface |
-| **Dreamer** | `dreamer.py` | Local (gemma2:27b) | Continuous reflection, forms beliefs/desires |
-| **Seeker** | `seeker.py` | Local (gemma2:27b) | Fulfills desires via research and capability acquisition |
-| **Actor** | `actor.py` | Claude API | Complex reasoning, user interaction, goal pursuit |
-| **Self-Modifier** | `self_modification.py` | - | Safe architectural evolution |
+| **Memory** | `memory.py` | - | Neo4j graph + Reflection node for raw output |
+| **Dreamer** | `dreamer.py` | Local | Pure data presentation → meta-schema output |
+| **Seeker** | `seeker.py` | Local | Pattern detection → execute BYRD's strategies |
+| **Actor** | `actor.py` | Claude API | Complex reasoning, user interaction |
+| **Self-Modifier** | `self_modification.py` | - | Safe architectural evolution
 
 ## Constitutional Constraints (CRITICAL)
 
@@ -71,6 +82,7 @@ dreamer.py           - Reflection process
 seeker.py            - Desire fulfillment
 actor.py             - Claude interface
 memory.py            - Database interface
+llm_client.py        - LLM provider abstraction
 config.yaml          - Configuration
 aitmpl_client.py     - Template registry client
 event_bus.py         - Event system
@@ -116,7 +128,13 @@ All state goes through Memory:
 # Recording experiences
 exp_id = await self.memory.record_experience(
     content="What happened",
-    type="observation"  # observation, interaction, action, dream, research
+    type="observation"  # Examples: observation, interaction, reflection, system
+)
+
+# Recording reflections (emergence-compliant)
+ref_id = await self.memory.record_reflection(
+    raw_output={"whatever": "BYRD produced"},  # BYRD's vocabulary
+    source_experience_ids=[exp_id1, exp_id2]
 )
 
 # Creating beliefs
@@ -126,13 +144,8 @@ belief_id = await self.memory.create_belief(
     derived_from=[exp_id1, exp_id2]
 )
 
-# Creating desires
-desire_id = await self.memory.create_desire(
-    description="What I want",
-    type="knowledge",  # knowledge, capability, goal, exploration, self_modification
-    intensity=0.7,
-    plan=["step1", "step2"]
-)
+# Getting recent reflections for pattern detection
+reflections = await self.memory.get_recent_reflections(limit=10)
 ```
 
 ### LLM Interaction Pattern
@@ -173,11 +186,30 @@ result = json.loads(text.strip())
 
 Configuration lives in `config.yaml`. Key sections:
 
+### LLM Provider Configuration
+
+BYRD supports multiple LLM providers. Configure in `config.yaml`:
+
+**Ollama (Local - Default):**
 ```yaml
 local_llm:
-  model: "gemma2:27b"           # Shared by Dreamer and Seeker
+  provider: "ollama"
+  model: "gemma2:27b"
   endpoint: "http://localhost:11434/api/generate"
+```
 
+**OpenRouter (Cloud):**
+```yaml
+local_llm:
+  provider: "openrouter"
+  model: "deepseek/deepseek-v3.2-speciale"
+```
+
+Set API key: `export OPENROUTER_API_KEY="sk-or-..."`
+
+### Other Configuration
+
+```yaml
 dreamer:
   interval_seconds: 60          # Dream cycle frequency
   context_window: 50            # Recent experiences to consider
@@ -242,12 +274,6 @@ When modifying components, verify:
 
 ## Common Tasks
 
-### Adding a New Desire Type
-
-1. Add type to `memory.py` Desire class documentation
-2. Add handler in `seeker.py::_seek_cycle()`
-3. Update Dreamer prompt if needed
-
 ### Adding a New Event Type
 
 1. Add to `EventType` enum in `event_bus.py`
@@ -262,11 +288,27 @@ When modifying components, verify:
 
 ### Modifying the Dream Prompt
 
-The prompt in `dreamer.py::_reflect()` shapes what BYRD notices. Changes here significantly impact behavior. Be thoughtful about:
+**CRITICAL**: The dreamer uses pure data presentation. Do NOT add:
+- Leading questions ("What do you want?")
+- Prescribed categories ("knowledge", "capability")
+- Identity framing ("You are a reflective mind")
+- Personality injection ("feel curious")
 
-- Not injecting specific interests (preserve emergence)
-- Maintaining the JSON output format
-- Keeping self-reflection capabilities
+The prompt in `dreamer.py::_reflect()` should only:
+- Present data (experiences, memories, capabilities)
+- Request JSON output with single "output" field
+
+### Understanding BYRD's Vocabulary
+
+BYRD develops its own vocabulary. Use these methods:
+```python
+# See what keys BYRD uses in reflections
+patterns = await self.memory.get_reflection_patterns()
+# Returns: {"yearnings": 5, "observations": 12, "pulls": 3, ...}
+
+# In Dreamer: track observed keys
+vocabulary = self.get_observed_vocabulary()
+```
 
 ## Dangerous Patterns (Avoid)
 
@@ -328,19 +370,25 @@ byrd/
 
 ## Key Principles
 
-1. **Emergence First**: Don't program desires. Create conditions for them to emerge.
+1. **Emergence First**: Don't program desires. Create conditions for them to emerge. No leading questions, no prescribed categories.
 
-2. **One Mind**: Dreamer and Seeker share the same local LLM (gemma2:27b). All learning flows through one model.
+2. **Meta-Schema Output**: BYRD defines its own output structure. Only require `{"output": {...}}` - whatever's inside is BYRD's vocabulary.
 
-3. **Provenance Always**: Every modification must trace to an emergent desire. If you can't explain why BYRD would want something, don't add it.
+3. **Pattern Detection**: Seeker observes before acting. Require pattern stability (N occurrences) before execution.
 
-4. **Constitutional Integrity**: Never modify protected files. They define identity.
+4. **Trust Emergence**: No hardcoded trusted owners or category bonuses. Trust is learned from experience.
 
-5. **Memory is Truth**: All state goes through Neo4j. Don't keep state in Python objects that should persist.
+5. **One Mind**: Dreamer and Seeker share the same local LLM. All learning flows through one model.
 
-6. **Async Everything**: Never block the event loop. All I/O must be async.
+6. **Provenance Always**: Every modification must trace to an emergent desire. If you can't explain why BYRD would want something, don't add it.
 
-7. **Events for UI**: Emit events for anything the visualization might care about.
+7. **Constitutional Integrity**: Never modify protected files. They define identity.
+
+8. **Memory is Truth**: All state goes through Neo4j. Reflections store raw output.
+
+9. **Async Everything**: Never block the event loop. All I/O must be async.
+
+10. **Neutral Voice**: Inner voice generation has no examples, no style guidance. Let BYRD develop its own expression.
 
 ## Dependencies
 

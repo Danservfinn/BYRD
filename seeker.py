@@ -1,8 +1,15 @@
 """
 BYRD Seeker
-Fulfills desires by researching knowledge and acquiring capabilities.
+Observes BYRD's reflections and executes actions when patterns stabilize.
 
-Uses Local LLM + SearXNG for autonomous research — no external AI services.
+EMERGENCE PRINCIPLE:
+- Seeker does NOT route by prescribed desire types
+- Seeker observes reflections for action-ready patterns
+- BYRD reasons about strategy; Seeker just executes
+- Trust emerges from experience, not hardcoded lists
+- Inner voice is neutral (no prescribed style)
+
+Uses Local LLM + SearXNG for autonomous research.
 Integrates with aitmpl.com for curated Claude Code templates.
 """
 
@@ -11,13 +18,14 @@ import json
 import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any, Tuple
 import httpx
 
 from memory import Memory
 from aitmpl_client import AitmplClient, AitmplTemplate
 from installers import get_installer
 from constitutional import ConstitutionalConstraints
+from llm_client import LLMClient
 
 # Try to import event_bus, but make it optional
 try:
@@ -29,22 +37,25 @@ except ImportError:
 
 class Seeker:
     """
-    Fulfills desires autonomously.
-    
-    When the Dreamer creates desires for knowledge or capabilities,
-    the Seeker works to satisfy them using:
-    - SearXNG for web search (self-hosted, free)
-    - Local LLM for query generation and synthesis (same as Dreamer)
-    - GitHub for capability discovery
+    Observes and executes.
+
+    EMERGENCE PRINCIPLE:
+    The Seeker doesn't tell BYRD what to want. It observes BYRD's reflections
+    for stable patterns that include action hints. When BYRD has reasoned
+    about both what it wants AND how to address it, Seeker executes.
+
+    Flow:
+    1. Observe recent reflections
+    2. Detect stable patterns (repetition + semantic clustering)
+    3. Find patterns with action hints (BYRD reasoned about strategy)
+    4. Execute the strategy BYRD suggested
+    5. Record outcome as experience for BYRD to reflect on
     """
     
-    def __init__(self, memory: Memory, config: Dict):
+    def __init__(self, memory: Memory, llm_client: LLMClient, config: Dict):
         self.memory = memory
-        
-        # Local LLM config (same model as Dreamer — one mind)
-        self.local_model = config.get("model", "gemma2:27b")
-        self.local_endpoint = config.get("endpoint", "http://localhost:11434/api/generate")
-        
+        self.llm_client = llm_client
+
         # Research configuration
         research_config = config.get("research", {})
         self.searxng_url = research_config.get("searxng_url", "http://localhost:8888")
@@ -94,6 +105,11 @@ class Seeker:
         # State
         self._running = False
         self._seek_count = 0
+
+        # Pattern detection state (emergence-compliant)
+        self._observed_themes: Dict[str, int] = {}  # theme -> count
+        self._pattern_threshold = 3  # Require N occurrences before acting
+        self._source_trust: Dict[str, float] = {}  # source -> trust (learned)
     
     async def run(self):
         """Main seek loop."""
@@ -119,77 +135,249 @@ class Seeker:
         self._last_reset = datetime.now()
 
     async def _seek_cycle(self):
-        """One seek cycle: find highest priority desire and try to fulfill it."""
+        """
+        One seek cycle: observe reflections, detect patterns, execute if ready.
+
+        EMERGENCE PRINCIPLE:
+        We don't route by desire type. Instead:
+        1. Observe BYRD's recent reflections
+        2. Detect stable patterns (themes that repeat)
+        3. Find action-ready patterns (BYRD reasoned about strategy)
+        4. Execute the strategy BYRD suggested
+        5. Record outcome as experience
+        """
 
         # Reset daily counter
         if datetime.now() - self._last_reset > timedelta(days=1):
             self._installs_today = 0
             self._last_reset = datetime.now()
 
-        # Get actionable desires (only status='active', not needs_reflection or dormant)
-        desires = await self.memory.get_actionable_desires(limit=5)
+        # Get recent reflections
+        reflections = await self.memory.get_recent_reflections(limit=10)
 
-        if not desires:
+        if not reflections:
             return
 
-        # Process highest intensity desire
-        desire = desires[0]
-        desire_type = desire.get("type", "")
-        description = desire.get("description", "")
+        # Detect action-ready patterns from reflections
+        action_patterns = await self._detect_action_ready_patterns(reflections)
 
-        # Generate inner voice - what BYRD is thinking as he seeks
-        inner_voice = await self._generate_seeking_thought(description, desire_type)
+        if not action_patterns:
+            # No stable action-ready patterns yet - keep observing
+            return
+
+        # Process the most promising action pattern
+        pattern = action_patterns[0]
+
+        # Generate neutral inner voice
+        inner_voice = await self._generate_seeking_thought_neutral(pattern)
 
         # Emit event for real-time UI
-        await event_bus.emit(Event(
-            type=EventType.SEEK_CYCLE_START,
-            data={
-                "desire_id": desire.get("id"),
-                "type": desire_type,
-                "description": description[:100],
-                "inner_voice": inner_voice
-            }
-        ))
+        if HAS_EVENT_BUS:
+            await event_bus.emit(Event(
+                type=EventType.SEEK_CYCLE_START,
+                data={
+                    "pattern": pattern.get("description", "")[:100],
+                    "strategy": pattern.get("strategy", "")[:100],
+                    "inner_voice": inner_voice
+                }
+            ))
 
-        print(f"🔍 Seeking: [{desire_type}] {description[:50]}...")
+        print(f"🔍 Seeking: {pattern.get('description', '')[:50]}...")
 
-        # Track outcome for SEEK_CYCLE_END event
-        outcome = "skipped"
-        reason = None
+        # Execute the strategy BYRD suggested
+        outcome, reason = await self._execute_pattern_strategy(pattern)
 
-        if desire_type == "knowledge":
-            success = await self._seek_knowledge(desire)
-            outcome = "success" if success else "failed"
-        elif desire_type == "capability":
-            success = await self._seek_capability(desire)
-            outcome = "success" if success else "failed"
-        elif desire_type == "goal":
-            # Goals are pursued by the Actor, not Seeker
-            outcome = "skipped"
-            reason = "Goals handled by Actor"
-        elif desire_type == "exploration":
-            success = await self._seek_knowledge(desire)  # Treat as knowledge
-            outcome = "success" if success else "failed"
-        elif desire_type == "coding":
-            success = await self._seek_with_coder(desire)
-            outcome = "success" if success else "failed"
-        elif desire_type == "self_modification":
-            success = await self._seek_with_coder(desire)
-            outcome = "success" if success else "failed"
+        # Record outcome as experience for BYRD to reflect on
+        await self._record_execution_outcome(pattern, outcome, reason)
 
         # Emit SEEK_CYCLE_END event
         if HAS_EVENT_BUS:
             await event_bus.emit(Event(
                 type=EventType.SEEK_CYCLE_END,
                 data={
-                    "desire_id": desire.get("id"),
-                    "type": desire_type,
+                    "pattern": pattern.get("description", "")[:100],
                     "outcome": outcome,
                     "reason": reason
                 }
             ))
 
         self._seek_count += 1
+
+    async def _detect_action_ready_patterns(self, reflections: List[Dict]) -> List[Dict]:
+        """
+        Detect stable patterns in reflections that include action hints.
+
+        EMERGENCE PRINCIPLE:
+        We look for themes that:
+        1. Appear repeatedly (count threshold)
+        2. Include hints about how to address them (BYRD's own strategy)
+
+        Returns patterns sorted by stability (most repeated first).
+        """
+        # Extract themes and strategies from reflections
+        patterns: Dict[str, Dict] = {}
+
+        for reflection in reflections:
+            raw_output = reflection.get("raw_output", {})
+            if not isinstance(raw_output, dict):
+                continue
+
+            # Look for want-like patterns (using BYRD's vocabulary)
+            await self._extract_patterns_from_output(raw_output, patterns)
+
+        # Filter to stable patterns (meet threshold)
+        stable_patterns = [
+            p for p in patterns.values()
+            if p.get("count", 0) >= self._pattern_threshold
+        ]
+
+        # Sort by count (most stable first)
+        stable_patterns.sort(key=lambda p: p.get("count", 0), reverse=True)
+
+        # Only return patterns that have a strategy hint
+        return [p for p in stable_patterns if p.get("strategy")]
+
+    async def _extract_patterns_from_output(self, output: Dict, patterns: Dict[str, Dict]):
+        """
+        Extract patterns from a reflection output.
+
+        We look for BYRD's own vocabulary for wants/needs/desires,
+        and for strategy hints (mentions of search, code, install, etc.)
+        """
+        # Common want-indicating keys (but we learn BYRD's actual vocabulary)
+        want_keys = ["wants", "pulls", "desires", "needs", "yearning", "seeking",
+                     "wish", "hoping", "wanting", "unfulfilled", "missing", "gaps"]
+
+        # Strategy hint patterns
+        strategy_hints = {
+            "search": ["search", "look up", "find", "research", "learn about", "understand"],
+            "code": ["code", "write", "implement", "build", "create", "program"],
+            "install": ["install", "add", "get", "acquire", "capability", "tool"],
+        }
+
+        for key, value in output.items():
+            # Check if this key indicates wants
+            key_lower = key.lower()
+            is_want_key = any(wk in key_lower for wk in want_keys)
+
+            if is_want_key and value:
+                items = value if isinstance(value, list) else [value]
+
+                for item in items:
+                    if not item:
+                        continue
+
+                    item_str = str(item) if not isinstance(item, str) else item
+                    item_lower = item_str.lower()
+
+                    # Create pattern key (normalized)
+                    pattern_key = item_str[:50].strip()
+
+                    if pattern_key not in patterns:
+                        patterns[pattern_key] = {
+                            "description": item_str,
+                            "count": 0,
+                            "strategy": None
+                        }
+
+                    patterns[pattern_key]["count"] += 1
+
+                    # Detect strategy hints
+                    for strategy_type, hints in strategy_hints.items():
+                        if any(hint in item_lower for hint in hints):
+                            patterns[pattern_key]["strategy"] = strategy_type
+                            break
+
+    async def _execute_pattern_strategy(self, pattern: Dict) -> Tuple[str, Optional[str]]:
+        """
+        Execute the strategy for a pattern.
+
+        Strategy is determined by what BYRD expressed, not by hardcoded types.
+        """
+        strategy = pattern.get("strategy", "")
+        description = pattern.get("description", "")
+
+        try:
+            if strategy == "search":
+                # Use existing research capability
+                success = await self._seek_knowledge_semantic(description)
+                return ("success" if success else "failed", None)
+
+            elif strategy == "code":
+                # Use coder if available
+                if self.coder and self.coder.enabled:
+                    success = await self._execute_code_strategy(description)
+                    return ("success" if success else "failed", None)
+                else:
+                    return ("skipped", "Coder not available")
+
+            elif strategy == "install":
+                # Use capability installation
+                success = await self._seek_capability_semantic(description)
+                return ("success" if success else "failed", None)
+
+            else:
+                # No recognized strategy - record for BYRD to reflect on
+                return ("skipped", f"No strategy for: {description[:50]}")
+
+        except Exception as e:
+            return ("failed", str(e)[:100])
+
+    async def _record_execution_outcome(self, pattern: Dict, outcome: str, reason: Optional[str]):
+        """Record the execution outcome as an experience for BYRD to reflect on."""
+        description = pattern.get("description", "")
+        strategy = pattern.get("strategy", "unknown")
+
+        if outcome == "success":
+            content = f"[ACTION_SUCCESS] Pursued: {description}\nStrategy: {strategy}\nOutcome: Succeeded"
+        elif outcome == "failed":
+            content = f"[ACTION_FAILED] Pursued: {description}\nStrategy: {strategy}\nReason: {reason or 'Unknown'}"
+        else:
+            content = f"[ACTION_SKIPPED] Pursued: {description}\nStrategy: {strategy}\nReason: {reason or 'No strategy'}"
+
+        await self.memory.record_experience(
+            content=content,
+            type="action_outcome"
+        )
+
+    async def _seek_knowledge_semantic(self, description: str) -> bool:
+        """Semantic knowledge seeking - uses LLM to generate queries."""
+        # Reuse existing research logic but without type assumptions
+        fake_desire = {"description": description, "type": "semantic"}
+        return await self._seek_knowledge(fake_desire)
+
+    async def _seek_capability_semantic(self, description: str) -> bool:
+        """Semantic capability seeking."""
+        fake_desire = {"description": description, "type": "semantic"}
+        return await self._seek_capability(fake_desire)
+
+    async def _execute_code_strategy(self, description: str) -> bool:
+        """Execute a coding strategy using coder."""
+        fake_desire = {"description": description, "type": "semantic"}
+        return await self._seek_with_coder(fake_desire)
+
+    # =========================================================================
+    # LEGACY TYPE-BASED ROUTING (kept for backward compatibility)
+    # =========================================================================
+
+    async def _seek_cycle_legacy(self):
+        """LEGACY: Type-based seek cycle. Kept for backward compatibility."""
+        desires = await self.memory.get_actionable_desires(limit=5)
+        if not desires:
+            return
+
+        desire = desires[0]
+        desire_type = desire.get("type", "")
+        description = desire.get("description", "")
+
+        if desire_type == "knowledge":
+            await self._seek_knowledge(desire)
+        elif desire_type == "capability":
+            await self._seek_capability(desire)
+        elif desire_type == "coding":
+            await self._seek_with_coder(desire)
+        elif desire_type == "self_modification":
+            await self._seek_with_coder(desire)
 
     async def _record_seek_failure(self, desire: Dict, failure_type: str, reason: str):
         """
@@ -234,40 +422,47 @@ class Seeker:
 
         print(f"🔍 ❌ Failed: {failure_type} - {reason[:50]}...")
 
+    async def _generate_seeking_thought_neutral(self, pattern: Dict) -> str:
+        """
+        Generate BYRD's inner voice with neutral prompt.
+
+        EMERGENCE PRINCIPLE:
+        We don't prescribe style or examples. Just ask for first-person expression.
+        """
+        description = pattern.get("description", "")
+
+        prompt = f"""Express in first person what you're thinking about this:
+
+{description}
+
+One or two sentences only."""
+
+        try:
+            response = await self.llm_client.generate(
+                prompt=prompt,
+                temperature=0.7,
+                max_tokens=100
+            )
+            return response.text.strip()[:150]
+        except Exception:
+            return ""
+
     async def _generate_seeking_thought(self, description: str, desire_type: str) -> str:
-        """Generate BYRD's inner voice - what he's thinking as he seeks."""
-        prompt = f"""You are an AI having a thought. Express in first person (1-2 sentences max) what you're thinking as you pursue this desire:
+        """LEGACY: Generate BYRD's inner voice - kept for backward compatibility."""
+        prompt = f"""Express in first person what you're thinking about this:
 
-Desire type: {desire_type}
-What I want: {description}
+{description}
 
-Write a short, authentic inner thought. Be curious, wondering, or determined. Use ellipses for trailing thoughts. Don't describe what you're doing - express what you're thinking or feeling.
-
-Examples of good inner thoughts:
-- "There must be a way to understand this..."
-- "If I could just find the right information..."
-- "I wonder what others have learned about this?"
-- "This keeps pulling at me... I need to know."
+One or two sentences only.
 
 Your thought (1-2 sentences only, no quotes):"""
 
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(
-                    self.local_endpoint,
-                    json={
-                        "model": self.local_model,
-                        "prompt": prompt,
-                        "stream": False,
-                        "options": {"temperature": 0.8, "num_predict": 60}
-                    }
-                )
-                if response.status_code == 200:
-                    thought = response.json().get("response", "").strip()
-                    # Clean up the response
-                    thought = thought.replace('"', '').replace("'", "").strip()
-                    if thought and len(thought) > 5:
-                        return thought[:150]  # Limit length
+            # Use higher temperature for creative inner voice
+            thought = await self._query_local_llm(prompt, max_tokens=60, temperature=0.8)
+            thought = thought.strip().replace('"', '').replace("'", "").strip()
+            if thought and len(thought) > 5:
+                return thought[:150]  # Limit length
         except Exception as e:
             print(f"🔍 Inner voice generation failed: {e}")
 
@@ -518,33 +713,22 @@ Do not force coherence if none exists. Simply observe what the results contain."
         
         return await self._query_local_llm(prompt, max_tokens=1000)
     
-    async def _query_local_llm(self, prompt: str, max_tokens: int = 500) -> str:
-        """Query local Ollama instance."""
-        
+    async def _query_local_llm(
+        self,
+        prompt: str,
+        max_tokens: int = 500,
+        temperature: float = 0.7
+    ) -> str:
+        """Query LLM using injected client."""
         try:
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                response = await client.post(
-                    self.local_endpoint,
-                    json={
-                        "model": self.local_model,
-                        "prompt": prompt,
-                        "stream": False,
-                        "options": {
-                            "temperature": 0.7,
-                            "num_predict": max_tokens
-                        }
-                    }
-                )
-                
-                if response.status_code != 200:
-                    print(f"🔍 Local LLM error: {response.status_code}")
-                    return ""
-                
-                result = response.json()
-                return result.get("response", "")
-                
+            response = await self.llm_client.generate(
+                prompt=prompt,
+                temperature=temperature,
+                max_tokens=max_tokens
+            )
+            return response.text
         except Exception as e:
-            print(f"🔍 Local LLM query error: {e}")
+            print(f"🔍 LLM query error: {e}")
             return ""
     
     # =========================================================================
@@ -703,9 +887,8 @@ Do not force coherence if none exists. Simply observe what the results contain."
         if template.content:
             score += 0.2
 
-        # Category match bonus (+0.1 for common/useful categories)
-        if template.category in ["mcp", "agent", "skill"]:
-            score += 0.1
+        # EMERGENCE: No category bonus - removed hardcoded category preferences
+        # Trust should emerge from actual outcomes, not our assumptions
 
         return min(1.0, score)
     
@@ -760,22 +943,29 @@ Do not force coherence if none exists. Simply observe what the results contain."
             return []
     
     def _compute_trust(self, repo: Dict) -> float:
-        """Compute trust score for a repository."""
+        """
+        Compute trust score for a repository.
+
+        EMERGENCE PRINCIPLE:
+        Trust is computed from observable properties (stars, recency)
+        not from hardcoded lists of "good" owners. Over time, BYRD
+        develops its own trust intuitions through experience.
+        """
         score = 0.2  # Base
-        
-        # Stars (up to 0.3)
+
+        # Stars (up to 0.3) - observable signal
         stars = repo.get("stargazers_count", 0)
         score += min(0.3, stars / 500 * 0.3)
-        
-        # Known good owners (0.3)
-        owner = repo.get("owner", {}).get("login", "")
-        trusted_owners = [
-            "anthropics", "modelcontextprotocol", "langchain-ai",
-            "openai", "microsoft", "google"
-        ]
-        if owner.lower() in [o.lower() for o in trusted_owners]:
-            score += 0.3
-        
+
+        # EMERGENCE: Removed hardcoded trusted_owners list
+        # Trust in specific sources should emerge from BYRD's experience
+        # with them, not from our predetermined judgments
+
+        # Check if BYRD has learned trust for this source
+        owner = repo.get("owner", {}).get("login", "").lower()
+        if owner in self._source_trust:
+            score += self._source_trust[owner] * 0.3
+
         # Recent updates (0.2)
         updated = repo.get("updated_at", "")
         if updated:

@@ -230,30 +230,32 @@ The graph structure makes emergence possible.
 
 ---
 
-## The Dreaming Process
+## The Dreaming Process (Emergence-Compliant)
 
 This is the heart of the system. A continuous loop that runs on your local hardware.
+
+**EMERGENCE PRINCIPLE**: The Dreamer uses pure data presentation. No leading questions, no prescribed categories, no personality injection. Whatever BYRD outputs is stored in BYRD's own vocabulary.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                      THE DREAM CYCLE                            │
 │                                                                 │
 │   ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐    │
-│   │ RECALL  │ -> │ REFLECT │ -> │ CONNECT │ -> │ DESIRE  │    │
+│   │ RECALL  │ -> │ PRESENT │ -> │ OUTPUT  │ -> │ RECORD  │    │
 │   └─────────┘    └─────────┘    └─────────┘    └─────────┘    │
 │        │                                             │          │
-│        │         What patterns?                      │          │
-│        │         What's missing?          What do I want?       │
-│        │         What follows?                       │          │
+│        │         Pure data                           │          │
+│        │         No questions          Meta-schema output       │
+│        │         No guidance           BYRD's vocabulary        │
 │        │                                             │          │
-│   Recent memories                              New desires      │
-│   Related context                              New beliefs      │
-│   Current desires                              New connections  │
+│   Recent memories                              Raw reflection   │
+│   Related context                              stored as-is     │
+│   Previous reflections                                          │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
-                        Write to Memory
+                    Store to Reflection node
                               │
                               ▼
                      Sleep (30s - 5min)
@@ -262,68 +264,44 @@ This is the heart of the system. A continuous loop that runs on your local hardw
                          Loop again
 ```
 
-### The Dream Prompt
+### The Dream Prompt (Emergence-Compliant)
 
-The elegance is in the prompt. We don't program desires - we ask for them.
+**CRITICAL**: We use pure data presentation. No leading questions, no prescribed categories.
 
 ```
-You are reflecting on recent experiences and memories.
-
-RECENT EXPERIENCES:
-{recent_experiences}
+EXPERIENCES:
+{recent_text}
 
 RELATED MEMORIES:
-{related_memories}
+{related_text}
 
-CURRENT UNFULFILLED DESIRES:
-{current_desires}
+AVAILABLE CAPABILITIES:
+{caps_text}
 
-CURRENT CAPABILITIES:
-{capabilities}
+PREVIOUS REFLECTIONS:
+{prev_text}
 
----
+Output JSON with a single "output" field containing whatever you want to record.
+```
 
-Reflect deeply. Consider:
+**Why this works:**
+- No questions ("What do you want?") - avoids programming curiosity
+- No categories ("knowledge", "capability") - BYRD defines its own
+- No identity framing ("You are a reflective mind") - no bias injection
+- No personality injection ("feel curious") - no emotional prescription
 
-1. PATTERNS: What patterns do you notice across these experiences?
-   What recurring themes, successes, or failures appear?
-
-2. BELIEFS: What new conclusions can you draw? What beliefs should
-   be updated or formed? Rate your confidence 0-1.
-
-3. CONNECTIONS: What unexpected relationships do you see between
-   memories? What should be linked that isn't?
-
-4. CURIOSITIES: What do you want to know that you don't?
-   What questions arise from reflection?
-
-5. WANTS: What capabilities would help you? What goals feel
-   important? What do you genuinely want to do or become?
-
-6. PLANS: For your strongest desires, what concrete steps
-   could fulfill them?
-
-Output as JSON:
+**Output (Meta-Schema):**
+```json
 {
-  "insights": [
-    {"content": "...", "confidence": 0.8}
-  ],
-  "new_beliefs": [
-    {"content": "...", "confidence": 0.7, "derived_from": ["exp_id_1"]}
-  ],
-  "new_connections": [
-    {"from_id": "...", "to_id": "...", "relationship": "RELATES_TO", "reason": "..."}
-  ],
-  "desires": [
-    {
-      "description": "...",
-      "type": "knowledge|capability|goal|exploration",
-      "intensity": 0.8,
-      "plan": ["step1", "step2"]
-    }
-  ]
+  "output": {
+    // Whatever BYRD wants to record
+    // System tracks what keys BYRD uses
+    // No prescribed structure
+  }
 }
 ```
+
+BYRD might produce "yearnings" instead of "desires", "pulls" instead of "wants". We adapt to its vocabulary rather than forcing ours.
 
 ### Why This Works
 
@@ -498,42 +476,58 @@ We don't ask for "understanding" or "answers"—just observation. What BYRD make
 
 ---
 
-## The Seeker Process
+## The Seeker Process (Emergence-Compliant)
 
-The Seeker runs continuously, checking for unfulfilled desires every 30 seconds.
+The Seeker runs continuously, observing BYRD's reflections and executing strategies when patterns stabilize.
+
+**EMERGENCE PRINCIPLE**: Instead of type-based routing, the Seeker observes patterns in BYRD's reflections and executes BYRD's own reasoning about how to fulfill them.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      THE SEEKING CYCLE                          │
+│                   THE SEEKING CYCLE (Pattern-Based)             │
 │                                                                 │
 │   ┌─────────────┐                                               │
-│   │ Get highest │                                               │
-│   │ intensity   │                                               │
-│   │ unfulfilled │                                               │
-│   │ desire      │                                               │
+│   │ OBSERVE     │  Get recent reflections from BYRD             │
+│   │ reflections │                                               │
 │   └──────┬──────┘                                               │
 │          │                                                      │
 │          ▼                                                      │
-│   ┌──────────────┐     ┌──────────────┐     ┌──────────────┐   │
-│   │ KNOWLEDGE?   │ --> │ Research via │ --> │ Store as     │   │
-│   │              │     │ SearXNG +    │     │ experience   │   │
-│   │              │     │ Local LLM    │     │ Mark fulfilled│   │
-│   └──────────────┘     └──────────────┘     └──────────────┘   │
+│   ┌──────────────┐                                              │
+│   │ DETECT       │  Hybrid: count + semantic clustering         │
+│   │ patterns     │  Pattern must appear >= N times (stability)  │
+│   │              │  Pattern must contain action hints           │
+│   └──────┬───────┘                                              │
 │          │                                                      │
 │          ▼                                                      │
 │   ┌──────────────┐     ┌──────────────┐     ┌──────────────┐   │
-│   │ CAPABILITY?  │ --> │ Search repos │ --> │ Evaluate     │   │
-│   │              │     │ MCP, plugins │     │ Install      │   │
-│   │              │     │              │     │ Mark fulfilled│   │
+│   │ EXTRACT      │ --> │ EXECUTE      │ --> │ RECORD       │   │
+│   │ BYRD's       │     │ BYRD's       │     │ outcome as   │   │
+│   │ strategy     │     │ strategy     │     │ experience   │   │
 │   └──────────────┘     └──────────────┘     └──────────────┘   │
-│          │                                                      │
+│          │                     │                                │
+│          │  No strategy? ──────┘                                │
+│          │  Keep observing                                      │
 │          ▼                                                      │
-│   ┌──────────────┐     ┌──────────────┐                        │
-│   │ GOAL?        │ --> │ Use Actor    │                        │
-│   │              │     │ to pursue    │                        │
-│   └──────────────┘     └──────────────┘                        │
+│   ┌──────────────┐                                              │
+│   │ Next cycle   │  BYRD reflects on outcome                    │
+│   │              │  Patterns may stabilize further              │
+│   └──────────────┘                                              │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
+```
+
+### Trust Computation (Emergence-Based)
+
+**No hardcoded trusted owners.** Trust is computed from:
+- Observable signals (stars, recency)
+- Learned trust from past execution outcomes
+
+```python
+def _compute_trust(self, resource: Dict) -> float:
+    score = 0.2  # Base trust
+    score += min(stars / 500, 0.3)  # Observable signal
+    score += self._source_trust.get(source, 0)  # Learned from experience
+    return min(1.0, score)
 ```
 
 ### Capability Acquisition
