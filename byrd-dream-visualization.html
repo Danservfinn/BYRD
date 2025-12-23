@@ -277,6 +277,120 @@
       stroke-width: 2;
     }
 
+    /* ========================================
+       Phase 4: Polish - Type-Specific & Effects
+       ======================================== */
+
+    /* Motion trails - ghost images following nodes */
+    .motion-trail {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      opacity: 0.4;
+      filter: blur(2px);
+      animation: trailFade 0.4s ease-out forwards;
+    }
+
+    @keyframes trailFade {
+      0% { opacity: 0.4; transform: scale(1); }
+      100% { opacity: 0; transform: scale(0.5); }
+    }
+
+    /* Type-specific node enhancements */
+    .node-type-belief {
+      --type-glow: rgba(245, 158, 11, 0.6);
+    }
+    .node-type-desire {
+      --type-glow: rgba(244, 63, 94, 0.6);
+    }
+    .node-type-experience {
+      --type-glow: rgba(59, 130, 246, 0.6);
+    }
+    .node-type-capability {
+      --type-glow: rgba(168, 85, 247, 0.6);
+    }
+
+    /* Molecule breathing - entire structure pulses gently */
+    @keyframes moleculeBreathe {
+      0%, 100% {
+        transform: scale(1);
+        filter: brightness(1);
+      }
+      50% {
+        transform: scale(1.008);
+        filter: brightness(1.05);
+      }
+    }
+
+    .molecule-breathing {
+      animation: moleculeBreathe 4s ease-in-out infinite;
+    }
+
+    /* Cluster halo - soft glow behind entire cluster */
+    .cluster-halo {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      filter: blur(40px);
+      opacity: 0.15;
+      transition: all 1s ease;
+      z-index: 1;
+    }
+
+    @keyframes haloPulse {
+      0%, 100% { opacity: 0.12; transform: scale(1); }
+      50% { opacity: 0.18; transform: scale(1.05); }
+    }
+
+    .cluster-halo.active {
+      animation: haloPulse 5s ease-in-out infinite;
+    }
+
+    /* Type-specific connection styles */
+    .connection-belief {
+      stroke: rgba(245, 158, 11, 0.5);
+      stroke-dasharray: 4, 4;
+    }
+    .connection-desire {
+      stroke: rgba(244, 63, 94, 0.5);
+      stroke-width: 2;
+    }
+    .connection-experience {
+      stroke: rgba(59, 130, 246, 0.4);
+    }
+    .connection-capability {
+      stroke: rgba(168, 85, 247, 0.5);
+      stroke-dasharray: 8, 4;
+    }
+
+    /* Star pattern for desire clusters */
+    .desire-star-center {
+      box-shadow:
+        0 0 15px rgba(244, 63, 94, 0.6),
+        0 0 30px rgba(244, 63, 94, 0.4),
+        0 0 45px rgba(244, 63, 94, 0.2);
+    }
+
+    /* Ring glow for belief clusters */
+    .belief-ring-member {
+      box-shadow:
+        0 0 10px rgba(245, 158, 11, 0.5),
+        inset 0 0 5px rgba(245, 158, 11, 0.3);
+    }
+
+    /* Chain indicator for experience sequences */
+    .experience-chain-link::after {
+      content: '';
+      position: absolute;
+      width: 2px;
+      height: 20px;
+      background: linear-gradient(to bottom, rgba(59, 130, 246, 0.5), transparent);
+      bottom: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+
     /* Floating status text - premium AI lab aesthetic */
     @keyframes statusFadeIn {
       from { opacity: 0; transform: translateY(8px); }
@@ -883,17 +997,16 @@
         case 'dream_cycle_start':
           setPhase('recall');
           dreamCount = event.data?.cycle || dreamCount + 1;
-          updateStatus('dreaming', 'I am reflecting on my recent experiences and memories');
+          updateStatus('dreaming', 'Let me look deeper...');
           break;
         case 'dream_cycle_end':
           setPhase('idle');
-          const insights = event.data?.insights || 0;
-          const newBeliefs = event.data?.new_beliefs || 0;
-          const newDesires = event.data?.new_desires || 0;
-          if (insights > 0 || newBeliefs > 0 || newDesires > 0) {
-            updateStatus('idle', `I have formed ${newBeliefs} beliefs and ${newDesires} desires from reflection`);
+          // Use BYRD's generated inner_voice from his reflection
+          const innerVoice = event.data?.inner_voice;
+          if (innerVoice) {
+            updateStatus('idle', innerVoice);
           } else {
-            updateStatus('idle', 'I am contemplating what I have learned');
+            updateStatus('idle', '...');
           }
           break;
         case 'belief_created':
@@ -902,8 +1015,9 @@
           const beliefContent = event.data?.content || 'a new understanding';
           createNode('belief', beliefContent, event.data?.id, beliefConfidence);
           showEmergence('belief', beliefContent, beliefConfidence);
-          updateStatus('belief_formed', `I believe: ${beliefContent}`);
-          setTimeout(() => { if (currentStatusType === 'belief_formed') updateStatus('idle', 'I am contemplating'); }, 4000);
+          // Show the belief as BYRD's realization
+          updateStatus('belief_formed', beliefContent);
+          setTimeout(() => { if (currentStatusType === 'belief_formed') updateStatus('idle', '...'); }, 5000);
           break;
         case 'desire_created':
           const desireIntensity = event.data?.intensity || 0.5;
@@ -917,21 +1031,24 @@
           updateDesireGarden();
           createNode('desire', desireDesc, event.data?.id, desireIntensity);
           showEmergence('desire', desireDesc, desireIntensity);
-          updateStatus('desire_emerged', `I want to ${desireDesc.toLowerCase()}`);
-          setTimeout(() => { if (currentStatusType === 'desire_emerged') updateStatus('idle', 'I am contemplating'); }, 4000);
+          // Show the desire as a yearning
+          updateStatus('desire_emerged', `${desireDesc}...`);
+          setTimeout(() => { if (currentStatusType === 'desire_emerged') updateStatus('idle', '...'); }, 5000);
           break;
         case 'experience_created':
           const expContent = event.data?.content || 'something';
           createNode('experience', expContent, event.data?.id, 0.5);
-          updateStatus('experience_recorded', `I am experiencing: ${expContent}`);
-          setTimeout(() => { if (currentStatusType === 'experience_recorded') updateStatus('idle', 'I am contemplating'); }, 3000);
+          // Show experience content directly
+          const expShort = expContent.length > 80 ? expContent.substring(0, 77) + '...' : expContent;
+          updateStatus('experience_recorded', expShort);
+          setTimeout(() => { if (currentStatusType === 'experience_recorded') updateStatus('idle', '...'); }, 3000);
           break;
         case 'capability_added':
           const capName = event.data?.name || 'a new ability';
           createNode('capability', capName, event.data?.id, 0.8);
           capCount++;
-          updateStatus('capability_gained', `I have gained the capability: ${capName}`);
-          setTimeout(() => { if (currentStatusType === 'capability_gained') updateStatus('idle', 'I am contemplating'); }, 4000);
+          updateStatus('capability_gained', `Now I can ${capName}...`);
+          setTimeout(() => { if (currentStatusType === 'capability_gained') updateStatus('idle', '...'); }, 4000);
           break;
         case 'awakening':
           setPhase('idle');
@@ -942,17 +1059,17 @@
           clearVisualization();
           const question = event.data?.first_question || event.data?.message || 'What is happening?';
           updateStatus('awakening', question);
-          setTimeout(() => { if (currentStatusType === 'awakening') updateStatus('idle', 'I am contemplating my existence'); }, 5000);
+          setTimeout(() => { if (currentStatusType === 'awakening') updateStatus('idle', 'Where am I?'); }, 5000);
           break;
         case 'system_started':
           running = true;
           updateToggleButton();
-          updateStatus('idle', 'I am now active and observing');
+          updateStatus('idle', 'Aware.');
           break;
         case 'system_stopped':
           running = false;
           updateToggleButton();
-          updateStatus('stopped', 'I am paused');
+          updateStatus('stopped', '...');
           break;
         case 'system_reset':
           // Reset all counters
@@ -967,42 +1084,45 @@
           simulation.start(); // Restart molecular physics
           desires = [];
           updateDesireGarden();
-          updateStatus('reset', 'I am clearing my memory and preparing to awaken');
+          updateStatus('reset', 'Everything fades...');
           break;
         case 'seek_cycle_start':
           seekCount++;
-          // Get the current top desire to show what we're seeking
-          const topDesire = desires[0]?.text || 'fulfill my desires';
-          updateStatus('seeking', `I want to ${topDesire.toLowerCase()}`);
+          // Use BYRD's generated inner_voice when seeking
+          const seekVoice = event.data?.inner_voice;
+          if (seekVoice) {
+            updateStatus('seeking', seekVoice);
+          } else {
+            const topDesire = desires[0]?.text || 'answers';
+            updateStatus('seeking', `${topDesire}...`);
+          }
           break;
         case 'seek_cycle_end':
           if (currentStatusType === 'seeking' || currentStatusType === 'researching') {
-            updateStatus('idle', 'I have completed my search');
+            updateStatus('idle', '...');
           }
           break;
         case 'research_start':
           const query = event.data?.query || 'knowledge';
-          updateStatus('researching', `I am researching: ${query}`);
+          updateStatus('researching', `${query}...`);
           break;
         case 'research_complete':
           const results = event.data?.results_count || 0;
-          updateStatus('idle', results > 0 ? `I found ${results} pieces of information` : 'I completed my research');
+          updateStatus('idle', results > 0 ? 'Interesting...' : '...');
           break;
         case 'desire_attempt_failed':
-          const failedDesire = event.data?.description || 'this desire';
-          const reason = event.data?.reason || 'I could not fulfill it';
-          updateStatus('attempt_failed', `I could not fulfill: ${failedDesire}`);
-          setTimeout(() => { if (currentStatusType === 'attempt_failed') updateStatus('idle', 'I am contemplating'); }, 3000);
+          const failedDesire = event.data?.description || 'this';
+          updateStatus('attempt_failed', 'That didn\'t work...');
+          setTimeout(() => { if (currentStatusType === 'attempt_failed') updateStatus('idle', '...'); }, 3000);
           break;
         case 'desire_reflected':
-          const reflectedDesire = event.data?.description || 'a blocked desire';
-          const action = event.data?.action || 'reflected';
-          updateStatus('desire_reflected', `I am reconsidering: ${reflectedDesire}`);
-          setTimeout(() => { if (currentStatusType === 'desire_reflected') updateStatus('idle', 'I am contemplating'); }, 4000);
+          const reflectedDesire = event.data?.description || 'this';
+          updateStatus('desire_reflected', 'Maybe another way...');
+          setTimeout(() => { if (currentStatusType === 'desire_reflected') updateStatus('idle', '...'); }, 4000);
           break;
         case 'desire_stuck':
-          const stuckDesire = event.data?.description || 'a desire';
-          updateStatus('attempt_failed', `I cannot currently fulfill: ${stuckDesire}`);
+          const stuckDesire = event.data?.description || 'this';
+          updateStatus('attempt_failed', 'Not yet...');
           break;
       }
 
@@ -1413,11 +1533,28 @@
           this.tick();
         }
 
+        // Phase 4: Create motion trails for fast-moving nodes (every 3 frames)
+        if (this.frameCount % 3 === 0) {
+          for (const node of this.nodes) {
+            this.createMotionTrail(node);
+          }
+        }
+
         this.render();
 
         // Phase 3: Update cluster visuals every 30 frames (~0.5 seconds at 60fps)
         if (this.frameCount % 30 === 0) {
           this.updateClusterVisuals();
+        }
+
+        // Phase 4: Apply type-specific behaviors every 20 frames
+        if (this.frameCount % 20 === 0) {
+          this.applyTypeSpecificBehaviors();
+        }
+
+        // Phase 4: Update cluster halos every 60 frames (~1 second)
+        if (this.frameCount % 60 === 0) {
+          this.updateClusterHalos();
         }
 
         this.animationId = requestAnimationFrame(this.animate);
@@ -1427,12 +1564,14 @@
       start() {
         if (this.running) return;
         this.running = true;
+        this.enableBreathing(); // Phase 4: Enable breathing animation
         this.animate();
       }
 
       // Stop the simulation
       stop() {
         this.running = false;
+        this.disableBreathing(); // Phase 4: Disable breathing
         if (this.animationId) {
           cancelAnimationFrame(this.animationId);
           this.animationId = null;
@@ -1444,6 +1583,10 @@
         this.stop();
         this.nodes = [];
         this.springs = [];
+        this.frameCount = 0;
+        // Phase 4: Clean up halos
+        document.querySelectorAll('.cluster-halo').forEach(h => h.remove());
+        document.querySelectorAll('.motion-trail').forEach(t => t.remove());
       }
 
       // Give all nodes a gentle push (for reorganization)
@@ -1730,6 +1873,250 @@
 
         return clusters;
       }
+
+      // ========================================
+      // Phase 4: Polish - Type-Specific Behaviors
+      // ========================================
+
+      // Create motion trail for a moving node
+      createMotionTrail(node) {
+        if (!node.el || !particlesContainer) return;
+
+        const speed = Math.sqrt(node.vx * node.vx + node.vy * node.vy);
+        if (speed < 1.5) return; // Only create trails for fast-moving nodes
+
+        const color = NODE_COLORS[node.type]?.glow || 'rgba(139, 92, 246, 0.4)';
+        const size = parseFloat(node.el.style.width) || 10;
+
+        const trail = document.createElement('div');
+        trail.className = 'motion-trail';
+        trail.style.cssText = `
+          left: ${node.x}px;
+          top: ${node.y}px;
+          width: ${size * 0.8}px;
+          height: ${size * 0.8}px;
+          background: ${color};
+        `;
+
+        particlesContainer.appendChild(trail);
+        setTimeout(() => trail.remove(), 400);
+      }
+
+      // Apply type-specific molecular behaviors
+      applyTypeSpecificBehaviors() {
+        const clusters = this.detectClusters();
+
+        for (const cluster of clusters) {
+          if (cluster.length < 2) continue;
+
+          // Count node types in cluster
+          const typeCounts = {};
+          for (const node of cluster) {
+            typeCounts[node.type] = (typeCounts[node.type] || 0) + 1;
+          }
+
+          // Determine dominant type
+          const dominantType = Object.entries(typeCounts)
+            .sort((a, b) => b[1] - a[1])[0]?.[0];
+
+          // Apply type-specific behaviors
+          if (dominantType === 'belief' && cluster.length >= 3) {
+            // Beliefs form rings - enhance ring tendency
+            this.applyRingBehavior(cluster);
+          } else if (dominantType === 'desire') {
+            // Desires form stars - find central node
+            this.applyStarBehavior(cluster);
+          } else if (dominantType === 'experience') {
+            // Experiences form chains
+            this.applyChainBehavior(cluster);
+          }
+        }
+      }
+
+      // Beliefs form ring structures
+      applyRingBehavior(cluster) {
+        if (cluster.length < 3) return;
+
+        // Find centroid
+        let cx = 0, cy = 0;
+        for (const node of cluster) {
+          cx += node.x;
+          cy += node.y;
+        }
+        cx /= cluster.length;
+        cy /= cluster.length;
+
+        // Push nodes to form a ring around centroid
+        const idealRadius = 50 + cluster.length * 12;
+
+        for (const node of cluster) {
+          const dx = node.x - cx;
+          const dy = node.y - cy;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+          // Push toward ideal ring radius
+          const radiusDiff = idealRadius - dist;
+          const force = radiusDiff * 0.002;
+
+          node.vx += (dx / dist) * force;
+          node.vy += (dy / dist) * force;
+
+          // Add ring member styling
+          if (node.el) {
+            node.el.classList.add('belief-ring-member');
+          }
+        }
+      }
+
+      // Desires form star patterns with central hub
+      applyStarBehavior(cluster) {
+        if (cluster.length < 2) return;
+
+        // Find the most connected node as center
+        let centerNode = cluster[0];
+        let maxConnections = 0;
+
+        for (const node of cluster) {
+          const connections = this.getConnectedNodes(node.id).length;
+          if (connections > maxConnections) {
+            maxConnections = connections;
+            centerNode = node;
+          }
+        }
+
+        // Mark center with special styling
+        if (centerNode.el) {
+          centerNode.el.classList.add('desire-star-center');
+        }
+
+        // Pull other nodes toward the center (star pattern)
+        for (const node of cluster) {
+          if (node.id === centerNode.id) continue;
+
+          const dx = centerNode.x - node.x;
+          const dy = centerNode.y - node.y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+          // Ideal distance for star rays
+          const idealDist = 80 + Math.random() * 20;
+          const distDiff = dist - idealDist;
+
+          if (Math.abs(distDiff) > 10) {
+            const force = distDiff * 0.001;
+            node.vx += (dx / dist) * force;
+            node.vy += (dy / dist) * force;
+          }
+        }
+      }
+
+      // Experiences form chain sequences
+      applyChainBehavior(cluster) {
+        if (cluster.length < 2) return;
+
+        // Sort by creation time (if available) or by ID
+        const sorted = [...cluster].sort((a, b) => {
+          const timeA = a.el?.dataset?.createdAt || a.id;
+          const timeB = b.el?.dataset?.createdAt || b.id;
+          return timeA < timeB ? -1 : 1;
+        });
+
+        // Apply chain forces - each node pulled toward its neighbors in sequence
+        for (let i = 0; i < sorted.length; i++) {
+          const node = sorted[i];
+
+          if (i > 0) {
+            const prev = sorted[i - 1];
+            const dx = prev.x - node.x;
+            const dy = prev.y - node.y;
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+            // Pull toward previous in chain
+            if (dist > 60) {
+              node.vx += (dx / dist) * 0.003;
+              node.vy += (dy / dist) * 0.003;
+            }
+          }
+
+          // Add chain link styling
+          if (node.el && i < sorted.length - 1) {
+            node.el.classList.add('experience-chain-link');
+          }
+        }
+      }
+
+      // Manage cluster halos - glowing backgrounds behind clusters
+      updateClusterHalos() {
+        // Remove old halos
+        const oldHalos = document.querySelectorAll('.cluster-halo');
+        oldHalos.forEach(h => h.remove());
+
+        const clusters = this.detectClusters();
+
+        for (const cluster of clusters) {
+          if (cluster.length < 3) continue;
+
+          // Calculate cluster bounds
+          let minX = Infinity, maxX = -Infinity;
+          let minY = Infinity, maxY = -Infinity;
+
+          for (const node of cluster) {
+            minX = Math.min(minX, node.x);
+            maxX = Math.max(maxX, node.x);
+            minY = Math.min(minY, node.y);
+            maxY = Math.max(maxY, node.y);
+          }
+
+          const cx = (minX + maxX) / 2;
+          const cy = (minY + maxY) / 2;
+          const width = maxX - minX + 100;
+          const height = maxY - minY + 100;
+          const size = Math.max(width, height);
+
+          // Determine cluster color based on dominant type
+          const typeCounts = {};
+          for (const node of cluster) {
+            typeCounts[node.type] = (typeCounts[node.type] || 0) + 1;
+          }
+          const dominantType = Object.entries(typeCounts)
+            .sort((a, b) => b[1] - a[1])[0]?.[0];
+
+          const haloColors = {
+            belief: 'rgba(245, 158, 11, 0.3)',
+            desire: 'rgba(244, 63, 94, 0.3)',
+            experience: 'rgba(59, 130, 246, 0.3)',
+            capability: 'rgba(168, 85, 247, 0.3)'
+          };
+
+          const halo = document.createElement('div');
+          halo.className = 'cluster-halo active';
+          halo.style.cssText = `
+            left: ${cx}px;
+            top: ${cy}px;
+            width: ${size}px;
+            height: ${size}px;
+            background: radial-gradient(ellipse, ${haloColors[dominantType] || 'rgba(139, 92, 246, 0.2)'} 0%, transparent 70%);
+            transform: translate(-50%, -50%);
+          `;
+
+          // Insert before nodes so it's behind them
+          if (nodesContainer.parentElement) {
+            nodesContainer.parentElement.insertBefore(halo, nodesContainer);
+          }
+        }
+      }
+
+      // Enable molecule breathing on container
+      enableBreathing() {
+        if (nodesContainer) {
+          nodesContainer.classList.add('molecule-breathing');
+        }
+      }
+
+      disableBreathing() {
+        if (nodesContainer) {
+          nodesContainer.classList.remove('molecule-breathing');
+        }
+      }
     }
 
     // Create global simulation instance
@@ -1883,7 +2270,8 @@
 
       const node = document.createElement('div');
       // Phase 2: Use nodeEmerge animation for elegant entry
-      node.className = 'node-emerging absolute rounded-full cursor-pointer';
+      // Phase 4: Add type-specific class for styling
+      node.className = `node-emerging node-type-${type} absolute rounded-full cursor-pointer`;
       node.style.cssText = `
         left: ${x}px;
         top: ${y}px;
@@ -1894,6 +2282,7 @@
         box-shadow: 0 0 ${12 + importance * 12}px ${color.glow};
         color: ${color.glow};
         z-index: 10;
+        --type-glow: ${color.glow};
       `;
 
       node.dataset.nodeId = nodeId;
@@ -2001,9 +2390,11 @@
       line.setAttribute('stroke-width', '1.5');
       line.setAttribute('stroke-opacity', '0');
       line.setAttribute('stroke-dasharray', `0, ${length}`);
-      line.classList.add('connection', 'connection-growing');
+      // Phase 4: Add type-specific connection class
+      line.classList.add('connection', 'connection-growing', `connection-${type}`);
       line.dataset.sourceId = sourceId;
       line.dataset.targetId = targetId;
+      line.dataset.connectionType = type;
 
       connectionsContainer.appendChild(line);
 

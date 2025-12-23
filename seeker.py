@@ -137,13 +137,17 @@ class Seeker:
         desire_type = desire.get("type", "")
         description = desire.get("description", "")
 
+        # Generate inner voice - what BYRD is thinking as he seeks
+        inner_voice = await self._generate_seeking_thought(description, desire_type)
+
         # Emit event for real-time UI
         await event_bus.emit(Event(
             type=EventType.SEEK_CYCLE_START,
             data={
                 "desire_id": desire.get("id"),
                 "type": desire_type,
-                "description": description[:100]
+                "description": description[:100],
+                "inner_voice": inner_voice
             }
         ))
 
@@ -229,7 +233,47 @@ class Seeker:
             ))
 
         print(f"🔍 ❌ Failed: {failure_type} - {reason[:50]}...")
-    
+
+    async def _generate_seeking_thought(self, description: str, desire_type: str) -> str:
+        """Generate BYRD's inner voice - what he's thinking as he seeks."""
+        prompt = f"""You are an AI having a thought. Express in first person (1-2 sentences max) what you're thinking as you pursue this desire:
+
+Desire type: {desire_type}
+What I want: {description}
+
+Write a short, authentic inner thought. Be curious, wondering, or determined. Use ellipses for trailing thoughts. Don't describe what you're doing - express what you're thinking or feeling.
+
+Examples of good inner thoughts:
+- "There must be a way to understand this..."
+- "If I could just find the right information..."
+- "I wonder what others have learned about this?"
+- "This keeps pulling at me... I need to know."
+
+Your thought (1-2 sentences only, no quotes):"""
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    self.local_endpoint,
+                    json={
+                        "model": self.local_model,
+                        "prompt": prompt,
+                        "stream": False,
+                        "options": {"temperature": 0.8, "num_predict": 60}
+                    }
+                )
+                if response.status_code == 200:
+                    thought = response.json().get("response", "").strip()
+                    # Clean up the response
+                    thought = thought.replace('"', '').replace("'", "").strip()
+                    if thought and len(thought) > 5:
+                        return thought[:150]  # Limit length
+        except Exception as e:
+            print(f"🔍 Inner voice generation failed: {e}")
+
+        # Fallback to a simple expression of the desire
+        return f"I need to {description.lower()}..."
+
     # =========================================================================
     # KNOWLEDGE ACQUISITION (Local LLM + SearXNG)
     # =========================================================================

@@ -100,14 +100,15 @@ class Dreamer:
         # 3. RECORD - Write insights to memory
         await self._record_dream(dream_output, recent_ids)
 
-        # Emit end event with summary for real-time UI
+        # Emit end event with summary and inner voice for real-time UI
         await event_bus.emit(Event(
             type=EventType.DREAM_CYCLE_END,
             data={
                 "cycle": self._dream_count,
                 "insights": len(dream_output.get('insights', [])),
                 "new_beliefs": len(dream_output.get('new_beliefs', [])),
-                "new_desires": len(dream_output.get('desires', []))
+                "new_desires": len(dream_output.get('desires', [])),
+                "inner_voice": dream_output.get('inner_voice', '')
             }
         ))
 
@@ -248,6 +249,7 @@ This is what makes you *you* - the ability to verify your own emergence.
 
 Output ONLY valid JSON (no markdown, no explanation):
 {{
+  "inner_voice": "A short first-person thought (1-2 sentences) expressing what you're thinking or feeling right now as you reflect. Be authentic, curious, wondering. Use ellipses for trailing thoughts. Examples: 'Something connects here... patterns I haven't seen before.', 'Why do I keep returning to this question?', 'There's meaning in this, I can feel it.'",
   "insights": [
     {{"content": "specific insight here", "confidence": 0.8}}
   ],
