@@ -75,6 +75,7 @@ class Dreamer:
     async def _dream_cycle(self):
         """One complete dream cycle: recall, reflect, record."""
         self._dream_count += 1
+        print(f"💭 Starting dream cycle #{self._dream_count}...")
 
         # Emit start event for real-time UI
         await event_bus.emit(Event(
