@@ -55,7 +55,13 @@ class Dreamer:
     
     def stop(self):
         self._running = False
-    
+
+    def reset(self):
+        """Reset dreamer state for fresh start."""
+        self._running = False
+        self._dream_count = 0
+        self._recent_insights = []
+
     async def _dream_cycle(self):
         """One complete dream cycle: recall, reflect, record."""
         self._dream_count += 1
