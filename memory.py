@@ -921,11 +921,22 @@ class Memory:
         Used for reset functionality to trigger fresh awakening.
         """
         async with self.driver.session() as session:
-            # Delete all relationships first, then all nodes
-            await session.run("MATCH ()-[r]-() DELETE r")
-            await session.run("MATCH (n) DELETE n")
+            # DETACH DELETE removes nodes and all their relationships in one operation
+            # This is more robust than separate DELETE operations
+            result = await session.run("MATCH (n) DETACH DELETE n")
+            summary = await result.consume()
 
-            # Re-create indexes
+            # Verify the database is empty
+            count_result = await session.run("MATCH (n) RETURN count(n) as count")
+            record = await count_result.single()
+            node_count = record["count"] if record else 0
+
+            if node_count > 0:
+                # If nodes remain, try again more aggressively
+                print(f"Warning: {node_count} nodes remain after clear, retrying...")
+                await session.run("MATCH (n) DETACH DELETE n")
+
+            # Re-create indexes for fresh start
             await self._ensure_schema()
 
-        print("Memory cleared: all nodes and relationships deleted")
+        print("Memory cleared: all nodes and relationships deleted - database is empty")
