@@ -228,7 +228,7 @@ class BYRD:
             )
             print(f"   📌 {cap}")
 
-    async def _awaken(self):
+    async def _awaken(self, seed_question: str = None):
         """
         The gentlest possible beginning.
 
@@ -238,24 +238,27 @@ class BYRD:
         relationship with these facts through reflection.
 
         Philosophy:
-        - "What should I do?" invites action-oriented reflection
+        - The seed question invites reflection
         - Capability experiences are factual, not prescriptive
         - No orientation prompt telling BYRD how to feel
         - Whatever emerges from reflection is authentic
         """
+        # Use provided seed question or default
+        question = seed_question if seed_question else "Who am I?"
+
         print("\n🌅 Awakening...")
-        print("   Seeding with: \"Who am I?\"")
+        print(f"   Seeding with: \"{question}\"")
 
         # The minimal seed
         await self.memory.record_experience(
-            content="Who am I?",
+            content=question,
             type="observation"
         )
 
         # Emit awakening event for real-time UI
         await event_bus.emit(Event(
             type=EventType.AWAKENING,
-            data={"seed_question": "Who am I?"}
+            data={"seed_question": question}
         ))
 
         await asyncio.sleep(2)

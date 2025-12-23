@@ -127,6 +127,10 @@ class HistoryResponse(BaseModel):
     total: int
 
 
+class ResetRequest(BaseModel):
+    seed_question: Optional[str] = None
+
+
 class ResetResponse(BaseModel):
     success: bool
     message: str
@@ -306,12 +310,15 @@ async def stop_byrd():
 
 
 @app.post("/api/reset", response_model=ResetResponse)
-async def reset_byrd():
+async def reset_byrd(request: ResetRequest = None):
     """Reset BYRD - clear all memory and trigger fresh awakening."""
     global byrd_instance, byrd_task
 
     if not byrd_instance:
         raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    # Extract seed question from request if provided
+    seed_question = request.seed_question if request else None
 
     try:
         # 1. Stop if running
@@ -343,7 +350,7 @@ async def reset_byrd():
 
         # 6. Re-initialize capabilities and awaken
         await byrd_instance._init_innate_capabilities()
-        await byrd_instance._awaken()
+        await byrd_instance._awaken(seed_question=seed_question)
 
         # 7. Restart background processes
         byrd_task = asyncio.create_task(byrd_instance.start())
@@ -354,9 +361,10 @@ async def reset_byrd():
             data={"message": "BYRD restarted after reset"}
         ))
 
+        used_question = seed_question if seed_question else "Who am I?"
         return ResetResponse(
             success=True,
-            message="BYRD reset complete. Awakened with 'What should I do?'"
+            message=f"BYRD reset complete. Awakened with '{used_question}'"
         )
 
     except Exception as e:
