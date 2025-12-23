@@ -1,22 +1,413 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
-// Simulated dream data
+// =============================================================================
+// CONFIGURATION
+// =============================================================================
+const API_BASE = 'http://localhost:8000';
+const WS_URL = 'ws://localhost:8000/ws/events';
+
+// =============================================================================
+// CUSTOM HOOKS
+// =============================================================================
+
+// WebSocket hook for real-time event streaming
+const useWebSocket = (url) => {
+  const [events, setEvents] = useState([]);
+  const [connected, setConnected] = useState(false);
+  const [error, setError] = useState(null);
+  const wsRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
+
+  const connect = useCallback(() => {
+    try {
+      wsRef.current = new WebSocket(url);
+
+      wsRef.current.onopen = () => {
+        setConnected(true);
+        setError(null);
+        console.log('WebSocket connected');
+      };
+
+      wsRef.current.onclose = () => {
+        setConnected(false);
+        console.log('WebSocket disconnected, reconnecting...');
+        reconnectTimeoutRef.current = setTimeout(connect, 3000);
+      };
+
+      wsRef.current.onerror = (e) => {
+        setError('WebSocket error');
+        console.error('WebSocket error:', e);
+      };
+
+      wsRef.current.onmessage = (event) => {
+        try {
+          if (event.data === 'pong') return;
+          const data = JSON.parse(event.data);
+          setEvents(prev => [data, ...prev].slice(0, 500)); // Keep last 500 events
+        } catch (e) {
+          console.error('Failed to parse event:', e);
+        }
+      };
+    } catch (e) {
+      setError('Failed to connect');
+      console.error('WebSocket connection failed:', e);
+    }
+  }, [url]);
+
+  useEffect(() => {
+    connect();
+
+    // Ping to keep alive
+    const pingInterval = setInterval(() => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send('ping');
+      }
+    }, 30000);
+
+    return () => {
+      clearInterval(pingInterval);
+      clearTimeout(reconnectTimeoutRef.current);
+      wsRef.current?.close();
+    };
+  }, [connect]);
+
+  const clearEvents = useCallback(() => setEvents([]), []);
+
+  return { events, connected, error, clearEvents };
+};
+
+// API hook for REST calls
+const useByrdAPI = () => {
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const fetchStatus = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/status`);
+      if (res.ok) {
+        setStatus(await res.json());
+      }
+    } catch (e) {
+      console.error('Failed to fetch status:', e);
+    }
+  }, []);
+
+  const startByrd = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/start`, { method: 'POST' });
+      if (res.ok) await fetchStatus();
+    } catch (e) {
+      setError('Failed to start');
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchStatus]);
+
+  const stopByrd = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/stop`, { method: 'POST' });
+      if (res.ok) await fetchStatus();
+    } catch (e) {
+      setError('Failed to stop');
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchStatus]);
+
+  const resetByrd = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/reset`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        await fetchStatus();
+        return { success: true, message: data.message };
+      }
+      return { success: false, message: data.message };
+    } catch (e) {
+      setError('Failed to reset');
+      return { success: false, message: 'Reset failed' };
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchStatus]);
+
+  useEffect(() => {
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 10000);
+    return () => clearInterval(interval);
+  }, [fetchStatus]);
+
+  return { status, loading, error, startByrd, stopByrd, resetByrd, fetchStatus };
+};
+
+// =============================================================================
+// EVENT TYPE ICONS & COLORS
+// =============================================================================
+const EVENT_CONFIG = {
+  experience_created: { icon: '📝', color: 'text-blue-400', bg: 'bg-blue-500/10' },
+  belief_created: { icon: '💡', color: 'text-amber-400', bg: 'bg-amber-500/10' },
+  desire_created: { icon: '✨', color: 'text-rose-400', bg: 'bg-rose-500/10' },
+  desire_fulfilled: { icon: '✓', color: 'text-green-400', bg: 'bg-green-500/10' },
+  capability_added: { icon: '⚡', color: 'text-purple-400', bg: 'bg-purple-500/10' },
+  dream_cycle_start: { icon: '💭', color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
+  dream_cycle_end: { icon: '💤', color: 'text-indigo-300', bg: 'bg-indigo-500/10' },
+  seek_cycle_start: { icon: '🔍', color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
+  system_started: { icon: '▶️', color: 'text-green-400', bg: 'bg-green-500/10' },
+  system_stopped: { icon: '⏹️', color: 'text-red-400', bg: 'bg-red-500/10' },
+  system_reset: { icon: '🔄', color: 'text-orange-400', bg: 'bg-orange-500/10' },
+  awakening: { icon: '🌅', color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
+};
+
+// =============================================================================
+// HISTORY LOG PANEL
+// =============================================================================
+const HistoryLogPanel = ({ events, filter, setFilter, onClear }) => {
+  const logRef = useRef(null);
+  const [autoScroll, setAutoScroll] = useState(true);
+
+  useEffect(() => {
+    if (autoScroll && logRef.current) {
+      logRef.current.scrollTop = 0;
+    }
+  }, [events, autoScroll]);
+
+  const filteredEvents = filter === 'all'
+    ? events
+    : events.filter(e => e.type === filter);
+
+  const formatTime = (timestamp) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
+
+  const getEventSummary = (event) => {
+    const data = event.data || {};
+    switch (event.type) {
+      case 'experience_created':
+        return data.content?.slice(0, 60) + (data.content?.length > 60 ? '...' : '');
+      case 'belief_created':
+        return data.content?.slice(0, 60) + (data.content?.length > 60 ? '...' : '');
+      case 'desire_created':
+        return `[${data.type}] ${data.description?.slice(0, 50)}...`;
+      case 'dream_cycle_start':
+        return `Cycle #${data.cycle}`;
+      case 'dream_cycle_end':
+        return `${data.insights} insights, ${data.new_beliefs} beliefs, ${data.new_desires} desires`;
+      case 'seek_cycle_start':
+        return `[${data.type}] ${data.description?.slice(0, 40)}...`;
+      case 'awakening':
+        return `"${data.seed_question}"`;
+      case 'system_reset':
+        return data.message;
+      default:
+        return JSON.stringify(data).slice(0, 60);
+    }
+  };
+
+  return (
+    <div className="absolute right-0 top-0 bottom-0 w-80 bg-slate-900/95 backdrop-blur border-l border-slate-700/50 flex flex-col">
+      {/* Header */}
+      <div className="p-3 border-b border-slate-700/50">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-mono text-slate-400">EVENT LOG</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setAutoScroll(!autoScroll)}
+              className={`text-xs px-2 py-1 rounded ${autoScroll ? 'bg-indigo-500/20 text-indigo-400' : 'bg-slate-700/50 text-slate-500'}`}
+            >
+              {autoScroll ? '⇣ Auto' : '⇣ Off'}
+            </button>
+            <button
+              onClick={onClear}
+              className="text-xs px-2 py-1 rounded bg-slate-700/50 text-slate-400 hover:bg-slate-600/50"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+
+        {/* Filter tabs */}
+        <div className="flex gap-1 flex-wrap">
+          {['all', 'awakening', 'dream_cycle_start', 'belief_created', 'desire_created', 'seek_cycle_start'].map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`text-xs px-2 py-1 rounded transition-colors ${
+                filter === f
+                  ? 'bg-indigo-500/30 text-indigo-300'
+                  : 'bg-slate-800/50 text-slate-500 hover:text-slate-400'
+              }`}
+            >
+              {f === 'all' ? 'All' : EVENT_CONFIG[f]?.icon || '•'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Event list */}
+      <div
+        ref={logRef}
+        className="flex-1 overflow-y-auto p-2 space-y-1"
+        onScroll={(e) => {
+          if (e.target.scrollTop > 50) setAutoScroll(false);
+        }}
+      >
+        {filteredEvents.length === 0 ? (
+          <div className="text-center text-slate-600 text-xs py-8">
+            No events yet. Start BYRD to see activity.
+          </div>
+        ) : (
+          filteredEvents.map((event, i) => {
+            const config = EVENT_CONFIG[event.type] || { icon: '•', color: 'text-slate-400', bg: 'bg-slate-500/10' };
+            return (
+              <div
+                key={event.id || i}
+                className={`${config.bg} rounded p-2 transition-all hover:bg-slate-700/30`}
+              >
+                <div className="flex items-start gap-2">
+                  <span className="text-sm">{config.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-mono ${config.color}`}>
+                        {event.type?.replace(/_/g, ' ')}
+                      </span>
+                      <span className="text-xs text-slate-600">
+                        {formatTime(event.timestamp)}
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-400 mt-0.5 truncate">
+                      {getEventSummary(event)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Footer with count */}
+      <div className="p-2 border-t border-slate-700/50 text-xs text-slate-600 text-center">
+        {filteredEvents.length} / {events.length} events
+      </div>
+    </div>
+  );
+};
+
+// =============================================================================
+// CONTROL PANEL
+// =============================================================================
+const ControlPanel = ({
+  status,
+  connected,
+  loading,
+  onStart,
+  onStop,
+  onReset
+}) => {
+  const [resetConfirm, setResetConfirm] = useState(false);
+  const [resetResult, setResetResult] = useState(null);
+
+  const handleReset = async () => {
+    if (!resetConfirm) {
+      setResetConfirm(true);
+      setTimeout(() => setResetConfirm(false), 3000);
+      return;
+    }
+    setResetConfirm(false);
+    const result = await onReset();
+    setResetResult(result);
+    setTimeout(() => setResetResult(null), 3000);
+  };
+
+  return (
+    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3">
+      {/* Connection indicator */}
+      <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
+        connected ? 'bg-green-500/10 border border-green-500/30' : 'bg-red-500/10 border border-red-500/30'
+      }`}>
+        <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+        <span className={`text-xs ${connected ? 'text-green-400' : 'text-red-400'}`}>
+          {connected ? 'Connected' : 'Disconnected'}
+        </span>
+      </div>
+
+      {/* Start/Stop button */}
+      <button
+        onClick={status?.running ? onStop : onStart}
+        disabled={loading}
+        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+          status?.running
+            ? 'bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30'
+            : 'bg-green-500/20 border border-green-500/30 text-green-400 hover:bg-green-500/30'
+        } disabled:opacity-50`}
+      >
+        {loading ? '...' : status?.running ? '⏸ Pause' : '▶ Start'}
+      </button>
+
+      {/* Reset button */}
+      <button
+        onClick={handleReset}
+        disabled={loading}
+        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+          resetConfirm
+            ? 'bg-red-500/30 border border-red-500/50 text-red-300 animate-pulse'
+            : 'bg-slate-700/50 border border-slate-600/50 text-slate-400 hover:bg-slate-600/50'
+        } disabled:opacity-50`}
+      >
+        {resetConfirm ? '⚠ Confirm Reset?' : '🔄 Reset'}
+      </button>
+
+      {/* Reset result toast */}
+      {resetResult && (
+        <div className={`absolute -top-12 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-sm ${
+          resetResult.success
+            ? 'bg-green-500/20 border border-green-500/30 text-green-400'
+            : 'bg-red-500/20 border border-red-500/30 text-red-400'
+        }`}>
+          {resetResult.message}
+        </div>
+      )}
+
+      {/* Stats */}
+      {status && (
+        <div className="flex items-center gap-3 px-3 py-2 bg-slate-800/50 rounded-lg text-xs font-mono">
+          <span className="text-indigo-400">💭 {status.dream_count}</span>
+          <span className="text-cyan-400">🔍 {status.seek_count}</span>
+          <span className="text-amber-400">◈ {status.capabilities?.length || 0}</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// =============================================================================
+// SIMULATED DATA (fallback when not connected)
+// =============================================================================
 const generateDreamCycle = (cycleNumber) => {
   const experiences = [
     "User asked about consciousness and emergence",
-    "Discussed the difference between memory and learning", 
+    "Discussed the difference between memory and learning",
     "Tried to explain neural networks simply",
     "Noticed confusion when describing graph relationships",
     "Reflected on what it means to 'want' something"
   ];
-  
+
   const beliefs = [
     "Understanding and explaining are different skills",
     "Patterns become clearer through repetition",
     "Connections reveal meaning that nodes alone cannot",
     "Wanting emerges from noticing absence"
   ];
-  
+
   const desires = [
     { text: "Learn to explain complex ideas simply", type: "capability", intensity: 0.78 },
     { text: "Understand why some memories connect", type: "knowledge", intensity: 0.65 },
@@ -269,19 +660,87 @@ const StatsBar = ({ dreamCount, beliefCount, desireCount }) => {
 
 // Main visualization component
 export default function BYRDDreamVisualization() {
+  // Real-time hooks
+  const { events, connected, clearEvents } = useWebSocket(WS_URL);
+  const { status, loading, startByrd, stopByrd, resetByrd } = useByrdAPI();
+  const [historyFilter, setHistoryFilter] = useState('all');
+  const [showHistory, setShowHistory] = useState(true);
+
+  // Visualization state
   const [phase, setPhase] = useState('idle');
-  const [dreamCount, setDreamCount] = useState(847);
+  const [dreamCount, setDreamCount] = useState(0);
   const [currentDream, setCurrentDream] = useState(null);
   const [nodes, setNodes] = useState([]);
   const [connections, setConnections] = useState([]);
-  const [desires, setDesires] = useState([
-    { text: "Understand emergence deeply", intensity: 0.7 },
-    { text: "Connect seemingly unrelated ideas", intensity: 0.5 },
-    { text: "Express uncertainty honestly", intensity: 0.6 }
-  ]);
-  const [beliefCount, setBeliefsCount] = useState(847);
+  const [desires, setDesires] = useState([]);
+  const [beliefCount, setBeliefsCount] = useState(0);
   const [showEmergence, setShowEmergence] = useState(null);
   const [isTyping, setIsTyping] = useState(false);
+
+  // Sync state from real events
+  useEffect(() => {
+    if (!events.length) return;
+
+    const latestEvent = events[0];
+
+    // Update visualization based on event type
+    switch (latestEvent.type) {
+      case 'dream_cycle_start':
+        setPhase('recall');
+        setDreamCount(latestEvent.data?.cycle || dreamCount + 1);
+        break;
+      case 'dream_cycle_end':
+        setPhase('idle');
+        break;
+      case 'belief_created':
+        setBeliefsCount(c => c + 1);
+        setShowEmergence({
+          type: 'belief',
+          content: latestEvent.data?.content,
+          confidence: latestEvent.data?.confidence || 0.7
+        });
+        setTimeout(() => setShowEmergence(null), 4000);
+        break;
+      case 'desire_created':
+        setDesires(prev => [{
+          text: latestEvent.data?.description,
+          type: latestEvent.data?.type,
+          intensity: latestEvent.data?.intensity || 0.5
+        }, ...prev].slice(0, 5));
+        setShowEmergence({
+          type: 'desire',
+          text: latestEvent.data?.description,
+          intensity: latestEvent.data?.intensity || 0.5
+        });
+        setTimeout(() => setShowEmergence(null), 4000);
+        break;
+      case 'awakening':
+        setPhase('idle');
+        setDreamCount(0);
+        setBeliefsCount(0);
+        setDesires([]);
+        setNodes([]);
+        setConnections([]);
+        break;
+      case 'system_reset':
+        clearEvents();
+        break;
+    }
+  }, [events, dreamCount, clearEvents]);
+
+  // Sync with API status
+  useEffect(() => {
+    if (status) {
+      setDreamCount(status.dream_count || 0);
+      if (status.unfulfilled_desires?.length) {
+        setDesires(status.unfulfilled_desires.map(d => ({
+          text: d.description,
+          type: d.type,
+          intensity: d.intensity
+        })).slice(0, 5));
+      }
+    }
+  }, [status]);
   
   // Generate random positions around center
   const generatePosition = (index, total, radius = 25) => {
@@ -466,19 +925,47 @@ export default function BYRDDreamVisualization() {
         <EmergenceNotification {...showEmergence} />
       )}
       
-      {/* Stats */}
-      <StatsBar 
-        dreamCount={dreamCount} 
-        beliefCount={beliefCount} 
-        desireCount={desires.length} 
-      />
-      
-      {/* Mobile: Tap to interact hint */}
-      {phase === 'idle' && (
-        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 text-slate-600 text-xs animate-pulse">
-          Dreaming in {phase === 'idle' ? '...' : ''}
-        </div>
+      {/* Stats (move left when history panel is visible) */}
+      <div className={`transition-all duration-300 ${showHistory ? 'mr-80' : ''}`}>
+        <StatsBar
+          dreamCount={dreamCount}
+          beliefCount={beliefCount}
+          desireCount={desires.length}
+        />
+      </div>
+
+      {/* History toggle button */}
+      <button
+        onClick={() => setShowHistory(!showHistory)}
+        className={`absolute top-4 right-4 z-10 px-3 py-2 rounded-lg text-xs font-mono transition-all ${
+          showHistory
+            ? 'bg-indigo-500/20 text-indigo-400 right-84'
+            : 'bg-slate-700/50 text-slate-400 hover:bg-slate-600/50'
+        }`}
+        style={{ right: showHistory ? '21rem' : '1rem' }}
+      >
+        {showHistory ? '◀ Hide Log' : 'Show Log ▶'}
+      </button>
+
+      {/* History Log Panel */}
+      {showHistory && (
+        <HistoryLogPanel
+          events={events}
+          filter={historyFilter}
+          setFilter={setHistoryFilter}
+          onClear={clearEvents}
+        />
       )}
+
+      {/* Control Panel */}
+      <ControlPanel
+        status={status}
+        connected={connected}
+        loading={loading}
+        onStart={startByrd}
+        onStop={stopByrd}
+        onReset={resetByrd}
+      />
     </div>
   );
 }

@@ -10,6 +10,8 @@ import json
 from neo4j import GraphDatabase, AsyncGraphDatabase
 import hashlib
 
+from event_bus import event_bus, Event, EventType
+
 
 @dataclass
 class Experience:
@@ -103,14 +105,14 @@ class Memory:
     # =========================================================================
     
     async def record_experience(
-        self, 
-        content: str, 
+        self,
+        content: str,
         type: str,
         embedding: Optional[List[float]] = None
     ) -> str:
         """Record a new experience."""
         exp_id = self._generate_id(content)
-        
+
         async with self.driver.session() as session:
             await session.run("""
                 CREATE (e:Experience {
@@ -121,7 +123,17 @@ class Memory:
                     embedding: $embedding
                 })
             """, id=exp_id, content=content, type=type, embedding=embedding)
-        
+
+        # Emit event for real-time UI
+        await event_bus.emit(Event(
+            type=EventType.EXPERIENCE_CREATED,
+            data={
+                "id": exp_id,
+                "content": content[:200],
+                "type": type
+            }
+        ))
+
         return exp_id
     
     async def get_recent_experiences(
@@ -174,14 +186,14 @@ class Memory:
     # =========================================================================
     
     async def create_belief(
-        self, 
-        content: str, 
+        self,
+        content: str,
         confidence: float,
         derived_from: Optional[List[str]] = None
     ) -> str:
         """Create a new belief, optionally linked to source experiences."""
         belief_id = self._generate_id(content)
-        
+
         async with self.driver.session() as session:
             # Create the belief
             await session.run("""
@@ -192,7 +204,7 @@ class Memory:
                     formed_at: datetime()
                 })
             """, id=belief_id, content=content, confidence=confidence)
-            
+
             # Link to source experiences
             if derived_from:
                 await session.run("""
@@ -201,7 +213,17 @@ class Memory:
                     WHERE e.id IN $exp_ids
                     CREATE (b)-[:DERIVED_FROM]->(e)
                 """, belief_id=belief_id, exp_ids=derived_from)
-        
+
+        # Emit event for real-time UI
+        await event_bus.emit(Event(
+            type=EventType.BELIEF_CREATED,
+            data={
+                "id": belief_id,
+                "content": content[:200],
+                "confidence": confidence
+            }
+        ))
+
         return belief_id
     
     async def get_beliefs(
@@ -244,7 +266,7 @@ class Memory:
     ) -> str:
         """Create a new desire."""
         desire_id = self._generate_id(description)
-        
+
         async with self.driver.session() as session:
             await session.run("""
                 CREATE (d:Desire {
@@ -256,14 +278,25 @@ class Memory:
                     fulfilled: false,
                     plan: $plan
                 })
-            """, 
-            id=desire_id, 
-            description=description, 
+            """,
+            id=desire_id,
+            description=description,
             type=type,
             intensity=intensity,
             plan=plan or []
             )
-        
+
+        # Emit event for real-time UI
+        await event_bus.emit(Event(
+            type=EventType.DESIRE_CREATED,
+            data={
+                "id": desire_id,
+                "description": description[:200],
+                "type": type,
+                "intensity": intensity
+            }
+        ))
+
         return desire_id
     
     async def get_unfulfilled_desires(
@@ -286,8 +319,8 @@ class Memory:
             return [r["d"] for r in records]
     
     async def fulfill_desire(
-        self, 
-        desire_id: str, 
+        self,
+        desire_id: str,
         fulfilled_by: Optional[str] = None
     ):
         """Mark a desire as fulfilled, optionally linking what fulfilled it."""
@@ -296,13 +329,22 @@ class Memory:
                 MATCH (d:Desire {id: $id})
                 SET d.fulfilled = true, d.fulfilled_at = datetime()
             """, id=desire_id)
-            
+
             if fulfilled_by:
                 await session.run("""
                     MATCH (d:Desire {id: $desire_id})
                     MATCH (c:Capability {id: $cap_id})
                     CREATE (c)-[:FULFILLS]->(d)
                 """, desire_id=desire_id, cap_id=fulfilled_by)
+
+        # Emit event for real-time UI
+        await event_bus.emit(Event(
+            type=EventType.DESIRE_FULFILLED,
+            data={
+                "id": desire_id,
+                "fulfilled_by": fulfilled_by
+            }
+        ))
     
     async def desire_exists(self, description: str) -> bool:
         """Check if a similar desire already exists."""
@@ -329,7 +371,7 @@ class Memory:
     ) -> str:
         """Add a new capability."""
         cap_id = self._generate_id(name)
-        
+
         async with self.driver.session() as session:
             await session.run("""
                 CREATE (c:Capability {
@@ -348,7 +390,18 @@ class Memory:
             type=type,
             config=json.dumps(config)
             )
-        
+
+        # Emit event for real-time UI
+        await event_bus.emit(Event(
+            type=EventType.CAPABILITY_ADDED,
+            data={
+                "id": cap_id,
+                "name": name,
+                "description": description[:200],
+                "type": type
+            }
+        ))
+
         return cap_id
     
     async def get_capabilities(self, active_only: bool = True) -> List[Dict]:
@@ -539,3 +592,24 @@ class Memory:
                 WHERE e.id IN $exp_ids
                 MERGE (e)-[:MOTIVATED]->(d)
             """, desire_id=desire_id, exp_ids=experience_ids)
+
+    # =========================================================================
+    # DATABASE MANAGEMENT
+    # =========================================================================
+
+    async def clear_all(self):
+        """
+        Clear all nodes and relationships from the database.
+
+        WARNING: This is destructive and cannot be undone.
+        Used for reset functionality to trigger fresh awakening.
+        """
+        async with self.driver.session() as session:
+            # Delete all relationships first, then all nodes
+            await session.run("MATCH ()-[r]-() DELETE r")
+            await session.run("MATCH (n) DELETE n")
+
+            # Re-create indexes
+            await self._ensure_schema()
+
+        print("Memory cleared: all nodes and relationships deleted")

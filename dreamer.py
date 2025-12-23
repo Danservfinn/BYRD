@@ -11,6 +11,7 @@ from typing import Dict, List, Optional
 import httpx
 
 from memory import Memory
+from event_bus import event_bus, Event, EventType
 
 
 class Dreamer:
@@ -58,28 +59,45 @@ class Dreamer:
     async def _dream_cycle(self):
         """One complete dream cycle: recall, reflect, record."""
         self._dream_count += 1
-        
+
+        # Emit start event for real-time UI
+        await event_bus.emit(Event(
+            type=EventType.DREAM_CYCLE_START,
+            data={"cycle": self._dream_count}
+        ))
+
         # 1. RECALL - Gather context
         recent = await self.memory.get_recent_experiences(limit=self.context_window)
-        
+
         if not recent:
             return  # Nothing to dream about yet
-        
+
         recent_ids = [e["id"] for e in recent]
         related = await self.memory.get_related_memories(recent_ids, depth=2, limit=50)
-        
+
         current_desires = await self.memory.get_unfulfilled_desires(limit=10)
         capabilities = await self.memory.get_capabilities()
-        
+
         # 2. REFLECT - Ask local LLM to reflect
         dream_output = await self._reflect(recent, related, current_desires, capabilities)
-        
+
         if not dream_output:
             return
-        
+
         # 3. RECORD - Write insights to memory
         await self._record_dream(dream_output, recent_ids)
-        
+
+        # Emit end event with summary for real-time UI
+        await event_bus.emit(Event(
+            type=EventType.DREAM_CYCLE_END,
+            data={
+                "cycle": self._dream_count,
+                "insights": len(dream_output.get('insights', [])),
+                "new_beliefs": len(dream_output.get('new_beliefs', [])),
+                "new_desires": len(dream_output.get('desires', []))
+            }
+        ))
+
         print(f"💭 Dream #{self._dream_count}: {len(dream_output.get('insights', []))} insights, "
               f"{len(dream_output.get('desires', []))} desires")
     

@@ -19,6 +19,7 @@ from dreamer import Dreamer
 from seeker import Seeker
 from actor import Actor
 from self_modification import SelfModificationSystem
+from event_bus import event_bus, Event, EventType
 
 
 class BYRD:
@@ -185,6 +186,12 @@ class BYRD:
             content="What is happening?",
             type="observation"
         )
+
+        # Emit awakening event for real-time UI
+        await event_bus.emit(Event(
+            type=EventType.AWAKENING,
+            data={"seed_question": "What is happening?"}
+        ))
 
         print("   BYRD awakens. Everything else emerges.")
     
