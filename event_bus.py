@@ -22,6 +22,12 @@ class EventType(Enum):
     CAPABILITY_ADDED = "capability_added"
     CONNECTION_CREATED = "connection_created"
 
+    # Desire lifecycle events (reflective failure processing)
+    DESIRE_ATTEMPT_FAILED = "desire_attempt_failed"
+    DESIRE_STUCK = "desire_stuck"  # Needs Dreamer reflection
+    DESIRE_REFLECTED = "desire_reflected"  # Dreamer processed stuck desire
+    DESIRE_INTENSITY_CHANGED = "desire_intensity_changed"
+
     # Dreamer events
     DREAM_CYCLE_START = "dream_cycle_start"
     DREAM_CYCLE_END = "dream_cycle_end"

@@ -78,6 +78,55 @@
       pointer-events: none;
       animation: particleDrift 1s ease-out forwards;
     }
+
+    /* Phase 2: Connection flow particles */
+    @keyframes flowAlongLine {
+      0% { offset-distance: 0%; opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { offset-distance: 100%; opacity: 0; }
+    }
+    .connection-particle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      pointer-events: none;
+      offset-rotate: 0deg;
+      animation: flowAlongLine 2s linear infinite;
+    }
+
+    /* Phase 2: Node aging */
+    .node-aged {
+      transition: opacity 2s ease, filter 2s ease;
+    }
+
+    /* Phase 2: Phase-driven canvas effects */
+    .phase-recall #nodes { filter: brightness(1.1); }
+    .phase-associate #connections { filter: brightness(1.5) saturate(1.3); }
+    .phase-reflect { background: radial-gradient(ellipse at center, rgba(139, 92, 246, 0.15) 0%, transparent 50%); }
+    .phase-form #nodes .node-new { filter: brightness(1.3) drop-shadow(0 0 10px currentColor); }
+
+    /* Phase 2: Background nebula */
+    .nebula {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(60px);
+      opacity: 0.15;
+      pointer-events: none;
+      transition: all 3s ease;
+    }
+    .nebula-1 { background: radial-gradient(circle, rgba(99, 102, 241, 0.4) 0%, transparent 70%); }
+    .nebula-2 { background: radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, transparent 70%); }
+    .nebula-3 { background: radial-gradient(circle, rgba(79, 70, 229, 0.35) 0%, transparent 70%); }
+
+    /* Phase 2: Connection glow on activity */
+    .connection-active {
+      stroke-opacity: 0.6 !important;
+      filter: drop-shadow(0 0 3px currentColor);
+      transition: all 0.3s ease;
+    }
+
     @keyframes fadeInNode {
       from { opacity: 0; transform: translate(-50%, -50%) scale(0); }
       to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
@@ -196,6 +245,16 @@
     <div class="absolute inset-0 bg-gradient-radial from-indigo-950/20 via-transparent to-transparent"
          style="background: radial-gradient(ellipse at center, rgba(79,70,229,0.1) 0%, transparent 60%);"></div>
 
+    <!-- Background nebulas -->
+    <div id="nebula-container" class="absolute inset-0 pointer-events-none overflow-hidden" style="right: 320px;">
+      <div id="nebula-1" class="nebula nebula-1"></div>
+      <div id="nebula-2" class="nebula nebula-2"></div>
+      <div id="nebula-3" class="nebula nebula-3"></div>
+    </div>
+
+    <!-- Connection flow particles container -->
+    <div id="flow-particles" class="absolute inset-0 pointer-events-none" style="right: 320px;"></div>
+
     <!-- Ambient particles container -->
     <div id="particles" class="absolute inset-0 pointer-events-none overflow-hidden" style="right: 320px;"></div>
 
@@ -313,6 +372,8 @@
           <button class="filter-btn text-xs px-2 py-1 rounded bg-slate-800/50 text-slate-500" data-filter="belief_created">&#128161;</button>
           <button class="filter-btn text-xs px-2 py-1 rounded bg-slate-800/50 text-slate-500" data-filter="desire_created">&#10024;</button>
           <button class="filter-btn text-xs px-2 py-1 rounded bg-slate-800/50 text-slate-500" data-filter="seek_cycle_start">&#128269;</button>
+          <button class="filter-btn text-xs px-2 py-1 rounded bg-slate-800/50 text-slate-500" data-filter="desire_attempt_failed">&#10060;</button>
+          <button class="filter-btn text-xs px-2 py-1 rounded bg-slate-800/50 text-slate-500" data-filter="desire_reflected">&#129504;</button>
         </div>
       </div>
 
@@ -400,6 +461,12 @@
       system_stopped: { icon: '&#9209;', color: 'text-red-400', bg: 'bg-red-500/10', label: 'system stopped' },
       system_reset: { icon: '&#128260;', color: 'text-orange-400', bg: 'bg-orange-500/10', label: 'system reset' },
       awakening: { icon: '&#127749;', color: 'text-yellow-400', bg: 'bg-yellow-500/10', label: 'awakening' },
+      // Desire lifecycle events (reflective failure processing)
+      desire_attempt_failed: { icon: '&#10060;', color: 'text-red-400', bg: 'bg-red-500/10', label: 'attempt failed' },
+      desire_stuck: { icon: '&#128683;', color: 'text-orange-400', bg: 'bg-orange-500/10', label: 'desire stuck' },
+      desire_reflected: { icon: '&#129504;', color: 'text-purple-400', bg: 'bg-purple-500/10', label: 'reflected' },
+      desire_intensity_changed: { icon: '&#128200;', color: 'text-amber-300', bg: 'bg-amber-500/10', label: 'intensity changed' },
+      seek_cycle_end: { icon: '&#128269;', color: 'text-cyan-300', bg: 'bg-cyan-500/10', label: 'seek cycle end' },
     };
 
     // ==========================================================================
@@ -439,6 +506,14 @@
     const tooltipType = document.getElementById('tooltip-type');
     const tooltipContent = document.getElementById('tooltip-content');
     const tooltipMeta = document.getElementById('tooltip-meta');
+
+    // Phase 2 elements
+    const appContainer = document.getElementById('app');
+    const nebulaContainer = document.getElementById('nebula-container');
+    const nebula1 = document.getElementById('nebula-1');
+    const nebula2 = document.getElementById('nebula-2');
+    const nebula3 = document.getElementById('nebula-3');
+    const flowParticlesContainer = document.getElementById('flow-particles');
 
     // ==========================================================================
     // WEBSOCKET
@@ -529,8 +604,8 @@
         const res = await fetch(`${API_BASE}/api/reset`, { method: 'POST' });
         const data = await res.json();
         if (data.success) {
-          events = [];
-          renderHistory();
+          // Note: events are cleared by the system_reset WebSocket event handler
+          // Don't clear here or we'll wipe out the awakening events that arrive via WebSocket
           await fetchStatus();
         }
         return data;
@@ -726,6 +801,17 @@
           return `"${data.seed_question}"`;
         case 'system_reset':
           return data.message || 'Memory cleared';
+        // Desire lifecycle events (reflective failure processing)
+        case 'desire_attempt_failed':
+          return `${(data.description || '').slice(0, 30)}...: ${data.failure_type} (attempt #${data.attempt_count})`;
+        case 'desire_stuck':
+          return `${(data.description || '').slice(0, 35)}... needs reflection`;
+        case 'desire_reflected':
+          return `${data.action}: ${(data.desire_id || '').slice(0, 8)}...`;
+        case 'desire_intensity_changed':
+          return `${(data.desire_id || '').slice(0, 8)}... → ${data.new_intensity?.toFixed(2) || '?'}`;
+        case 'seek_cycle_end':
+          return `${data.outcome || 'unknown'}: ${(data.reason || data.type || '').slice(0, 35)}`;
         default:
           return JSON.stringify(data).slice(0, 50);
       }
@@ -960,7 +1046,7 @@
       node.addEventListener('mouseleave', hideNodeTooltip);
 
       nodesContainer.appendChild(node);
-      visualNodes.push({ el: node, x, y, type, id, content, importance });
+      visualNodes.push({ el: node, x, y, type, id, content, importance, createdAt: Date.now() });
 
       // React the orb
       reactOrb(type, 0.7 + importance * 0.5);
@@ -1076,6 +1162,15 @@
         setOrbDreaming(true);
       }
 
+      // Phase 2: Apply phase class to app container for canvas effects
+      appContainer.classList.remove('phase-recall', 'phase-associate', 'phase-reflect', 'phase-form');
+      if (phase !== 'idle') {
+        appContainer.classList.add(`phase-${phase}`);
+      }
+
+      // Phase 2: Animate nebulas based on phase
+      animateNebulasForPhase(phase);
+
       phases.forEach((p, i) => {
         const dot = document.getElementById(`dot-${p}`);
         const span = dot?.nextElementSibling;
@@ -1092,6 +1187,156 @@
         }
       });
     }
+
+    // ==========================================================================
+    // PHASE 2: NEBULAS & ATMOSPHERE
+    // ==========================================================================
+    function initNebulas() {
+      const cx = centerX();
+      const cy = centerY();
+
+      // Position nebulas around the center
+      nebula1.style.cssText = `
+        width: 400px; height: 400px;
+        left: ${cx - 300}px; top: ${cy - 200}px;
+      `;
+      nebula2.style.cssText = `
+        width: 350px; height: 350px;
+        left: ${cx + 100}px; top: ${cy - 150}px;
+      `;
+      nebula3.style.cssText = `
+        width: 300px; height: 300px;
+        left: ${cx - 100}px; top: ${cy + 100}px;
+      `;
+
+      // Start slow drift animation
+      driftNebulas();
+    }
+
+    function driftNebulas() {
+      let time = 0;
+      setInterval(() => {
+        time += 0.01;
+        const cx = centerX();
+        const cy = centerY();
+
+        nebula1.style.left = `${cx - 300 + Math.sin(time * 0.5) * 30}px`;
+        nebula1.style.top = `${cy - 200 + Math.cos(time * 0.3) * 20}px`;
+
+        nebula2.style.left = `${cx + 100 + Math.cos(time * 0.4) * 25}px`;
+        nebula2.style.top = `${cy - 150 + Math.sin(time * 0.6) * 25}px`;
+
+        nebula3.style.left = `${cx - 100 + Math.sin(time * 0.7) * 20}px`;
+        nebula3.style.top = `${cy + 100 + Math.cos(time * 0.5) * 30}px`;
+      }, 50);
+    }
+
+    function animateNebulasForPhase(phase) {
+      const intensity = {
+        idle: 0.1,
+        recall: 0.2,
+        associate: 0.25,
+        reflect: 0.35,
+        form: 0.3
+      };
+      const opacity = intensity[phase] || 0.15;
+
+      nebula1.style.opacity = opacity;
+      nebula2.style.opacity = opacity * 0.9;
+      nebula3.style.opacity = opacity * 0.8;
+
+      // During reflect phase, make nebulas more purple
+      if (phase === 'reflect') {
+        nebula1.style.filter = 'blur(60px) hue-rotate(20deg)';
+        nebula2.style.filter = 'blur(60px) hue-rotate(15deg)';
+      } else {
+        nebula1.style.filter = 'blur(60px)';
+        nebula2.style.filter = 'blur(60px)';
+      }
+    }
+
+    // ==========================================================================
+    // PHASE 2: CONNECTION FLOW PARTICLES
+    // ==========================================================================
+    let connectionFlowInterval = null;
+
+    function startConnectionFlow() {
+      if (connectionFlowInterval) return;
+
+      connectionFlowInterval = setInterval(() => {
+        // Only emit particles when dreaming
+        if (currentPhase === 'idle') return;
+
+        const lines = connectionsContainer.querySelectorAll('line');
+        if (lines.length === 0) return;
+
+        // Pick a random connection to animate
+        const line = lines[Math.floor(Math.random() * lines.length)];
+        createConnectionFlowParticle(line);
+      }, 300);
+    }
+
+    function createConnectionFlowParticle(line) {
+      const x1 = parseFloat(line.getAttribute('x1'));
+      const y1 = parseFloat(line.getAttribute('y1'));
+      const x2 = parseFloat(line.getAttribute('x2'));
+      const y2 = parseFloat(line.getAttribute('y2'));
+      const color = line.getAttribute('stroke');
+
+      const particle = document.createElement('div');
+      particle.className = 'connection-particle';
+
+      // Create SVG path for offset-path
+      const pathId = `flow-path-${Date.now()}-${Math.random()}`;
+      const pathSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      pathSvg.style.cssText = 'position:absolute;width:0;height:0;';
+      pathSvg.innerHTML = `<path id="${pathId}" d="M ${x1} ${y1} L ${x2} ${y2}"/>`;
+      flowParticlesContainer.appendChild(pathSvg);
+
+      particle.style.cssText = `
+        background: ${color};
+        box-shadow: 0 0 6px ${color};
+        offset-path: path('M ${x1} ${y1} L ${x2} ${y2}');
+        animation-duration: ${1 + Math.random()}s;
+      `;
+
+      flowParticlesContainer.appendChild(particle);
+
+      // Cleanup after animation
+      setTimeout(() => {
+        particle.remove();
+        pathSvg.remove();
+      }, 2000);
+    }
+
+    // ==========================================================================
+    // PHASE 2: NODE AGING
+    // ==========================================================================
+    function updateNodeAging() {
+      const now = Date.now();
+      const maxAge = 120000; // 2 minutes to full fade
+
+      visualNodes.forEach((nodeData, index) => {
+        const age = now - (nodeData.createdAt || now);
+        const ageFactor = Math.min(age / maxAge, 1);
+
+        // Fade opacity from 1 to 0.3 over time
+        const opacity = 1 - (ageFactor * 0.7);
+        // Slight blur for very old nodes
+        const blur = ageFactor > 0.8 ? `blur(${(ageFactor - 0.8) * 3}px)` : 'none';
+
+        nodeData.el.style.opacity = opacity;
+        nodeData.el.style.filter = blur;
+
+        // Mark as aged for styling
+        if (ageFactor > 0.3 && !nodeData.el.classList.contains('node-aged')) {
+          nodeData.el.classList.add('node-aged');
+        }
+      });
+    }
+
+    // Start node aging timer
+    setInterval(updateNodeAging, 5000);
 
     function showEmergence(type, content, value) {
       const isDesire = type === 'desire';
@@ -1213,6 +1458,10 @@
       setInterval(fetchStatus, 10000);
       renderHistory();
       initAmbientParticles();
+      initNebulas();
+      startConnectionFlow();
+      // Start node aging check every 30 seconds
+      setInterval(updateNodeAging, 30000);
     }
 
     init();

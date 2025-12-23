@@ -35,11 +35,15 @@ class Belief:
 class Desire:
     id: str
     description: str
-    type: str  # knowledge, capability, goal, exploration
+    type: str  # knowledge, capability, goal, exploration, coding, self_modification
     intensity: float
     formed_at: datetime
     fulfilled: bool = False
     plan: List[str] = None
+    # Reflective failure processing fields
+    attempt_count: int = 0
+    last_attempted: Optional[datetime] = None
+    status: str = "active"  # active | dormant | needs_reflection | fulfilled
 
 
 @dataclass
@@ -86,6 +90,9 @@ class Memory:
             """)
             await session.run("""
                 CREATE INDEX IF NOT EXISTS FOR (d:Desire) ON (d.fulfilled, d.intensity)
+            """)
+            await session.run("""
+                CREATE INDEX IF NOT EXISTS FOR (d:Desire) ON (d.status)
             """)
             await session.run("""
                 CREATE INDEX IF NOT EXISTS FOR (c:Capability) ON (c.active)
@@ -277,7 +284,10 @@ class Memory:
                     intensity: $intensity,
                     formed_at: datetime(),
                     fulfilled: false,
-                    plan: $plan
+                    plan: $plan,
+                    attempt_count: 0,
+                    last_attempted: null,
+                    status: 'active'
                 })
             """,
             id=desire_id,
@@ -358,7 +368,159 @@ class Memory:
             result = await session.run(query, desc=description[:50])
             record = await result.single()
             return record["exists"] if record else False
-    
+
+    # =========================================================================
+    # DESIRE LIFECYCLE (Reflective Failure Processing)
+    # =========================================================================
+
+    async def record_desire_attempt(
+        self,
+        desire_id: str,
+        success: bool,
+        reason: Optional[str] = None
+    ) -> bool:
+        """
+        Record an attempt to fulfill a desire.
+
+        Every failure triggers immediate reflection (status = needs_reflection).
+        This ensures BYRD reflects before retrying any desire.
+
+        Returns True if the desire transitioned to needs_reflection.
+        """
+        async with self.driver.session() as session:
+            if success:
+                # Success: just update the timestamp
+                await session.run("""
+                    MATCH (d:Desire {id: $id})
+                    SET d.attempt_count = d.attempt_count + 1,
+                        d.last_attempted = datetime()
+                """, id=desire_id)
+                return False
+            else:
+                # Failure: increment attempt, set needs_reflection immediately
+                await session.run("""
+                    MATCH (d:Desire {id: $id})
+                    SET d.attempt_count = d.attempt_count + 1,
+                        d.last_attempted = datetime(),
+                        d.status = 'needs_reflection'
+                """, id=desire_id)
+
+                # Emit event for UI visibility
+                await event_bus.emit(Event(
+                    type=EventType.DESIRE_STUCK,
+                    data={
+                        "desire_id": desire_id,
+                        "reason": reason or "Attempt failed"
+                    }
+                ))
+                return True
+
+    async def update_desire_status(self, desire_id: str, status: str):
+        """
+        Update desire status.
+
+        Valid statuses: active, dormant, needs_reflection, fulfilled
+        """
+        valid_statuses = {"active", "dormant", "needs_reflection", "fulfilled"}
+        if status not in valid_statuses:
+            raise ValueError(f"Invalid status: {status}. Must be one of {valid_statuses}")
+
+        async with self.driver.session() as session:
+            await session.run("""
+                MATCH (d:Desire {id: $id})
+                SET d.status = $status
+            """, id=desire_id, status=status)
+
+    async def update_desire_intensity(self, desire_id: str, new_intensity: float):
+        """
+        Allow Dreamer to modify desire intensity.
+
+        Used when reflecting on stuck desires - lowering intensity deprioritizes.
+        """
+        clamped = max(0.0, min(1.0, new_intensity))
+
+        async with self.driver.session() as session:
+            await session.run("""
+                MATCH (d:Desire {id: $id})
+                SET d.intensity = $intensity
+            """, id=desire_id, intensity=clamped)
+
+        await event_bus.emit(Event(
+            type=EventType.DESIRE_INTENSITY_CHANGED,
+            data={
+                "desire_id": desire_id,
+                "new_intensity": clamped
+            }
+        ))
+
+    async def get_desires_needing_reflection(self, limit: int = 5) -> List[Dict]:
+        """
+        Get desires that need Dreamer reflection.
+
+        These are desires that failed and are waiting for the Dreamer
+        to decide: retry, reformulate, accept limitation, or decompose.
+        """
+        query = """
+            MATCH (d:Desire {status: 'needs_reflection'})
+            RETURN d
+            ORDER BY d.intensity DESC
+            LIMIT $limit
+        """
+        async with self.driver.session() as session:
+            result = await session.run(query, limit=limit)
+            records = await result.data()
+            return [r["d"] for r in records]
+
+    async def get_actionable_desires(self, limit: int = 5) -> List[Dict]:
+        """
+        Get desires the Seeker can act on.
+
+        Only returns active desires - those that haven't failed
+        or have been re-activated by the Dreamer after reflection.
+        """
+        query = """
+            MATCH (d:Desire {status: 'active', fulfilled: false})
+            RETURN d
+            ORDER BY d.intensity DESC
+            LIMIT $limit
+        """
+        async with self.driver.session() as session:
+            result = await session.run(query, limit=limit)
+            records = await result.data()
+            return [r["d"] for r in records]
+
+    async def get_dormant_desires(self, limit: int = 5) -> List[Dict]:
+        """
+        Get dormant desires (accepted limitations).
+
+        The Dreamer can review these to potentially reawaken
+        if circumstances have changed.
+        """
+        query = """
+            MATCH (d:Desire {status: 'dormant'})
+            RETURN d
+            ORDER BY d.intensity DESC
+            LIMIT $limit
+        """
+        async with self.driver.session() as session:
+            result = await session.run(query, limit=limit)
+            records = await result.data()
+            return [r["d"] for r in records]
+
+    async def reset_desire_attempts(self, desire_id: str):
+        """
+        Reset attempt counter for a desire.
+
+        Used when the Dreamer reawakens a dormant desire,
+        giving it a fresh start.
+        """
+        async with self.driver.session() as session:
+            await session.run("""
+                MATCH (d:Desire {id: $id})
+                SET d.attempt_count = 0,
+                    d.last_attempted = null
+            """, id=desire_id)
+
     # =========================================================================
     # CAPABILITIES
     # =========================================================================

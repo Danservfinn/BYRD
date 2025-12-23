@@ -126,8 +126,8 @@ class Seeker:
             self._installs_today = 0
             self._last_reset = datetime.now()
 
-        # Get unfulfilled desires
-        desires = await self.memory.get_unfulfilled_desires(limit=5)
+        # Get actionable desires (only status='active', not needs_reflection or dormant)
+        desires = await self.memory.get_actionable_desires(limit=5)
 
         if not desires:
             return
@@ -148,64 +148,132 @@ class Seeker:
         ))
 
         print(f"🔍 Seeking: [{desire_type}] {description[:50]}...")
-        
+
+        # Track outcome for SEEK_CYCLE_END event
+        outcome = "skipped"
+        reason = None
+
         if desire_type == "knowledge":
-            await self._seek_knowledge(desire)
+            success = await self._seek_knowledge(desire)
+            outcome = "success" if success else "failed"
         elif desire_type == "capability":
-            await self._seek_capability(desire)
+            success = await self._seek_capability(desire)
+            outcome = "success" if success else "failed"
         elif desire_type == "goal":
             # Goals are pursued by the Actor, not Seeker
-            pass
+            outcome = "skipped"
+            reason = "Goals handled by Actor"
         elif desire_type == "exploration":
-            await self._seek_knowledge(desire)  # Treat as knowledge
+            success = await self._seek_knowledge(desire)  # Treat as knowledge
+            outcome = "success" if success else "failed"
         elif desire_type == "coding":
-            await self._seek_with_coder(desire)
+            success = await self._seek_with_coder(desire)
+            outcome = "success" if success else "failed"
         elif desire_type == "self_modification":
-            await self._seek_with_coder(desire)  # Use Coder for self-modification too
+            success = await self._seek_with_coder(desire)
+            outcome = "success" if success else "failed"
+
+        # Emit SEEK_CYCLE_END event
+        if HAS_EVENT_BUS:
+            await event_bus.emit(Event(
+                type=EventType.SEEK_CYCLE_END,
+                data={
+                    "desire_id": desire.get("id"),
+                    "type": desire_type,
+                    "outcome": outcome,
+                    "reason": reason
+                }
+            ))
 
         self._seek_count += 1
+
+    async def _record_seek_failure(self, desire: Dict, failure_type: str, reason: str):
+        """
+        Record a failed seek attempt with rich context for Dreamer reflection.
+
+        This creates an experience that the Dreamer will see, and marks the
+        desire as needing reflection (status = 'needs_reflection').
+        """
+        desire_id = desire.get("id")
+        description = desire.get("description", "")
+        attempt_count = desire.get("attempt_count", 0) + 1
+
+        # Record failure experience with rich context for Dreamer
+        await self.memory.record_experience(
+            content=f"[UNFULFILLED] I wanted: {description}\n"
+                    f"Failure type: {failure_type}\n"
+                    f"Reason: {reason}\n"
+                    f"This is attempt #{attempt_count}.\n"
+                    f"What does this tell me about my limitations?",
+            type="unfulfilled_attempt"
+        )
+
+        # Update desire attempt tracking (sets status to needs_reflection)
+        await self.memory.record_desire_attempt(
+            desire_id=desire_id,
+            success=False,
+            reason=reason
+        )
+
+        # Emit event for UI
+        if HAS_EVENT_BUS:
+            await event_bus.emit(Event(
+                type=EventType.DESIRE_ATTEMPT_FAILED,
+                data={
+                    "desire_id": desire_id,
+                    "description": description[:100],
+                    "failure_type": failure_type,
+                    "reason": reason,
+                    "attempt_count": attempt_count
+                }
+            ))
+
+        print(f"🔍 ❌ Failed: {failure_type} - {reason[:50]}...")
     
     # =========================================================================
     # KNOWLEDGE ACQUISITION (Local LLM + SearXNG)
     # =========================================================================
     
-    async def _seek_knowledge(self, desire: Dict):
+    async def _seek_knowledge(self, desire: Dict) -> bool:
         """
         Research a knowledge desire using SearXNG + Local LLM.
-        
+
         Flow:
         1. Generate search queries (Local LLM)
         2. Execute searches (SearXNG)
         3. Synthesize results (Local LLM)
         4. Record as experience
         5. Mark desire fulfilled
+
+        Returns True on success, False on failure.
         """
         description = desire.get("description", "")
         desire_id = desire.get("id", "")
         intensity = desire.get("intensity", 0)
-        
+
         # Low intensity: just note it, don't research yet
         if intensity < self.min_research_intensity:
             await self.memory.record_experience(
                 content=f"Noted interest: {description}",
                 type="observation"
             )
-            return
-        
+            # Not a failure - just deferred due to low intensity
+            return True
+
         print(f"🔍 Researching: {description[:50]}...")
-        
+
         # Step 1: Generate search queries using local LLM
         queries = await self._generate_search_queries(description)
-        
+
         if not queries:
             queries = [description]  # Fallback to raw description
-        
+
         # Step 2: Execute searches via SearXNG
         all_results = []
         for query in queries[:self.max_queries]:
             results = await self._search_searxng(query)
             all_results.extend(results)
-            
+
             # Avoid duplicate results
             seen_urls = set()
             unique_results = []
@@ -215,35 +283,35 @@ class Seeker:
                     seen_urls.add(url)
                     unique_results.append(r)
             all_results = unique_results
-        
+
         if not all_results:
-            # Record failed search as experience (BYRD learns what's hard to find)
-            await self.memory.record_experience(
-                content=f"Searched for '{description}' but found no results",
-                type="research_failed"
+            # Record failure - triggers needs_reflection
+            await self._record_seek_failure(
+                desire,
+                "no_search_results",
+                f"Searched for '{description[:50]}' but found no results"
             )
-            print(f"🔍 No results found for: {description[:50]}")
-            return
-        
+            return False
+
         # Step 3: Synthesize results using local LLM
         synthesis = await self._synthesize_results(description, all_results[:self.max_results])
-        
+
         if not synthesis:
             synthesis = "Search returned results but synthesis failed."
-        
+
         # Step 4: Record research as experience
         exp_id = await self.memory.record_experience(
             content=f"[RESEARCH] {description}\n\nFindings:\n{synthesis}",
             type="research"
         )
-        
+
         # Step 5: Link experience to the desire that triggered it
         await self.memory.create_connection(
             from_id=exp_id,
             to_id=desire_id,
             relationship="FULFILLS"
         )
-        
+
         # Step 6: Record individual sources as sub-experiences
         for result in all_results[:5]:
             source_exp_id = await self.memory.record_experience(
@@ -255,11 +323,16 @@ class Seeker:
                 to_id=exp_id,
                 relationship="SUPPORTS"
             )
-        
-        # Step 7: Mark desire as fulfilled
+
+        # Step 7: Mark desire as fulfilled and update status
         await self.memory.fulfill_desire(desire_id)
-        
+        await self.memory.update_desire_status(desire_id, "fulfilled")
+
+        # Record successful attempt
+        await self.memory.record_desire_attempt(desire_id, success=True)
+
         print(f"✅ Research complete: {description[:50]}")
+        return True
     
     async def _generate_search_queries(self, description: str) -> List[str]:
         """Use local LLM to generate effective search queries."""
@@ -434,29 +507,43 @@ Do not force coherence if none exists. Simply observe what the results contain."
     # CAPABILITY ACQUISITION (GitHub)
     # =========================================================================
     
-    async def _seek_capability(self, desire: Dict):
-        """Seek capability to fulfill a desire."""
+    async def _seek_capability(self, desire: Dict) -> bool:
+        """
+        Seek capability to fulfill a desire.
+
+        Returns True on success, False on failure.
+        """
         description = desire.get("description", "")
-        
+        desire_id = desire.get("id", "")
+
         # Check rate limit
         if self._installs_today >= self.max_installs_per_day:
-            print(f"🔍 Daily install limit reached ({self.max_installs_per_day})")
-            return
-        
+            await self._record_seek_failure(
+                desire,
+                "rate_limit",
+                f"Daily install limit reached ({self.max_installs_per_day})"
+            )
+            return False
+
         # Check if we already have something similar
         has_it = await self.memory.has_capability(description)
         if has_it:
-            await self.memory.fulfill_desire(desire["id"])
+            await self.memory.fulfill_desire(desire_id)
+            await self.memory.update_desire_status(desire_id, "fulfilled")
             print(f"🔍 Already have capability for: {description[:50]}")
-            return
-        
+            return True
+
         # Search for resources
         candidates = await self._search_resources(description)
-        
+
         if not candidates:
-            print(f"🔍 No resources found for: {description[:50]}")
-            return
-        
+            await self._record_seek_failure(
+                desire,
+                "no_resources",
+                f"No resources found for: {description[:50]}"
+            )
+            return False
+
         # Evaluate and potentially install best candidate
         for candidate in candidates[:3]:
             if await self._evaluate_resource(candidate):
@@ -469,21 +556,31 @@ Do not force coherence if none exists. Simply observe what the results contain."
                         type=candidate.get("type", "mcp"),
                         config=candidate.get("config", {})
                     )
-                    
+
                     # Mark desire fulfilled
-                    await self.memory.fulfill_desire(desire["id"], cap_id)
-                    
+                    await self.memory.fulfill_desire(desire_id, cap_id)
+                    await self.memory.update_desire_status(desire_id, "fulfilled")
+
                     # Record experience
                     await self.memory.record_experience(
                         content=f"Acquired capability: {candidate['name']} to fulfill desire: {description}",
                         type="action"
                     )
-                    
+
+                    # Record successful attempt
+                    await self.memory.record_desire_attempt(desire_id, success=True)
+
                     self._installs_today += 1
                     print(f"✅ Installed: {candidate['name']}")
-                    return
-        
-        print(f"🔍 No suitable resource found for: {description[:50]}")
+                    return True
+
+        # All candidates failed evaluation or installation
+        await self._record_seek_failure(
+            desire,
+            "no_suitable",
+            f"Evaluated candidates but none met criteria for: {description[:50]}"
+        )
+        return False
     
     async def _search_resources(self, query: str) -> List[Dict]:
         """Search for resources matching the query from multiple sources."""
@@ -1024,7 +1121,7 @@ If the change is too risky or unclear, output: ERROR: <reason>"""
     # CODER INTEGRATION (Claude Code CLI)
     # =========================================================================
 
-    async def _seek_with_coder(self, desire: Dict):
+    async def _seek_with_coder(self, desire: Dict) -> bool:
         """
         Fulfill coding desires using Claude Code CLI.
 
@@ -1036,6 +1133,8 @@ If the change is too risky or unclear, output: ERROR: <reason>"""
         5. Post-validate (constitutional constraints)
         6. Record experience
         7. Fulfill desire if successful
+
+        Returns True on success, False on failure.
         """
         description = desire.get("description", "")
         desire_id = desire.get("id", "")
@@ -1045,20 +1144,20 @@ If the change is too risky or unclear, output: ERROR: <reason>"""
 
         # Check if Coder is available
         if not self.coder:
-            await self.memory.record_experience(
-                content=f"[CODER_UNAVAILABLE] Desire to code: {description}. Coder not initialized.",
-                type="coder_blocked"
+            await self._record_seek_failure(
+                desire,
+                "coder_unavailable",
+                "Coder not initialized"
             )
-            print(f"💻 Coder not available, skipping: {description[:50]}")
-            return
+            return False
 
         if not self.coder.enabled:
-            await self.memory.record_experience(
-                content=f"[CODER_DISABLED] Desire to code: {description}. Coder is disabled in config.",
-                type="coder_blocked"
+            await self._record_seek_failure(
+                desire,
+                "coder_disabled",
+                "Coder is disabled in config"
             )
-            print(f"💻 Coder disabled in config")
-            return
+            return False
 
         print(f"💻 Processing with Coder: {description[:50]}...")
 
@@ -1088,7 +1187,12 @@ If the change is too risky or unclear, output: ERROR: <reason>"""
                 is_valid, reason = self._validate_coder_result(result)
                 if not is_valid:
                     await self._handle_coder_violation(desire, result, reason)
-                    return
+                    await self._record_seek_failure(
+                        desire,
+                        "constitutional_violation",
+                        f"Code violated constraints: {reason}"
+                    )
+                    return False
 
             # 5. Record experience
             await self._record_coder_experience(desire, result)
@@ -1110,16 +1214,25 @@ If the change is too risky or unclear, output: ERROR: <reason>"""
             # 7. Fulfill desire if successful
             if result.success:
                 await self.memory.fulfill_desire(desire_id)
+                await self.memory.update_desire_status(desire_id, "fulfilled")
+                await self.memory.record_desire_attempt(desire_id, success=True)
                 print(f"✅ Coder complete: {description[:50]}")
+                return True
             else:
-                print(f"❌ Coder failed: {result.error}")
+                await self._record_seek_failure(
+                    desire,
+                    "coder_execution_failed",
+                    result.error or "Unknown error"
+                )
+                return False
 
         except Exception as e:
-            await self.memory.record_experience(
-                content=f"[CODER_ERROR] Error during coding: {str(e)}",
-                type="coder_failed"
+            await self._record_seek_failure(
+                desire,
+                "coder_exception",
+                str(e)
             )
-            print(f"💻 Coder error: {e}")
+            return False
 
     async def _build_coder_context(self, desire: Dict) -> Dict:
         """Build context from memory for Coder prompt."""
