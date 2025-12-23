@@ -18,6 +18,7 @@ from memory import Memory
 from dreamer import Dreamer
 from seeker import Seeker
 from actor import Actor
+from self_modification import SelfModificationSystem
 
 
 class BYRD:
@@ -35,13 +36,31 @@ class BYRD:
     def __init__(self, config_path: str = "config.yaml"):
         # Load config
         self.config = self._load_config(config_path)
-        
+
         # Initialize components
         self.memory = Memory(self.config.get("memory", {}))
-        self.dreamer = Dreamer(self.memory, self.config.get("dreamer", {}))
-        self.seeker = Seeker(self.memory, self.config.get("seeker", {}))
+        self.dreamer = Dreamer(self.memory, {
+            **self.config.get("dreamer", {}),
+            **self.config.get("local_llm", {})
+        })
+        self.seeker = Seeker(self.memory, {
+            **self.config.get("seeker", {}),
+            **self.config.get("local_llm", {}),
+            "self_modification": self.config.get("self_modification", {})
+        })
         self.actor = Actor(self.memory, self.config.get("actor", {}))
-        
+
+        # Initialize self-modification system
+        self_mod_config = self.config.get("self_modification", {})
+        self.self_mod = SelfModificationSystem(
+            memory=self.memory,
+            config=self_mod_config,
+            project_root="."
+        )
+
+        # Inject self-modification system into Seeker
+        self.seeker.self_mod = self.self_mod
+
         # State
         self._running = False
     
@@ -97,6 +116,10 @@ class BYRD:
             print("\n🧠 Initializing innate capabilities...")
             await self._init_innate_capabilities()
         
+        # Show self-modification status
+        self_mod_status = "enabled" if self.self_mod.enabled else "disabled"
+        print(f"\n🔧 Self-modification: {self_mod_status}")
+
         # Start background processes
         print("\n💭 Starting Dreamer (continuous reflection)...")
         print("🔍 Starting Seeker (desire fulfillment)...")
@@ -152,17 +175,17 @@ class BYRD:
     async def status(self) -> Dict:
         """Get current status of BYRD."""
         await self.memory.connect()
-        
+
         stats = await self.memory.stats()
         desires = await self.memory.get_unfulfilled_desires(limit=5)
         capabilities = await self.memory.get_capabilities()
-        
+
         await self.memory.close()
-        
+
         return {
             "memory_stats": stats,
             "unfulfilled_desires": [
-                {"description": d.get("description", ""), 
+                {"description": d.get("description", ""),
                  "type": d.get("type", ""),
                  "intensity": d.get("intensity", 0)}
                 for d in desires
@@ -170,7 +193,8 @@ class BYRD:
             "capabilities": [c.get("name", "") for c in capabilities],
             "dream_count": self.dreamer.dream_count(),
             "seek_count": self.seeker.seek_count(),
-            "recent_insights": self.dreamer.recent_insights()
+            "recent_insights": self.dreamer.recent_insights(),
+            "self_modification": self.self_mod.get_statistics()
         }
     
     async def chat_loop(self):

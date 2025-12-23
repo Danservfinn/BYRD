@@ -460,3 +460,82 @@ class Memory:
             result = await session.run(query)
             records = await result.data()
             return {r["type"]: r["count"] for r in records}
+
+    # =========================================================================
+    # PROVENANCE SUPPORT METHODS
+    # =========================================================================
+
+    async def get_desire_by_id(self, desire_id: str) -> Optional[Dict]:
+        """Get a specific desire by ID."""
+        query = """
+            MATCH (d:Desire {id: $id})
+            RETURN d
+        """
+        async with self.driver.session() as session:
+            result = await session.run(query, id=desire_id)
+            record = await result.single()
+            return record["d"] if record else None
+
+    async def get_experience_by_id(self, exp_id: str) -> Optional[Dict]:
+        """Get a specific experience by ID."""
+        query = """
+            MATCH (e:Experience {id: $id})
+            RETURN e
+        """
+        async with self.driver.session() as session:
+            result = await session.run(query, id=exp_id)
+            record = await result.single()
+            return record["e"] if record else None
+
+    async def get_desire_sources(self, desire_id: str) -> List[str]:
+        """
+        Get experience IDs that led to a desire.
+
+        Desires are formed during dream cycles, so we trace back through
+        the dream experience that created the desire.
+        """
+        query = """
+            MATCH (d:Desire {id: $id})
+            OPTIONAL MATCH (d)<-[:MOTIVATED]-(e:Experience)
+            OPTIONAL MATCH (d)<-[:DERIVED_FROM]-(b:Belief)<-[:DERIVED_FROM]-(e2:Experience)
+            WITH collect(DISTINCT e.id) + collect(DISTINCT e2.id) as exp_ids
+            UNWIND exp_ids as exp_id
+            RETURN DISTINCT exp_id
+        """
+        async with self.driver.session() as session:
+            result = await session.run(query, id=desire_id)
+            records = await result.data()
+            return [r["exp_id"] for r in records if r["exp_id"]]
+
+    async def find_experiences_mentioning(
+        self,
+        text: str,
+        type_filter: Optional[str] = None
+    ) -> List[Dict]:
+        """Find experiences that mention specific text."""
+        query = """
+            MATCH (e:Experience)
+            WHERE e.content CONTAINS $text
+              AND ($type IS NULL OR e.type = $type)
+            RETURN e
+            ORDER BY e.timestamp DESC
+            LIMIT 20
+        """
+        async with self.driver.session() as session:
+            result = await session.run(query, text=text[:100], type=type_filter)
+            records = await result.data()
+            return [r["e"] for r in records]
+
+    async def link_desire_to_experiences(
+        self,
+        desire_id: str,
+        experience_ids: List[str]
+    ):
+        """Create MOTIVATED relationships from experiences to desire."""
+        async with self.driver.session() as session:
+            await session.run("""
+                MATCH (d:Desire {id: $desire_id})
+                MATCH (e:Experience)
+                WHERE e.id IN $exp_ids
+                MERGE (e)-[:MOTIVATED]->(d)
+            """, desire_id=desire_id, exp_ids=experience_ids)
