@@ -75,6 +75,11 @@ class Dreamer:
         # Load belief cache on startup for efficient deduplication
         await self._load_belief_cache()
 
+        # Load persistent dream count from database
+        self._dream_count = await self.memory.get_system_counter("dream_count")
+        if self._dream_count > 0:
+            print(f"💭 Restored dream count: {self._dream_count}")
+
         while self._running:
             try:
                 await self._dream_cycle()
@@ -206,10 +211,13 @@ class Dreamer:
         self._dream_count = 0
         self._observed_keys = {}
         self._inner_voice_queue.clear()  # Clear narrator queue
+        # Note: Database counter is reset in memory.clear_all()
 
     async def _dream_cycle(self):
         """One complete dream cycle: recall, reflect, record."""
         self._dream_count += 1
+        # Persist dream count to survive restarts
+        await self.memory.set_system_counter("dream_count", self._dream_count)
         print(f"💭 Starting dream cycle #{self._dream_count}...")
 
         # Emit start event for real-time UI
