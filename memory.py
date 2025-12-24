@@ -1100,6 +1100,96 @@ class Memory:
         print("Memory cleared: all nodes and relationships deleted - database is empty")
 
     # =========================================================================
+    # CODE SELF-AWARENESS (Read Own Source)
+    # =========================================================================
+
+    # Files that BYRD can read and potentially modify
+    MODIFIABLE_FILES = [
+        "byrd.py", "dreamer.py", "seeker.py", "actor.py",
+        "memory.py", "llm_client.py", "config.yaml",
+        "aitmpl_client.py", "event_bus.py", "server.py",
+    ]
+
+    async def read_own_source(self, filename: str) -> Optional[str]:
+        """
+        Read one of BYRD's own source files.
+
+        This enables self-modification by letting BYRD understand
+        its current implementation before making changes.
+
+        Only files in MODIFIABLE_FILES can be read.
+        """
+        from pathlib import Path
+
+        # Security check - only allow reading modifiable files
+        if filename not in self.MODIFIABLE_FILES:
+            print(f"Cannot read protected file: {filename}")
+            return None
+
+        try:
+            # Get the BYRD directory (where this file lives)
+            byrd_dir = Path(__file__).parent
+            filepath = byrd_dir / filename
+
+            if filepath.exists():
+                content = filepath.read_text(encoding='utf-8')
+                return content
+            else:
+                print(f"File not found: {filename}")
+                return None
+
+        except Exception as e:
+            print(f"Error reading {filename}: {e}")
+            return None
+
+    async def get_source_structure(self, filename: str) -> Optional[Dict]:
+        """
+        Get a structural summary of a source file.
+
+        Returns information about classes, methods, and their locations
+        to help BYRD understand where to make modifications.
+        """
+        content = await self.read_own_source(filename)
+        if not content:
+            return None
+
+        import re
+
+        structure = {
+            "filename": filename,
+            "lines": len(content.split('\n')),
+            "classes": [],
+            "functions": [],
+            "imports": []
+        }
+
+        lines = content.split('\n')
+        for i, line in enumerate(lines, 1):
+            # Find class definitions
+            class_match = re.match(r'^class\s+(\w+)', line)
+            if class_match:
+                structure["classes"].append({
+                    "name": class_match.group(1),
+                    "line": i
+                })
+
+            # Find function/method definitions
+            func_match = re.match(r'^(\s*)(?:async\s+)?def\s+(\w+)', line)
+            if func_match:
+                indent = len(func_match.group(1))
+                structure["functions"].append({
+                    "name": func_match.group(2),
+                    "line": i,
+                    "is_method": indent > 0
+                })
+
+            # Find imports
+            if line.startswith('import ') or line.startswith('from '):
+                structure["imports"].append(line.strip())
+
+        return structure
+
+    # =========================================================================
     # GRAPH INTROSPECTION (Self-Awareness)
     # =========================================================================
 
