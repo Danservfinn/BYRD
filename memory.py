@@ -1021,6 +1021,74 @@ class Memory:
             return {r["type"]: r["count"] for r in records}
 
     # =========================================================================
+    # SYSTEM STATE PERSISTENCE (counters that survive restarts)
+    # =========================================================================
+
+    async def get_system_counter(self, counter_name: str) -> int:
+        """
+        Get a persistent system counter value.
+
+        Used for dream_count, seek_count, etc. that should survive server restarts.
+        """
+        query = """
+            MATCH (s:SystemState {name: 'counters'})
+            RETURN s[$counter_name] as value
+        """
+        async with self.driver.session() as session:
+            result = await session.run(query, counter_name=counter_name)
+            record = await result.single()
+            if record and record["value"] is not None:
+                return int(record["value"])
+            return 0
+
+    async def set_system_counter(self, counter_name: str, value: int):
+        """
+        Set a persistent system counter value.
+
+        Creates the SystemState node if it doesn't exist.
+        """
+        query = """
+            MERGE (s:SystemState {name: 'counters'})
+            SET s[$counter_name] = $value, s.updated_at = datetime()
+            RETURN s
+        """
+        async with self.driver.session() as session:
+            await session.run(query, counter_name=counter_name, value=value)
+
+    async def increment_system_counter(self, counter_name: str) -> int:
+        """
+        Atomically increment a system counter and return the new value.
+        """
+        query = """
+            MERGE (s:SystemState {name: 'counters'})
+            ON CREATE SET s[$counter_name] = 1, s.updated_at = datetime()
+            ON MATCH SET s[$counter_name] = coalesce(s[$counter_name], 0) + 1, s.updated_at = datetime()
+            RETURN s[$counter_name] as value
+        """
+        async with self.driver.session() as session:
+            result = await session.run(query, counter_name=counter_name)
+            record = await result.single()
+            return int(record["value"]) if record else 1
+
+    async def get_all_system_counters(self) -> Dict[str, int]:
+        """
+        Get all system counters as a dictionary.
+        """
+        query = """
+            MATCH (s:SystemState {name: 'counters'})
+            RETURN s
+        """
+        async with self.driver.session() as session:
+            result = await session.run(query)
+            record = await result.single()
+            if record:
+                node = dict(record["s"])
+                # Filter out non-counter properties
+                return {k: v for k, v in node.items()
+                        if k not in ('name', 'updated_at') and isinstance(v, (int, float))}
+            return {}
+
+    # =========================================================================
     # PROVENANCE SUPPORT METHODS
     # =========================================================================
 
@@ -1112,6 +1180,7 @@ class Memory:
         - All custom node types created by BYRD (Insight, Question, Theory, etc.)
         - All relationships between nodes
         - Indexes for custom node types
+        - System state (dream_count, seek_count counters)
 
         WARNING: This is destructive and cannot be undone.
         Used for reset functionality to trigger fresh awakening.

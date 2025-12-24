@@ -134,6 +134,11 @@ class Seeker:
         self._running = True
         print(f"🔍 Seeker starting (interval: {self.interval_seconds}s, concurrent: {self.max_concurrent_desires})...")
 
+        # Load persistent seek count from database
+        self._seek_count = await self.memory.get_system_counter("seek_count")
+        if self._seek_count > 0:
+            print(f"🔍 Restored seek count: {self._seek_count}")
+
         while self._running:
             try:
                 await self._seek_cycle()
@@ -151,6 +156,7 @@ class Seeker:
         self._seek_count = 0
         self._installs_today = 0
         self._last_reset = datetime.now()
+        # Note: Database counter is reset in memory.clear_all()
 
     async def _seek_cycle(self):
         """
@@ -279,6 +285,8 @@ class Seeker:
                 ))
 
             self._seek_count += 1
+            # Persist seek count to survive restarts
+            await self.memory.set_system_counter("seek_count", self._seek_count)
 
     async def _crystallize_motivations(self, reflections: List[Dict]):
         """
