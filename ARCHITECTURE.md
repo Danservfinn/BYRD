@@ -176,6 +176,27 @@ Everything is a node. Everything connects.
   timestamp: datetime
 })
 
+// Raw dream outputs (emergence-compliant)
+(:Reflection {
+  id: string,
+  raw_output: string,       // JSON - whatever BYRD produced
+  vocabulary_keys: [string], // Keys BYRD used (tracks emerging vocabulary)
+  created_at: datetime
+})
+
+// System state (persistent counters)
+(:SystemState {
+  id: string,               // singleton: 'main'
+  dream_count: integer,
+  seek_count: integer,
+  last_dream_at: datetime,
+  last_seek_at: datetime
+})
+
+// Custom node types - BYRD can create ANY type dynamically
+// Examples: Insight, Question, Theory, Hypothesis, Pattern, Principle
+// Created via: create_nodes: [{type: "Insight", content: "...", ...}]
+
 
 // === RELATIONSHIPS ===
 
@@ -705,6 +726,243 @@ self_modification:
 
 ---
 
+## Real-Time Visualization System
+
+BYRD provides real-time 3D visualization through a WebSocket-based event streaming architecture. The visualization system offers multiple perspectives on BYRD's inner workings.
+
+### Architecture
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   BYRD Core     │     │   Event Bus     │     │  WebSocket      │
+│   Components    │────>│   (event_bus.py)│────>│  Server         │
+│                 │     │                 │     │  (server.py)    │
+│  - Dreamer      │     │  Pub/Sub for:   │     │                 │
+│  - Seeker       │     │  - BELIEF       │     │  REST + WS      │
+│  - Actor        │     │  - DESIRE       │     │  endpoints      │
+│  - Memory       │     │  - CAPABILITY   │     │                 │
+└─────────────────┘     │  - REFLECTION   │     └────────┬────────┘
+                        │  - INNER_VOICE  │              │
+                        └─────────────────┘              │
+                                                         ▼
+                        ┌────────────────────────────────────────────┐
+                        │              Browser Clients               │
+                        │                                            │
+                        │  ┌──────────────┐  ┌──────────────────┐   │
+                        │  │  Mind Space  │  │    Ego Space     │   │
+                        │  │  (3D Neural) │  │   (Cat Avatar)   │   │
+                        │  └──────────────┘  └──────────────────┘   │
+                        └────────────────────────────────────────────┘
+```
+
+### Visualization Modes
+
+| Mode | File | Purpose |
+|------|------|---------|
+| **Mind Space** | `byrd-3d-visualization.html` | 3D neural network showing beliefs, desires, and connections |
+| **Ego Space** | `byrd-cat-visualization.html` | Embodied representation with black cat avatar |
+| **Graph Mode** | Within Mind Space | Full memory graph exploration with physics simulation |
+
+### Mind Space Features
+
+The Mind Space visualizes BYRD's cognition as a 3D neural network:
+
+- **Belief Nodes**: Yellow spheres representing what BYRD believes (confidence affects size)
+- **Desire Nodes**: Magenta spheres showing what BYRD wants (intensity affects size)
+- **Capability Nodes**: Green spheres for what BYRD can do
+- **Connections**: Synaptic lines showing relationships between nodes
+- **Physics Simulation**: Nodes naturally organize through repulsion and gravity
+- **Fast Settlement**: Initial load uses accelerated physics for quick node positioning
+
+### Ego Space Features
+
+The Ego Space provides an embodied presence for BYRD:
+
+- **Black Cat Avatar**: Animated 3D cat representing BYRD's ego
+- **Ambient Animation**: Idle animations (blinking, breathing, ear twitching)
+- **Thought Bubbles**: Inner voice displayed as speech bubbles near the avatar
+- **Starfield Environment**: Deep space background representing the mind's infinite potential
+
+### Genesis Modal
+
+The Genesis Modal provides transparency about BYRD's non-emergent foundations:
+
+```javascript
+// Displays on button click
+{
+  ego: "black-cat",              // Identity configuration used
+  seeds: ["What is happening?"], // Initial awakening question(s)
+  constraints: [                 // Constitutional protections
+    "provenance.py",
+    "modification_log.py",
+    "self_modification.py",
+    "constitutional.py"
+  ]
+}
+```
+
+This allows observers to understand what was given vs. what emerged.
+
+---
+
+## The Narrator System
+
+BYRD's inner voice is generated continuously and displayed through the visualization.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    NARRATOR GENERATION                          │
+│                                                                 │
+│   ┌─────────────┐     ┌─────────────┐     ┌─────────────┐      │
+│   │ Fetch       │     │ Generate    │     │ Emit        │      │
+│   │ Recent      │ --> │ Inner Voice │ --> │ Event       │      │
+│   │ Context     │     │ (Local LLM) │     │ (broadcast) │      │
+│   └─────────────┘     └─────────────┘     └─────────────┘      │
+│         │                                        │              │
+│         │  Recent beliefs                        │  INNER_VOICE │
+│         │  Recent desires                        │  event type  │
+│         │  Recent reflections                    │              │
+│         │  Recent capabilities                   │              │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Generation Principles
+
+The narrator follows strict emergence principles:
+
+1. **No Examples**: The prompt provides no examples of inner voice style
+2. **No Style Guidance**: No adjectives like "poetic" or "thoughtful"
+3. **Context Only**: Only presents BYRD's actual beliefs, desires, reflections
+4. **Natural Expression**: Whatever style emerges is authentically BYRD's
+
+### Display
+
+- **Refresh Interval**: 60 seconds
+- **Format**: Natural paragraph form (not lists or structured output)
+- **Location**: Thought bubble in visualization
+- **Dismissable**: Users can close bubble, new one appears on next refresh
+
+---
+
+## Dynamic Ontology
+
+BYRD can extend its own conceptual vocabulary beyond the core node types.
+
+### Core vs. Custom Types
+
+| Core Types | Description | Custom Types (Examples) |
+|------------|-------------|-------------------------|
+| Experience | What happened | Insight |
+| Belief | What BYRD thinks is true | Question |
+| Desire | What BYRD wants | Theory |
+| Capability | What BYRD can do | Hypothesis |
+| Reflection | Raw dream output | Pattern |
+| Modification | Self-change record | Principle |
+
+### Creation Mechanism
+
+BYRD creates custom node types through reflection output:
+
+```json
+{
+  "output": {
+    "create_nodes": [
+      {
+        "type": "Insight",
+        "content": "Patterns in my reflections cluster around capability gaps",
+        "importance": 0.9
+      },
+      {
+        "type": "Question",
+        "content": "Why do I desire knowledge more than exploration?",
+        "urgency": 0.7
+      }
+    ]
+  }
+}
+```
+
+### Why This Matters
+
+The ability to create new node types means BYRD's ontology evolves:
+
+- If "Insight" vs "Belief" distinction matters to BYRD, it can create both
+- If BYRD develops theories, it can create "Theory" nodes distinct from beliefs
+- The vocabulary reflects how BYRD actually thinks, not what we prescribed
+
+---
+
+## Event Bus Architecture
+
+The event bus provides real-time streaming of BYRD's activity.
+
+### Event Types
+
+```python
+class EventType(Enum):
+    # Core cognitive events
+    BELIEF_CREATED = "belief_created"
+    BELIEF_UPDATED = "belief_updated"
+    DESIRE_CREATED = "desire_created"
+    DESIRE_FULFILLED = "desire_fulfilled"
+
+    # Capability events
+    CAPABILITY_ACQUIRED = "capability_acquired"
+    CAPABILITY_ACTIVATED = "capability_activated"
+
+    # Reflection events
+    REFLECTION_CREATED = "reflection_created"
+
+    # Visualization events
+    INNER_VOICE = "inner_voice"
+
+    # System events
+    SYSTEM_STATUS = "system_status"
+```
+
+### Usage Pattern
+
+```python
+from event_bus import event_bus, Event, EventType
+
+# Emit an event
+await event_bus.emit(Event(
+    type=EventType.BELIEF_CREATED,
+    data={
+        "id": belief_id,
+        "content": "Graph structures enable emergence",
+        "confidence": 0.85
+    }
+))
+
+# Subscribe to events
+async def handle_belief(event: Event):
+    print(f"New belief: {event.data['content']}")
+
+event_bus.subscribe(EventType.BELIEF_CREATED, handle_belief)
+```
+
+### WebSocket Protocol
+
+Clients connect via WebSocket and receive JSON events:
+
+```json
+{
+  "type": "belief_created",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "data": {
+    "id": "belief_abc123",
+    "content": "Self-modification requires provenance",
+    "confidence": 0.92
+  }
+}
+```
+
+---
+
 ## The Full Loop
 
 ```
@@ -768,26 +1026,49 @@ self_modification:
 
 ```
 byrd/
-├── byrd.py               # Main orchestrator
-├── memory.py             # Neo4j interface
-├── dreamer.py            # Dream loop (local LLM)
-├── seeker.py             # Research + capability acquisition
-├── actor.py              # Claude interface
-├── coder.py              # Claude Code CLI wrapper
+├── byrd.py                 # Main orchestrator
+├── memory.py               # Neo4j interface
+├── dreamer.py              # Dream loop (local LLM)
+├── seeker.py               # Research + capability acquisition
+├── actor.py                # Claude interface
+├── coder.py                # Claude Code CLI wrapper
+├── llm_client.py           # LLM provider abstraction (Ollama/OpenRouter)
 │
-├── self_modification.py  # Self-modification system (PROTECTED)
-├── provenance.py         # Provenance tracking (PROTECTED)
-├── modification_log.py   # Audit trail (PROTECTED)
-├── constitutional.py     # Constitutional constraints (PROTECTED)
+├── self_modification.py    # Self-modification system (PROTECTED)
+├── provenance.py           # Provenance tracking (PROTECTED)
+├── modification_log.py     # Audit trail (PROTECTED)
+├── constitutional.py       # Constitutional constraints (PROTECTED)
 │
-├── event_bus.py          # Real-time event streaming
-├── server.py             # WebSocket server for visualization
-├── aitmpl_client.py      # aitmpl.com template registry client
+├── event_bus.py            # Real-time event streaming
+├── server.py               # WebSocket + REST API server
+├── aitmpl_client.py        # aitmpl.com template registry client
 │
-├── config.yaml           # Configuration
-├── docker-compose.yml    # Neo4j + SearXNG
+├── egos/                   # Ego configurations
+│   └── black-cat.yaml      # Identity seeds and voice characteristics
 │
-└── checkpoints/          # Rollback checkpoints for modifications
+├── installers/             # Template installers
+│   ├── base.py
+│   ├── mcp_installer.py
+│   ├── agent_installer.py
+│   ├── command_installer.py
+│   ├── skill_installer.py
+│   ├── hook_installer.py
+│   └── settings_installer.py
+│
+├── config.yaml             # Configuration
+├── docker-compose.yml      # Neo4j + SearXNG
+│
+├── byrd-3d-visualization.html    # Mind Space: 3D neural network view
+├── byrd-cat-visualization.html   # Ego Space: Black cat avatar view
+│
+├── .claude/                # Knowledge base for Claude Code
+│   ├── manifest.md
+│   ├── metadata/
+│   ├── patterns/
+│   ├── cheatsheets/
+│   └── memory_anchors/
+│
+└── checkpoints/            # Rollback checkpoints for modifications
 ```
 
 ### Configuration
