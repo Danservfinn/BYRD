@@ -399,6 +399,19 @@
     .crystal-source-item:hover {
       transform: translateX(4px);
     }
+
+    /* Stats bar type filtering */
+    .stat-type {
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .stat-type:hover {
+      text-decoration: underline;
+    }
+    .stat-type.active {
+      text-decoration: underline;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -476,10 +489,10 @@
   <div class="ui-overlay bottom-4 left-1/2 -translate-x-1/2">
     <!-- Stats Row -->
     <div id="stats" class="flex items-center justify-center gap-3 px-4 py-2 mb-2 bg-white/90 border border-slate-200 rounded-lg text-xs font-mono shadow">
-      <span class="text-amber-600">Beliefs: <span id="belief-count">0</span></span>
-      <span class="text-rose-600">Desires: <span id="desire-count">0</span></span>
-      <span class="text-purple-600">Reflect: <span id="reflection-count">0</span></span>
-      <span class="text-sky-600">Exp: <span id="exp-count">0</span></span>
+      <span class="stat-type text-amber-600" data-type="belief">Beliefs: <span id="belief-count">0</span></span>
+      <span class="stat-type text-rose-600" data-type="desire">Desires: <span id="desire-count">0</span></span>
+      <span class="stat-type text-purple-600" data-type="reflection">Reflect: <span id="reflection-count">0</span></span>
+      <span class="stat-type text-sky-600" data-type="experience">Exp: <span id="exp-count">0</span></span>
       <span class="text-slate-400">Nodes: <span id="node-count">0</span></span>
       <span class="text-indigo-600">Dreams: <span id="dream-count">0</span></span>
       <span class="text-teal-600">Seeks: <span id="seek-count">0</span></span>
@@ -1111,6 +1124,9 @@
     let dreamCount = 0;
     let seekCount = 0;
     let currentPhase = 'idle';
+
+    // Type highlight state
+    let highlightedType = null;  // Currently highlighted type, null = none
 
     // Gravitational Spiral: Connection tracking for centrality-based positioning
     const connectionCounts = new Map(); // nodeId -> connection count
@@ -2059,15 +2075,15 @@
       // Pulse the core
       pulseCore(type, importance);
 
-      // Update count
-      nodeCountEl.textContent = nodes3D.length;
-
       // Limit nodes
       if (nodes3D.length > 80) {
         const oldNode = nodes3D.shift();
         fadeOutAndRemove(oldNode);
         connectionCounts.delete(oldNode.userData.id);
       }
+
+      // Update counts to reflect actual rendered nodes
+      updateRenderedCounts();
 
       return mesh;
     }
@@ -2939,6 +2955,7 @@
         }
 
         const type = nodeData.type || 'experience';
+        const importance = nodeData.importance || 0.5;  // Default importance
 
         // Use getCustomTypeColor for dynamic color assignment (handles both system and custom types)
         const colors = getCustomTypeColor(type);
@@ -3197,6 +3214,9 @@
      * Switch between event mode and graph mode
      */
     async function setVisualizationMode(mode) {
+        // Clear any type highlighting when switching modes
+        clearTypeHighlight();
+
         const heatLegend = document.getElementById('heat-legend');
 
         if (mode === 'graph') {
@@ -3510,6 +3530,98 @@
       selectedNodeIndex = -1;
       hideDetailPanel();
       resetCamera();
+    }
+
+    // Type filtering: Highlight all nodes of a specific type
+    function highlightNodesByType(type) {
+      // Toggle off if same type clicked
+      if (highlightedType === type) {
+        clearTypeHighlight();
+        return;
+      }
+
+      highlightedType = type;
+
+      // Update UI active state
+      document.querySelectorAll('.stat-type').forEach(el => {
+        el.classList.toggle('active', el.dataset.type === type);
+      });
+
+      // Process event mode nodes (nodes3D array)
+      nodes3D.forEach(node => {
+        const nodeType = node.userData.type?.toLowerCase();
+        const isMatch = nodeType === type;
+
+        if (isMatch) {
+          // Highlight: increase emissive, full opacity
+          node.material.emissive.setHex(0x444444);
+          node.material.opacity = 1.0;
+        } else {
+          // Dim: reduce opacity, no emissive
+          node.material.emissive.setHex(0x000000);
+          node.material.opacity = 0.15;
+        }
+      });
+
+      // Also handle graph mode nodes if active
+      if (graphState.nodeIdToMesh) {
+        Object.values(graphState.nodeIdToMesh).forEach(mesh => {
+          const nodeType = mesh.userData.type?.toLowerCase();
+          const isMatch = nodeType === type;
+
+          if (isMatch) {
+            mesh.material.emissive.setHex(0x444444);
+            mesh.material.opacity = 1.0;
+          } else {
+            mesh.material.emissive.setHex(0x000000);
+            mesh.material.opacity = 0.15;
+          }
+        });
+      }
+    }
+
+    // Clear type highlighting and restore normal appearance
+    function clearTypeHighlight() {
+      highlightedType = null;
+
+      // Clear UI active state
+      document.querySelectorAll('.stat-type').forEach(el => {
+        el.classList.remove('active');
+      });
+
+      // Restore event mode nodes
+      nodes3D.forEach(node => {
+        const colors = NODE_COLORS[node.userData.type?.toLowerCase()] || NODE_COLORS.default;
+        node.material.emissive.setHex(0x000000);
+        node.material.opacity = colors.opacity || 0.9;
+      });
+
+      // Restore graph mode nodes
+      if (graphState.nodeIdToMesh) {
+        Object.values(graphState.nodeIdToMesh).forEach(mesh => {
+          const colors = NODE_COLORS[mesh.userData.type?.toLowerCase()] || NODE_COLORS.default;
+          mesh.material.emissive.setHex(0x000000);
+          mesh.material.opacity = colors.opacity || 0.9;
+        });
+      }
+    }
+
+    // Update rendered node counts to match actual nodes3D array
+    function updateRenderedCounts() {
+      const counts = { belief: 0, desire: 0, reflection: 0, experience: 0 };
+
+      nodes3D.forEach(node => {
+        const type = node.userData.type?.toLowerCase();
+        if (counts.hasOwnProperty(type)) {
+          counts[type]++;
+        }
+      });
+
+      document.getElementById('belief-count').textContent = counts.belief;
+      document.getElementById('desire-count').textContent = counts.desire;
+      document.getElementById('reflection-count').textContent = counts.reflection;
+      document.getElementById('exp-count').textContent = counts.experience;
+      document.getElementById('node-count').textContent = nodes3D.length;
     }
 
     // Phase 4: Enhanced camera transition with callback
@@ -5454,8 +5566,8 @@
       events = [];
       eventList.innerHTML = '';
 
-      // Reset counters
-      nodeCountEl.textContent = '0';
+      // Reset all counters
+      updateRenderedCounts();
 
       console.log('Visualization cleared - all nodes and events removed');
     }
@@ -5576,6 +5688,23 @@
     // Fast Forward button - instantly settle physics
     btnFastForward.addEventListener('click', () => {
       fastForwardPhysics();
+    });
+
+    // Stats bar type filtering - click to highlight nodes of that type
+    document.querySelectorAll('.stat-type').forEach(el => {
+      el.addEventListener('click', () => {
+        const type = el.dataset.type;
+        if (type) {
+          highlightNodesByType(type);
+        }
+      });
+    });
+
+    // ESC key to clear type highlighting
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && highlightedType) {
+        clearTypeHighlight();
+      }
     });
 
     /**
@@ -5892,8 +6021,8 @@
           });
         }
 
-        // Update node count display
-        nodeCountEl.textContent = nodes3D.length;
+        // Update all type counts to reflect rendered nodes
+        updateRenderedCounts();
 
         console.log(`Loaded ${totalCreated} nodes and ${relsCreated} relationships from database`);
         updateStatus(`Loaded ${totalCreated} nodes`, 'green');
