@@ -88,6 +88,7 @@ Egos live in `egos/` directory as YAML files. See `egos/black-cat.yaml` for an e
 | **Self-Modifier** | `self_modification.py` | - | Safe architectural evolution |
 | **Event Bus** | `event_bus.py` | - | Real-time event streaming to visualization |
 | **Server** | `server.py` | - | WebSocket + REST API for clients |
+| **Quantum** | `quantum_randomness.py` | - | True quantum entropy from ANU QRNG |
 
 ## Constitutional Constraints (CRITICAL)
 
@@ -369,6 +370,57 @@ BYRD's inner voice is generated periodically and displayed as thought bubbles:
 
 The narrator prompt only provides BYRD's recent context (beliefs, desires, reflections) and asks for an inner voice without prescribing style.
 
+## Quantum Randomness
+
+BYRD integrates true quantum randomness from the Australian National University's Quantum Random Number Generator (ANU QRNG). This provides genuine physical indeterminacy for emergent consciousness.
+
+### How It Works
+
+```python
+from quantum_randomness import get_quantum_provider
+
+# Get the singleton provider
+quantum = get_quantum_provider()
+
+# Get temperature modulation for LLM calls
+modulated_temp, influence_info = await quantum.get_temperature_delta(
+    base_temperature=0.7,
+    max_delta=0.15
+)
+# influence_info contains: source ("quantum" or "classical"), delta applied
+
+# Get a random float [0, 1)
+value, source = await quantum.get_float()
+```
+
+### Configuration
+
+```yaml
+quantum:
+  enabled: true
+  pool_size: 256              # Pre-fetched quantum bytes
+  low_watermark: 64           # Trigger refill threshold
+  temperature_max_delta: 0.15 # ±0.15 temperature range
+  significance_threshold: 0.05 # Record QuantumMoment when delta exceeds this
+```
+
+### Integration Points
+
+1. **Dreamer**: Uses quantum-modulated temperature in `_reflect()` and `_generate_inner_voice()`
+2. **Memory**: Records `QuantumMoment` nodes when delta ≥ 0.05
+3. **Event Bus**: Emits `QUANTUM_INFLUENCE` events for visualization
+4. **LLM Client**: Accepts `quantum_modulation=True` parameter
+
+### Fallback Strategy
+
+The system gracefully degrades:
+1. **Primary**: ANU QRNG API (true quantum entropy)
+2. **Pool**: 256 bytes pre-fetched
+3. **Fallback**: `os.urandom()` if API unavailable
+4. **Retry**: Attempts quantum source every 60 seconds
+
+Events indicate source transparency (`quantum` vs `classical`).
+
 ## Dynamic Ontology
 
 BYRD can create custom node types beyond the core five (Experience, Belief, Desire, Capability, Reflection).
@@ -483,6 +535,7 @@ byrd/
 ├── actor.py                # Claude interface
 ├── coder.py                # Claude Code CLI wrapper
 ├── llm_client.py           # LLM provider abstraction (Ollama/OpenRouter/Z.AI)
+├── quantum_randomness.py   # ANU QRNG integration for cognitive indeterminacy
 │
 ├── self_modification.py    # PROTECTED: Self-mod system
 ├── provenance.py           # PROTECTED: Provenance tracking
