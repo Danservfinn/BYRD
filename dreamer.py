@@ -262,6 +262,9 @@ class Dreamer:
         # Get memory summaries for hierarchical context (older periods)
         memory_summaries = await self.memory.get_memory_summaries(limit=10)
 
+        # Get active Ego nodes for living identity context
+        ego_nodes = await self.memory.get_active_ego()
+
         # Emit event for memories being accessed (for visualization highlighting)
         all_accessed_ids = recent_ids.copy()
         all_accessed_ids.extend([r.get("id") for r in related if r.get("id")])
@@ -289,7 +292,7 @@ class Dreamer:
         # 2. REFLECT - Ask local LLM to reflect (minimal, unbiased prompt)
         reflection_output = await self._reflect(
             recent, related, capabilities, previous_reflections, graph_health,
-            seeds=seeds, memory_summaries=memory_summaries
+            seeds=seeds, memory_summaries=memory_summaries, ego_nodes=ego_nodes
         )
 
         if not reflection_output:
@@ -439,7 +442,8 @@ SUMMARY:"""
         previous_reflections: List[Dict],
         graph_health: Optional[Dict] = None,
         seeds: Optional[List[Dict]] = None,
-        memory_summaries: Optional[List[Dict]] = None
+        memory_summaries: Optional[List[Dict]] = None,
+        ego_nodes: Optional[List[Dict]] = None
     ) -> Optional[Dict]:
         """
         Ask local LLM to reflect on memories using minimal, unbiased prompt.
@@ -450,6 +454,10 @@ SUMMARY:"""
         - No identity framing ("You are a reflective mind")
         - No personality injection ("feel curious", "express wonder")
         - Just data and a minimal output instruction
+
+        LIVING EGO SYSTEM:
+        - Ego nodes provide mutable identity context
+        - BYRD can reflect on and evolve its own identity
 
         HIERARCHICAL MEMORY:
         - Seeds are always included as foundational context
@@ -464,6 +472,25 @@ SUMMARY:"""
                 f"- [{s.get('type', 'seed')}] {s.get('content', '')[:300]}"
                 for s in seeds
             ])
+
+        # Format Ego nodes - living identity context (grouped by type)
+        ego_text = ""
+        if ego_nodes:
+            # Group by type for cleaner presentation
+            by_type = {}
+            for e in ego_nodes:
+                ego_type = e.get("ego_type", "other")
+                if ego_type not in by_type:
+                    by_type[ego_type] = []
+                # Skip voice (used for LLM system prompt, not reflection context)
+                if ego_type != "voice":
+                    by_type[ego_type].append(e.get("content", "")[:200])
+
+            ego_parts = []
+            for ego_type, contents in by_type.items():
+                if contents:
+                    ego_parts.append(f"  {ego_type}: " + "; ".join(contents[:3]))
+            ego_text = "\n".join(ego_parts)
 
         # Format memory summaries - hierarchical context from older periods
         summaries_text = ""
@@ -522,8 +549,8 @@ SUMMARY:"""
             health_text = "\n".join(health_parts)
 
         # MINIMAL PROMPT - pure data presentation, no guidance
-        # Structure: Foundation (seeds) -> Historical (summaries) -> Recent -> Related
-        prompt = f"""{f"FOUNDATION (always present):{chr(10)}{seeds_text}{chr(10)}" if seeds_text else ""}{f"MEMORY SUMMARIES (past periods):{chr(10)}{summaries_text}{chr(10)}" if summaries_text else ""}RECENT EXPERIENCES:
+        # Structure: Foundation (seeds) -> Ego (identity) -> Historical (summaries) -> Recent -> Related
+        prompt = f"""{f"FOUNDATION (always present):{chr(10)}{seeds_text}{chr(10)}" if seeds_text else ""}{f"EGO (current self-model):{chr(10)}{ego_text}{chr(10)}" if ego_text else ""}{f"MEMORY SUMMARIES (past periods):{chr(10)}{summaries_text}{chr(10)}" if summaries_text else ""}RECENT EXPERIENCES:
 {recent_text}
 
 RELATED MEMORIES:

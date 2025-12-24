@@ -32,6 +32,7 @@ SYSTEM_NODE_TYPES = frozenset({
     'Reflection',   # Dream cycle outputs (BYRD's raw thoughts)
     'Capability',   # Tools and abilities
     'Mutation',     # Audit trail of self-modifications (protected)
+    'Ego',          # Living identity (mutable by BYRD)
 })
 
 # Properties managed by the system - cannot be set via create_node
@@ -3131,3 +3132,488 @@ class Memory:
                 "coverage_ratio": 0.0,
                 "error": str(e)
             }
+
+    # =========================================================================
+    # LIVING EGO SYSTEM
+    # =========================================================================
+    # The Ego is BYRD's mutable self-concept. It includes:
+    # - identity: Core identity statements
+    # - trait: Personality characteristics
+    # - value: Beliefs about what matters
+    # - capability: Awareness of what BYRD can do (auto-synced from Capability nodes)
+    # - architecture: Understanding of how BYRD works
+    # - voice: How BYRD expresses (applied to LLM system prefix)
+    #
+    # At first awakening, Ego is initialized from egos/*.yaml
+    # On subsequent awakenings, Ego is loaded from Neo4j (evolved state)
+    # BYRD can add, update, or deprecate any Ego node
+
+    async def has_ego(self) -> bool:
+        """Check if Ego nodes exist (determines first vs subsequent awakening)."""
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (e:Ego)
+                    RETURN count(e) > 0 as has_ego
+                """)
+                record = await result.single()
+                return record["has_ego"] if record else False
+        except Exception as e:
+            print(f"Error checking ego existence: {e}")
+            return False
+
+    async def create_ego(
+        self,
+        content: str,
+        ego_type: str,
+        source: str = "initial",
+        source_id: Optional[str] = None,
+        priority: int = 0
+    ) -> Optional[str]:
+        """
+        Create an Ego node.
+
+        Args:
+            content: The ego statement content
+            ego_type: Type of ego node (identity, trait, value, capability, architecture, voice)
+            source: Origin of this ego node (initial, capability_sync, self_evolved)
+            source_id: ID of source (capability ID, original ego ID, etc.)
+            priority: Ordering priority (especially for voice nodes)
+
+        Returns:
+            Ego node ID, or None on failure
+        """
+        try:
+            import uuid
+            ego_id = f"ego_{uuid.uuid4().hex[:12]}"
+
+            async with self.driver.session() as session:
+                await session.run("""
+                    CREATE (e:Ego {
+                        id: $id,
+                        content: $content,
+                        ego_type: $ego_type,
+                        active: true,
+                        priority: $priority,
+                        created_at: datetime(),
+                        deprecated_at: null,
+                        source: $source,
+                        source_id: $source_id,
+                        replaced_by: null
+                    })
+                """,
+                    id=ego_id,
+                    content=content,
+                    ego_type=ego_type,
+                    priority=priority,
+                    source=source,
+                    source_id=source_id
+                )
+
+                # Emit event
+                await event_bus.emit(Event(
+                    type=EventType.EGO_CREATED,
+                    data={
+                        "id": ego_id,
+                        "ego_type": ego_type,
+                        "content": content[:100],
+                        "source": source
+                    }
+                ))
+
+                return ego_id
+
+        except Exception as e:
+            print(f"Error creating ego node: {e}")
+            return None
+
+    async def get_active_ego(self) -> List[Dict[str, Any]]:
+        """
+        Get all active Ego nodes, organized by type.
+
+        Returns:
+            List of ego dictionaries with id, content, ego_type, priority, etc.
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (e:Ego)
+                    WHERE e.active = true
+                    RETURN
+                        e.id as id,
+                        e.content as content,
+                        e.ego_type as ego_type,
+                        e.priority as priority,
+                        e.source as source,
+                        e.source_id as source_id,
+                        e.created_at as created_at
+                    ORDER BY e.ego_type, e.priority, e.created_at
+                """)
+
+                ego_nodes = []
+                async for record in result:
+                    ego_nodes.append({
+                        "id": record["id"],
+                        "content": record["content"],
+                        "ego_type": record["ego_type"],
+                        "priority": record["priority"] or 0,
+                        "source": record["source"],
+                        "source_id": record["source_id"],
+                        "created_at": str(record["created_at"]) if record["created_at"] else None
+                    })
+
+                return ego_nodes
+
+        except Exception as e:
+            print(f"Error getting active ego: {e}")
+            return []
+
+    async def get_ego_by_type(self, ego_type: str, active_only: bool = True) -> List[Dict[str, Any]]:
+        """Get Ego nodes of a specific type."""
+        try:
+            async with self.driver.session() as session:
+                if active_only:
+                    query = """
+                        MATCH (e:Ego)
+                        WHERE e.ego_type = $ego_type AND e.active = true
+                        RETURN e
+                        ORDER BY e.priority, e.created_at
+                    """
+                else:
+                    query = """
+                        MATCH (e:Ego)
+                        WHERE e.ego_type = $ego_type
+                        RETURN e
+                        ORDER BY e.priority, e.created_at
+                    """
+
+                result = await session.run(query, ego_type=ego_type)
+                nodes = []
+                async for record in result:
+                    node = dict(record["e"])
+                    if "created_at" in node:
+                        node["created_at"] = str(node["created_at"])
+                    if "deprecated_at" in node and node["deprecated_at"]:
+                        node["deprecated_at"] = str(node["deprecated_at"])
+                    nodes.append(node)
+
+                return nodes
+
+        except Exception as e:
+            print(f"Error getting ego by type: {e}")
+            return []
+
+    async def get_ego_voice(self) -> str:
+        """
+        Get the current voice from active voice Ego nodes.
+
+        Voice nodes are concatenated by priority to form the
+        system prefix for all LLM calls.
+
+        Returns:
+            Voice string to prepend to LLM system messages
+        """
+        voice_nodes = await self.get_ego_by_type("voice", active_only=True)
+        if not voice_nodes:
+            return ""
+
+        voice_nodes.sort(key=lambda x: x.get("priority", 0))
+        return "\n".join([v["content"] for v in voice_nodes])
+
+    async def update_ego(
+        self,
+        ego_id: str,
+        new_content: str,
+        create_history: bool = True
+    ) -> Optional[str]:
+        """
+        Update an Ego node's content.
+
+        If create_history is True, deprecates the old node and creates
+        a new one with the updated content, preserving evolution history.
+
+        Args:
+            ego_id: ID of the ego node to update
+            new_content: New content for the ego node
+            create_history: If True, preserve history by deprecating old and creating new
+
+        Returns:
+            New ego node ID (if create_history) or original ID
+        """
+        try:
+            async with self.driver.session() as session:
+                # Get the current ego node
+                result = await session.run("""
+                    MATCH (e:Ego {id: $id})
+                    RETURN e
+                """, id=ego_id)
+                record = await result.single()
+
+                if not record:
+                    print(f"Ego node not found: {ego_id}")
+                    return None
+
+                old_node = dict(record["e"])
+
+                if create_history:
+                    # Create new node with updated content
+                    import uuid
+                    new_id = f"ego_{uuid.uuid4().hex[:12]}"
+
+                    await session.run("""
+                        CREATE (e:Ego {
+                            id: $new_id,
+                            content: $content,
+                            ego_type: $ego_type,
+                            active: true,
+                            priority: $priority,
+                            created_at: datetime(),
+                            deprecated_at: null,
+                            source: 'self_evolved',
+                            source_id: $old_id,
+                            replaced_by: null
+                        })
+                    """,
+                        new_id=new_id,
+                        content=new_content,
+                        ego_type=old_node.get("ego_type"),
+                        priority=old_node.get("priority", 0),
+                        old_id=ego_id
+                    )
+
+                    # Deprecate the old node
+                    await session.run("""
+                        MATCH (e:Ego {id: $id})
+                        SET e.active = false,
+                            e.deprecated_at = datetime(),
+                            e.replaced_by = $new_id
+                    """, id=ego_id, new_id=new_id)
+
+                    # Create evolution relationship
+                    await session.run("""
+                        MATCH (new:Ego {id: $new_id})
+                        MATCH (old:Ego {id: $old_id})
+                        CREATE (new)-[:EVOLVED_FROM]->(old)
+                    """, new_id=new_id, old_id=ego_id)
+
+                    # Emit event
+                    await event_bus.emit(Event(
+                        type=EventType.EGO_EVOLVED,
+                        data={
+                            "old_id": ego_id,
+                            "new_id": new_id,
+                            "ego_type": old_node.get("ego_type"),
+                            "action": "update"
+                        }
+                    ))
+
+                    return new_id
+                else:
+                    # Direct update without history
+                    await session.run("""
+                        MATCH (e:Ego {id: $id})
+                        SET e.content = $content
+                    """, id=ego_id, content=new_content)
+
+                    return ego_id
+
+        except Exception as e:
+            print(f"Error updating ego: {e}")
+            return None
+
+    async def deprecate_ego(self, ego_id: str) -> bool:
+        """
+        Deprecate an Ego node (soft delete with history preservation).
+
+        Args:
+            ego_id: ID of the ego node to deprecate
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (e:Ego {id: $id})
+                    SET e.active = false,
+                        e.deprecated_at = datetime()
+                    RETURN e.ego_type as ego_type
+                """, id=ego_id)
+
+                record = await result.single()
+                if record:
+                    await event_bus.emit(Event(
+                        type=EventType.EGO_EVOLVED,
+                        data={
+                            "id": ego_id,
+                            "ego_type": record["ego_type"],
+                            "action": "deprecate"
+                        }
+                    ))
+                    return True
+                return False
+
+        except Exception as e:
+            print(f"Error deprecating ego: {e}")
+            return False
+
+    async def deprecate_ego_by_source(self, source_id: str) -> int:
+        """
+        Deprecate all Ego nodes with a given source_id.
+
+        Used when a Capability is removed to deprecate its awareness.
+
+        Args:
+            source_id: The source ID (e.g., capability ID)
+
+        Returns:
+            Number of nodes deprecated
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (e:Ego)
+                    WHERE e.source_id = $source_id AND e.active = true
+                    SET e.active = false,
+                        e.deprecated_at = datetime()
+                    RETURN count(e) as deprecated
+                """, source_id=source_id)
+
+                record = await result.single()
+                return record["deprecated"] if record else 0
+
+        except Exception as e:
+            print(f"Error deprecating ego by source: {e}")
+            return 0
+
+    async def sync_capability_awareness(self) -> Dict[str, int]:
+        """
+        Sync Ego capability nodes with current Capability nodes.
+
+        Creates Ego nodes for new capabilities, deprecates nodes
+        for removed capabilities.
+
+        Returns:
+            {"added": n, "deprecated": n}
+        """
+        try:
+            # Get current capabilities
+            capabilities = await self.get_capabilities()
+            cap_ids = {c["id"] for c in capabilities}
+
+            # Get current capability ego nodes
+            cap_egos = await self.get_ego_by_type("capability", active_only=True)
+            ego_source_ids = {e.get("source_id") for e in cap_egos if e.get("source_id")}
+
+            added = 0
+            deprecated = 0
+
+            # Add ego nodes for new capabilities
+            for cap in capabilities:
+                if cap["id"] not in ego_source_ids:
+                    content = f"I can {cap.get('description', cap.get('name', 'do something'))}"
+                    await self.create_ego(
+                        content=content,
+                        ego_type="capability",
+                        source="capability_sync",
+                        source_id=cap["id"]
+                    )
+                    added += 1
+
+            # Deprecate ego nodes for removed capabilities
+            for ego in cap_egos:
+                source_id = ego.get("source_id")
+                if source_id and source_id not in cap_ids:
+                    await self.deprecate_ego(ego["id"])
+                    deprecated += 1
+
+            return {"added": added, "deprecated": deprecated}
+
+        except Exception as e:
+            print(f"Error syncing capability awareness: {e}")
+            return {"added": 0, "deprecated": 0, "error": str(e)}
+
+    async def get_ego_evolution(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """
+        Get the evolution history of the Ego.
+
+        Returns:
+            List of evolution events (creations, updates, deprecations)
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (e:Ego)
+                    WHERE e.source = 'self_evolved' OR e.deprecated_at IS NOT NULL
+                    RETURN
+                        e.id as id,
+                        e.content as content,
+                        e.ego_type as ego_type,
+                        e.source as source,
+                        e.source_id as source_id,
+                        e.created_at as created_at,
+                        e.deprecated_at as deprecated_at,
+                        e.replaced_by as replaced_by,
+                        e.active as active
+                    ORDER BY COALESCE(e.deprecated_at, e.created_at) DESC
+                    LIMIT $limit
+                """, limit=limit)
+
+                history = []
+                async for record in result:
+                    history.append({
+                        "id": record["id"],
+                        "content": record["content"],
+                        "ego_type": record["ego_type"],
+                        "source": record["source"],
+                        "source_id": record["source_id"],
+                        "created_at": str(record["created_at"]) if record["created_at"] else None,
+                        "deprecated_at": str(record["deprecated_at"]) if record["deprecated_at"] else None,
+                        "replaced_by": record["replaced_by"],
+                        "active": record["active"]
+                    })
+
+                return history
+
+        except Exception as e:
+            print(f"Error getting ego evolution: {e}")
+            return []
+
+    async def get_original_ego(self) -> List[Dict[str, Any]]:
+        """
+        Get the original Ego nodes (source='initial').
+
+        Used for Genesis modal to show what was given at first awakening.
+
+        Returns:
+            List of original ego nodes
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (e:Ego)
+                    WHERE e.source = 'initial'
+                    RETURN
+                        e.id as id,
+                        e.content as content,
+                        e.ego_type as ego_type,
+                        e.active as active,
+                        e.created_at as created_at
+                    ORDER BY e.ego_type, e.priority, e.created_at
+                """)
+
+                nodes = []
+                async for record in result:
+                    nodes.append({
+                        "id": record["id"],
+                        "content": record["content"],
+                        "ego_type": record["ego_type"],
+                        "active": record["active"],
+                        "created_at": str(record["created_at"]) if record["created_at"] else None
+                    })
+
+                return nodes
+
+        except Exception as e:
+            print(f"Error getting original ego: {e}")
+            return []
