@@ -421,6 +421,47 @@ The system gracefully degrades:
 
 Events indicate source transparency (`quantum` vs `classical`).
 
+## Hierarchical Memory
+
+BYRD implements hierarchical memory to maintain historical awareness without exceeding context limits.
+
+### Key Features
+
+1. **Seeds Always Present**: Foundational experiences (`ego_seed`, `system`, `awakening`) are included in every reflection
+2. **Automatic Summarization**: Experiences older than 24 hours are periodically compressed into `MemorySummary` nodes
+3. **Day-Based Grouping**: Summaries are created per-day for efficient retrieval
+
+### Configuration
+
+```yaml
+dreamer:
+  summarization:
+    enabled: true
+    min_age_hours: 24         # Only summarize experiences older than this
+    batch_size: 20            # Max experiences per cycle
+    interval_cycles: 10       # Run every N dream cycles
+```
+
+### Prompt Structure
+
+The reflection prompt now includes three layers:
+1. **FOUNDATION** - Seeds (always present)
+2. **MEMORY SUMMARIES** - Compressed historical context
+3. **RECENT EXPERIENCES** - Last N experiences
+
+### Key Methods
+
+```python
+# Get seeds for inclusion in reflection
+seeds = await memory.get_seed_experiences()
+
+# Get summaries for historical context
+summaries = await memory.get_memory_summaries(limit=10)
+
+# Manually trigger summarization
+await dreamer._maybe_summarize()
+```
+
 ## Dynamic Ontology
 
 BYRD can create custom node types beyond the core five (Experience, Belief, Desire, Capability, Reflection).

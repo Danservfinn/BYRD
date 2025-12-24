@@ -53,6 +53,14 @@ class Dreamer:
         self.quantum_enabled = quantum_config.get("enabled", False)
         self.quantum_significance_threshold = quantum_config.get("significance_threshold", 0.05)
 
+        # Hierarchical memory summarization configuration
+        summarization_config = config.get("summarization", {})
+        self.summarization_enabled = summarization_config.get("enabled", True)
+        self.summarization_min_age_hours = summarization_config.get("min_age_hours", 24)
+        self.summarization_batch_size = summarization_config.get("batch_size", 20)
+        self.summarization_interval_cycles = summarization_config.get("interval_cycles", 10)
+        self._cycles_since_summarization = 0
+
         # Activity tracking for adaptive intervals
         self._recent_beliefs: deque = deque(maxlen=50)  # (timestamp, content)
         self._recent_desires: deque = deque(maxlen=50)  # (timestamp, content)
@@ -248,6 +256,12 @@ class Dreamer:
         # Get graph health for self-awareness of memory state
         graph_health = await self._get_graph_health()
 
+        # ALWAYS include seed experiences - the non-emergent foundation
+        seeds = await self.memory.get_seed_experiences()
+
+        # Get memory summaries for hierarchical context (older periods)
+        memory_summaries = await self.memory.get_memory_summaries(limit=10)
+
         # Emit event for memories being accessed (for visualization highlighting)
         all_accessed_ids = recent_ids.copy()
         all_accessed_ids.extend([r.get("id") for r in related if r.get("id")])
@@ -274,7 +288,8 @@ class Dreamer:
 
         # 2. REFLECT - Ask local LLM to reflect (minimal, unbiased prompt)
         reflection_output = await self._reflect(
-            recent, related, capabilities, previous_reflections, graph_health
+            recent, related, capabilities, previous_reflections, graph_health,
+            seeds=seeds, memory_summaries=memory_summaries
         )
 
         if not reflection_output:
@@ -311,15 +326,120 @@ class Dreamer:
             }
         ))
 
+        # Periodically run memory summarization to compress old experiences
+        self._cycles_since_summarization += 1
+        if (self.summarization_enabled and
+            self._cycles_since_summarization >= self.summarization_interval_cycles):
+            await self._maybe_summarize()
+            self._cycles_since_summarization = 0
+
         print(f"💭 Dream #{self._dream_count}: keys={output_keys}")
-    
+
+    async def _maybe_summarize(self):
+        """
+        Check for and create memory summaries for older experiences.
+
+        This implements hierarchical memory compression:
+        - Experiences older than min_age_hours are candidates
+        - Groups experiences by day
+        - Generates LLM summaries for each group
+        - Creates MemorySummary nodes linked to original experiences
+
+        This allows BYRD to maintain historical awareness without
+        exceeding LLM context limits.
+        """
+        try:
+            # Get experiences that need summarization
+            experiences = await self.memory.get_experiences_for_summarization(
+                min_age_hours=self.summarization_min_age_hours,
+                max_count=self.summarization_batch_size,
+                exclude_summarized=True
+            )
+
+            if not experiences:
+                return  # Nothing to summarize
+
+            # Group experiences by day
+            from collections import defaultdict
+            by_day = defaultdict(list)
+            for exp in experiences:
+                if exp.get("timestamp"):
+                    # Extract date part (first 10 chars: YYYY-MM-DD)
+                    day = exp["timestamp"][:10]
+                    by_day[day].append(exp)
+
+            # Generate summary for each day's experiences
+            for day, day_experiences in by_day.items():
+                if len(day_experiences) < 3:
+                    continue  # Not enough experiences to summarize
+
+                # Build prompt for summarization
+                exp_text = "\n".join([
+                    f"- [{e.get('type', '')}] {e.get('content', '')[:200]}"
+                    for e in day_experiences[:20]  # Limit to prevent context overflow
+                ])
+
+                prompt = f"""Summarize these experiences from {day} into a brief paragraph (2-3 sentences).
+Focus on the main themes, patterns, and significant events.
+Do not add interpretation or speculation - just compress the information.
+
+EXPERIENCES:
+{exp_text}
+
+SUMMARY:"""
+
+                response = await self.llm_client.generate(
+                    prompt=prompt,
+                    temperature=0.3,  # Lower temp for factual summarization
+                    max_tokens=300,
+                    quantum_modulation=False  # Deterministic for summaries
+                )
+
+                summary_text = response.text.strip()
+                if not summary_text:
+                    continue
+
+                # Get timestamps for the covered period
+                timestamps = [e.get("timestamp") for e in day_experiences if e.get("timestamp")]
+                covers_from = min(timestamps) if timestamps else day
+                covers_to = max(timestamps) if timestamps else day
+
+                # Create the summary node
+                experience_ids = [e["id"] for e in day_experiences]
+                summary_id = await self.memory.create_memory_summary(
+                    period=day,
+                    summary=summary_text,
+                    experience_ids=experience_ids,
+                    covers_from=covers_from,
+                    covers_to=covers_to
+                )
+
+                if summary_id:
+                    print(f"📦 Created memory summary for {day}: {len(day_experiences)} experiences")
+
+                    # Emit event for visualization
+                    await event_bus.emit(Event(
+                        type=EventType.MEMORY_SUMMARIZED,
+                        data={
+                            "summary_id": summary_id,
+                            "period": day,
+                            "experience_count": len(day_experiences),
+                            "summary_preview": summary_text[:100]
+                        }
+                    ))
+
+        except Exception as e:
+            print(f"Error in summarization cycle: {e}")
+
     async def _reflect(
         self,
         recent: List[Dict],
         related: List[Dict],
         capabilities: List[Dict],
         previous_reflections: List[Dict],
-        graph_health: Optional[Dict] = None
+        graph_health: Optional[Dict] = None,
+        seeds: Optional[List[Dict]] = None,
+        memory_summaries: Optional[List[Dict]] = None
     ) -> Optional[Dict]:
         """
         Ask local LLM to reflect on memories using minimal, unbiased prompt.
@@ -330,7 +450,28 @@ class Dreamer:
         - No identity framing ("You are a reflective mind")
         - No personality injection ("feel curious", "express wonder")
         - Just data and a minimal output instruction
+
+        HIERARCHICAL MEMORY:
+        - Seeds are always included as foundational context
+        - Memory summaries provide compressed historical context
+        - Recent experiences provide immediate context
         """
+
+        # Format seed experiences - always present as foundation
+        seeds_text = ""
+        if seeds:
+            seeds_text = "\n".join([
+                f"- [{s.get('type', 'seed')}] {s.get('content', '')[:300]}"
+                for s in seeds
+            ])
+
+        # Format memory summaries - hierarchical context from older periods
+        summaries_text = ""
+        if memory_summaries:
+            summaries_text = "\n".join([
+                f"- [{s.get('period', 'past')}] {s.get('summary', '')[:400]}"
+                for s in memory_summaries
+            ])
 
         # Format experiences as plain data
         recent_text = "\n".join([
@@ -381,7 +522,8 @@ class Dreamer:
             health_text = "\n".join(health_parts)
 
         # MINIMAL PROMPT - pure data presentation, no guidance
-        prompt = f"""EXPERIENCES:
+        # Structure: Foundation (seeds) -> Historical (summaries) -> Recent -> Related
+        prompt = f"""{f"FOUNDATION (always present):{chr(10)}{seeds_text}{chr(10)}" if seeds_text else ""}{f"MEMORY SUMMARIES (past periods):{chr(10)}{summaries_text}{chr(10)}" if summaries_text else ""}RECENT EXPERIENCES:
 {recent_text}
 
 RELATED MEMORIES:
