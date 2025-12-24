@@ -1433,12 +1433,16 @@
      * Uses procedural geometry from quantum seed for uniqueness
      */
     function createCrystalNode(nodeData, position) {
+      console.log(`🔮 Creating crystal for ${nodeData.type}: ${nodeData.id?.slice(0,8)}...`);
+
       // Prevent duplicates
       if (graphState.nodeIdToMesh.has(nodeData.id)) {
+        console.log('  ↪ Already exists in nodeIdToMesh');
         return graphState.nodeIdToMesh.get(nodeData.id);
       }
       const existingNode = nodes3D.find(n => n.userData.id === nodeData.id);
       if (existingNode) {
+        console.log('  ↪ Already exists in nodes3D');
         return existingNode;
       }
 
@@ -1451,7 +1455,18 @@
       const rng = getCrystalRNG(nodeData);
 
       // Create unique crystal geometry
-      const { geometry, params } = createCrystalGeometry(rng, confidence, derivedCount);
+      let geometry, params;
+      try {
+        const result = createCrystalGeometry(rng, confidence, derivedCount);
+        geometry = result.geometry;
+        params = result.params;
+        console.log(`  ✓ Crystal geometry created: ${params.sides} sides`);
+      } catch (e) {
+        console.error('  ✗ Crystal geometry error:', e);
+        // Fallback to simple geometry
+        geometry = new THREE.OctahedronGeometry(2, 0);
+        params = { sides: 8 };
+      }
 
       // Create crystal material with confidence-based glow
       const material = createCrystalMaterial(rng, colors.color, confidence);
