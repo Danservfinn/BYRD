@@ -84,7 +84,10 @@ Egos live in `egos/` directory as YAML files. See `egos/black-cat.yaml` for an e
 | **Dreamer** | `dreamer.py` | Local | Pure data presentation → meta-schema output |
 | **Seeker** | `seeker.py` | Local | Pattern detection → execute BYRD's strategies |
 | **Actor** | `actor.py` | Claude API | Complex reasoning, user interaction |
-| **Self-Modifier** | `self_modification.py` | - | Safe architectural evolution
+| **Coder** | `coder.py` | Claude Code CLI | Autonomous coding for features and self-modification |
+| **Self-Modifier** | `self_modification.py` | - | Safe architectural evolution |
+| **Event Bus** | `event_bus.py` | - | Real-time event streaming to visualization |
+| **Server** | `server.py` | - | WebSocket + REST API for clients |
 
 ## Constitutional Constraints (CRITICAL)
 
@@ -321,6 +324,76 @@ When modifying components, verify:
 3. **Seeker**: Can search and synthesize results
 4. **Actor**: Responds with context
 
+## Visualization System
+
+BYRD provides real-time 3D visualization through WebSocket-based event streaming.
+
+### Starting the Visualization
+
+```bash
+# Start the WebSocket server
+python server.py
+
+# Open in browser:
+# Mind Space: http://localhost:8000/byrd-3d-visualization.html
+# Ego Space:  http://localhost:8000/byrd-cat-visualization.html
+```
+
+### Visualization Modes
+
+| Mode | File | Description |
+|------|------|-------------|
+| **Mind Space** | `byrd-3d-visualization.html` | 3D neural network with beliefs, desires, connections |
+| **Ego Space** | `byrd-cat-visualization.html` | Black cat avatar with thought bubbles |
+| **Graph Mode** | Within Mind Space | Full memory graph with physics simulation |
+
+### Event Types for Visualization
+
+```python
+from event_bus import event_bus, Event, EventType
+
+# Core events that update visualization
+EventType.BELIEF_CREATED      # New belief node
+EventType.DESIRE_CREATED      # New desire node
+EventType.CAPABILITY_ACQUIRED # New capability node
+EventType.INNER_VOICE         # Narrator text for thought bubble
+```
+
+### The Narrator System
+
+BYRD's inner voice is generated periodically and displayed as thought bubbles:
+
+- **Refresh interval**: 60 seconds
+- **Format**: Natural paragraph form (not lists)
+- **Principles**: No examples, no style guidance—pure emergence
+
+The narrator prompt only provides BYRD's recent context (beliefs, desires, reflections) and asks for an inner voice without prescribing style.
+
+## Dynamic Ontology
+
+BYRD can create custom node types beyond the core five (Experience, Belief, Desire, Capability, Reflection).
+
+### Creating Custom Nodes
+
+Include `create_nodes` in reflection output:
+
+```json
+{
+  "output": {
+    "create_nodes": [
+      {"type": "Insight", "content": "...", "importance": 0.9},
+      {"type": "Question", "content": "...", "urgency": 0.7}
+    ]
+  }
+}
+```
+
+### Why This Matters
+
+- BYRD defines its own conceptual vocabulary
+- "Insight" vs "Belief" distinction can emerge naturally
+- Custom types persist in Neo4j with the specified type label
+
 ## Common Tasks
 
 ### Adding a New Event Type
@@ -408,15 +481,16 @@ byrd/
 ├── dreamer.py              # Dream loop
 ├── seeker.py               # Desire fulfillment + research
 ├── actor.py                # Claude interface
+├── coder.py                # Claude Code CLI wrapper
+├── llm_client.py           # LLM provider abstraction (Ollama/OpenRouter/Z.AI)
 │
 ├── self_modification.py    # PROTECTED: Self-mod system
 ├── provenance.py           # PROTECTED: Provenance tracking
 ├── modification_log.py     # PROTECTED: Audit trail
 ├── constitutional.py       # PROTECTED: Constraints
 │
-├── llm_client.py           # LLM provider abstraction
-├── event_bus.py            # Event system
-├── server.py               # WebSocket server
+├── event_bus.py            # Event system for real-time updates
+├── server.py               # WebSocket + REST API server
 ├── aitmpl_client.py        # Template registry client
 │
 ├── egos/                   # Modular personality system
@@ -437,6 +511,9 @@ byrd/
 ├── docker-compose.yml      # Neo4j + SearXNG
 ├── requirements.txt        # Python dependencies
 │
+├── byrd-3d-visualization.html    # Mind Space: 3D neural network view
+├── byrd-cat-visualization.html   # Ego Space: Black cat avatar view
+│
 ├── .claude/                # Knowledge base
 │   ├── manifest.md
 │   ├── metadata/
@@ -445,6 +522,8 @@ byrd/
 │   └── memory_anchors/
 │
 ├── ARCHITECTURE.md         # Detailed architecture docs
+├── EMERGENCE_PRINCIPLES.md # Core philosophical principles
+├── BITCOIN_IMPLEMENTATION_PLAN.md  # Financial agency roadmap
 ├── README.md               # Quick start guide
 └── CLAUDE.md               # This file
 ```

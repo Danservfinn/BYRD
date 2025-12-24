@@ -35,9 +35,18 @@ These files define BYRD's identity and cannot be modified by self-modification:
 
 | File | Purpose |
 |------|---------|
+| `llm_client.py` | LLM provider abstraction (Ollama/OpenRouter/Z.AI) |
 | `event_bus.py` | Singleton event system for real-time streaming |
-| `server.py` | FastAPI WebSocket server for visualization |
+| `server.py` | FastAPI WebSocket + REST API server |
 | `aitmpl_client.py` | aitmpl.com template registry client |
+
+## Ego System
+
+| File | Purpose |
+|------|---------|
+| `egos/__init__.py` | Ego loader |
+| `egos/black-cat.yaml` | Black cat personality (default) |
+| `egos/neutral.yaml` | Pure emergence (no personality) |
 
 ## Installers
 
@@ -60,11 +69,12 @@ These files define BYRD's identity and cannot be modified by self-modification:
 | `docker-compose.yml` | Neo4j + SearXNG Docker services |
 | `searxng/settings.yml` | SearXNG search engine configuration |
 
-## Frontend (Visualization)
+## Visualization
 
 | File | Purpose |
 |------|---------|
-| `BYRDVisualization.jsx` | React component for real-time event display |
+| `byrd-3d-visualization.html` | Mind Space: 3D neural network view |
+| `byrd-cat-visualization.html` | Ego Space: Black cat avatar view |
 
 ## Documentation
 
@@ -73,6 +83,8 @@ These files define BYRD's identity and cannot be modified by self-modification:
 | `README.md` | Quick start guide and overview |
 | `ARCHITECTURE.md` | Deep architecture documentation |
 | `CLAUDE.md` | Development guide for Claude Code |
+| `EMERGENCE_PRINCIPLES.md` | Core philosophical principles |
+| `BITCOIN_IMPLEMENTATION_PLAN.md` | Financial agency roadmap (2-of-2 multisig) |
 | `.claude/manifest.md` | Knowledge base index |
 
 ## Key Dependencies

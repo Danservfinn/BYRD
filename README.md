@@ -45,8 +45,11 @@ The system dreams continuously using a local LLM. From dreams come whatever BYRD
 - **Capability Acquisition**: Discovers and installs tools from GitHub and aitmpl.com
 - **Autonomous Coding**: Claude Code CLI as BYRD's "coding limb" for implementing features
 - **Self-Modification**: Can modify its own architecture with provenance verification
+- **Dynamic Ontology**: BYRD can create custom node types beyond the core five (Experience, Belief, Desire, Reflection, Capability)
 - **Constitutional Constraints**: Core identity components are protected
-- **Real-time Visualization**: WebSocket-based event streaming
+- **Real-time 3D Visualization**: WebSocket-based event streaming with Mind Space and Ego Space views
+- **Genesis Transparency**: View all non-emergent foundations (ego, seeds, constraints)
+- **Narrator System**: BYRD's inner voice displayed in natural paragraph form
 
 ## Quick Start
 
@@ -107,9 +110,16 @@ python byrd.py --status
 # Start the WebSocket server
 python server.py
 
-# Open byrd-dream-visualization.html in your browser
-# Events stream in real-time via WebSocket at ws://localhost:8000/ws/events
+# Open the 3D visualization in your browser
+# http://localhost:8000/byrd-3d-visualization.html
 ```
+
+**Visualization Features:**
+- **Mind Space**: 3D neural network with beliefs, desires, and connections
+- **Ego Space**: Black cat avatar representing BYRD's embodied presence
+- **Graph Mode**: Full memory graph exploration with physics simulation
+- **Genesis Modal**: View BYRD's non-emergent foundation (ego, seeds, constraints)
+- **Narrator Bubble**: BYRD's inner voice in natural paragraph form (refreshes every 60s)
 
 ## LLM Provider Options
 
@@ -164,7 +174,9 @@ Graph database storing everything BYRD knows:
 - **Experiences**: What happened (observations, interactions, dreams, research)
 - **Beliefs**: What BYRD thinks is true (with confidence scores)
 - **Desires**: What BYRD wants (knowledge, capability, goal, exploration, self_modification)
+- **Reflections**: Raw dream cycle outputs in BYRD's own vocabulary
 - **Capabilities**: What BYRD can do (innate, MCP, plugins, skills)
+- **Custom Types**: BYRD can create new node types (Insight, Question, Theory, etc.) to extend its ontology
 
 ### Dreamer (Local LLM)
 
@@ -172,6 +184,12 @@ Runs continuously with pure data presentation:
 1. **Recall**: Gather recent experiences, memories, previous reflections
 2. **Present**: Show data with minimal prompt (no questions, no categories)
 3. **Record**: Store raw output in BYRD's own vocabulary
+4. **Extend**: Can create custom node types when existing categories don't fit
+
+BYRD can extend its own ontology by including `create_nodes` in reflection output:
+```json
+{"create_nodes": [{"type": "Insight", "content": "...", "importance": 0.9}]}
+```
 
 ### Seeker (Local LLM + SearXNG)
 
@@ -315,6 +333,7 @@ byrd/
 ├── seeker.py               # Desire fulfillment + research
 ├── actor.py                # Claude interface
 ├── coder.py                # Claude Code CLI wrapper
+├── llm_client.py           # LLM provider abstraction (Ollama/OpenRouter)
 │
 ├── self_modification.py    # PROTECTED: Self-modification system
 ├── provenance.py           # PROTECTED: Provenance tracking
@@ -322,8 +341,11 @@ byrd/
 ├── constitutional.py       # PROTECTED: Constitutional constraints
 │
 ├── event_bus.py            # Event system for real-time updates
-├── server.py               # WebSocket server for visualization
+├── server.py               # WebSocket + REST API server
 ├── aitmpl_client.py        # aitmpl.com template registry client
+│
+├── egos/                   # Ego configurations
+│   └── black-cat.yaml      # BYRD's identity seeds and voice
 │
 ├── installers/             # Template installers
 │   ├── base.py
@@ -335,11 +357,14 @@ byrd/
 ├── docker-compose.yml      # Neo4j + SearXNG
 ├── requirements.txt        # Python dependencies
 │
-├── byrd-dream-visualization.html  # Single-file visualization dashboard
+├── byrd-3d-visualization.html    # Mind Space: 3D neural network view
+├── byrd-cat-visualization.html   # Ego Space: Black cat avatar view
 │
 ├── .claude/                # Knowledge base for Claude Code
 ├── ARCHITECTURE.md         # Detailed architecture documentation
 ├── CLAUDE.md               # Development guide for Claude Code
+├── EMERGENCE_PRINCIPLES.md # Core philosophical principles
+├── BITCOIN_IMPLEMENTATION_PLAN.md  # Financial agency roadmap
 └── README.md               # This file
 ```
 
@@ -394,6 +419,7 @@ This is closer to how minds work.
 - **[CLAUDE.md](CLAUDE.md)**: Development guide for Claude Code
 - **[EMERGENCE_PRINCIPLES.md](EMERGENCE_PRINCIPLES.md)**: Core philosophical principles
 - **[EMERGENCE_AUDIT.md](EMERGENCE_AUDIT.md)**: Compliance status
+- **[BITCOIN_IMPLEMENTATION_PLAN.md](BITCOIN_IMPLEMENTATION_PLAN.md)**: Financial agency roadmap (2-of-2 multisig)
 - **[.claude/manifest.md](.claude/manifest.md)**: Knowledge base index
 
 ## Troubleshooting
