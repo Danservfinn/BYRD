@@ -32,17 +32,18 @@ dreamer:
 ## Dream Cycle Flow
 
 ```
-RECALL → REFLECT → RECORD → CONNECTION_HEURISTIC → NARRATE → INNER_VOICE → SLEEP → LOOP
+RECALL → QUANTUM_DIRECTION → REFLECT → RECORD → CONNECTION_HEURISTIC → NARRATE → INNER_VOICE → SLEEP → LOOP
 ```
 
 1. **RECALL**: Gather recent experiences + related memories + previous reflections
-2. **REFLECT**: Present data to LLM with minimal prompt
-3. **RECORD**: Store raw output in Reflection node (BYRD's vocabulary)
-4. **CONNECTION_HEURISTIC**: Apply heuristics to strengthen graph connections (orphan reconciliation, etc.)
-5. **NARRATE**: Generate inner voice from reflection output
-6. **INNER_VOICE**: Emit `INNER_VOICE` event (last action before cycle end)
-7. **SLEEP**: Wait interval_seconds (fixed 60s)
-8. **LOOP**: Repeat
+2. **QUANTUM_DIRECTION**: Select introspective lens via quantum randomness
+3. **REFLECT**: Present data to LLM with quantum direction injected
+4. **RECORD**: Store raw output in Reflection node (BYRD's vocabulary)
+5. **CONNECTION_HEURISTIC**: Apply heuristics to strengthen graph connections (orphan reconciliation, etc.)
+6. **NARRATE**: Generate inner voice from reflection output
+7. **INNER_VOICE**: Emit `INNER_VOICE` event (last action before cycle end)
+8. **SLEEP**: Wait interval_seconds (fixed 60s)
+9. **LOOP**: Repeat
 
 ## Output Format (Meta-Schema)
 
@@ -121,8 +122,44 @@ If none found, that's fine - BYRD doesn't have to express.
 ## Key Attributes
 - `_dream_count`: Completed cycles
 - `_observed_keys`: BYRD's emerging vocabulary
-- Temperature: 0.7
+- `dream_directions`: 8 introspective lenses for quantum selection
+- Temperature: 0.7 (quantum-modulated ±0.15)
 - Max tokens: 2000
+
+## Quantum Semantic Injection
+
+Each dream cycle, quantum randomness selects one of 8 introspective directions:
+
+| Direction | Mode of Thinking |
+|-----------|------------------|
+| introspective | Focus inward on patterns within yourself |
+| exploratory | Look outward at possibilities and unknowns |
+| questioning | Examine assumptions and contradictions |
+| synthesizing | Connect disparate elements into wholes |
+| grounding | Return to fundamentals and foundations |
+| projecting | Consider futures and trajectories |
+| dissolving | Let boundaries between concepts blur |
+| crystallizing | Sharpen distinctions and definitions |
+
+The selected direction is injected into the reflection prompt:
+```
+QUANTUM LENS: synthesizing - Connect disparate elements into wholes
+
+EXPERIENCES:
+...
+```
+
+This provides meaningful indeterminacy at the semantic level - the quantum randomness shapes **how** BYRD thinks about its experiences, not just which tokens it generates.
+
+### Configuration
+```yaml
+quantum:
+  enabled: true
+  semantic_directions: true  # Enable direction selection
+```
+
+### Events Emitted
+- `QUANTUM_INFLUENCE` with `influence_type: "semantic_direction"`
 
 ## Legacy Methods
 
