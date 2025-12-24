@@ -218,12 +218,15 @@ if os.path.exists(models_dir):
 
 class StatusResponse(BaseModel):
     running: bool
+    started_at: Optional[str] = None
     memory_stats: Dict[str, int]
     dream_count: int
     seek_count: int
     unfulfilled_desires: List[Dict]
     capabilities: List[str]
     recent_insights: List[str]
+    recent_reflections: List[Dict] = []
+    recent_beliefs: List[Dict] = []
     llm_provider: str
     llm_model: str
 
@@ -272,6 +275,10 @@ async def get_status():
         desires = await byrd_instance.memory.get_unfulfilled_desires(limit=5)
         capabilities = await byrd_instance.memory.get_capabilities()
 
+        # Get recent reflections and beliefs for narrative summary
+        reflections = await byrd_instance.memory.get_recent_reflections(limit=5)
+        beliefs = await byrd_instance.memory.get_beliefs(limit=10)
+
         # Get LLM info
         client = byrd_instance.llm_client
         model_name = client.model_name
@@ -281,8 +288,14 @@ async def get_status():
             llm_provider = "ollama"  # Default for local models
             llm_model = model_name
 
+        # Format started_at timestamp
+        started_at = None
+        if byrd_instance._started_at:
+            started_at = byrd_instance._started_at.isoformat()
+
         return StatusResponse(
             running=byrd_instance._running,
+            started_at=started_at,
             memory_stats=stats,
             dream_count=byrd_instance.dreamer.dream_count(),
             seek_count=byrd_instance.seeker.seek_count(),
@@ -292,6 +305,16 @@ async def get_status():
             ],
             capabilities=[c.get("name", "") for c in capabilities],
             recent_insights=byrd_instance.dreamer.recent_insights(),
+            recent_reflections=[
+                {"keys": list(r.get("raw_output", {}).keys()) if isinstance(r.get("raw_output"), dict) else [],
+                 "output": r.get("raw_output", {}),
+                 "timestamp": str(r.get("timestamp", "")) if r.get("timestamp") else ""}
+                for r in reflections
+            ],
+            recent_beliefs=[
+                {"content": b.get("content", ""), "confidence": b.get("confidence", 0)}
+                for b in beliefs
+            ],
             llm_provider=llm_provider,
             llm_model=llm_model
         )

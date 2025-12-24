@@ -13,6 +13,7 @@ import argparse
 import os
 import re
 import yaml
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -99,6 +100,7 @@ class BYRD:
 
         # State
         self._running = False
+        self._started_at: Optional[datetime] = None
     
     def _expand_env_vars(self, config_str: str) -> str:
         """Expand ${VAR:-default} patterns in config string."""
@@ -182,6 +184,7 @@ class BYRD:
         print("🎙️ Starting Narrator (inner voice broadcast)...")
 
         self._running = True
+        self._started_at = datetime.now()
 
         try:
             await asyncio.gather(
