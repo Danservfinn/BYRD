@@ -446,6 +446,9 @@ class Seeker:
             "search": ["search", "look up", "find", "research", "learn about", "understand"],
             "code": ["code", "write", "implement", "build", "create", "program"],
             "install": ["install", "add", "get", "acquire", "capability", "tool"],
+            "curate": ["optimize", "clean", "consolidate", "prune", "organize", "simplify",
+                       "remove duplicate", "merge similar", "curate", "tidy", "declutter",
+                       "reduce orphan"],
         }
 
         for key, value in output.items():
@@ -523,6 +526,11 @@ class Seeker:
                 success = await self._seek_capability_semantic(description)
                 return ("success" if success else "failed", None)
 
+            elif strategy == "curate":
+                # Use graph curation capability
+                success = await self._execute_curate_strategy(description, desire_id)
+                return ("success" if success else "failed", None)
+
             else:
                 # No recognized strategy - record for BYRD to reflect on
                 return ("skipped", f"No strategy for: {description[:50]}")
@@ -567,6 +575,181 @@ class Seeker:
         """Execute a coding strategy using coder."""
         fake_desire = {"description": description, "type": "semantic"}
         return await self._seek_with_coder(fake_desire)
+
+    async def _execute_curate_strategy(self, description: str, desire_id: str = None) -> bool:
+        """
+        Execute a graph curation strategy.
+
+        Flow:
+        1. Get graph statistics and health metrics
+        2. Find issues (duplicates, orphans, stale, conflicts)
+        3. Present issues to LLM for decision on what to curate
+        4. Execute approved actions with safety limits
+        5. Record outcomes as experiences
+        """
+        print(f"🧹 Curating graph: {description[:50]}...")
+
+        try:
+            # 1. Get graph statistics
+            stats = await self.memory.get_graph_statistics()
+
+            if not stats:
+                await self.memory.record_experience(
+                    content=f"[CURATION_FAILED] Could not get graph statistics for: {description}",
+                    type="curation_failed"
+                )
+                return False
+
+            # 2. Find potential issues
+            issues = {
+                "duplicates": await self.memory.find_duplicate_beliefs(threshold=0.85),
+                "orphans": await self.memory.find_orphan_nodes(),
+                "stale": await self.memory.find_stale_experiences(older_than_hours=48),
+                "conflicts": await self.memory.find_conflicting_beliefs()
+            }
+
+            # Count total issues
+            total_issues = sum(len(v) for v in issues.values())
+
+            if total_issues == 0:
+                await self.memory.record_experience(
+                    content=f"[CURATION_COMPLETE] Graph analysis found no issues to address.\n"
+                           f"Stats: {stats.get('total_nodes', 0)} nodes, {stats.get('total_relationships', 0)} relationships.\n"
+                           f"The graph appears healthy.",
+                    type="curation_success"
+                )
+                print(f"✅ Graph is healthy - no curation needed")
+                return True
+
+            # 3. Present issues to LLM for decision
+            curation_plan = await self._generate_curation_plan(description, stats, issues)
+
+            if not curation_plan or not curation_plan.get("actions"):
+                await self.memory.record_experience(
+                    content=f"[CURATION_SKIPPED] Found {total_issues} potential issues but LLM decided no action needed.\n"
+                           f"Issues: {len(issues['duplicates'])} duplicates, {len(issues['orphans'])} orphans, "
+                           f"{len(issues['stale'])} stale, {len(issues['conflicts'])} conflicts",
+                    type="curation_deferred"
+                )
+                return True
+
+            # 4. Execute approved actions (with safety limits)
+            actions_taken = 0
+            max_actions = 5  # Safety limit per cycle
+
+            for action in curation_plan.get("actions", [])[:max_actions]:
+                action_type = action.get("type")
+                target_id = action.get("target_id")
+                target_type = action.get("target_type", "unknown")
+                reason = action.get("reason", "LLM-approved curation")
+
+                success = False
+
+                if action_type == "archive":
+                    success = await self.memory.archive_node(
+                        node_id=target_id, node_type=target_type,
+                        reason=reason, desire_id=desire_id
+                    )
+                elif action_type == "delete":
+                    success = await self.memory.delete_node(
+                        node_id=target_id, node_type=target_type,
+                        reason=reason, desire_id=desire_id
+                    )
+                elif action_type == "merge":
+                    source_ids = action.get("source_ids", [])
+                    if source_ids and target_id:
+                        success = await self.memory.merge_beliefs(
+                            source_ids=source_ids, target_id=target_id,
+                            reason=reason, desire_id=desire_id
+                        )
+
+                if success:
+                    actions_taken += 1
+                    print(f"🧹 {action_type}: {target_id[:20] if target_id else 'n/a'}...")
+
+            # 5. Record outcome
+            await self.memory.record_experience(
+                content=f"[CURATION_COMPLETE] Curated graph based on: {description}\n"
+                       f"Actions taken: {actions_taken}\n"
+                       f"Issues addressed: duplicates={len(issues['duplicates'])}, "
+                       f"orphans={len(issues['orphans'])}, stale={len(issues['stale'])}, "
+                       f"conflicts={len(issues['conflicts'])}\n"
+                       f"Rationale: {curation_plan.get('rationale', 'N/A')}",
+                type="curation_success"
+            )
+
+            print(f"✅ Curation complete: {actions_taken} actions taken")
+            return True
+
+        except Exception as e:
+            await self.memory.record_experience(
+                content=f"[CURATION_ERROR] Error during curation: {str(e)}",
+                type="curation_failed"
+            )
+            print(f"🧹 Curation error: {e}")
+            return False
+
+    async def _generate_curation_plan(self, description: str, stats: Dict, issues: Dict) -> Optional[Dict]:
+        """Use LLM to generate a curation plan based on graph issues."""
+        # Format issues for LLM
+        issues_text = []
+
+        if issues["duplicates"]:
+            issues_text.append(f"DUPLICATE BELIEFS ({len(issues['duplicates'])}):")
+            for dup in issues["duplicates"][:5]:
+                issues_text.append(f"  - {dup.get('id1', 'n/a')[:15]} ≈ {dup.get('id2', 'n/a')[:15]}")
+
+        if issues["orphans"]:
+            issues_text.append(f"ORPHAN NODES ({len(issues['orphans'])}):")
+            for orphan in issues["orphans"][:5]:
+                issues_text.append(f"  - [{orphan.get('type', 'unknown')}] {orphan.get('id', 'n/a')[:20]}")
+
+        if issues["stale"]:
+            issues_text.append(f"STALE EXPERIENCES ({len(issues['stale'])}):")
+            for stale in issues["stale"][:5]:
+                issues_text.append(f"  - {stale.get('id', 'n/a')[:20]} (age: {stale.get('age_hours', 0):.1f}h)")
+
+        if issues["conflicts"]:
+            issues_text.append(f"CONFLICTING BELIEFS ({len(issues['conflicts'])}):")
+            for conflict in issues["conflicts"][:3]:
+                issues_text.append(f"  - {conflict.get('belief1', 'n/a')[:30]} vs {conflict.get('belief2', 'n/a')[:30]}")
+
+        prompt = f"""Analyze graph health issues and decide what curation actions to take.
+
+CURATION REQUEST: {description}
+
+GRAPH STATS:
+- Total nodes: {stats.get('total_nodes', 0)}
+- Total relationships: {stats.get('total_relationships', 0)}
+
+ISSUES FOUND:
+{chr(10).join(issues_text) if issues_text else "No significant issues found."}
+
+SAFETY CONSTRAINTS:
+- Max 5 actions per cycle
+- Cannot delete nodes with many connections (>3)
+- Prefer archiving over deleting
+
+Return ONLY valid JSON:
+{{"rationale": "why these actions are appropriate", "actions": [{{"type": "archive|delete|merge", "target_id": "node-id", "target_type": "Belief|Experience", "reason": "why"}}]}}
+
+If no action needed, return: {{"rationale": "reason", "actions": []}}
+"""
+
+        response = await self._query_local_llm(prompt, max_tokens=1000)
+
+        if not response:
+            return None
+
+        try:
+            text = response.strip()
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0]
+            elif "```" in text:
+                text = text.split("```")[1].split("```")[0]
+            return json.loads(text.strip())
+        except json.JSONDecodeError:
+            return None
 
     # =========================================================================
     # LEGACY TYPE-BASED ROUTING (kept for backward compatibility)

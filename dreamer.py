@@ -131,6 +131,50 @@ class Dreamer:
         elif activity_type == "desire":
             self._recent_desires.append((now, content))
 
+    async def _get_graph_health(self) -> Optional[Dict]:
+        """
+        Get graph health metrics for self-awareness.
+
+        Returns a summary of graph statistics and any issues found.
+        This gives BYRD visibility into its own memory structure.
+        """
+        try:
+            health = {"stats": {}, "issues": {}}
+
+            # Get basic statistics
+            stats = await self.memory.get_graph_statistics()
+            if stats:
+                health["stats"] = {
+                    "total_nodes": stats.get("total_nodes", 0),
+                    "total_relationships": stats.get("total_relationships", 0),
+                    "node_types": stats.get("node_types", {})
+                }
+
+            # Get issue counts (lightweight - just counts, not full lists)
+            try:
+                duplicates = await self.memory.find_duplicate_beliefs(threshold=0.85)
+                health["issues"]["duplicates"] = len(duplicates) if duplicates else 0
+            except Exception:
+                health["issues"]["duplicates"] = 0
+
+            try:
+                orphans = await self.memory.find_orphan_nodes()
+                health["issues"]["orphans"] = len(orphans) if orphans else 0
+            except Exception:
+                health["issues"]["orphans"] = 0
+
+            try:
+                stale = await self.memory.find_stale_experiences(older_than_hours=48)
+                health["issues"]["stale"] = len(stale) if stale else 0
+            except Exception:
+                health["issues"]["stale"] = 0
+
+            return health
+
+        except Exception as e:
+            print(f"💭 Error getting graph health: {e}")
+            return None
+
     async def _load_belief_cache(self):
         """Load existing beliefs into memory cache for O(1) deduplication."""
         if self._belief_cache_loaded:
@@ -187,9 +231,12 @@ class Dreamer:
         # Get previous reflections to provide continuity
         previous_reflections = await self.memory.get_recent_reflections(limit=5)
 
+        # Get graph health for self-awareness of memory state
+        graph_health = await self._get_graph_health()
+
         # 2. REFLECT - Ask local LLM to reflect (minimal, unbiased prompt)
         reflection_output = await self._reflect(
-            recent, related, capabilities, previous_reflections
+            recent, related, capabilities, previous_reflections, graph_health
         )
 
         if not reflection_output:
@@ -229,7 +276,8 @@ class Dreamer:
         recent: List[Dict],
         related: List[Dict],
         capabilities: List[Dict],
-        previous_reflections: List[Dict]
+        previous_reflections: List[Dict],
+        graph_health: Optional[Dict] = None
     ) -> Optional[Dict]:
         """
         Ask local LLM to reflect on memories using minimal, unbiased prompt.
@@ -270,6 +318,26 @@ class Dreamer:
                     prev_items.append(f"- Previous reflection contained: {keys}")
             prev_text = "\n".join(prev_items) if prev_items else ""
 
+        # Format graph health for self-awareness
+        health_text = ""
+        if graph_health:
+            health_parts = []
+            stats = graph_health.get("stats", {})
+            if stats:
+                health_parts.append(f"- Total nodes: {stats.get('total_nodes', 0)}")
+                health_parts.append(f"- Relationships: {stats.get('total_relationships', 0)}")
+                types = stats.get("node_types", {})
+                if types:
+                    type_list = ", ".join(f"{k}: {v}" for k, v in list(types.items())[:5])
+                    health_parts.append(f"- Node types: {type_list}")
+
+            issues = graph_health.get("issues", {})
+            if any(issues.values()):
+                health_parts.append(f"- Issues: {issues.get('duplicates', 0)} duplicates, "
+                                   f"{issues.get('orphans', 0)} orphans, "
+                                   f"{issues.get('stale', 0)} stale")
+            health_text = "\n".join(health_parts)
+
         # MINIMAL PROMPT - pure data presentation, no guidance
         prompt = f"""EXPERIENCES:
 {recent_text}
@@ -281,6 +349,8 @@ AVAILABLE CAPABILITIES:
 {caps_text}
 
 {f"PREVIOUS REFLECTIONS:{chr(10)}{prev_text}" if prev_text else ""}
+
+{f"GRAPH HEALTH:{chr(10)}{health_text}" if health_text else ""}
 
 Output JSON with a single "output" field containing whatever you want to record."""
 

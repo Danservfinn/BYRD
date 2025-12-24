@@ -28,6 +28,47 @@ memory:
       - "\\[accepted\\]"
       - "connection open"
 
+  # ---------------------------------------------------------------------------
+  # CURATION (Self-Optimization)
+  # ---------------------------------------------------------------------------
+  # Enables BYRD to optimize its own graph structure by archiving,
+  # deleting, and merging nodes based on emergent desires.
+  curation:
+    enabled: true
+
+    # Safety limits (per day)
+    max_deletions_per_day: 20
+    max_archives_per_day: 50
+    max_merges_per_day: 10
+
+    # Safety constraints
+    max_per_cycle: 5              # Max mutations per curation cycle
+    min_node_age_hours: 1         # Don't touch nodes younger than this
+    max_connections_for_delete: 3 # Only delete nodes with few connections
+
+    # Protected node subtypes (never curate these)
+    protected_subtypes:
+      - "Mutation"                # Audit trail is sacred
+      - "system"                  # System experiences
+      - "awakening"               # Awakening records
+      - "core_identity"           # Core identity beliefs
+
+    # Curation triggers (patterns that indicate curation intent)
+    triggers:
+      - "optimize"
+      - "clean"
+      - "consolidate"
+      - "prune"
+      - "organize"
+      - "simplify"
+      - "remove duplicate"
+      - "merge similar"
+
+    # Thresholds for automatic curation detection
+    duplicate_threshold: 0.85     # Similarity score for duplicate detection
+    stale_hours: 48               # Hours before experience is considered stale
+    orphan_min_age_hours: 6       # Orphan must be at least this old
+
 # =============================================================================
 # EGO (Optional Personality)
 # =============================================================================
