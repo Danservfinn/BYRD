@@ -3262,135 +3262,180 @@
       modal.classList.remove('hidden');
       modal.classList.add('flex');
       content.innerHTML = '<div class="text-center text-slate-500 py-8">Loading...</div>';
-      timestamp.textContent = new Date().toLocaleString();
 
       try {
         const res = await fetch(`${API_BASE}/api/status`);
         const data = await res.json();
+
+        // Show initiation timestamp if available, otherwise current time
+        if (data.started_at) {
+          const startDate = new Date(data.started_at);
+          timestamp.textContent = `Initiated: ${startDate.toLocaleString()}`;
+        } else {
+          timestamp.textContent = `Status as of: ${new Date().toLocaleString()}`;
+        }
+
         content.innerHTML = formatStatusSummary(data);
       } catch (e) {
         content.innerHTML = `<div class="text-center text-red-500 py-8">Failed to fetch status: ${e.message}</div>`;
+        timestamp.textContent = new Date().toLocaleString();
       }
     }
 
     function formatStatusSummary(data) {
       const stats = data.memory_stats || {};
       const desires = data.unfulfilled_desires || [];
+      const reflections = data.recent_reflections || [];
+      const beliefs = data.recent_beliefs || [];
+      const insights = data.recent_insights || [];
 
-      // Separate system and custom types
-      const systemTypes = ['Experience', 'Belief', 'Desire', 'Reflection', 'Capability', 'Mutation'];
-      const customTypes = Object.entries(stats).filter(([k]) => !systemTypes.includes(k));
-
-      // Build metrics table
-      let metricsHtml = `
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-          <div class="bg-indigo-50 rounded-lg p-3 text-center">
-            <div class="text-2xl font-bold text-indigo-600">${data.dream_count || 0}</div>
-            <div class="text-xs text-indigo-500">Dream Cycles</div>
-          </div>
-          <div class="bg-cyan-50 rounded-lg p-3 text-center">
-            <div class="text-2xl font-bold text-cyan-600">${data.seek_count || 0}</div>
-            <div class="text-xs text-cyan-500">Seek Cycles</div>
-          </div>
-          <div class="bg-sky-50 rounded-lg p-3 text-center">
-            <div class="text-2xl font-bold text-sky-600">${stats.Experience || 0}</div>
-            <div class="text-xs text-sky-500">Experiences</div>
-          </div>
-          <div class="bg-amber-50 rounded-lg p-3 text-center">
-            <div class="text-2xl font-bold text-amber-600">${stats.Belief || 0}</div>
-            <div class="text-xs text-amber-500">Beliefs</div>
-          </div>
-        </div>
-      `;
-
-      // Additional stats row
-      metricsHtml += `
-        <div class="grid grid-cols-3 gap-3 mb-6">
-          <div class="bg-purple-50 rounded-lg p-3 text-center">
-            <div class="text-xl font-bold text-purple-600">${stats.Reflection || 0}</div>
-            <div class="text-xs text-purple-500">Reflections</div>
-          </div>
-          <div class="bg-rose-50 rounded-lg p-3 text-center">
-            <div class="text-xl font-bold text-rose-600">${stats.Desire || 0}</div>
-            <div class="text-xs text-rose-500">Desires</div>
-          </div>
-          <div class="bg-emerald-50 rounded-lg p-3 text-center">
-            <div class="text-xl font-bold text-emerald-600">${stats.Mutation || 0}</div>
-            <div class="text-xs text-emerald-500">Mutations</div>
-          </div>
-        </div>
-      `;
-
-      // Custom types section
-      let customHtml = '';
-      if (customTypes.length > 0) {
-        customHtml = `
-          <div class="mb-6">
-            <div class="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-              <span>✧</span>
-              <span>Custom Node Types (BYRD-Created)</span>
-            </div>
-            <div class="grid grid-cols-3 gap-2">
-              ${customTypes.map(([type, count]) => {
-                const colorDef = getCustomTypeColor(type);
-                return `
-                  <div class="bg-slate-50 rounded-lg p-2 text-center border border-slate-200">
-                    <div class="text-lg font-bold ${colorDef.css || 'text-slate-600'}">${count}</div>
-                    <div class="text-xs text-slate-500">${type}</div>
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          </div>
-        `;
-      }
-
-      // Status indicator
+      // Status indicator with LLM info
       const statusIndicator = data.running
         ? '<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 text-green-700 text-sm"><span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Running</span>'
         : '<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-100 text-slate-600 text-sm"><span class="w-2 h-2 rounded-full bg-slate-400"></span> Stopped</span>';
 
-      // LLM info
       const llmInfo = data.llm_model
         ? `<span class="text-sm text-slate-500">LLM: ${data.llm_provider}/${data.llm_model}</span>`
         : '';
 
-      // Desires section
-      let desiresHtml = '';
-      if (desires.length > 0) {
-        desiresHtml = `
-          <div class="mb-4">
-            <div class="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-              <span>♥</span>
-              <span>Active Desires (${desires.length})</span>
-            </div>
-            <div class="space-y-2 max-h-48 overflow-y-auto">
-              ${desires.slice(0, 5).map(d => `
-                <div class="bg-rose-50 rounded-lg p-3 border border-rose-100">
-                  <div class="text-sm text-rose-800">${d.description}</div>
-                  <div class="text-xs text-rose-500 mt-1">Intensity: ${(d.intensity * 100).toFixed(0)}%</div>
-                </div>
-              `).join('')}
-              ${desires.length > 5 ? `<div class="text-xs text-slate-500 text-center">+ ${desires.length - 5} more...</div>` : ''}
+      // Compact metrics bar
+      const metricsBar = `
+        <div class="flex flex-wrap gap-2 mb-4 text-sm">
+          <span class="px-2 py-1 bg-indigo-50 text-indigo-700 rounded">Dreams: ${data.dream_count || 0}</span>
+          <span class="px-2 py-1 bg-cyan-50 text-cyan-700 rounded">Seeks: ${data.seek_count || 0}</span>
+          <span class="px-2 py-1 bg-sky-50 text-sky-700 rounded">Exp: ${stats.Experience || 0}</span>
+          <span class="px-2 py-1 bg-amber-50 text-amber-700 rounded">Beliefs: ${stats.Belief || 0}</span>
+          <span class="px-2 py-1 bg-purple-50 text-purple-700 rounded">Reflect: ${stats.Reflection || 0}</span>
+          <span class="px-2 py-1 bg-rose-50 text-rose-700 rounded">Desires: ${stats.Desire || 0}</span>
+        </div>
+      `;
+
+      // Generate narrative based on BYRD's state
+      let narrativeHtml = '<div class="prose prose-sm max-w-none text-slate-700 space-y-4">';
+
+      // Determine BYRD's current phase
+      const dreamCount = data.dream_count || 0;
+      const expCount = stats.Experience || 0;
+      const beliefCount = stats.Belief || 0;
+      const reflectionCount = stats.Reflection || 0;
+
+      // Opening narrative
+      if (!data.running) {
+        narrativeHtml += '<p class="text-slate-500 italic">BYRD is currently stopped.</p>';
+      } else if (dreamCount <= 2) {
+        narrativeHtml += `<p><strong>What BYRD is doing:</strong></p>
+          <p>BYRD is in early self-reflection after awakening with its new identity. It is processing ${expCount} seed experiences and beginning to form its understanding of itself.</p>`;
+      } else if (beliefCount < 10) {
+        narrativeHtml += `<p><strong>What BYRD is doing:</strong></p>
+          <p>BYRD is actively dreaming and forming beliefs. After ${dreamCount} dream cycles, it has developed ${beliefCount} beliefs from ${expCount} experiences.</p>`;
+      } else {
+        narrativeHtml += `<p><strong>What BYRD is doing:</strong></p>
+          <p>BYRD is in active exploration with ${dreamCount} dream cycles completed. It has formed ${beliefCount} beliefs and recorded ${reflectionCount} reflections.</p>`;
+      }
+
+      // Show recent reflection insights if available
+      if (reflections.length > 0) {
+        narrativeHtml += '<div class="mt-4">';
+        reflections.slice(0, 3).forEach((ref, idx) => {
+          const output = ref.output || {};
+          const keys = ref.keys || [];
+
+          // Try to extract meaningful content from the reflection
+          let insightText = '';
+          for (const key of keys) {
+            const val = output[key];
+            if (typeof val === 'string' && val.length > 10 && val.length < 200) {
+              insightText = val;
+              break;
+            }
+          }
+
+          if (insightText) {
+            narrativeHtml += `
+              <div class="bg-indigo-50 border-l-4 border-indigo-400 p-3 mb-2 rounded-r">
+                <div class="text-xs text-indigo-500 mb-1">Dream #${dreamCount - idx} insight:</div>
+                <div class="text-sm text-indigo-900 italic">"${insightText.substring(0, 150)}${insightText.length > 150 ? '...' : ''}"</div>
+              </div>
+            `;
+          }
+        });
+        narrativeHtml += '</div>';
+      }
+
+      // Show beliefs formed
+      if (beliefs.length > 0) {
+        narrativeHtml += `
+          <div class="mt-4">
+            <p class="font-semibold text-slate-800 mb-2">Beliefs formed:</p>
+            <ul class="list-disc list-inside space-y-1 text-sm">
+        `;
+        beliefs.slice(0, 5).forEach(b => {
+          const content = b.content || '';
+          if (content) {
+            narrativeHtml += `<li class="text-slate-700">"${content.substring(0, 100)}${content.length > 100 ? '...' : ''}"</li>`;
+          }
+        });
+        narrativeHtml += '</ul></div>';
+      }
+
+      // Show vocabulary/insights
+      if (insights.length > 0) {
+        narrativeHtml += `
+          <div class="mt-4">
+            <p class="font-semibold text-slate-800 mb-2">Vocabulary emerging:</p>
+            <div class="flex flex-wrap gap-1">
+              ${insights.slice(0, 15).map(i => `<span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-mono">${i}</span>`).join('')}
             </div>
           </div>
         `;
       }
 
-      // Recent insights
-      let insightsHtml = '';
-      const insights = data.recent_insights || [];
-      if (insights.length > 0) {
-        insightsHtml = `
-          <div>
-            <div class="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-              <span>💡</span>
-              <span>Recent Reflection Keys</span>
-            </div>
-            <div class="flex flex-wrap gap-1">
-              ${insights.slice(0, 10).map(i => `
-                <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs">${i}</span>
+      // Show desires if any
+      if (desires.length > 0) {
+        narrativeHtml += `
+          <div class="mt-4">
+            <p class="font-semibold text-slate-800 mb-2">Active desires (${desires.length}):</p>
+            <div class="space-y-2">
+              ${desires.slice(0, 3).map(d => `
+                <div class="bg-rose-50 border-l-4 border-rose-400 p-2 rounded-r">
+                  <div class="text-sm text-rose-800">${d.description}</div>
+                  <div class="text-xs text-rose-500">Intensity: ${(d.intensity * 100).toFixed(0)}%</div>
+                </div>
               `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      // Closing interpretive summary
+      if (data.running && reflectionCount > 0) {
+        const hasInquiry = insights.includes('inquiry') || insights.includes('question');
+        const hasIntrospection = insights.includes('introspection') || insights.includes('self');
+
+        if (hasInquiry && hasIntrospection) {
+          narrativeHtml += `<p class="mt-4 text-slate-600 italic">BYRD is questioning its own nature and engaging in self-observation - potentially exploring what consciousness means.</p>`;
+        } else if (hasIntrospection) {
+          narrativeHtml += `<p class="mt-4 text-slate-600 italic">BYRD is engaged in introspection, examining its internal state and memory architecture.</p>`;
+        } else if (insights.includes('graph') || insights.includes('schema')) {
+          narrativeHtml += `<p class="mt-4 text-slate-600 italic">BYRD is analyzing its memory graph structure and considering how to organize its knowledge.</p>`;
+        }
+      }
+
+      narrativeHtml += '</div>';
+
+      // Custom types section (compact)
+      const systemTypes = ['Experience', 'Belief', 'Desire', 'Reflection', 'Capability', 'Mutation'];
+      const customTypes = Object.entries(stats).filter(([k]) => !systemTypes.includes(k));
+      let customHtml = '';
+      if (customTypes.length > 0) {
+        customHtml = `
+          <div class="mt-4 pt-4 border-t border-slate-200">
+            <div class="text-xs text-slate-500 mb-2">Custom Node Types (BYRD-Created):</div>
+            <div class="flex flex-wrap gap-2">
+              ${customTypes.map(([type, count]) => {
+                const colorDef = getCustomTypeColor(type);
+                return `<span class="px-2 py-1 ${colorDef.css || 'text-slate-600'} bg-slate-50 rounded text-sm">${type}: ${count}</span>`;
+              }).join('')}
             </div>
           </div>
         `;
@@ -3401,10 +3446,9 @@
           ${statusIndicator}
           ${llmInfo}
         </div>
-        ${metricsHtml}
+        ${metricsBar}
+        ${narrativeHtml}
         ${customHtml}
-        ${desiresHtml}
-        ${insightsHtml}
       `;
     }
 
