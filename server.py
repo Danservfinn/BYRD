@@ -437,6 +437,89 @@ async def get_capabilities():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/genesis")
+async def get_genesis():
+    """
+    Get BYRD's genesis - all non-emergent factors that constitute the foundation.
+
+    This includes:
+    - Ego configuration (name, archetype, voice, description)
+    - Seed experiences (ego_seed, system, awakening types)
+    - Constitutional constraints (protected files)
+    - System configuration (LLM model, intervals)
+    - Emergence statistics (ratio of emergent vs given content)
+
+    This endpoint provides transparency about what was "given" to BYRD
+    versus what emerged through its own reflection processes.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+
+        # Get ego configuration
+        ego_data = {
+            "name": byrd_instance.ego.name,
+            "archetype": byrd_instance.ego.archetype,
+            "description": byrd_instance.ego.description,
+            "voice": byrd_instance.ego.voice,
+            "is_neutral": byrd_instance.ego.is_neutral,
+            "seed_count": len(byrd_instance.ego.seeds) if byrd_instance.ego.seeds else 0
+        }
+
+        # Get seed experiences from database
+        seed_experiences = await byrd_instance.memory.get_seed_experiences()
+
+        # Get genesis statistics
+        genesis_stats = await byrd_instance.memory.get_genesis_stats()
+
+        # Constitutional constraints (hardcoded as these are fundamental)
+        constitutional = {
+            "protected_files": [
+                "constitutional.py",
+                "provenance.py",
+                "modification_log.py",
+                "self_modification.py"
+            ],
+            "description": "These files define BYRD's identity boundaries and cannot be self-modified. They ensure provenance tracking and safe evolution."
+        }
+
+        # System configuration
+        # Get LLM info from model_name property (format: "provider/model")
+        llm_model_name = byrd_instance.llm_client.model_name
+        llm_parts = llm_model_name.split("/", 1) if llm_model_name else ["unknown", "unknown"]
+        system_config = {
+            "llm_provider": llm_parts[0] if len(llm_parts) > 0 else "unknown",
+            "llm_model": llm_parts[1] if len(llm_parts) > 1 else llm_model_name,
+            "dream_interval_base": byrd_instance.config.get("dreamer", {}).get("interval_seconds", 30),
+            "seek_interval": byrd_instance.config.get("seeker", {}).get("interval_seconds", 10),
+            "self_modification_enabled": byrd_instance.config.get("self_modification", {}).get("enabled", False)
+        }
+
+        # Get awakening timestamp if available
+        awakening_timestamp = None
+        if seed_experiences:
+            for seed in seed_experiences:
+                if seed.get("type") == "awakening" or seed.get("type") == "ego_seed":
+                    awakening_timestamp = seed.get("timestamp")
+                    break
+
+        return {
+            "ego": ego_data,
+            "seed_experiences": seed_experiences,
+            "constitutional": constitutional,
+            "system_config": system_config,
+            "genesis_stats": genesis_stats,
+            "awakening_timestamp": awakening_timestamp
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/graph", response_model=GraphResponse)
 async def get_graph(limit: int = 1000):
     """
