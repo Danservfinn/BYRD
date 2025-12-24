@@ -257,6 +257,39 @@ class LLMConfigUpdate(BaseModel):
     model: str
 
 
+# Graph Visualization Models
+class GraphNode(BaseModel):
+    id: str
+    type: str
+    content: str
+    subtype: Optional[str] = None
+    confidence: Optional[float] = None
+    intensity: Optional[float] = None
+    status: Optional[str] = None
+    created_at: Optional[str] = None
+    access_count: int = 0
+    last_accessed: Optional[str] = None
+
+
+class GraphRelationship(BaseModel):
+    id: str
+    type: str
+    source_id: str
+    target_id: str
+
+
+class GraphStats(BaseModel):
+    total_nodes: int
+    total_relationships: int
+    by_type: Dict[str, int]
+
+
+class GraphResponse(BaseModel):
+    nodes: List[GraphNode]
+    relationships: List[GraphRelationship]
+    stats: GraphStats
+
+
 # =============================================================================
 # REST ENDPOINTS
 # =============================================================================
@@ -400,6 +433,36 @@ async def get_capabilities():
         await byrd_instance.memory.connect()
         capabilities = await byrd_instance.memory.get_capabilities()
         return {"capabilities": capabilities}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/graph", response_model=GraphResponse)
+async def get_graph(limit: int = 1000):
+    """
+    Get full graph structure for visualization.
+
+    Returns all nodes and relationships from the Neo4j database,
+    suitable for rendering the complete memory graph in 3D.
+
+    Args:
+        limit: Maximum number of nodes to return (default 1000)
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+        graph = await byrd_instance.memory.get_full_graph(limit=limit)
+
+        # Convert to response model format
+        return GraphResponse(
+            nodes=[GraphNode(**node) for node in graph["nodes"]],
+            relationships=[GraphRelationship(**rel) for rel in graph["relationships"]],
+            stats=GraphStats(**graph["stats"])
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
