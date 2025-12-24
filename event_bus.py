@@ -41,6 +41,7 @@ class EventType(Enum):
     DREAM_CYCLE_END = "dream_cycle_end"
     REFLECTION_TEXT = "reflection_text"
     REFLECTION_CREATED = "reflection_created"  # Emergence-compliant storage
+    MEMORIES_ACCESSED = "memories_accessed"  # When memories are being considered during reflection
 
     # Seeker events
     SEEK_CYCLE_START = "seek_cycle_start"
