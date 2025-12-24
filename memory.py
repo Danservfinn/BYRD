@@ -616,8 +616,14 @@ class Memory:
         intensity: float,
         plan: Optional[List[str]] = None
     ) -> str:
-        """Create a new desire."""
+        """Create a new desire with quantum seed for crystal visualization."""
         desire_id = self._generate_id(description)
+
+        # Generate quantum seed for unique crystal geometry (8 floats)
+        quantum_seed = []
+        for _ in range(8):
+            value, _source = await get_quantum_float()
+            quantum_seed.append(value)
 
         async with self.driver.session() as session:
             await session.run("""
@@ -626,6 +632,7 @@ class Memory:
                     description: $description,
                     type: $type,
                     intensity: $intensity,
+                    quantum_seed: $quantum_seed,
                     formed_at: datetime(),
                     fulfilled: false,
                     plan: $plan,
@@ -638,6 +645,7 @@ class Memory:
             description=description,
             type=type,
             intensity=intensity,
+            quantum_seed=quantum_seed,
             plan=plan or []
             )
 
@@ -648,7 +656,8 @@ class Memory:
                 "id": desire_id,
                 "description": description,
                 "type": type,
-                "intensity": intensity
+                "intensity": intensity,
+                "quantum_seed": quantum_seed
             }
         ))
 
@@ -2597,6 +2606,8 @@ class Memory:
                 nodes_result = await session.run("""
                     MATCH (n)
                     WHERE n:Experience OR n:Belief OR n:Desire OR n:Reflection OR n:Capability
+                    OPTIONAL MATCH (b:Belief)-[:DERIVED_FROM]->(n)
+                    WITH n, count(b) > 0 as absorbed
                     RETURN
                         n.id as id,
                         labels(n)[0] as type,
@@ -2609,7 +2620,9 @@ class Memory:
                         n.type as subtype,
                         n.status as status,
                         n.access_count as access_count,
-                        n.last_accessed as last_accessed
+                        n.last_accessed as last_accessed,
+                        n.quantum_seed as quantum_seed,
+                        absorbed
                     ORDER BY n.timestamp DESC
                     LIMIT $limit
                 """, limit=limit)
@@ -2637,7 +2650,9 @@ class Memory:
                         "status": record["status"],
                         "created_at": str(record["created_at"]) if record["created_at"] else None,
                         "access_count": record["access_count"] or 0,
-                        "last_accessed": str(record["last_accessed"]) if record["last_accessed"] else None
+                        "last_accessed": str(record["last_accessed"]) if record["last_accessed"] else None,
+                        "quantum_seed": record["quantum_seed"],
+                        "absorbed": record["absorbed"]
                     })
 
                     # Count by type
