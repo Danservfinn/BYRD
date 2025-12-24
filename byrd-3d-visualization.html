@@ -361,6 +361,44 @@
         transform: translateX(-50%) scale(2);
       }
     }
+
+    /* Crystal Modal Styles */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(30, 41, 59, 0.5);
+      border-radius: 3px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.5);
+      border-radius: 3px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 0.8);
+    }
+
+    .crystal-modal-content {
+      animation: crystalModalIn 0.3s ease-out;
+    }
+
+    @keyframes crystalModalIn {
+      from {
+        opacity: 0;
+        transform: scale(0.9) translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .crystal-source-item {
+      transition: all 0.2s ease;
+    }
+    .crystal-source-item:hover {
+      transform: translateX(4px);
+    }
   </style>
 </head>
 <body>
@@ -580,6 +618,54 @@
   <!-- Phase 4: Camera Indicator -->
   <div id="camera-indicator" class="camera-indicator">
     <span id="camera-indicator-text">Focusing on node...</span>
+  </div>
+
+  <!-- Crystal Modal: Source Experiences -->
+  <div id="crystal-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="crystal-modal-content bg-slate-900/95 border border-slate-700/50 rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
+      <!-- Header -->
+      <div class="flex items-center justify-between p-4 border-b border-slate-700/50">
+        <div class="flex items-center gap-3">
+          <div id="crystal-modal-dot" class="w-4 h-4 rounded-full bg-purple-500"></div>
+          <div>
+            <div id="crystal-modal-type" class="text-sm font-medium text-slate-300 uppercase tracking-wide">Belief Crystal</div>
+            <div id="crystal-modal-confidence" class="text-xs text-slate-500">Confidence: 85%</div>
+          </div>
+        </div>
+        <button id="btn-close-crystal-modal" class="text-slate-500 hover:text-slate-300 transition-colors p-1">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <!-- Crystal Content -->
+      <div class="p-4">
+        <div id="crystal-modal-content" class="text-sm text-slate-300 leading-relaxed mb-4 italic"></div>
+      </div>
+      <!-- Source Experiences -->
+      <div class="border-t border-slate-700/50">
+        <div class="p-4">
+          <div class="text-[10px] uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-2">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+              <path d="M2 17l10 5 10-5"/>
+              <path d="M2 12l10 5 10-5"/>
+            </svg>
+            <span>Crystallized from <span id="crystal-source-count">0</span> experiences</span>
+          </div>
+          <div id="crystal-sources-list" class="space-y-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+            <!-- Source experiences will be populated here -->
+          </div>
+        </div>
+      </div>
+      <!-- Footer with quantum seed info -->
+      <div class="px-4 py-2 bg-slate-800/50 border-t border-slate-700/30">
+        <div class="text-[9px] text-slate-600 font-mono flex items-center gap-2">
+          <span>Quantum Seed:</span>
+          <span id="crystal-quantum-seed" class="text-slate-500 truncate">—</span>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Event Detail Modal -->
@@ -1136,6 +1222,302 @@
     };
 
     // ==========================================================================
+    // BELIEF CRYSTAL GENERATION
+    // ==========================================================================
+    // Unique crystal geometry for each belief, seeded by quantum randomness
+
+    /**
+     * Get a seeded RNG from quantum seed array or fallback to ID-based hash
+     */
+    function getCrystalRNG(nodeData) {
+      if (nodeData.quantum_seed && nodeData.quantum_seed.length >= 8) {
+        return seededRandomFromQuantum(nodeData.quantum_seed);
+      }
+      return seededRandomFallback(nodeData.id);
+    }
+
+    /**
+     * RNG seeded from quantum random values (stored at belief creation)
+     */
+    function seededRandomFromQuantum(quantumSeed) {
+      let index = 0;
+      return function() {
+        const v1 = quantumSeed[index % quantumSeed.length];
+        const v2 = quantumSeed[(index + 3) % quantumSeed.length];
+        index++;
+        return (v1 + v2 * 0.7182818) % 1.0;
+      };
+    }
+
+    /**
+     * Fallback RNG for beliefs without quantum seed (backwards compat)
+     */
+    function seededRandomFallback(nodeId) {
+      let hash = 0;
+      for (let i = 0; i < nodeId.length; i++) {
+        hash = ((hash << 5) - hash) + nodeId.charCodeAt(i);
+        hash = hash & hash;
+      }
+      return function() {
+        hash = (hash * 1103515245 + 12345) & 0x7fffffff;
+        return hash / 0x7fffffff;
+      };
+    }
+
+    /**
+     * Create unique crystal geometry based on seeded random parameters
+     */
+    function createCrystalGeometry(rng, confidence, derivedCount) {
+      // Crystal parameters derived from quantum seed
+      const sides = Math.floor(rng() * 5) + 4;           // 4-8 sides
+      const heightRatio = 1.5 + rng() * 1.5;             // 1.5-3.0
+      const twistAngle = (rng() - 0.5) * 0.52;           // ±15° in radians
+      const termType = Math.floor(rng() * 4);            // 0-3: pyramidal, chisel, flat, double
+      const termRatio = 0.2 + rng() * 0.3;               // 0.2-0.5
+      const asymmetry = rng() * 0.3;                     // 0-0.3
+      const irregularity = rng() * 0.12;                 // 0-0.12
+
+      // Base size scales with derived count and confidence
+      const baseSize = 1.5 + Math.log2(derivedCount + 1) * 0.3 + confidence * 0.5;
+      const height = baseSize * heightRatio;
+      const termHeight = height * termRatio;
+
+      // Build vertices
+      const vertices = [];
+      const indices = [];
+
+      // Create prism layers with twist
+      const layers = [
+        { y: -height / 2, radius: baseSize, twistMult: 0 },
+        { y: -height / 2 + termHeight * 0.3, radius: baseSize, twistMult: 0.2 },
+        { y: 0, radius: baseSize, twistMult: 0.5 },
+        { y: height / 2 - termHeight * 0.3, radius: baseSize, twistMult: 0.8 },
+        { y: height / 2, radius: baseSize * (0.85 + rng() * 0.1), twistMult: 1 }
+      ];
+
+      // Generate prism vertices
+      for (let layerIdx = 0; layerIdx < layers.length; layerIdx++) {
+        const layer = layers[layerIdx];
+        const layerTwist = twistAngle * layer.twistMult;
+
+        for (let i = 0; i < sides; i++) {
+          const baseAngle = (i / sides) * Math.PI * 2;
+          const angle = baseAngle + layerTwist;
+
+          // Add irregularity
+          const radiusVar = layer.radius * (1 - irregularity / 2 + rng() * irregularity);
+          const angleVar = angle + (rng() - 0.5) * irregularity * 0.5;
+
+          vertices.push(
+            Math.cos(angleVar) * radiusVar,
+            layer.y,
+            Math.sin(angleVar) * radiusVar
+          );
+        }
+      }
+
+      // Add termination points based on type
+      const topPointIdx = vertices.length / 3;
+      if (termType === 0 || termType === 3) { // pyramidal or double
+        vertices.push(0, height / 2 + termHeight * 0.4, 0);
+      }
+
+      const bottomPointIdx = vertices.length / 3;
+      if (termType === 3) { // double terminated
+        vertices.push(0, -height / 2 - termHeight * 0.4, 0);
+      }
+
+      // Build faces
+      // Side faces (connect adjacent layers)
+      for (let layer = 0; layer < layers.length - 1; layer++) {
+        const baseA = layer * sides;
+        const baseB = (layer + 1) * sides;
+
+        for (let i = 0; i < sides; i++) {
+          const next = (i + 1) % sides;
+          // Two triangles per quad
+          indices.push(baseA + i, baseB + i, baseB + next);
+          indices.push(baseA + i, baseB + next, baseA + next);
+        }
+      }
+
+      // Top termination (if pyramidal or double)
+      if (termType === 0 || termType === 3) {
+        const topLayerBase = (layers.length - 1) * sides;
+        for (let i = 0; i < sides; i++) {
+          const next = (i + 1) % sides;
+          indices.push(topLayerBase + i, topLayerBase + next, topPointIdx);
+        }
+      } else {
+        // Flat or chisel top - fill with triangles
+        const topLayerBase = (layers.length - 1) * sides;
+        for (let i = 1; i < sides - 1; i++) {
+          indices.push(topLayerBase, topLayerBase + i, topLayerBase + i + 1);
+        }
+      }
+
+      // Bottom termination (if double)
+      if (termType === 3) {
+        for (let i = 0; i < sides; i++) {
+          const next = (i + 1) % sides;
+          indices.push(i, bottomPointIdx, next);
+        }
+      } else {
+        // Flat bottom
+        for (let i = 1; i < sides - 1; i++) {
+          indices.push(0, i + 1, i);
+        }
+      }
+
+      // Create geometry
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+      geometry.setIndex(indices);
+      geometry.computeVertexNormals();
+
+      return {
+        geometry,
+        params: { sides, heightRatio, twistAngle, termType, asymmetry, irregularity }
+      };
+    }
+
+    /**
+     * Create crystal material with glass-like appearance
+     */
+    function createCrystalMaterial(rng, baseColor, confidence) {
+      const hue = new THREE.Color(baseColor);
+      // Slight color variation per crystal
+      const hueShift = (rng() - 0.5) * 0.08;
+      hue.offsetHSL(hueShift, 0, (rng() - 0.5) * 0.1);
+
+      // Emissive intensity based on confidence
+      const emissiveIntensity = 0.15 + confidence * 0.35;
+
+      return new THREE.MeshPhongMaterial({
+        color: hue,
+        emissive: hue.clone().multiplyScalar(0.5),
+        emissiveIntensity: emissiveIntensity,
+        transparent: true,
+        opacity: 0.75 + confidence * 0.2,
+        shininess: 80 + rng() * 40,
+        specular: new THREE.Color(0xffffff),
+        side: THREE.DoubleSide
+      });
+    }
+
+    /**
+     * Create inner glow effect for crystal
+     */
+    function createCrystalInnerGlow(crystalMesh, color, confidence) {
+      const innerGeometry = crystalMesh.geometry.clone();
+      innerGeometry.scale(0.5, 0.5, 0.5);
+
+      const glowMaterial = new THREE.MeshBasicMaterial({
+        color: color,
+        transparent: true,
+        opacity: 0.25 + confidence * 0.25,
+        blending: THREE.AdditiveBlending
+      });
+
+      const innerGlow = new THREE.Mesh(innerGeometry, glowMaterial);
+      crystalMesh.add(innerGlow);
+
+      return innerGlow;
+    }
+
+    /**
+     * Create a crystal node for beliefs, desires, or seeks
+     * Uses procedural geometry from quantum seed for uniqueness
+     */
+    function createCrystalNode(nodeData, position) {
+      // Prevent duplicates
+      if (graphState.nodeIdToMesh.has(nodeData.id)) {
+        return graphState.nodeIdToMesh.get(nodeData.id);
+      }
+      const existingNode = nodes3D.find(n => n.userData.id === nodeData.id);
+      if (existingNode) {
+        return existingNode;
+      }
+
+      const type = nodeData.type || 'belief';
+      const colors = NODE_COLORS[type] || NODE_COLORS.belief;
+      const confidence = nodeData.confidence || nodeData.intensity || 0.5;
+      const derivedCount = nodeData.derived_count || nodeData.source_count || 1;
+
+      // Get seeded RNG from quantum seed or fallback
+      const rng = getCrystalRNG(nodeData);
+
+      // Create unique crystal geometry
+      const { geometry, params } = createCrystalGeometry(rng, confidence, derivedCount);
+
+      // Create crystal material with confidence-based glow
+      const material = createCrystalMaterial(rng, colors.color, confidence);
+
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(position.x, position.y, position.z);
+
+      // Random initial rotation for variety
+      mesh.rotation.set(
+        rng() * Math.PI * 2,
+        rng() * Math.PI * 2,
+        rng() * Math.PI * 2
+      );
+
+      // Add inner glow effect
+      const innerGlow = createCrystalInnerGlow(mesh, colors.color, confidence);
+
+      // Store crystal-specific data
+      mesh.userData = {
+        id: nodeData.id,
+        type: type,
+        content: nodeData.content,
+        importance: confidence,
+        confidence: confidence,
+        nodeData: nodeData,
+        baseScale: 1,
+        baseColor: colors.color,
+        targetScale: new THREE.Vector3(1, 1, 1),
+        velocity: new THREE.Vector3(0, 0, 0),
+        force: new THREE.Vector3(0, 0, 0),
+        createdAt: Date.now(),
+        isGraphNode: true,
+        isCrystal: true,  // Flag for crystal-specific interactions
+        innerGlow: innerGlow,
+        rotationSpeed: new THREE.Vector3(
+          (rng() - 0.5) * 0.002,
+          (rng() - 0.5) * 0.003,
+          (rng() - 0.5) * 0.002
+        )
+      };
+
+      scene.add(mesh);
+      nodes3D.push(mesh);
+      graphState.nodeIdToMesh.set(nodeData.id, mesh);
+      connectionCounts.set(nodeData.id, 0);
+
+      return mesh;
+    }
+
+    /**
+     * Types that should render as crystals
+     */
+    const CRYSTAL_TYPES = ['belief', 'desire', 'Belief', 'Desire'];
+
+    /**
+     * Check if a node should be rendered as a crystal
+     */
+    function isCrystalType(type) {
+      return CRYSTAL_TYPES.includes(type);
+    }
+
+    /**
+     * Check if an experience is absorbed into a crystal
+     */
+    function isAbsorbedExperience(node) {
+      return node.absorbed === true;
+    }
+
+    // ==========================================================================
     // DOM ELEMENTS
     // ==========================================================================
     const container = document.getElementById('canvas-container');
@@ -1180,6 +1562,17 @@
     const loadingOverlay = document.getElementById('loading-overlay');
     const cameraIndicator = document.getElementById('camera-indicator');
     const cameraIndicatorText = document.getElementById('camera-indicator-text');
+
+    // Crystal Modal DOM Elements
+    const crystalModal = document.getElementById('crystal-modal');
+    const crystalModalDot = document.getElementById('crystal-modal-dot');
+    const crystalModalType = document.getElementById('crystal-modal-type');
+    const crystalModalConfidence = document.getElementById('crystal-modal-confidence');
+    const crystalModalContent = document.getElementById('crystal-modal-content');
+    const crystalSourceCount = document.getElementById('crystal-source-count');
+    const crystalSourcesList = document.getElementById('crystal-sources-list');
+    const crystalQuantumSeed = document.getElementById('crystal-quantum-seed');
+    const btnCloseCrystalModal = document.getElementById('btn-close-crystal-modal');
 
     // Phase 4: State
     let selectedNode = null;
@@ -1281,6 +1674,25 @@
       // Phase 4: Detail panel close button
       btnCloseDetail.addEventListener('click', () => {
         deselectNode();
+      });
+
+      // Crystal modal close button
+      btnCloseCrystalModal.addEventListener('click', () => {
+        hideCrystalModal();
+      });
+
+      // Crystal modal backdrop click to close
+      crystalModal.addEventListener('click', (e) => {
+        if (e.target === crystalModal) {
+          hideCrystalModal();
+        }
+      });
+
+      // ESC key to close crystal modal
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !crystalModal.classList.contains('hidden')) {
+          hideCrystalModal();
+        }
       });
 
       // Phase 4: Hide loading overlay after init
@@ -2702,34 +3114,53 @@
         // Clear existing event-mode nodes (but keep cat and core)
         clearEventModeNodes();
 
-        // Group nodes by type for positioning (exclude experiences, deduplicate)
-        const excludeTypes = ['experience', 'Experience'];
+        // Group nodes by type for positioning
+        // Filter: skip absorbed experiences (they live inside crystals)
         const seenIds = new Set();
         const nodesByType = {};
+        let absorbedCount = 0;
+        let crystalCount = 0;
+
         data.nodes.forEach(node => {
             const type = node.type || 'experience';
-            // Skip experience nodes
-            if (excludeTypes.includes(type)) return;
+
+            // Skip absorbed experiences - they're part of crystals now
+            if (isAbsorbedExperience(node)) {
+                absorbedCount++;
+                return;
+            }
+
+            // Skip regular experience nodes (keep absorbed check above for logging)
+            if (type === 'experience' || type === 'Experience') return;
+
             // Deduplicate by ID
             if (seenIds.has(node.id)) return;
             seenIds.add(node.id);
+
             if (!nodesByType[type]) nodesByType[type] = [];
             nodesByType[type].push(node);
         });
 
         // Create nodes with type-based positioning
+        // Use crystal rendering for belief/desire types
         let totalCreated = 0;
         for (const [type, typeNodes] of Object.entries(nodesByType)) {
             typeNodes.forEach((node, index) => {
                 const pos = calculateGraphPosition(node, index, typeNodes.length);
-                createGraphNode(node, pos);
+
+                if (isCrystalType(type)) {
+                    createCrystalNode(node, pos);
+                    crystalCount++;
+                } else {
+                    createGraphNode(node, pos);
+                }
                 totalCreated++;
             });
         }
 
-        console.log(`Created ${totalCreated} graph nodes`);
+        console.log(`Created ${totalCreated} graph nodes (${crystalCount} crystals, ${absorbedCount} absorbed experiences)`);
 
-        // Create relationship lines
+        // Create relationship lines (skip relationships to absorbed nodes)
         let relsCreated = 0;
         data.relationships.forEach(rel => {
             if (createRelationshipLine(rel)) {
@@ -2744,7 +3175,7 @@
 
         // Set mode
         graphState.mode = 'graph';
-        updateStatus(`Graph: ${totalCreated} nodes, ${relsCreated} relationships`, 'green');
+        updateStatus(`Graph: ${totalCreated} nodes, ${relsCreated} rels, ${crystalCount} crystals`, 'green');
 
         // Trigger visual refresh
         invalidateConnectionMap();
@@ -3188,6 +3619,13 @@
     // Phase 4: Detail panel functions
     function showDetailPanel(node) {
       const data = node.userData;
+
+      // If this is a crystal node, show the crystal modal instead
+      if (data.isCrystal || isCrystalType(data.type)) {
+        showCrystalModal(node);
+        return;
+      }
+
       const colors = NODE_COLORS[data.type] || NODE_COLORS.experience;
       const colorHex = `#${colors.color.toString(16).padStart(6, '0')}`;
 
@@ -3221,6 +3659,105 @@
 
     function hideDetailPanel() {
       detailPanel.classList.remove('visible');
+    }
+
+    // ==========================================================================
+    // CRYSTAL MODAL FUNCTIONS
+    // ==========================================================================
+
+    /**
+     * Show crystal modal with source experiences
+     */
+    async function showCrystalModal(node) {
+      const data = node.userData;
+      const colors = NODE_COLORS[data.type] || NODE_COLORS.belief;
+      const colorHex = `#${colors.color.toString(16).padStart(6, '0')}`;
+
+      // Set header
+      crystalModalDot.style.backgroundColor = colorHex;
+      crystalModalType.textContent = `${colors.label} Crystal`;
+      crystalModalType.style.color = colorHex;
+
+      const confidence = data.confidence || data.intensity || 0.5;
+      crystalModalConfidence.textContent = `Confidence: ${Math.round(confidence * 100)}%`;
+
+      // Set content
+      crystalModalContent.textContent = data.content || 'No content available';
+
+      // Show loading state for sources
+      crystalSourcesList.innerHTML = '<div class="text-xs text-slate-500 italic">Loading source experiences...</div>';
+      crystalSourceCount.textContent = '...';
+
+      // Display quantum seed if available
+      const quantumSeed = data.nodeData?.quantum_seed || data.quantum_seed;
+      if (quantumSeed && quantumSeed.length > 0) {
+        crystalQuantumSeed.textContent = quantumSeed.slice(0, 4).map(v => v.toFixed(3)).join(', ') + '...';
+      } else {
+        crystalQuantumSeed.textContent = 'Fallback RNG (ID-based)';
+      }
+
+      // Show modal
+      crystalModal.classList.remove('hidden');
+      crystalModal.classList.add('flex');
+
+      // Fetch detailed data including source experiences
+      try {
+        const response = await fetch(`/api/belief/${data.id}`);
+        if (response.ok) {
+          const beliefData = await response.json();
+          renderCrystalSources(beliefData.source_experiences || []);
+        } else {
+          // Fallback for desires or if endpoint fails
+          crystalSourcesList.innerHTML = '<div class="text-xs text-slate-500 italic">Source experiences not available for this crystal type.</div>';
+          crystalSourceCount.textContent = '0';
+        }
+      } catch (err) {
+        console.error('Failed to fetch crystal details:', err);
+        crystalSourcesList.innerHTML = '<div class="text-xs text-red-400">Failed to load sources</div>';
+        crystalSourceCount.textContent = '?';
+      }
+    }
+
+    /**
+     * Render source experiences in the crystal modal
+     */
+    function renderCrystalSources(sources) {
+      crystalSourceCount.textContent = sources.length;
+
+      if (sources.length === 0) {
+        crystalSourcesList.innerHTML = '<div class="text-xs text-slate-500 italic">No source experiences recorded.</div>';
+        return;
+      }
+
+      crystalSourcesList.innerHTML = sources.map((exp, index) => {
+        const typeColor = NODE_COLORS[exp.type]?.color || NODE_COLORS.experience.color;
+        const colorHex = `#${typeColor.toString(16).padStart(6, '0')}`;
+        const timestamp = exp.created_at ? new Date(exp.created_at).toLocaleString() : 'Unknown time';
+
+        return `
+          <div class="crystal-source-item bg-slate-800/50 rounded-lg p-3 border border-slate-700/30 hover:border-slate-600/50 transition-colors">
+            <div class="flex items-start gap-2">
+              <div class="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style="background-color: ${colorHex}"></div>
+              <div class="flex-1 min-w-0">
+                <div class="text-xs text-slate-300 leading-relaxed">${exp.content || 'No content'}</div>
+                <div class="text-[10px] text-slate-600 mt-1 flex items-center gap-2">
+                  <span class="uppercase">${exp.type || 'experience'}</span>
+                  <span>•</span>
+                  <span>${timestamp}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    /**
+     * Hide crystal modal
+     */
+    function hideCrystalModal() {
+      crystalModal.classList.add('hidden');
+      crystalModal.classList.remove('flex');
     }
 
     function updateRelatedNodes(node) {
@@ -3555,8 +4092,36 @@
       // Phase 3: Update reflection highlights (pulsing rings)
       updateHighlightAnimations();
 
+      // Animate crystal nodes (gentle rotation)
+      animateCrystals(delta, time);
+
       // Render
       composer.render();
+    }
+
+    /**
+     * Animate crystal nodes with gentle rotation and glow pulsing
+     */
+    function animateCrystals(delta, time) {
+      for (const node of nodes3D) {
+        if (!node.userData.isCrystal) continue;
+
+        const rotSpeed = node.userData.rotationSpeed;
+        if (rotSpeed) {
+          node.rotation.x += rotSpeed.x;
+          node.rotation.y += rotSpeed.y;
+          node.rotation.z += rotSpeed.z;
+        }
+
+        // Pulse inner glow based on time
+        const innerGlow = node.userData.innerGlow;
+        if (innerGlow && innerGlow.material) {
+          const confidence = node.userData.confidence || 0.5;
+          const baseOpacity = 0.25 + confidence * 0.25;
+          const pulse = Math.sin(time * 1.5 + node.userData.id.charCodeAt(0)) * 0.1;
+          innerGlow.material.opacity = baseOpacity + pulse;
+        }
+      }
     }
 
     // Phase 3: Dynamic shader uniform updates
