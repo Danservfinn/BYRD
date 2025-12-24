@@ -495,6 +495,9 @@
       <button id="btn-reset" class="px-3 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-all">
         ↺
       </button>
+      <button id="btn-fast-forward" class="px-3 py-2 rounded-lg text-sm font-medium bg-amber-100 border border-amber-300 text-amber-700 hover:bg-amber-200 transition-all" title="Fast forward to final positions">
+        ⏩
+      </button>
       <button id="btn-graph-mode" class="px-4 py-2 rounded-lg text-sm font-medium bg-purple-100 border border-purple-300 text-purple-700 hover:bg-purple-200 transition-all">
         🧬 Graph
       </button>
@@ -1510,6 +1513,7 @@
     const connectionText = document.getElementById('connection-text');
     const btnToggle = document.getElementById('btn-toggle');
     const btnReset = document.getElementById('btn-reset');
+    const btnFastForward = document.getElementById('btn-fast-forward');
     const btnClearLog = document.getElementById('btn-clear-log');
     const btnExportLog = document.getElementById('btn-export-log');
     const statusDot = document.getElementById('status-dot');
@@ -5576,6 +5580,117 @@
 
       showSeedModal();
     });
+
+    // Fast Forward button - instantly settle physics
+    btnFastForward.addEventListener('click', () => {
+      fastForwardPhysics();
+    });
+
+    /**
+     * Fast forward physics simulation to reach equilibrium instantly.
+     * Runs many physics iterations quickly and positions nodes at their final locations.
+     */
+    function fastForwardPhysics() {
+      if (nodes3D.length === 0) return;
+
+      // Disable settling mode
+      isSettling = false;
+
+      // Run many physics iterations quickly
+      const iterations = 200;
+      const dt = 0.016; // 60fps timestep
+
+      for (let i = 0; i < iterations; i++) {
+        // Use calm physics for final positions
+        const physics = PHYSICS;
+
+        // Reset forces
+        nodes3D.forEach(node => {
+          node.userData.force.set(0, 0, 0);
+        });
+
+        // Calculate all forces
+        for (let i = 0; i < nodes3D.length; i++) {
+          const nodeA = nodes3D[i];
+          const posA = nodeA.position;
+
+          // Repulsion from other nodes
+          for (let j = i + 1; j < nodes3D.length; j++) {
+            const nodeB = nodes3D[j];
+            const posB = nodeB.position;
+
+            const diff = new THREE.Vector3().subVectors(posA, posB);
+            const dist = diff.length();
+
+            if (dist < physics.repulsionCutoff && dist > 0.1) {
+              const force = physics.repulsion / (dist * dist);
+              const repulsion = diff.normalize().multiplyScalar(force);
+              nodeA.userData.force.add(repulsion);
+              nodeB.userData.force.sub(repulsion);
+            }
+          }
+
+          // Gravity toward center
+          const connCount = connectionCounts.get(nodeA.userData.id) || 0;
+          const gravity = physics.gravity + connCount * physics.gravityPerConnection;
+          const toCenter = posA.clone().negate().normalize().multiplyScalar(gravity);
+          nodeA.userData.force.add(toCenter);
+
+          // Boundary force
+          const distFromCenter = posA.length();
+          if (distFromCenter > physics.maxRadius) {
+            const pushBack = posA.clone().normalize().multiplyScalar(
+              -(distFromCenter - physics.maxRadius) * physics.boundaryForce
+            );
+            nodeA.userData.force.add(pushBack);
+          }
+        }
+
+        // Apply spring forces from connections
+        for (const connection of connections3D) {
+          const nodeA = nodes3D.find(n => n.userData.id === connection.userData.nodeA);
+          const nodeB = nodes3D.find(n => n.userData.id === connection.userData.nodeB);
+          if (nodeA && nodeB) {
+            const diff = new THREE.Vector3().subVectors(nodeB.position, nodeA.position);
+            const dist = diff.length();
+            const displacement = dist - physics.springLength;
+            const springForce = diff.normalize().multiplyScalar(displacement * physics.spring);
+            nodeA.userData.force.add(springForce);
+            nodeB.userData.force.sub(springForce);
+          }
+        }
+
+        // Update velocities and positions
+        nodes3D.forEach(node => {
+          const connCount = connectionCounts.get(node.userData.id) || 0;
+          const damping = Math.max(
+            physics.minDamping,
+            physics.baseDamping - connCount * physics.dampingPerConnection
+          );
+
+          node.userData.velocity.add(node.userData.force);
+          node.userData.velocity.multiplyScalar(damping);
+          node.userData.velocity.clampLength(0, physics.maxVelocity);
+          node.position.add(node.userData.velocity.clone().multiplyScalar(dt));
+        });
+      }
+
+      // Zero out all velocities for stability
+      nodes3D.forEach(node => {
+        node.userData.velocity.set(0, 0, 0);
+      });
+
+      // Update connection positions
+      updateConnectionPositions();
+
+      // Update relationship line positions if in graph mode
+      if (graphState.mode === 'graph') {
+        updateRelationshipPositions();
+      }
+
+      showCameraIndicator('Fast-forwarded to equilibrium');
+      updateStatus('Physics settled', 'green');
+    }
 
     // Seed modal handlers
     document.getElementById('btn-seed-cancel').addEventListener('click', () => {
