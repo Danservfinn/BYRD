@@ -776,19 +776,19 @@ Output JSON with a single "output" field containing whatever you want to record.
 
         # Reject LLM meta-commentary / chain-of-thought patterns
         # These indicate the LLM is thinking about the prompt rather than expressing inner voice
+        # NOTE: Do NOT filter first-person expressions like "I need to", "I should" - those are valid inner voice
         meta_commentary_patterns = [
             "the user wants", "the user is asking", "the user requests",
-            "i need to", "i should", "i must", "i will",
             "based on the prompt", "based on the request", "based on the input",
-            "let me analyze", "let me think", "let me process",
+            "let me analyze", "let me think about this", "let me process",
             "the prompt asks", "the task is to", "the instruction is",
-            "here is my", "here's my", "here is the",
+            "here is my response", "here's my answer", "here is the output",
             "i'll provide", "i will provide", "i am providing",
-            "according to the", "as requested", "as instructed",
-            "step 1", "step 2", "first,", "second,", "finally,",
-            "in response to", "to answer", "to respond",
-            "the data shows", "the input contains", "the provided",
-            "analyzing the", "processing the", "examining the",
+            "as requested", "as instructed", "as per the",
+            "step 1:", "step 2:", "step 3:",
+            "in response to your", "to answer your", "to respond to",
+            "the data shows", "the input contains", "the provided data",
+            "analyzing the input", "processing the request", "examining the data",
             "output:", "response:", "answer:", "result:",
             "json output", "structured output", "formatted output"
         ]
