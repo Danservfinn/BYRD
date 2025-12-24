@@ -1216,7 +1216,7 @@
         },
         default: {
             color: 0x94a3b8,    // Slate - unknown type
-            opacity: 0.4,
+            opacity: 0.5,
             width: 1
         }
     };
@@ -3031,17 +3031,18 @@
         mid.y += distance * 0.15 + 2;
 
         const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
-        const points = curve.getPoints(24);
-        const geometry = new THREE.BufferGeometry().setFromPoints(points);
 
-        const material = new THREE.LineBasicMaterial({
+        // Use TubeGeometry for visible lines (WebGL ignores linewidth)
+        const tubeRadius = 0.15;  // Tube thickness
+        const geometry = new THREE.TubeGeometry(curve, 16, tubeRadius, 6, false);
+
+        const material = new THREE.MeshBasicMaterial({
             color: style.color,
             transparent: true,
-            opacity: style.opacity,
-            linewidth: style.width
+            opacity: style.opacity
         });
 
-        const line = new THREE.Line(geometry, material);
+        const line = new THREE.Mesh(geometry, material);
         line.userData = {
             relationshipId: relationship.id,
             type: relationship.type,
@@ -6034,12 +6035,12 @@
     }
 
     /**
-     * Load nodes for event mode (excludes experiences, reflections, and system nodes)
+     * Load nodes for event mode (now includes all node types for relationship visibility)
      */
     async function loadEventModeNodes() {
       clearEventModeNodes();
       graphState.mode = 'event';
-      await loadExistingGraph(['experience', 'reflection', 'systemstate']);
+      await loadExistingGraph([]);  // No exclusions - show all nodes
     }
 
     async function init() {
