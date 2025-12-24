@@ -448,7 +448,7 @@
       <button id="btn-reset" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-all">
         &#128260; Reset
       </button>
-      <div id="stats" class="flex items-center gap-3 px-3 py-2 bg-white/80 border border-slate-200 rounded-lg text-xs font-mono shadow">
+      <div id="stats" class="flex items-center gap-3 px-3 py-2 bg-white/80 border border-slate-200 rounded-lg text-xs font-mono shadow flex-wrap">
         <span class="text-indigo-600">Dreams: <span id="dream-count">0</span></span>
         <span class="text-cyan-600">Seeks: <span id="seek-count">0</span></span>
         <span class="text-slate-300">|</span>
@@ -457,6 +457,8 @@
         <span class="text-purple-600">Reflect: <span id="reflection-count">0</span></span>
         <span class="text-rose-600">Desires: <span id="desire-count">0</span></span>
         <span class="text-emerald-600">Mutations: <span id="mutation-count">0</span></span>
+        <!-- Custom node types container - dynamically populated -->
+        <span id="custom-types-container" class="contents"></span>
         <span class="text-slate-300">|</span>
         <span class="text-slate-500">Nodes: <span id="node-count">0</span></span>
       </div>
@@ -885,6 +887,59 @@
       awakening: { color: 0xf59e0b, emissive: 0xfcd34d, label: 'Awakening' }   // Golden amber - consciousness
     };
 
+    // System node types (cannot be created by BYRD, have fixed colors)
+    const SYSTEM_NODE_TYPES = new Set([
+      'Experience', 'Belief', 'Desire', 'Reflection', 'Capability', 'Mutation'
+    ]);
+
+    // Custom node type colors - generated dynamically with distinct hues
+    const CUSTOM_TYPE_COLORS = [
+      { color: 0x0891b2, emissive: 0x22d3ee, css: 'text-cyan-500' },      // Cyan
+      { color: 0x7c3aed, emissive: 0xa78bfa, css: 'text-violet-500' },    // Violet
+      { color: 0xdb2777, emissive: 0xf472b6, css: 'text-pink-500' },      // Pink
+      { color: 0x059669, emissive: 0x6ee7b7, css: 'text-emerald-500' },   // Emerald
+      { color: 0xea580c, emissive: 0xfb923c, css: 'text-orange-500' },    // Orange
+      { color: 0x4f46e5, emissive: 0x818cf8, css: 'text-indigo-500' },    // Indigo
+      { color: 0xca8a04, emissive: 0xfacc15, css: 'text-yellow-500' },    // Yellow
+      { color: 0x0d9488, emissive: 0x5eead4, css: 'text-teal-500' },      // Teal
+    ];
+
+    // Track which custom types have been assigned colors
+    const customTypeColorMap = new Map();
+    let nextCustomColorIndex = 0;
+
+    /**
+     * Get or create a color for a custom node type.
+     * Returns { color, emissive, css, label }
+     */
+    function getCustomTypeColor(typeName) {
+      const lowerType = typeName.toLowerCase();
+
+      // Check if already in NODE_COLORS (system type)
+      if (NODE_COLORS[lowerType]) {
+        return NODE_COLORS[lowerType];
+      }
+
+      // Check if we've already assigned a color to this custom type
+      if (customTypeColorMap.has(typeName)) {
+        return customTypeColorMap.get(typeName);
+      }
+
+      // Assign next color from palette (cycling if needed)
+      const colorDef = CUSTOM_TYPE_COLORS[nextCustomColorIndex % CUSTOM_TYPE_COLORS.length];
+      const fullColorDef = {
+        ...colorDef,
+        label: typeName
+      };
+
+      // Register in both maps
+      customTypeColorMap.set(typeName, fullColorDef);
+      NODE_COLORS[lowerType] = fullColorDef;
+
+      nextCustomColorIndex++;
+      return fullColorDef;
+    }
+
     // ==========================================================================
     // STATE
     // ==========================================================================
@@ -942,6 +997,7 @@
     const reflectionCountEl = document.getElementById('reflection-count');
     const desireCountEl = document.getElementById('desire-count');
     const mutationCountEl = document.getElementById('mutation-count');
+    const customTypesContainer = document.getElementById('custom-types-container');
     const btnToggleLog = document.getElementById('btn-toggle-log');
     const eventPanelContainer = document.getElementById('event-panel-container');
     const tooltip = document.getElementById('node-tooltip');
@@ -2496,6 +2552,39 @@
     }
 
     // ==========================================================================
+    // CUSTOM NODE TYPE STATS
+    // ==========================================================================
+
+    /**
+     * Update the stats bar with custom node types.
+     * Dynamically creates/updates stats for any non-system types.
+     */
+    function updateCustomTypeStats(stats) {
+      if (!customTypesContainer) return;
+
+      // Find custom types (anything not in SYSTEM_NODE_TYPES with count > 0)
+      const customTypes = Object.entries(stats)
+        .filter(([type, count]) => !SYSTEM_NODE_TYPES.has(type) && count > 0)
+        .sort((a, b) => b[1] - a[1]); // Sort by count descending
+
+      // Clear existing custom stats if no custom types
+      if (customTypes.length === 0) {
+        customTypesContainer.innerHTML = '';
+        return;
+      }
+
+      // Build HTML for custom types
+      let html = '<span class="text-slate-300">|</span>';
+      for (const [typeName, count] of customTypes) {
+        const colorDef = getCustomTypeColor(typeName);
+        const cssClass = colorDef.css || 'text-slate-600';
+        html += `<span class="${cssClass}">${typeName}: <span id="custom-${typeName.toLowerCase()}-count">${count}</span></span>`;
+      }
+
+      customTypesContainer.innerHTML = html;
+    }
+
+    // ==========================================================================
     // API & WEBSOCKET
     // ==========================================================================
     async function fetchStatus() {
@@ -2521,6 +2610,9 @@
         reflectionCountEl.textContent = stats.Reflection || 0;
         desireCountEl.textContent = stats.Desire || 0;
         mutationCountEl.textContent = stats.Mutation || 0;
+
+        // Update custom node types dynamically
+        updateCustomTypeStats(stats);
 
         // Update LLM model display
         const llmModelText = document.getElementById('llm-model-text');
@@ -2686,6 +2778,33 @@
             createThoughtBubble(event.narration);
           }
           updateStatus('New capability acquired', 'purple');
+          break;
+
+        case 'node_type_discovered':
+          // BYRD created a new conceptual category
+          const newTypeName = event.data?.node_type;
+          if (newTypeName) {
+            // Register color for the new type
+            getCustomTypeColor(newTypeName);
+            updateStatus(`New type discovered: ${newTypeName}`, 'cyan');
+            if (event.narration) {
+              createThoughtBubble(event.narration);
+            }
+          }
+          break;
+
+        case 'custom_node_created':
+          // BYRD created a node of a custom type - visualize it
+          const customType = event.data?.node_type;
+          const customContent = event.data?.properties?.content || event.data?.node_type;
+          const customId = event.data?.id;
+          if (customType && customId) {
+            // Ensure color is registered
+            getCustomTypeColor(customType);
+            // Create the 3D node
+            createNode3D(customType.toLowerCase(), customContent, customId, 0.7);
+            updateStatus(`New ${customType} created`, 'violet');
+          }
           break;
 
         case 'seek_started':
@@ -2946,6 +3065,8 @@
         experience_created: 'text-blue-600',
         reflection_created: 'text-emerald-600',
         capability_created: 'text-purple-600',
+        node_type_discovered: 'text-cyan-600',
+        custom_node_created: 'text-violet-600',
         seek_started: 'text-cyan-600',
         narrator_update: 'text-teal-600',
         awakening: 'text-amber-500',
@@ -2961,6 +3082,8 @@
         experience_created: '●',
         reflection_created: '✦',
         capability_created: '★',
+        node_type_discovered: '🆕',
+        custom_node_created: '✧',
         seek_started: '🔍',
         narrator_update: '🎙',
         awakening: '🌅',
@@ -2998,7 +3121,8 @@
       const typeIcons = {
         dream_cycle_start: '💭', dream_cycle_end: '💭', belief_created: '◆',
         desire_created: '♥', experience_created: '●', reflection_created: '✦',
-        capability_created: '★', seek_started: '🔍', narrator_update: '🎙',
+        capability_created: '★', node_type_discovered: '🆕', custom_node_created: '✧',
+        seek_started: '🔍', narrator_update: '🎙',
         awakening: '🌅', system_started: '▶', system_reset: '🔄'
       };
 
