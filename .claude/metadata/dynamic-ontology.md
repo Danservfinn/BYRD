@@ -74,6 +74,36 @@ CREATE (n:Insight {
 })
 ```
 
+## Visualization
+
+Custom node types are rendered distinctively in the 3D visualizer:
+
+| Aspect | System Types | Custom Types |
+|--------|-------------|--------------|
+| Geometry | Type-specific (icosahedron, octahedron, etc.) | Dodecahedron |
+| Size | 0.8 base | 1.4 base (more visible) |
+| Position | Inner quadrant sectors | Outer ring (radius 45) |
+| Height | Based on age | Elevated (y=8) |
+| Color | Fixed palette | Dynamic from CUSTOM_TYPE_COLORS |
+
+### Dynamic Sector Assignment
+
+Custom types get their own 30-degree sector in the outer ring:
+
+```javascript
+// First custom type: 0° to 30°
+// Second custom type: 30° to 60°
+// etc.
+```
+
+### Stats Display
+
+Custom types appear in the stats bar alongside system types:
+
+```
+EXP: 45 | BEL: 12 | DES: 3 | REF: 18 | CAP: 5 | Insight: 7 | Question: 3
+```
+
 ## Tracking Vocabulary
 
 ```python
