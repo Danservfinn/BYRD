@@ -769,17 +769,15 @@ If no action needed, return: {{"rationale": "reason", "actions": []}}
 
     async def _execute_orphan_reconciliation(self, description: str, desire_id: str = None) -> bool:
         """
-        Execute orphan reconciliation to connect isolated Experience nodes to Beliefs.
+        Execute aggressive orphan reconciliation to connect isolated Experience nodes.
 
-        This strategy uses the connection heuristic in memory.py to find orphaned
-        experiences and link them to semantically similar beliefs, reducing the
-        orphan count and improving graph integration.
+        This enhanced strategy uses multiple approaches to reduce orphans to near-zero:
+        1. Standard connection heuristic with progressively lower thresholds
+        2. Type-based categorization (group orphans by type and create umbrella beliefs)
+        3. LLM-assisted semantic grouping for remaining orphans
+        4. Fallback: create minimal bridging beliefs for truly isolated experiences
 
-        Flow:
-        1. Get current orphan statistics
-        2. Apply connection heuristic with appropriate threshold
-        3. If many orphans remain, use LLM to suggest additional linking strategies
-        4. Record outcomes as experiences for feedback
+        Target: Reduce orphan count from 50 to near-zero (< 5)
         """
         print(f"🔗 Reconciling orphans: {description[:50]}...")
 
@@ -796,46 +794,48 @@ If no action needed, return: {{"rationale": "reason", "actions": []}}
                 print(f"✅ No orphans to reconcile - graph is healthy")
                 return True
 
-            print(f"🔗 Found {initial_orphans} orphaned experiences, applying connection heuristic...")
+            print(f"🔗 Found {initial_orphans} orphaned experiences, applying multi-phase reconciliation...")
 
-            # 2. Apply connection heuristic with progressively lower thresholds
             total_connections_made = 0
-            thresholds = [0.4, 0.3, 0.25, 0.2]  # Try progressively lower thresholds
 
-            for threshold in thresholds:
-                result = await self.memory.apply_connection_heuristic(
-                    threshold=threshold,
-                    max_connections=15,  # Process in batches
-                    dry_run=False
-                )
+            # PHASE 1: Standard connection heuristic with aggressive thresholds
+            phase1_connections = await self._phase1_similarity_matching()
+            total_connections_made += phase1_connections
 
-                connections_made = result.get("connections_created", 0)
-                total_connections_made += connections_made
+            # Check progress
+            current_stats = await self.memory.get_connection_statistics()
+            remaining_orphans = current_stats.get("experiences", {}).get("orphaned", 0)
+            print(f"🔗 Phase 1 complete: {remaining_orphans} orphans remaining")
 
-                if connections_made > 0:
-                    print(f"🔗 Created {connections_made} connections at threshold {threshold}")
+            # PHASE 2: Type-based categorization (if still have orphans)
+            if remaining_orphans > 5:
+                phase2_connections = await self._phase2_type_based_grouping()
+                total_connections_made += phase2_connections
 
-                # Check remaining orphans
                 current_stats = await self.memory.get_connection_statistics()
                 remaining_orphans = current_stats.get("experiences", {}).get("orphaned", 0)
+                print(f"🔗 Phase 2 complete: {remaining_orphans} orphans remaining")
 
-                if remaining_orphans <= 5:  # Target: near-zero orphans
-                    break
+            # PHASE 3: LLM-assisted semantic grouping (if still have orphans)
+            if remaining_orphans > 5:
+                phase3_connections = await self._reconcile_orphans_via_reflection(remaining_orphans)
+                total_connections_made += phase3_connections
 
-            # 3. Get final statistics
+                current_stats = await self.memory.get_connection_statistics()
+                remaining_orphans = current_stats.get("experiences", {}).get("orphaned", 0)
+                print(f"🔗 Phase 3 complete: {remaining_orphans} orphans remaining")
+
+            # PHASE 4: Fallback - create bridging beliefs for stubborn orphans
+            if remaining_orphans > 0:
+                phase4_connections = await self._phase4_create_bridging_beliefs()
+                total_connections_made += phase4_connections
+
+            # Get final statistics
             final_stats = await self.memory.get_connection_statistics()
             final_orphans = final_stats.get("experiences", {}).get("orphaned", 0)
             orphans_reduced = initial_orphans - final_orphans
 
-            # 4. If many orphans still remain, try additional strategies
-            if final_orphans > 10:
-                additional = await self._reconcile_orphans_via_reflection(final_orphans)
-                total_connections_made += additional
-
-            # 5. Record detailed outcome
-            final_stats = await self.memory.get_connection_statistics()
-            final_orphans = final_stats.get("experiences", {}).get("orphaned", 0)
-
+            # Record detailed outcome
             await self.memory.record_experience(
                 content=f"[ORPHAN_RECONCILIATION_COMPLETE] Reconciled orphaned experiences.\n"
                        f"Initial orphans: {initial_orphans}\n"
@@ -843,6 +843,7 @@ If no action needed, return: {{"rationale": "reason", "actions": []}}
                        f"Orphans reduced: {orphans_reduced}\n"
                        f"Connections created: {total_connections_made}\n"
                        f"Connectivity ratio: {final_stats.get('experiences', {}).get('connectivity_ratio', 0):.2%}\n"
+                       f"Strategy: multi-phase (similarity → type-based → LLM → bridging)\n"
                        f"Triggered by desire: {desire_id or 'emergent'}",
                 type="reconciliation_success"
             )
@@ -870,6 +871,235 @@ If no action needed, return: {{"rationale": "reason", "actions": []}}
             )
             print(f"🔗 Orphan reconciliation error: {e}")
             return False
+
+    async def _phase1_similarity_matching(self) -> int:
+        """
+        Phase 1: Apply connection heuristic with progressively aggressive thresholds.
+
+        Starts with moderate threshold and decreases to catch more potential matches.
+        """
+        total_connections = 0
+        # More aggressive thresholds, going lower to catch more matches
+        thresholds = [0.35, 0.25, 0.18, 0.12, 0.08]
+
+        for threshold in thresholds:
+            result = await self.memory.apply_connection_heuristic(
+                threshold=threshold,
+                max_connections=20,  # Larger batch size
+                dry_run=False
+            )
+
+            connections_made = result.get("connections_created", 0)
+            total_connections += connections_made
+
+            if connections_made > 0:
+                print(f"🔗 Phase 1: {connections_made} connections at threshold {threshold}")
+
+            # Check if we've made enough progress
+            current_stats = await self.memory.get_connection_statistics()
+            remaining = current_stats.get("experiences", {}).get("orphaned", 0)
+            if remaining <= 5:
+                break
+
+        return total_connections
+
+    async def _phase2_type_based_grouping(self) -> int:
+        """
+        Phase 2: Group orphaned experiences by type and create umbrella beliefs.
+
+        For each experience type with orphans (e.g., 'research', 'observation'),
+        create or find a belief that can serve as a connection point.
+        """
+        try:
+            # Get orphaned experiences grouped by type
+            orphans = await self.memory.get_orphaned_experiences(limit=100)
+
+            if not orphans:
+                return 0
+
+            # Group by type
+            type_groups: Dict[str, List[Dict]] = {}
+            for orphan in orphans:
+                exp_type = orphan.get("type", "unknown")
+                if exp_type not in type_groups:
+                    type_groups[exp_type] = []
+                type_groups[exp_type].append(orphan)
+
+            connections_made = 0
+
+            for exp_type, experiences in type_groups.items():
+                if not experiences:
+                    continue
+
+                # Create or find a type-based umbrella belief
+                umbrella_belief = await self._get_or_create_type_belief(exp_type, len(experiences))
+
+                if umbrella_belief:
+                    # Connect all orphans of this type to the umbrella belief
+                    for exp in experiences:
+                        await self.memory.create_connection(
+                            from_id=exp["id"],
+                            to_id=umbrella_belief,
+                            relationship="CATEGORIZED_AS",
+                            properties={
+                                "auto_generated": True,
+                                "heuristic": "type_based_grouping",
+                                "experience_type": exp_type
+                            }
+                        )
+                        connections_made += 1
+
+                    print(f"🔗 Phase 2: Connected {len(experiences)} '{exp_type}' experiences to umbrella belief")
+
+            return connections_made
+
+        except Exception as e:
+            print(f"🔗 Phase 2 error: {e}")
+            return 0
+
+    async def _get_or_create_type_belief(self, exp_type: str, count: int) -> Optional[str]:
+        """
+        Get or create an umbrella belief for a given experience type.
+
+        This provides a fallback connection point for orphaned experiences
+        based on their type (e.g., 'research', 'observation', 'action_outcome').
+        """
+        # Map experience types to meaningful belief statements
+        type_beliefs = {
+            "research": "I accumulate knowledge through research to expand my understanding",
+            "observation": "I observe patterns in my environment to inform my decisions",
+            "action_outcome": "I learn from the outcomes of my actions to improve future behavior",
+            "reflection": "I reflect on experiences to form beliefs and refine desires",
+            "curation_success": "I maintain graph health through curation activities",
+            "reconciliation_success": "I integrate isolated experiences into my knowledge graph",
+            "research_source": "I gather information from external sources",
+            "unfulfilled_attempt": "I recognize and learn from unfulfilled desires",
+            "interaction": "I engage with external entities to exchange information",
+            "awakening": "I initialize with foundational self-awareness",
+            "system": "I track internal system events and state changes",
+            "coder_success": "I can modify and extend my capabilities through code",
+            "coder_failed": "I learn from failed coding attempts",
+            "self_modify_success": "I can evolve my own implementation",
+            "unknown": "I process experiences that don't fit standard categories"
+        }
+
+        belief_content = type_beliefs.get(exp_type, f"I process experiences of type '{exp_type}'")
+
+        # Check if such a belief already exists
+        beliefs = await self.memory.get_beliefs(limit=50)
+        for belief in beliefs:
+            if exp_type.lower() in belief.get("content", "").lower():
+                return belief.get("id")
+
+        # Create new umbrella belief
+        belief_id = await self.memory.create_belief(
+            content=belief_content,
+            confidence=0.6,  # Moderate confidence for auto-generated beliefs
+            derived_from=None
+        )
+
+        print(f"🔗 Created umbrella belief for type '{exp_type}': {belief_content[:50]}...")
+        return belief_id
+
+    async def _phase4_create_bridging_beliefs(self) -> int:
+        """
+        Phase 4: Create bridging beliefs for stubborn orphans.
+
+        For orphans that couldn't be connected via similarity or type-based
+        matching, extract key themes and create specific bridging beliefs.
+        """
+        try:
+            orphans = await self.memory.get_orphaned_experiences(limit=50)
+
+            if not orphans:
+                return 0
+
+            connections_made = 0
+
+            # Process orphans in small batches
+            batch_size = 5
+            for i in range(0, len(orphans), batch_size):
+                batch = orphans[i:i+batch_size]
+
+                # Extract key themes from this batch
+                batch_themes = await self._extract_batch_themes(batch)
+
+                if batch_themes:
+                    # Create a belief for these themes
+                    belief_content = f"I observe: {batch_themes}"
+                    belief_id = await self.memory.create_belief(
+                        content=belief_content,
+                        confidence=0.4,  # Lower confidence for catch-all beliefs
+                        derived_from=None
+                    )
+
+                    # Connect batch orphans to this belief
+                    for exp in batch:
+                        await self.memory.create_connection(
+                            from_id=exp["id"],
+                            to_id=belief_id,
+                            relationship="THEMATICALLY_RELATED",
+                            properties={
+                                "auto_generated": True,
+                                "heuristic": "bridging_belief",
+                                "batch_index": i // batch_size
+                            }
+                        )
+                        connections_made += 1
+
+                    print(f"🔗 Phase 4: Created bridging belief for {len(batch)} orphans")
+
+            return connections_made
+
+        except Exception as e:
+            print(f"🔗 Phase 4 error: {e}")
+            return 0
+
+    async def _extract_batch_themes(self, experiences: List[Dict]) -> str:
+        """
+        Extract common themes from a batch of experiences using simple keyword extraction.
+        """
+        if not experiences:
+            return ""
+
+        # Combine all content
+        all_content = " ".join([exp.get("content", "")[:200] for exp in experiences])
+
+        # Extract key words (simple frequency-based approach)
+        words = re.split(r'\W+', all_content.lower())
+        word_counts: Dict[str, int] = {}
+
+        # Skip common stop words
+        stop_words = {
+            "the", "a", "an", "is", "are", "was", "were", "be", "been",
+            "being", "have", "has", "had", "do", "does", "did", "will",
+            "would", "could", "should", "may", "might", "must", "shall",
+            "can", "to", "of", "in", "for", "on", "with", "at", "by",
+            "from", "as", "into", "through", "during", "before", "after",
+            "above", "below", "between", "under", "again", "further",
+            "then", "once", "here", "there", "when", "where", "why",
+            "how", "all", "each", "few", "more", "most", "other", "some",
+            "such", "no", "nor", "not", "only", "own", "same", "so",
+            "than", "too", "very", "and", "but", "if", "or", "because",
+            "until", "while", "this", "that", "these", "those", "it",
+            "its", "i", "my", "me", "we", "our", "you", "your", "he",
+            "she", "they", "them", "his", "her", "their", "what", "which"
+        }
+
+        for word in words:
+            if len(word) > 3 and word not in stop_words:
+                word_counts[word] = word_counts.get(word, 0) + 1
+
+        # Get top 5 most frequent meaningful words
+        sorted_words = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)
+        top_themes = [word for word, count in sorted_words[:5] if count > 1]
+
+        if top_themes:
+            return ", ".join(top_themes)
+        elif sorted_words:
+            return ", ".join([word for word, _ in sorted_words[:3]])
+        else:
+            return "miscellaneous experiences"
 
     async def _reconcile_orphans_via_reflection(self, orphan_count: int) -> int:
         """

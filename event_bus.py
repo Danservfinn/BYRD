@@ -26,6 +26,10 @@ class EventType(Enum):
     CONNECTION_CREATED = "connection_created"
     CONNECTION_HEURISTIC_APPLIED = "connection_heuristic_applied"
 
+    # Dynamic ontology events (BYRD evolving its own node types)
+    NODE_TYPE_DISCOVERED = "node_type_discovered"  # First use of a new node type
+    CUSTOM_NODE_CREATED = "custom_node_created"    # Node of emergent type created
+
     # Desire lifecycle events (reflective failure processing)
     DESIRE_ATTEMPT_FAILED = "desire_attempt_failed"
     DESIRE_STUCK = "desire_stuck"  # Needs Dreamer reflection
