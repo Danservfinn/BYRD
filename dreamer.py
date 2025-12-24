@@ -47,6 +47,12 @@ class Dreamer:
         self.activity_window = config.get("activity_window_seconds", 300)
         self.activity_threshold = config.get("activity_threshold", 3)
 
+        # Quantum randomness configuration
+        # When enabled, LLM temperature is modulated by true quantum randomness
+        quantum_config = config.get("quantum", {})
+        self.quantum_enabled = quantum_config.get("enabled", False)
+        self.quantum_significance_threshold = quantum_config.get("significance_threshold", 0.05)
+
         # Activity tracking for adaptive intervals
         self._recent_beliefs: deque = deque(maxlen=50)  # (timestamp, content)
         self._recent_desires: deque = deque(maxlen=50)  # (timestamp, content)
@@ -394,8 +400,30 @@ Output JSON with a single "output" field containing whatever you want to record.
             response = await self.llm_client.generate(
                 prompt=prompt,
                 temperature=0.7,
-                max_tokens=3000  # Increased to prevent JSON truncation
+                max_tokens=3000,  # Increased to prevent JSON truncation
+                quantum_modulation=self.quantum_enabled,
+                quantum_context="dreamer_reflection"
             )
+
+            # Record significant quantum moments
+            if response.quantum_influence:
+                influence = response.quantum_influence
+                delta = abs(influence.get("delta", 0))
+                if delta >= self.quantum_significance_threshold:
+                    # Emit event for significant quantum influence
+                    await event_bus.emit(Event(
+                        type=EventType.QUANTUM_INFLUENCE,
+                        data={
+                            "source": influence.get("source"),
+                            "original_temp": influence.get("original_value"),
+                            "modified_temp": influence.get("modified_value"),
+                            "delta": influence.get("delta"),
+                            "context": "dreamer_reflection",
+                            "cycle": self._dream_count
+                        }
+                    ))
+                    # Record in memory as quantum moment
+                    await self.memory.record_quantum_moment(influence)
 
             # Debug: log raw response for troubleshooting
             raw_text = response.text
@@ -615,8 +643,27 @@ Write ONLY the inner thought, nothing else:"""
             response = await self.llm_client.generate(
                 prompt=prompt,
                 temperature=0.9,
-                max_tokens=80
+                max_tokens=80,
+                quantum_modulation=self.quantum_enabled,
+                quantum_context="dreamer_inner_voice"
             )
+
+            # Record significant quantum moments for inner voice
+            if response.quantum_influence:
+                influence = response.quantum_influence
+                delta = abs(influence.get("delta", 0))
+                if delta >= self.quantum_significance_threshold:
+                    await event_bus.emit(Event(
+                        type=EventType.QUANTUM_INFLUENCE,
+                        data={
+                            "source": influence.get("source"),
+                            "original_temp": influence.get("original_value"),
+                            "modified_temp": influence.get("modified_value"),
+                            "delta": influence.get("delta"),
+                            "context": "dreamer_inner_voice",
+                            "cycle": self._dream_count
+                        }
+                    ))
 
             voice = response.text.strip()
 

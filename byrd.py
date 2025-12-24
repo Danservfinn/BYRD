@@ -65,10 +65,25 @@ class BYRD:
         )
         print(f"🧠 LLM: {self.llm_client.model_name}")
 
+        # Initialize quantum randomness provider if enabled
+        self.quantum_provider = None
+        quantum_config = self.config.get("quantum", {})
+        if quantum_config.get("enabled", False):
+            from quantum_randomness import get_quantum_provider
+            self.quantum_provider = get_quantum_provider()
+            self.llm_client.set_quantum_provider(self.quantum_provider)
+            print("🌀 Quantum randomness: enabled (ANU QRNG)")
+        else:
+            print("🌀 Quantum randomness: disabled")
+
+        # Build dreamer config including quantum settings
+        dreamer_config = self.config.get("dreamer", {})
+        dreamer_config["quantum"] = quantum_config
+
         self.dreamer = Dreamer(
             memory=self.memory,
             llm_client=self.llm_client,
-            config=self.config.get("dreamer", {})
+            config=dreamer_config
         )
         self.seeker = Seeker(
             memory=self.memory,
@@ -155,7 +170,13 @@ class BYRD:
         # Connect to memory
         print("📊 Connecting to memory (Neo4j)...")
         await self.memory.connect()
-        
+
+        # Initialize quantum provider if enabled
+        if self.quantum_provider:
+            await self.quantum_provider.initialize()
+            status = self.quantum_provider.get_pool_status()
+            print(f"🌀 Quantum pool: {status['pool_size']}/{status['max_pool_size']} bytes")
+
         # Get stats
         stats = await self.memory.stats()
         print(f"   Nodes: {sum(stats.values())} total")
@@ -195,6 +216,9 @@ class BYRD:
         except asyncio.CancelledError:
             pass
         finally:
+            # Shutdown quantum provider if running
+            if self.quantum_provider:
+                await self.quantum_provider.shutdown()
             await self.memory.close()
 
     async def _narrator_loop(self):

@@ -216,6 +216,18 @@ if os.path.exists(models_dir):
 # PYDANTIC MODELS
 # =============================================================================
 
+class QuantumStatus(BaseModel):
+    """Status of the quantum randomness provider."""
+    enabled: bool
+    pool_size: int = 0
+    max_pool_size: int = 256
+    in_fallback_mode: bool = False
+    quantum_fetches: int = 0
+    classical_fallbacks: int = 0
+    quantum_ratio: float = 1.0
+    last_error: Optional[str] = None
+
+
 class StatusResponse(BaseModel):
     running: bool
     started_at: Optional[str] = None
@@ -229,6 +241,7 @@ class StatusResponse(BaseModel):
     recent_beliefs: List[Dict] = []
     llm_provider: str
     llm_model: str
+    quantum: Optional[QuantumStatus] = None
 
 
 class HistoryResponse(BaseModel):
@@ -326,6 +339,23 @@ async def get_status():
         if byrd_instance._started_at:
             started_at = byrd_instance._started_at.isoformat()
 
+        # Get quantum status if provider exists
+        quantum_status = None
+        if byrd_instance.quantum_provider:
+            q_status = byrd_instance.quantum_provider.get_pool_status()
+            quantum_status = QuantumStatus(
+                enabled=True,
+                pool_size=q_status.get("pool_size", 0),
+                max_pool_size=q_status.get("max_pool_size", 256),
+                in_fallback_mode=q_status.get("in_fallback_mode", False),
+                quantum_fetches=q_status.get("quantum_fetches", 0),
+                classical_fallbacks=q_status.get("classical_fallbacks", 0),
+                quantum_ratio=q_status.get("quantum_ratio", 1.0),
+                last_error=q_status.get("last_error")
+            )
+        else:
+            quantum_status = QuantumStatus(enabled=False)
+
         return StatusResponse(
             running=byrd_instance._running,
             started_at=started_at,
@@ -349,7 +379,8 @@ async def get_status():
                 for b in beliefs
             ],
             llm_provider=llm_provider,
-            llm_model=llm_model
+            llm_model=llm_model,
+            quantum=quantum_status
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

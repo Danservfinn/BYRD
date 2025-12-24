@@ -303,3 +303,33 @@ coder:
 
   # Output format (json recommended for parsing)
   output_format: json
+
+# =============================================================================
+# QUANTUM RANDOMNESS (Physical Indeterminacy)
+# =============================================================================
+# Enables true quantum randomness from ANU QRNG to modulate LLM temperature.
+# This provides genuine physical indeterminacy to BYRD's cognitive processes,
+# making each reflection unique in a way that deterministic systems cannot be.
+#
+# Source: Australian National University Quantum Random Number Generator
+# The ANU QRNG extracts randomness from quantum vacuum fluctuations - the
+# fundamental uncertainty at the heart of physics.
+quantum:
+  # Master enable/disable switch
+  enabled: true
+
+  # Pool configuration
+  pool_size: 256              # Bytes to pre-fetch and maintain
+  low_watermark: 64           # Refill when pool drops below this
+  min_fetch_interval: 5.0     # Seconds between API requests (rate limiting)
+  fallback_retry_interval: 60.0  # Seconds to retry quantum after fallback
+
+  # Temperature modulation range
+  # LLM temperature will be shifted by ±max_delta from base
+  temperature_max_delta: 0.15
+
+  # Significance tracking
+  # Only record QuantumMoment nodes when delta exceeds threshold
+  # This prevents flooding the graph with insignificant moments
+  record_significant_moments: true
+  significance_threshold: 0.05

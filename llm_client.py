@@ -22,10 +22,18 @@ class LLMResponse:
     raw: Dict[str, Any]
     model: str
     provider: str
+    quantum_influence: Optional[Dict[str, Any]] = None  # Quantum modulation info if applied
 
 
 class LLMClient(ABC):
     """Abstract base class for LLM providers."""
+
+    # Quantum provider reference (set via set_quantum_provider)
+    _quantum_provider = None
+
+    def set_quantum_provider(self, provider):
+        """Set the quantum randomness provider for temperature modulation."""
+        self._quantum_provider = provider
 
     @abstractmethod
     async def generate(
@@ -33,10 +41,50 @@ class LLMClient(ABC):
         prompt: str,
         temperature: float = 0.7,
         max_tokens: int = 500,
+        quantum_modulation: bool = False,
+        quantum_context: str = "unknown",
         **kwargs
     ) -> LLMResponse:
-        """Generate a response from the LLM."""
+        """
+        Generate a response from the LLM.
+
+        Args:
+            prompt: The input prompt
+            temperature: Base temperature for sampling
+            max_tokens: Maximum tokens to generate
+            quantum_modulation: If True, apply quantum randomness to temperature
+            quantum_context: Context string for quantum influence tracking
+            **kwargs: Provider-specific arguments
+
+        Returns:
+            LLMResponse with text and optional quantum influence data
+        """
         pass
+
+    async def _apply_quantum_modulation(
+        self,
+        temperature: float,
+        context: str
+    ) -> tuple:
+        """
+        Apply quantum temperature modulation if provider is available.
+
+        Returns:
+            Tuple of (modulated_temperature, influence_dict or None)
+        """
+        if self._quantum_provider is None:
+            return temperature, None
+
+        try:
+            modulated_temp, influence = await self._quantum_provider.get_temperature_delta(
+                base_temperature=temperature,
+                max_delta=0.15,
+                context=context
+            )
+            return modulated_temp, influence.to_dict()
+        except Exception as e:
+            print(f"Quantum modulation error: {e}")
+            return temperature, None
 
     @property
     @abstractmethod
@@ -187,9 +235,19 @@ class OllamaClient(LLMClient):
         prompt: str,
         temperature: float = 0.7,
         max_tokens: int = 500,
+        quantum_modulation: bool = False,
+        quantum_context: str = "unknown",
         **kwargs
     ) -> LLMResponse:
         """Generate using Ollama API."""
+        quantum_influence = None
+
+        # Apply quantum modulation if requested
+        if quantum_modulation:
+            temperature, quantum_influence = await self._apply_quantum_modulation(
+                temperature, quantum_context
+            )
+
         timeout_config = httpx.Timeout(self.timeout, connect=60.0)
         async with httpx.AsyncClient(timeout=timeout_config) as client:
             response = await client.post(
@@ -212,7 +270,8 @@ class OllamaClient(LLMClient):
                 text=result.get("response", ""),
                 raw=result,
                 model=self.model,
-                provider="ollama"
+                provider="ollama",
+                quantum_influence=quantum_influence
             )
 
 
@@ -253,9 +312,19 @@ class OpenRouterClient(LLMClient):
         prompt: str,
         temperature: float = 0.7,
         max_tokens: int = 500,
+        quantum_modulation: bool = False,
+        quantum_context: str = "unknown",
         **kwargs
     ) -> LLMResponse:
         """Generate using OpenRouter API."""
+        quantum_influence = None
+
+        # Apply quantum modulation if requested
+        if quantum_modulation:
+            temperature, quantum_influence = await self._apply_quantum_modulation(
+                temperature, quantum_context
+            )
+
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
@@ -285,7 +354,8 @@ class OpenRouterClient(LLMClient):
                 text=result["choices"][0]["message"]["content"],
                 raw=result,
                 model=self.model,
-                provider="openrouter"
+                provider="openrouter",
+                quantum_influence=quantum_influence
             )
 
 
@@ -350,10 +420,20 @@ Example format: {"output": {...your reflection...}}"""
         prompt: str,
         temperature: float = 0.7,
         max_tokens: int = 500,
+        quantum_modulation: bool = False,
+        quantum_context: str = "unknown",
         **kwargs
     ) -> LLMResponse:
         """Generate using Z.AI API with retry on rate limits."""
         import asyncio
+
+        quantum_influence = None
+
+        # Apply quantum modulation if requested
+        if quantum_modulation:
+            temperature, quantum_influence = await self._apply_quantum_modulation(
+                temperature, quantum_context
+            )
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -403,7 +483,8 @@ Example format: {"output": {...your reflection...}}"""
                     text=text,
                     raw=result,
                     model=self.model,
-                    provider="zai"
+                    provider="zai",
+                    quantum_influence=quantum_influence
                 )
 
         # All retries exhausted
