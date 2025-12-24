@@ -507,13 +507,17 @@ async def get_genesis():
                     awakening_timestamp = seed.get("timestamp")
                     break
 
+        # Get custom node types (BYRD-created ontology)
+        custom_node_types = await byrd_instance.memory.get_custom_node_types()
+
         return {
             "ego": ego_data,
             "seed_experiences": seed_experiences,
             "constitutional": constitutional,
             "system_config": system_config,
             "genesis_stats": genesis_stats,
-            "awakening_timestamp": awakening_timestamp
+            "awakening_timestamp": awakening_timestamp,
+            "custom_node_types": custom_node_types
         }
 
     except Exception as e:

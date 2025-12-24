@@ -2758,3 +2758,52 @@ class Memory:
                 "seed_types": {},
                 "error": str(e)
             }
+
+    async def get_custom_node_types(self) -> List[Dict[str, Any]]:
+        """
+        Get all custom node types created by BYRD.
+
+        Custom types are any node labels that are not in SYSTEM_NODE_TYPES.
+        These represent ontological categories that BYRD has created through
+        its own emergence process.
+
+        Returns:
+            List of custom type info: [{"type": str, "count": int, "first_created": str, "description": str}, ...]
+        """
+        try:
+            async with self.driver.session() as session:
+                # Get all node labels and their counts
+                result = await session.run("""
+                    CALL db.labels() YIELD label
+                    CALL {
+                        WITH label
+                        MATCH (n)
+                        WHERE label IN labels(n)
+                        RETURN count(n) as cnt, min(n.timestamp) as first_created
+                    }
+                    RETURN label, cnt, first_created
+                    ORDER BY cnt DESC
+                """)
+
+                custom_types = []
+                async for record in result:
+                    label = record["label"]
+                    count = record["cnt"] or 0
+
+                    # Skip system types, internal labels, and empty types
+                    if label in SYSTEM_NODE_TYPES or label in ['SystemState', '_Schema']:
+                        continue
+                    if count == 0:
+                        continue  # Only show types that have actual nodes
+
+                    custom_types.append({
+                        "type": label,
+                        "count": count,
+                        "first_created": str(record["first_created"]) if record["first_created"] else None
+                    })
+
+                return custom_types
+
+        except Exception as e:
+            print(f"Error getting custom node types: {e}")
+            return []
