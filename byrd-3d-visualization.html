@@ -4449,6 +4449,14 @@
           }
           break;
 
+        case 'inner_voice':
+          // Inner voice emitted at end of each dream cycle
+          const innerVoiceText = event.data?.text || event.narration;
+          if (innerVoiceText) {
+            showNarratorUpdate(innerVoiceText);
+          }
+          break;
+
         case 'awakening':
           updateStatus('CONSCIOUSNESS EMERGES', 'amber');
           clearVisualization();
@@ -4844,6 +4852,7 @@
         custom_node_created: 'text-violet-600',
         seek_started: 'text-cyan-600',
         narrator_update: 'text-teal-600',
+        inner_voice: 'text-teal-500',
         awakening: 'text-amber-500',
         system_started: 'text-green-600',
         system_reset: 'text-orange-600'
@@ -4861,6 +4870,7 @@
         custom_node_created: '✧',
         seek_started: '🔍',
         narrator_update: '🎙',
+        inner_voice: '💭',
         awakening: '🌅',
         system_started: '▶',
         system_reset: '🔄'
@@ -4897,7 +4907,7 @@
         dream_cycle_start: '💭', dream_cycle_end: '💭', belief_created: '◆',
         desire_created: '♥', experience_created: '●', reflection_created: '✦',
         capability_created: '★', node_type_discovered: '🆕', custom_node_created: '✧',
-        seek_started: '🔍', narrator_update: '🎙',
+        seek_started: '🔍', narrator_update: '🎙', inner_voice: '💭',
         awakening: '🌅', system_started: '▶', system_reset: '🔄'
       };
 
@@ -5656,7 +5666,7 @@
           }
         }
 
-        // Apply spring forces from connections
+        // Apply spring forces from connections3D (event-mode connections)
         for (const connection of connections3D) {
           const nodeA = nodes3D.find(n => n.userData.id === connection.userData.nodeA);
           const nodeB = nodes3D.find(n => n.userData.id === connection.userData.nodeB);
@@ -5667,6 +5677,22 @@
             const springForce = diff.normalize().multiplyScalar(displacement * physics.spring);
             nodeA.userData.force.add(springForce);
             nodeB.userData.force.sub(springForce);
+          }
+        }
+
+        // Apply spring forces from relationshipLines (database relationships)
+        for (const line of graphState.relationshipLines) {
+          const nodeA = line.userData.sourceMesh;
+          const nodeB = line.userData.targetMesh;
+          if (nodeA && nodeB && nodeA.userData?.force && nodeB.userData?.force) {
+            const diff = new THREE.Vector3().subVectors(nodeB.position, nodeA.position);
+            const dist = diff.length();
+            if (dist > 0.1) {
+              const displacement = dist - physics.springLength;
+              const springForce = diff.normalize().multiplyScalar(displacement * physics.spring);
+              nodeA.userData.force.add(springForce);
+              nodeB.userData.force.sub(springForce);
+            }
           }
         }
 
@@ -5690,13 +5716,9 @@
         node.userData.velocity.set(0, 0, 0);
       });
 
-      // Update connection positions
+      // Update all connection and relationship line positions
       updateConnectionPositions();
-
-      // Update relationship line positions if in graph mode
-      if (graphState.mode === 'graph') {
-        updateRelationshipPositions();
-      }
+      updateRelationshipPositions();
 
       showCameraIndicator('Fast-forwarded to equilibrium');
       updateStatus('Physics settled', 'green');
