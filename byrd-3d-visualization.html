@@ -3611,6 +3611,11 @@
           };
 
           scene.add(awakeningMesh);
+
+          // After awakening, reload the full graph to show seed experiences
+          setTimeout(async () => {
+            await loadExistingGraph();
+          }, 2000);
           nodes3D.push(awakeningMesh);
           connectionCounts.set('awakening-core', 0);
 
@@ -3631,6 +3636,10 @@
         case 'system_reset':
           clearVisualization();
           updateStatus('System reset', 'orange');
+          // After reset, reload the graph to show any remaining/new nodes
+          setTimeout(async () => {
+            await loadExistingGraph();
+          }, 1000);
           break;
       }
     }
@@ -4406,10 +4415,81 @@
     // ==========================================================================
     // INIT
     // ==========================================================================
-    function init() {
+
+    /**
+     * Load existing nodes from database on page load.
+     * This ensures all nodes are visible even when returning from another page.
+     */
+    async function loadExistingGraph() {
+      try {
+        updateStatus('Loading existing nodes...', 'amber');
+        const response = await fetch(`${API_BASE}/api/graph?limit=2000`);
+        if (!response.ok) {
+          console.warn('Could not load existing graph:', response.status);
+          return;
+        }
+
+        const data = await response.json();
+        if (!data.nodes || data.nodes.length === 0) {
+          console.log('No existing nodes to load');
+          updateStatus('Ready', 'green');
+          return;
+        }
+
+        console.log(`Loading ${data.nodes.length} existing nodes from database`);
+
+        // Group nodes by type for positioning
+        const nodesByType = {};
+        data.nodes.forEach(node => {
+          const type = node.type?.toLowerCase() || 'experience';
+          if (!nodesByType[type]) nodesByType[type] = [];
+          nodesByType[type].push(node);
+        });
+
+        // Create nodes using the graph positioning logic
+        let totalCreated = 0;
+        for (const [type, typeNodes] of Object.entries(nodesByType)) {
+          typeNodes.forEach((node, index) => {
+            // Check if node already exists
+            const existingNode = nodes3D.find(n => n.userData?.id === node.id);
+            if (existingNode) return;
+
+            const pos = calculateGraphPosition(node, index, typeNodes.length);
+            const mesh = createGraphNode(node, pos);
+            if (mesh) totalCreated++;
+          });
+        }
+
+        // Create relationship lines
+        let relsCreated = 0;
+        if (data.relationships) {
+          data.relationships.forEach(rel => {
+            if (createRelationshipLine(rel)) {
+              relsCreated++;
+            }
+          });
+        }
+
+        // Update node count display
+        nodeCountEl.textContent = nodes3D.length;
+
+        console.log(`Loaded ${totalCreated} nodes and ${relsCreated} relationships from database`);
+        updateStatus(`Loaded ${totalCreated} nodes`, 'green');
+
+      } catch (error) {
+        console.error('Error loading existing graph:', error);
+        updateStatus('Ready', 'green');
+      }
+    }
+
+    async function init() {
       initThree();
       connectWebSocket();
-      fetchStatus();
+      await fetchStatus();
+
+      // Load existing nodes from database on page load
+      await loadExistingGraph();
+
       setInterval(fetchStatus, 10000);
       renderEventLog();
     }
