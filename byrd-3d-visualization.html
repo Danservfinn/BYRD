@@ -3054,6 +3054,7 @@
 
     /**
      * Create a relationship line between two nodes
+     * Uses straight, thin lines for sacred geometry aesthetic
      */
     function createRelationshipLine(relationship) {
         const sourceMesh = graphState.nodeIdToMesh.get(relationship.source_id);
@@ -3063,28 +3064,27 @@
 
         const style = RELATIONSHIP_STYLES[relationship.type] || RELATIONSHIP_STYLES.default;
 
-        // Create curved path between nodes
+        // Sacred geometry: straight lines connecting nodes directly
         const start = sourceMesh.position.clone();
         const end = targetMesh.position.clone();
-        const mid = start.clone().add(end).multiplyScalar(0.5);
 
-        // Curve upward for visual clarity
-        const distance = start.distanceTo(end);
-        mid.y += distance * 0.15 + 2;
+        // Create geometry with two points for a straight line
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array([
+            start.x, start.y, start.z,
+            end.x, end.y, end.z
+        ]);
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
-        const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
-
-        // Use TubeGeometry for visible lines (WebGL ignores linewidth)
-        const tubeRadius = 0.15;  // Tube thickness
-        const geometry = new THREE.TubeGeometry(curve, 16, tubeRadius, 6, false);
-
-        const material = new THREE.MeshBasicMaterial({
+        // Thin, luminous lines for sacred geometry effect
+        const material = new THREE.LineBasicMaterial({
             color: style.color,
             transparent: true,
-            opacity: style.opacity
+            opacity: style.opacity * 0.8,  // Slightly more subtle
+            linewidth: 1  // Note: WebGL typically renders as 1px regardless
         });
 
-        const line = new THREE.Mesh(geometry, material);
+        const line = new THREE.Line(geometry, material);
         line.userData = {
             relationshipId: relationship.id,
             type: relationship.type,
@@ -3092,8 +3092,8 @@
             targetId: relationship.target_id,
             sourceMesh: sourceMesh,
             targetMesh: targetMesh,
-            curve: curve,
-            isRelationshipLine: true
+            isRelationshipLine: true,
+            isSacredGeometry: true  // Flag for sacred geometry style
         };
 
         scene.add(line);
@@ -3230,20 +3230,19 @@
 
             if (!sourceMesh || !targetMesh) continue;
 
-            // Recalculate curve
-            const start = sourceMesh.position.clone();
-            const end = targetMesh.position.clone();
-            const mid = start.clone().add(end).multiplyScalar(0.5);
-            const distance = start.distanceTo(end);
-            mid.y += distance * 0.15 + 2;
+            // Sacred geometry: update straight line positions
+            const start = sourceMesh.position;
+            const end = targetMesh.position;
 
-            const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
-
-            // TubeGeometry can't be updated in place - must recreate
-            line.geometry.dispose();
-            const tubeRadius = 0.15;
-            line.geometry = new THREE.TubeGeometry(curve, 16, tubeRadius, 6, false);
-            line.userData.curve = curve;
+            // Update BufferGeometry positions directly (efficient)
+            const positions = line.geometry.attributes.position.array;
+            positions[0] = start.x;
+            positions[1] = start.y;
+            positions[2] = start.z;
+            positions[3] = end.x;
+            positions[4] = end.y;
+            positions[5] = end.z;
+            line.geometry.attributes.position.needsUpdate = true;
         }
     }
 
