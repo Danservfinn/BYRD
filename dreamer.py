@@ -234,6 +234,27 @@ class Dreamer:
         # Get graph health for self-awareness of memory state
         graph_health = await self._get_graph_health()
 
+        # Emit event for memories being accessed (for visualization highlighting)
+        all_accessed_ids = recent_ids.copy()
+        all_accessed_ids.extend([r.get("id") for r in related if r.get("id")])
+        all_accessed_ids.extend([c.get("id") for c in capabilities if c.get("id")])
+        all_accessed_ids.extend([r.get("id") for r in previous_reflections if r.get("id")])
+
+        await event_bus.emit(Event(
+            type=EventType.MEMORIES_ACCESSED,
+            data={
+                "cycle": self._dream_count,
+                "node_ids": all_accessed_ids,
+                "phase": "recall",
+                "counts": {
+                    "experiences": len(recent),
+                    "related": len(related),
+                    "capabilities": len(capabilities),
+                    "reflections": len(previous_reflections)
+                }
+            }
+        ))
+
         # 2. REFLECT - Ask local LLM to reflect (minimal, unbiased prompt)
         reflection_output = await self._reflect(
             recent, related, capabilities, previous_reflections, graph_health

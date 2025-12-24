@@ -2393,6 +2393,139 @@
     }
 
     // ==========================================================================
+    // REFLECTION HIGHLIGHTING (Phase 3)
+    // ==========================================================================
+
+    // Track currently highlighted nodes for cleanup
+    const highlightedNodes = new Set();
+
+    /**
+     * Highlight nodes being accessed during reflection
+     */
+    function highlightAccessedNodes(nodeIds) {
+        // Clear previous highlights first
+        clearNodeHighlights();
+
+        const highlightColor = 0xffffff;  // White highlight
+
+        for (const nodeId of nodeIds) {
+            const mesh = graphState.nodeIdToMesh.get(nodeId);
+            if (!mesh) continue;
+
+            // Store original state
+            if (!mesh.userData.originalColor) {
+                mesh.userData.originalColor = mesh.material.color.getHex();
+                mesh.userData.originalOpacity = mesh.material.opacity;
+                mesh.userData.originalScale = mesh.scale.x;
+            }
+
+            // Brighten the node color by blending with white
+            const originalColor = new THREE.Color(mesh.userData.originalColor);
+            const brightened = originalColor.clone().lerp(new THREE.Color(highlightColor), 0.4);
+            mesh.material.color.copy(brightened);
+            mesh.material.opacity = 1.0;
+
+            // Mark as highlighted
+            mesh.userData.isHighlighted = true;
+            mesh.userData.highlightPulsePhase = Math.random() * Math.PI * 2;
+
+            highlightedNodes.add(mesh);
+
+            // Create highlight ring effect
+            createHighlightRing(mesh);
+        }
+
+        console.log(`Highlighted ${highlightedNodes.size} nodes`);
+    }
+
+    /**
+     * Create a pulsing ring around a highlighted node
+     */
+    function createHighlightRing(mesh) {
+        const ringGeometry = new THREE.RingGeometry(1.5, 1.8, 32);
+        const ringMaterial = new THREE.MeshBasicMaterial({
+            color: 0x60a5fa,  // Blue highlight
+            transparent: true,
+            opacity: 0.6,
+            side: THREE.DoubleSide
+        });
+        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+        ring.position.copy(mesh.position);
+        ring.lookAt(camera.position);
+        ring.userData.isHighlightRing = true;
+        ring.userData.parentMesh = mesh;
+        ring.userData.createdAt = Date.now();
+
+        scene.add(ring);
+        mesh.userData.highlightRing = ring;
+    }
+
+    /**
+     * Clear all node highlights
+     */
+    function clearNodeHighlights() {
+        for (const mesh of highlightedNodes) {
+            if (!mesh) continue;
+
+            // Restore original color and opacity
+            if (mesh.userData.originalColor !== undefined) {
+                mesh.material.color.setHex(mesh.userData.originalColor);
+            }
+            if (mesh.userData.originalOpacity !== undefined) {
+                mesh.material.opacity = mesh.userData.originalOpacity;
+            }
+            if (mesh.userData.originalScale !== undefined) {
+                mesh.scale.setScalar(mesh.userData.originalScale);
+            }
+
+            mesh.userData.isHighlighted = false;
+
+            // Remove highlight ring
+            if (mesh.userData.highlightRing) {
+                scene.remove(mesh.userData.highlightRing);
+                mesh.userData.highlightRing.geometry.dispose();
+                mesh.userData.highlightRing.material.dispose();
+                mesh.userData.highlightRing = null;
+            }
+        }
+
+        highlightedNodes.clear();
+    }
+
+    /**
+     * Update highlight animations (called in render loop)
+     */
+    function updateHighlightAnimations() {
+        const time = Date.now() * 0.001;
+
+        for (const mesh of highlightedNodes) {
+            if (!mesh || !mesh.userData.isHighlighted) continue;
+
+            // Pulsing scale effect
+            const phase = mesh.userData.highlightPulsePhase || 0;
+            const pulse = 1 + 0.15 * Math.sin(time * 3 + phase);
+            const baseScale = mesh.userData.originalScale || 1;
+            mesh.scale.setScalar(baseScale * pulse);
+
+            // Update highlight ring
+            if (mesh.userData.highlightRing) {
+                const ring = mesh.userData.highlightRing;
+                ring.position.copy(mesh.position);
+                ring.lookAt(camera.position);
+
+                // Pulsing opacity
+                const ringAge = (Date.now() - ring.userData.createdAt) / 1000;
+                const ringPulse = 0.4 + 0.3 * Math.sin(ringAge * 4);
+                ring.material.opacity = ringPulse;
+
+                // Expanding ring effect
+                const ringScale = 1 + 0.2 * Math.sin(ringAge * 2);
+                ring.scale.setScalar(ringScale);
+            }
+        }
+    }
+
+    // ==========================================================================
     // ANIMATION HELPERS
     // ==========================================================================
     function animateValue(obj, prop, target, duration, callback, easing = easeOutCubic) {
@@ -2964,6 +3097,9 @@
       // Phase 3: Update shader uniforms
       updateShaderUniforms(time);
 
+      // Phase 3: Update reflection highlights (pulsing rings)
+      updateHighlightAnimations();
+
       // Render
       composer.render();
     }
@@ -3187,6 +3323,18 @@
             updateStatus('Resting...', 'slate');
           } else {
             updateStatus('Resting...', 'slate');
+          }
+          // Clear highlights when dream ends
+          clearNodeHighlights();
+          break;
+
+        case 'memories_accessed':
+          // Highlight nodes being considered during reflection (graph mode only)
+          if (graphState.mode === 'graph') {
+            const nodeIds = event.data?.node_ids || [];
+            const counts = event.data?.counts || {};
+            highlightAccessedNodes(nodeIds);
+            updateStatus(`Considering ${nodeIds.length} memories...`, 'indigo');
           }
           break;
 
