@@ -76,25 +76,35 @@ CREATE (n:Insight {
 
 ## Visualization
 
-Custom node types are rendered distinctively in the 3D visualizer:
+### Emergent Structure Philosophy
 
-| Aspect | System Types | Custom Types |
-|--------|-------------|--------------|
-| Geometry | Type-specific (icosahedron, octahedron, etc.) | Dodecahedron |
-| Size | 0.8 base | 1.4 base (more visible) |
-| Position | Inner quadrant sectors | Outer ring (radius 45) |
-| Height | Based on age | Elevated (y=8) |
-| Color | Fixed palette | Dynamic from CUSTOM_TYPE_COLORS |
+The 3D visualizer uses **emergent structure** rather than prescribed layouts:
 
-### Dynamic Sector Assignment
+| Aspect | How It Works |
+|--------|-------------|
+| Geometry | All nodes are spheres (uniform shape) |
+| Size | Determined by **connection count** (graph topology) |
+| Position | Force-directed physics creates clusters |
+| Color | Indicates type for visual identity |
 
-Custom types get their own 30-degree sector in the outer ring:
+### Connection-Based Sizing
+
+Node importance emerges from graph topology:
 
 ```javascript
-// First custom type: 0° to 30°
-// Second custom type: 30° to 60°
-// etc.
+// Size scales with connections (emergent importance)
+// 0 connections: 1x scale (peripheral)
+// 5 connections: ~2.1x scale
+// 10 connections: ~2.6x scale
+// 20 connections: ~3.1x scale (central/important)
 ```
+
+### Physics-Driven Clustering
+
+- Highly connected nodes gravitate toward center
+- Connected nodes attract each other (spring forces)
+- Unconnected nodes repel (spatial distribution)
+- Natural clusters form based on relationship patterns
 
 ### Stats Display
 

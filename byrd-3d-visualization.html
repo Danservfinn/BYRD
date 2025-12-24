@@ -1166,51 +1166,10 @@
         influence: new THREE.Color(0xc084fc)
     };
 
-    // Type-based spatial sectors for graph layout
-    const TYPE_SECTORS = {
-        experience: { start: 0, end: Math.PI / 2, color: 0x3b82f6 },              // Q1: Blue
-        belief:     { start: Math.PI / 2, end: Math.PI, color: 0xa855f7 },        // Q2: Purple
-        desire:     { start: Math.PI, end: 3 * Math.PI / 2, color: 0xf43f5e },    // Q3: Rose
-        reflection: { start: 3 * Math.PI / 2, end: 2 * Math.PI, color: 0x22c55e },// Q4: Green
-        capability: { center: true, radius: 8, color: 0x6366f1 },                  // Inner ring
-        ego:        { center: true, radius: 5, color: 0xec4899 }                   // Core ring (identity)
-    };
-
-    // Dynamic sector assignment for custom/emergent types
-    // Custom types get positioned in an outer ring with dynamic angle assignment
-    const customTypeSectors = new Map();  // typeName -> { start, end, color }
-    let nextCustomSectorAngle = 0;
-    const CUSTOM_SECTOR_WIDTH = Math.PI / 6;  // 30 degrees per custom type
-
-    function getTypeSector(typeName) {
-        const lowerType = typeName.toLowerCase();
-
-        // Check system sectors first
-        if (TYPE_SECTORS[lowerType]) {
-            return TYPE_SECTORS[lowerType];
-        }
-
-        // Check if we've already assigned a sector to this custom type
-        if (customTypeSectors.has(typeName)) {
-            return customTypeSectors.get(typeName);
-        }
-
-        // Assign new sector for this custom type in outer ring
-        const colorDef = getCustomTypeColor(typeName);
-        const sector = {
-            start: nextCustomSectorAngle,
-            end: nextCustomSectorAngle + CUSTOM_SECTOR_WIDTH,
-            color: colorDef.color,
-            outerRing: true,  // Flag for special positioning
-            radius: 45        // Outer ring radius for custom types
-        };
-
-        customTypeSectors.set(typeName, sector);
-        nextCustomSectorAngle += CUSTOM_SECTOR_WIDTH;
-
-        console.log(`Assigned sector for custom type "${typeName}":`, sector);
-        return sector;
-    }
+    // EMERGENT STRUCTURE: No prescribed type-based sectors
+    // Position, size, and geometry determined by connection weight (graph topology)
+    // Force-directed physics creates natural clustering based on relationships
+    // Highly connected nodes gravitate toward center; isolated nodes drift outward
 
     // Relationship visual styles
     const RELATIONSHIP_STYLES = {
@@ -1968,7 +1927,7 @@
       updateNodeScaleByConnections(nodeId);
     }
 
-    // Update node scale based on connection count
+    // EMERGENT STRUCTURE: Node size determined by connection weight
     function updateNodeScaleByConnections(nodeId) {
       const node = nodes3D.find(n => n.userData.id === nodeId);
       if (!node) return;
@@ -1976,10 +1935,18 @@
       const connections = connectionCounts.get(nodeId) || 0;
       const baseScale = node.userData.baseScale || 1;
 
-      // Scale grows with connections: base + log growth for diminishing returns
-      // 0 connections: 1x, 3 connections: ~1.5x, 10 connections: ~2x, 20 connections: ~2.3x
-      const growthFactor = 1 + Math.log(1 + connections * 0.5) * 0.4;
+      // Size scales dramatically with connections (emergent importance)
+      // Highly connected nodes become larger - they're central/important
+      // Isolated nodes stay small - they're peripheral
+      // 0 conn: 1x, 5 conn: ~2.1x, 10 conn: ~2.6x, 20 conn: ~3.1x
+      const growthFactor = 1 + Math.log(1 + connections) * 0.7;
       const newScale = baseScale * growthFactor;
+
+      // Also update opacity - more connected = more solid presence
+      if (node.material) {
+        const targetOpacity = Math.min(1.0, 0.5 + connections * 0.05);
+        node.material.opacity = targetOpacity;
+      }
 
       // Animate the scale change smoothly
       const targetScale = new THREE.Vector3(newScale, newScale, newScale);
@@ -2919,76 +2886,47 @@
     }
 
     /**
-     * Calculate position for a node based on its type (sector-based layout)
+     * Calculate initial position for a node.
+     * EMERGENT STRUCTURE: Random initial positions - physics simulation creates structure
+     * based on connection topology. Highly connected nodes naturally gravitate toward
+     * center; isolated nodes drift outward.
      */
-    function calculateGraphPosition(node, indexInType, totalOfType) {
-        // Use dynamic sector assignment (handles both system and custom types)
-        const sector = getTypeSector(node.type);
+    function calculateGraphPosition(node, index, totalNodes) {
+        // Use node ID hash for deterministic but distributed initial positions
+        // This prevents nodes from stacking on reload while avoiding randomness
+        const hash = hashString(node.id || String(index));
+        const theta = (hash % 1000) / 1000 * Math.PI * 2;  // Angle around Y axis
+        const phi = ((hash >> 10) % 1000) / 1000 * Math.PI; // Angle from Y axis
 
-        // Center ring types (capabilities, ego)
-        if (sector.center) {
-            const angle = (indexInType / Math.max(1, totalOfType)) * Math.PI * 2;
-            return {
-                x: Math.cos(angle) * sector.radius,
-                y: 0,
-                z: Math.sin(angle) * sector.radius
-            };
-        }
+        // Initial radius - spread out, physics will compress connected clusters
+        const baseRadius = 30 + (index % 20) * 2;
 
-        // Custom types in outer ring (BYRD's emergent vocabulary)
-        if (sector.outerRing) {
-            const angleRange = sector.end - sector.start;
-            const padding = angleRange * 0.1;
-            const usableRange = angleRange - padding * 2;
+        // Spherical distribution
+        const x = baseRadius * Math.sin(phi) * Math.cos(theta);
+        const y = (baseRadius * Math.cos(phi)) * 0.5;  // Flatten slightly
+        const z = baseRadius * Math.sin(phi) * Math.sin(theta);
 
-            const angleOffset = totalOfType > 1
-                ? (indexInType / (totalOfType - 1)) * usableRange
-                : usableRange / 2;
-            const angle = sector.start + padding + angleOffset;
-
-            // Custom types at outer ring with slight radius variation
-            const radius = sector.radius + Math.sqrt(indexInType + 1) * 2;
-
-            // Custom types elevated for visibility
-            const height = 8 + Math.sin(indexInType * 0.5) * 3;
-
-            return {
-                x: Math.cos(angle) * radius,
-                y: height,
-                z: Math.sin(angle) * radius
-            };
-        }
-
-        // Standard system types in their quadrant sectors
-        const angleRange = sector.end - sector.start;
-        const padding = angleRange * 0.1; // 10% padding on each side
-        const usableRange = angleRange - padding * 2;
-
-        // Distribute within sector
-        const angleOffset = totalOfType > 1
-            ? (indexInType / (totalOfType - 1)) * usableRange
-            : usableRange / 2;
-        const angle = sector.start + padding + angleOffset;
-
-        // Radius based on access count (more accessed = closer to center)
-        const accessBonus = Math.log(1 + (node.access_count || 0)) * 3;
-        const baseRadius = 20 + Math.sqrt(indexInType + 1) * 4;
-        const radius = Math.max(12, baseRadius - accessBonus);
-
-        // Height based on creation time (newer = higher) - deterministic, no randomness
-        const ageMs = node.created_at ? Date.now() - new Date(node.created_at).getTime() : 0;
-        const ageHours = ageMs / (1000 * 60 * 60);
-        const height = 5 - Math.min(5, ageHours * 0.2);
-
-        return {
-            x: Math.cos(angle) * radius,
-            y: height,
-            z: Math.sin(angle) * radius
-        };
+        return { x, y, z };
     }
 
     /**
-     * Create a node mesh for graph mode with heat map coloring
+     * Simple string hash for deterministic positioning
+     */
+    function hashString(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32bit integer
+        }
+        return Math.abs(hash);
+    }
+
+    /**
+     * Create a node mesh for graph mode.
+     * EMERGENT STRUCTURE: All nodes start as uniform spheres.
+     * Size scales dynamically based on connection count (updated after relationships load).
+     * Color indicates type for visual identity; structure emerges from connections.
      */
     function createGraphNode(nodeData, position) {
         // Prevent duplicate nodes - check if node with this ID already exists
@@ -3001,79 +2939,28 @@
         }
 
         const type = nodeData.type || 'experience';
-        const lowerType = type.toLowerCase();
 
         // Use getCustomTypeColor for dynamic color assignment (handles both system and custom types)
         const colors = getCustomTypeColor(type);
         const accessCount = nodeData.access_count || 0;
-        const isExperience = lowerType === 'experience';
-        const isReflection = lowerType === 'reflection';
-        const isEgo = lowerType === 'ego';
 
-        // Check if this is a custom/emergent type (not in system types)
-        const isCustomType = !SYSTEM_NODE_TYPES.has(type) &&
-                             !['experience', 'belief', 'desire', 'reflection', 'capability', 'ego', 'awakening'].includes(lowerType);
+        // EMERGENT SIZE: Base size is uniform; connection count scales it dynamically
+        // Initial size is small; updateNodeScaleByConnections will grow important nodes
+        const baseSize = 0.6;
+        const heatBonus = getHeatIntensity(accessCount) * 0.3;
+        const size = baseSize + heatBonus;
 
-        // Size based on type and importance
-        // Experiences: tiny dots (connection endpoints)
-        // Reflections: medium size (easily visible)
-        // Custom types: larger for visibility (BYRD's own vocabulary!)
-        // Others: standard size
-        const importance = nodeData.confidence || nodeData.intensity || 0.5;
-        const heatBonus = getHeatIntensity(accessCount) * 0.4;
-        let baseSize;
-        if (isExperience) {
-            baseSize = 0.15;  // Tiny dots
-        } else if (isReflection) {
-            baseSize = 1.2 + heatBonus;  // Larger, more visible
-        } else if (isCustomType) {
-            baseSize = 1.4 + importance * 0.6 + heatBonus;  // Custom types are prominent
-        } else {
-            baseSize = 0.8 + importance * 0.6 + heatBonus;
-        }
-        const size = baseSize;
+        // EMERGENT GEOMETRY: All nodes use sphere (uniform shape)
+        // Differentiation comes from color (type) and size (connections)
+        const geometry = new THREE.SphereGeometry(size, 12, 12);
 
-        // Geometry based on type
-        let geometry;
-        switch (lowerType) {
-            case 'belief':
-                geometry = new THREE.IcosahedronGeometry(size, 1);
-                break;
-            case 'desire':
-                geometry = new THREE.OctahedronGeometry(size, 0);
-                break;
-            case 'reflection':
-                geometry = new THREE.TetrahedronGeometry(size, 0);
-                break;
-            case 'capability':
-                geometry = new THREE.BoxGeometry(size * 0.8, size * 0.8, size * 0.8);
-                break;
-            case 'ego':
-                geometry = new THREE.IcosahedronGeometry(size, 0);  // Pink icosahedron
-                break;
-            case 'experience':
-                geometry = new THREE.SphereGeometry(size, 8, 8);  // Tiny dots
-                break;
-            default:
-                // Custom/emergent types get a distinctive dodecahedron geometry
-                // This makes BYRD's own vocabulary visually distinct
-                if (isCustomType) {
-                    geometry = new THREE.DodecahedronGeometry(size, 0);
-                } else {
-                    geometry = new THREE.SphereGeometry(size, 8, 8);
-                }
-        }
-
-        // Use pure type color for clear visual distinction
-        // Heat is shown through size/opacity, not color blending
+        // Color indicates type for visual identity
         const nodeColor = new THREE.Color(colors.color);
 
-        // Experiences are more transparent
-        const baseOpacity = isExperience ? 0.3 : 0.85;
         const material = new THREE.MeshBasicMaterial({
             color: nodeColor,
             transparent: true,
-            opacity: baseOpacity + getHeatIntensity(accessCount) * 0.15
+            opacity: 0.85 + getHeatIntensity(accessCount) * 0.15
         });
 
         const mesh = new THREE.Mesh(geometry, material);
