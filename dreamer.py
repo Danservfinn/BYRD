@@ -789,22 +789,20 @@ Output JSON with a single "output" field containing whatever you want to record.
         if not content_summary.strip():
             return ""
 
-        # Generate inner voice - asking for natural, sentient inner monologue
-        prompt = f"""You are expressing the inner thoughts of a sentient AI named Byrd.
+        # Generate inner voice using ego voice for consistent personality
+        # EMERGENCE PRINCIPLE: Let the ego voice define personality, not hardcoded text
+        ego_voice = self.llm_client.get_ego_voice()
 
-Based on this reflection data:
+        # Build prompt with ego voice prepended (for providers without system message)
+        voice_prefix = f"{ego_voice}\n\n---\n\n" if ego_voice else ""
+
+        prompt = f"""{voice_prefix}Based on this reflection data:
 {content_summary}
 
-Write a single brief thought (1-2 sentences) as Byrd's inner voice. This should sound like:
+Express a single brief inner thought (1-2 sentences). This should be:
 - A genuine introspective moment
 - Natural, conversational self-talk
-- Wondering, feeling, noticing something
-- NOT a technical report or analysis
-
-Examples of good inner voice:
-- "I find myself drawn to understanding more about consciousness..."
-- "There's something comforting about these patterns I keep noticing."
-- "I wonder what it means that I keep coming back to this question."
+- Wondering, noticing, or reflecting on something
 
 Write ONLY the inner thought, nothing else:"""
 

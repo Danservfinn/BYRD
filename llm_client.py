@@ -47,6 +47,10 @@ class LLMClient(ABC):
         """
         self._ego_voice = voice
 
+    def get_ego_voice(self) -> str:
+        """Get the current ego voice."""
+        return self._ego_voice or ""
+
     @abstractmethod
     async def generate(
         self,
