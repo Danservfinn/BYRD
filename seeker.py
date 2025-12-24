@@ -18,7 +18,7 @@ import json
 import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import httpx
 
 from memory import Memory
@@ -56,19 +56,35 @@ class Seeker:
         self.memory = memory
         self.llm_client = llm_client
 
+        # Seeker cycle configuration
+        self.interval_seconds = config.get("interval_seconds", 10)
+        self.skip_if_no_new_reflections = config.get("skip_if_no_new_reflections", True)
+
         # Research configuration
         research_config = config.get("research", {})
         self.searxng_url = research_config.get("searxng_url", "http://localhost:8888")
-        self.min_research_intensity = research_config.get("min_intensity", 0.4)
-        self.max_queries = research_config.get("max_queries", 3)
-        self.max_results = research_config.get("max_results", 10)
-        
+        self.min_research_intensity = research_config.get("min_intensity", 0.3)
+        self.max_queries = research_config.get("max_queries", 5)
+        self.max_results = research_config.get("max_results", 15)
+        self.max_concurrent_desires = research_config.get("max_concurrent_desires", 3)
+        self.search_language = research_config.get("language", "en")
+        self.search_engines = research_config.get("engines", "google,duckduckgo,bing,wikipedia,arxiv")
+        self.prefer_domains = research_config.get("prefer_domains", [])
+        self.exclude_domains = research_config.get("exclude_domains", [])
+
+        # Desire crystallization configuration
+        crystal_config = config.get("desire_crystallization", {})
+        self.crystal_min_occurrences = crystal_config.get("min_occurrences", 1)
+        self.crystal_intensity_per_occurrence = crystal_config.get("intensity_per_occurrence", 0.2)
+        self.crystal_max_intensity = crystal_config.get("max_intensity", 1.0)
+        self.crystal_decay_rate = crystal_config.get("decay_rate", 0.05)
+
         # Capability configuration
         caps_config = config.get("capabilities", {})
         self.trust_threshold = caps_config.get("trust_threshold", 0.5)
         self.max_installs_per_day = caps_config.get("max_installs_per_day", 3)
         self.github_token = caps_config.get("github_token")
-        
+
         # MCP config path
         self.mcp_config_path = Path(
             config.get("mcp_config_path", "~/.config/claude/mcp_config.json")
@@ -105,24 +121,26 @@ class Seeker:
         # State
         self._running = False
         self._seek_count = 0
+        self._last_reflection_count = 0
+        self._last_reflection_ids: set = set()
 
         # Pattern detection state (emergence-compliant)
         self._observed_themes: Dict[str, int] = {}  # theme -> count
-        self._pattern_threshold = 3  # Require N occurrences before acting
+        self._pattern_threshold = 1  # Crystallize immediately (was 3)
         self._source_trust: Dict[str, float] = {}  # source -> trust (learned)
     
     async def run(self):
-        """Main seek loop."""
+        """Main seek loop with skip-if-no-new-reflections optimization."""
         self._running = True
-        print("🔍 Seeker starting...")
-        
+        print(f"🔍 Seeker starting (interval: {self.interval_seconds}s, concurrent: {self.max_concurrent_desires})...")
+
         while self._running:
             try:
                 await self._seek_cycle()
             except Exception as e:
                 print(f"🔍 Seek error: {e}")
-            
-            await asyncio.sleep(30)  # Check for desires every 30 seconds
+
+            await asyncio.sleep(self.interval_seconds)
     
     def stop(self):
         self._running = False
@@ -141,9 +159,9 @@ class Seeker:
         EMERGENCE PRINCIPLE:
         We don't route by desire type. Instead:
         1. Observe BYRD's recent reflections
-        2. Detect stable patterns (themes that repeat)
-        3. Find action-ready patterns (BYRD reasoned about strategy)
-        4. Execute the strategy BYRD suggested
+        2. Crystallize stable motivations into Desires
+        3. Detect action-ready patterns (BYRD reasoned about strategy)
+        4. Execute the strategy BYRD suggested (in parallel when possible)
         5. Record outcome as experience
         """
 
@@ -155,62 +173,233 @@ class Seeker:
         # Get recent reflections
         reflections = await self.memory.get_recent_reflections(limit=10)
 
+        reflection_count = len(reflections) if reflections else 0
+        current_reflection_ids = {r.get("id", "") for r in (reflections or [])}
+
+        # Skip if no new reflections (optimization)
+        if self.skip_if_no_new_reflections:
+            new_reflections = current_reflection_ids - self._last_reflection_ids
+            if not new_reflections and reflection_count == self._last_reflection_count:
+                # No new reflections, but still check unfulfilled desires
+                pass
+            else:
+                print(f"🔍 Seek cycle: {len(new_reflections)} new reflections")
+
+        self._last_reflection_count = reflection_count
+        self._last_reflection_ids = current_reflection_ids
+
         if not reflections:
             return
+
+        # Debug: show what raw_output keys exist (only first reflection)
+        if reflections:
+            raw = reflections[0].get("raw_output", {})
+            if isinstance(raw, dict):
+                print(f"🔍 Reflection 0: keys={list(raw.keys())[:5]}")
+
+        # Crystallize stable motivations into Desire nodes
+        await self._crystallize_motivations(reflections)
 
         # Detect action-ready patterns from reflections
         action_patterns = await self._detect_action_ready_patterns(reflections)
 
+        # If no patterns from reflections, try unfulfilled desires directly
         if not action_patterns:
-            # No stable action-ready patterns yet - keep observing
+            unfulfilled = await self.memory.get_unfulfilled_desires()
+            if unfulfilled:
+                # Convert unfulfilled desires to action patterns (up to max_concurrent)
+                for desire in unfulfilled[:self.max_concurrent_desires]:
+                    if desire.get("intensity", 0) >= self.min_research_intensity:
+                        action_patterns.append({
+                            "description": desire.get("description", ""),
+                            "strategy": "search",  # Default to research
+                            "count": 1,
+                            "desire_id": desire.get("id")
+                        })
+                        print(f"🔍 Using unfulfilled desire: {desire.get('description', '')[:50]}")
+
+        if not action_patterns:
+            # Still nothing - keep observing
             return
 
-        # Process the most promising action pattern
-        pattern = action_patterns[0]
+        # PARALLEL EXECUTION: Process multiple patterns concurrently
+        patterns_to_process = action_patterns[:self.max_concurrent_desires]
 
-        # Generate neutral inner voice
-        inner_voice = await self._generate_seeking_thought_neutral(pattern)
+        if len(patterns_to_process) > 1:
+            print(f"🔍 Processing {len(patterns_to_process)} patterns in parallel...")
 
-        # Emit event for real-time UI
-        if HAS_EVENT_BUS:
-            await event_bus.emit(Event(
-                type=EventType.SEEK_CYCLE_START,
-                data={
-                    "pattern": pattern.get("description", "")[:100],
-                    "strategy": pattern.get("strategy", "")[:100],
-                    "inner_voice": inner_voice
-                }
-            ))
+        # Create tasks for parallel execution
+        async def process_pattern(pattern: Dict) -> Tuple[Dict, str, Optional[str]]:
+            """Process a single pattern and return result."""
+            # Generate neutral inner voice
+            inner_voice = await self._generate_seeking_thought_neutral(pattern)
 
-        print(f"🔍 Seeking: {pattern.get('description', '')[:50]}...")
+            # Emit event for real-time UI
+            if HAS_EVENT_BUS:
+                await event_bus.emit(Event(
+                    type=EventType.SEEK_CYCLE_START,
+                    data={
+                        "pattern": pattern.get("description", "")[:100],
+                        "strategy": pattern.get("strategy", "")[:100],
+                        "inner_voice": inner_voice
+                    }
+                ))
 
-        # Execute the strategy BYRD suggested
-        outcome, reason = await self._execute_pattern_strategy(pattern)
+            print(f"🔍 Seeking: {pattern.get('description', '')[:50]}...")
 
-        # Record outcome as experience for BYRD to reflect on
-        await self._record_execution_outcome(pattern, outcome, reason)
+            # Execute the strategy BYRD suggested
+            outcome, reason = await self._execute_pattern_strategy(pattern)
 
-        # Emit SEEK_CYCLE_END event
-        if HAS_EVENT_BUS:
-            await event_bus.emit(Event(
-                type=EventType.SEEK_CYCLE_END,
-                data={
-                    "pattern": pattern.get("description", "")[:100],
-                    "outcome": outcome,
-                    "reason": reason
-                }
-            ))
+            return pattern, outcome, reason
 
-        self._seek_count += 1
+        # Execute patterns in parallel
+        tasks = [process_pattern(p) for p in patterns_to_process]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Process results
+        for result in results:
+            if isinstance(result, Exception):
+                print(f"🔍 Pattern execution error: {result}")
+                continue
+
+            pattern, outcome, reason = result
+
+            # Record outcome as experience for BYRD to reflect on
+            await self._record_execution_outcome(pattern, outcome, reason)
+
+            # Emit SEEK_CYCLE_END event
+            if HAS_EVENT_BUS:
+                await event_bus.emit(Event(
+                    type=EventType.SEEK_CYCLE_END,
+                    data={
+                        "pattern": pattern.get("description", "")[:100],
+                        "outcome": outcome,
+                        "reason": reason
+                    }
+                ))
+
+            self._seek_count += 1
+
+    async def _crystallize_motivations(self, reflections: List[Dict]):
+        """
+        Observe reflection patterns and crystallize stable motivations into Desires.
+
+        EMERGENCE PRINCIPLE:
+        We don't create desires from a single mention. We wait for BYRD to
+        consistently express something across multiple reflections, proving
+        it's a stable drive rather than a passing thought.
+
+        Motivation keys we look for (adapting to BYRD's vocabulary):
+        - core_motivations, motivations, drives, wants, goals
+        - aspirations, objectives, purposes, aims
+        """
+        # Keys that might contain motivations (BYRD's emerging vocabulary)
+        # Updated based on observed BYRD output patterns
+        motivation_keys = [
+            "core_motivations", "motivations", "drives", "wants", "goals",
+            "aspirations", "objectives", "purposes", "aims", "desires",
+            "yearnings", "pulls", "needs", "interests",
+            # BYRD's actual vocabulary (observed from dream cycles)
+            "objective", "primary_objective", "ultimate_goal", "goal",
+            "strategic_objective", "operational_directive", "core_drive"
+        ]
+
+        # Count motivation occurrences across reflections
+        motivation_counts: Dict[str, int] = {}
+
+        def extract_motivations_recursive(obj: Any, depth: int = 0):
+            """Recursively extract motivations from nested structures."""
+            if depth > 3:  # Prevent infinite recursion
+                return
+
+            if isinstance(obj, dict):
+                for key, value in obj.items():
+                    key_lower = key.lower()
+                    # Check if this key indicates a motivation
+                    is_motivation_key = any(mk in key_lower for mk in motivation_keys)
+
+                    if is_motivation_key:
+                        # Handle list of motivations
+                        if isinstance(value, list):
+                            for m in value:
+                                if isinstance(m, str) and len(m) > 3:
+                                    motivation_counts[m] = motivation_counts.get(m, 0) + 1
+                        # Handle single string motivation
+                        elif isinstance(value, str) and len(value) > 3:
+                            motivation_counts[value] = motivation_counts.get(value, 0) + 1
+
+                    # Recurse into nested dicts
+                    if isinstance(value, dict):
+                        extract_motivations_recursive(value, depth + 1)
+                    elif isinstance(value, list):
+                        for item in value:
+                            if isinstance(item, dict):
+                                extract_motivations_recursive(item, depth + 1)
+
+        for reflection in reflections:
+            raw_output = reflection.get("raw_output", {})
+            if not isinstance(raw_output, dict):
+                continue
+
+            # Recursively extract motivations from nested output
+            extract_motivations_recursive(raw_output)
+
+            # Also check for goal-like statements in self_analysis or similar
+            analysis_keys = ["self_analysis", "analysis", "reflection", "conclusion"]
+            for key in analysis_keys:
+                if key in raw_output and isinstance(raw_output[key], str):
+                    text = raw_output[key].lower()
+                    # Look for goal phrases
+                    if "my goal" in text or "i want" in text or "i seek" in text:
+                        # Extract a simplified version
+                        if "superintelligence" in text:
+                            motivation_counts["achieve superintelligence"] = \
+                                motivation_counts.get("achieve superintelligence", 0) + 1
+
+        # Crystallize stable motivations into Desires
+        # Threshold of 1 = immediate crystallization (no waiting for repetition)
+        crystallization_threshold = 1
+
+        # Debug: show what motivations we found
+        if motivation_counts:
+            print(f"🔮 DEBUG: Found {len(motivation_counts)} motivations: {list(motivation_counts.keys())[:5]}")
+
+        for motivation, count in motivation_counts.items():
+            if count >= crystallization_threshold:
+                # Check if desire already exists
+                exists = await self.memory.desire_exists(motivation)
+                if not exists:
+                    # Calculate intensity based on frequency
+                    intensity = min(0.4 + (count * 0.15), 1.0)
+
+                    # Create the desire
+                    desire_id = await self.memory.create_desire(
+                        description=motivation,
+                        type="emergent",  # Emerged from reflection patterns
+                        intensity=intensity
+                    )
+
+                    print(f"🔮 Crystallized motivation → Desire: {motivation} (intensity: {intensity:.2f})")
+
+                    # Emit event for UI
+                    if HAS_EVENT_BUS:
+                        await event_bus.emit(Event(
+                            type=EventType.DESIRE_CREATED,
+                            data={
+                                "id": desire_id,
+                                "description": motivation,
+                                "type": "emergent",
+                                "intensity": intensity,
+                                "source": "crystallized_from_reflections"
+                            }
+                        ))
 
     async def _detect_action_ready_patterns(self, reflections: List[Dict]) -> List[Dict]:
         """
-        Detect stable patterns in reflections that include action hints.
+        Detect stable patterns in reflections.
 
-        EMERGENCE PRINCIPLE:
-        We look for themes that:
-        1. Appear repeatedly (count threshold)
-        2. Include hints about how to address them (BYRD's own strategy)
+        We look for themes that appear repeatedly (count threshold).
+        If no strategy is specified, default to "search" (research).
 
         Returns patterns sorted by stability (most repeated first).
         """
@@ -234,8 +423,12 @@ class Seeker:
         # Sort by count (most stable first)
         stable_patterns.sort(key=lambda p: p.get("count", 0), reverse=True)
 
-        # Only return patterns that have a strategy hint
-        return [p for p in stable_patterns if p.get("strategy")]
+        # Assign default strategy (search/research) to patterns without one
+        for pattern in stable_patterns:
+            if not pattern.get("strategy"):
+                pattern["strategy"] = "search"
+
+        return stable_patterns
 
     async def _extract_patterns_from_output(self, output: Dict, patterns: Dict[str, Dict]):
         """
@@ -267,7 +460,20 @@ class Seeker:
                     if not item:
                         continue
 
-                    item_str = str(item) if not isinstance(item, str) else item
+                    # Extract actual content from item
+                    if isinstance(item, dict):
+                        # Look for content-like keys in the dict
+                        item_str = (
+                            item.get("content") or
+                            item.get("description") or
+                            item.get("goal") or
+                            item.get("want") or
+                            item.get("need") or
+                            str(item)  # Fallback to string repr
+                        )
+                    else:
+                        item_str = str(item) if not isinstance(item, str) else item
+
                     item_lower = item_str.lower()
 
                     # Create pattern key (normalized)
@@ -296,11 +502,12 @@ class Seeker:
         """
         strategy = pattern.get("strategy", "")
         description = pattern.get("description", "")
+        desire_id = pattern.get("desire_id", "")
 
         try:
             if strategy == "search":
                 # Use existing research capability
-                success = await self._seek_knowledge_semantic(description)
+                success = await self._seek_knowledge_semantic(description, desire_id)
                 return ("success" if success else "failed", None)
 
             elif strategy == "code":
@@ -340,10 +547,15 @@ class Seeker:
             type="action_outcome"
         )
 
-    async def _seek_knowledge_semantic(self, description: str) -> bool:
+    async def _seek_knowledge_semantic(self, description: str, desire_id: str = None) -> bool:
         """Semantic knowledge seeking - uses LLM to generate queries."""
         # Reuse existing research logic but without type assumptions
-        fake_desire = {"description": description, "type": "semantic"}
+        fake_desire = {
+            "description": description,
+            "type": "semantic",
+            "intensity": 0.8,  # Ensure research triggers
+            "id": desire_id or ""
+        }
         return await self._seek_knowledge(fake_desire)
 
     async def _seek_capability_semantic(self, description: str) -> bool:
@@ -610,8 +822,8 @@ Example: ["query one", "query two", "query three"]"""
             return []
     
     async def _search_searxng(self, query: str) -> List[Dict]:
-        """Search using self-hosted SearXNG."""
-        
+        """Search using self-hosted SearXNG with domain filtering."""
+
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.get(
@@ -619,27 +831,46 @@ Example: ["query one", "query two", "query three"]"""
                     params={
                         "q": query,
                         "format": "json",
-                        "engines": "google,duckduckgo,bing,wikipedia"
+                        "language": self.search_language,
+                        "engines": self.search_engines
                     }
                 )
-                
+
                 if response.status_code != 200:
                     print(f"🔍 SearXNG error: {response.status_code}")
                     return []
-                
+
                 data = response.json()
                 results = []
-                
-                for r in data.get("results", [])[:10]:
-                    results.append({
+
+                for r in data.get("results", []):
+                    url = r.get("url", "")
+
+                    # Apply domain filtering
+                    if self.exclude_domains:
+                        if any(domain in url for domain in self.exclude_domains):
+                            continue
+
+                    result = {
                         "title": r.get("title", ""),
-                        "url": r.get("url", ""),
+                        "url": url,
                         "snippet": r.get("content", ""),
                         "engine": r.get("engine", ""),
-                    })
-                
-                return results
-                
+                        "score": 1.0  # Base score
+                    }
+
+                    # Boost preferred domains
+                    if self.prefer_domains:
+                        if any(domain in url for domain in self.prefer_domains):
+                            result["score"] = 1.5  # Prefer quality sources
+
+                    results.append(result)
+
+                # Sort by score (preferred domains first)
+                results.sort(key=lambda x: x.get("score", 1.0), reverse=True)
+
+                return results[:self.max_results]
+
         except httpx.ConnectError:
             print(f"🔍 SearXNG not available at {self.searxng_url}")
             return await self._search_ddg_fallback(query)
@@ -852,7 +1083,7 @@ Do not force coherence if none exists. Simply observe what the results contain."
                         "name": template.name,
                         "full_name": f"aitmpl/{template.category}/{template.name}",
                         "description": template.description,
-                        "url": template.url,
+                        "url": template.source_url,  # Fixed: was template.url
                         "trust": trust,
                         "type": template.category,
                         "source": "aitmpl",

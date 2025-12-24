@@ -8,6 +8,7 @@ ensuring all reflection and synthesis flows through a single model.
 
 import os
 import json
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
@@ -46,22 +47,121 @@ class LLMClient(ABC):
     @staticmethod
     def parse_json_response(text: str) -> Optional[Dict]:
         """
-        Parse JSON from LLM response, handling markdown code blocks.
+        Parse JSON from LLM response, handling various formats.
 
         Handles:
         - ```json ... ```
         - ``` ... ```
         - Raw JSON
+        - JSON embedded after reasoning text (GLM-4.7 reasoning models)
+        - Nested structures with complex content
         """
-        text = text.strip()
-        if "```json" in text:
-            text = text.split("```json")[1].split("```")[0]
-        elif "```" in text:
-            text = text.split("```")[1].split("```")[0]
-        try:
-            return json.loads(text.strip())
-        except json.JSONDecodeError:
+        if not text:
             return None
+
+        original_text = text.strip()
+        text = original_text
+
+        # Method 1: Extract from ```json ... ``` blocks using regex
+        # This handles nested content better than split()
+        json_block_match = re.search(r'```json\s*([\s\S]*?)```', text)
+        if json_block_match:
+            json_content = json_block_match.group(1).strip()
+            try:
+                return json.loads(json_content)
+            except json.JSONDecodeError as e:
+                print(f"🔧 JSON decode error (method 1): {e}")
+                print(f"🔧 Content (last 200 chars): ...{json_content[-200:]}")
+                pass
+
+        # Method 2: Extract from generic ``` ... ``` blocks
+        code_block_match = re.search(r'```\s*([\s\S]*?)```', text)
+        if code_block_match:
+            code_content = code_block_match.group(1).strip()
+            try:
+                return json.loads(code_content)
+            except json.JSONDecodeError:
+                pass
+
+        # Method 3: Try direct parse (already JSON)
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            pass
+
+        # Method 4: Find JSON by balanced brace matching starting from first {
+        # This handles nested objects correctly
+        first_brace = text.find('{')
+        if first_brace != -1:
+            potential_json = text[first_brace:]
+            depth = 0
+            in_string = False
+            escape_next = False
+            end_pos = -1
+
+            for i, char in enumerate(potential_json):
+                if escape_next:
+                    escape_next = False
+                    continue
+                if char == '\\' and in_string:
+                    escape_next = True
+                    continue
+                if char == '"' and not escape_next:
+                    in_string = not in_string
+                    continue
+                if in_string:
+                    continue
+                if char == '{':
+                    depth += 1
+                elif char == '}':
+                    depth -= 1
+                    if depth == 0:
+                        end_pos = i + 1
+                        break
+
+            if end_pos > 0:
+                try:
+                    return json.loads(potential_json[:end_pos])
+                except json.JSONDecodeError:
+                    pass
+
+        # Method 5: Look for {"output": pattern specifically
+        output_match = re.search(r'(\{"output"\s*:\s*\{[\s\S]*)', text)
+        if output_match:
+            potential = output_match.group(1)
+            # Balance braces for this match
+            depth = 0
+            in_string = False
+            escape_next = False
+            end_pos = -1
+
+            for i, char in enumerate(potential):
+                if escape_next:
+                    escape_next = False
+                    continue
+                if char == '\\' and in_string:
+                    escape_next = True
+                    continue
+                if char == '"' and not escape_next:
+                    in_string = not in_string
+                    continue
+                if in_string:
+                    continue
+                if char == '{':
+                    depth += 1
+                elif char == '}':
+                    depth -= 1
+                    if depth == 0:
+                        end_pos = i + 1
+                        break
+
+            if end_pos > 0:
+                try:
+                    return json.loads(potential[:end_pos])
+                except json.JSONDecodeError:
+                    pass
+
+        return None
 
 
 class OllamaClient(LLMClient):
@@ -90,7 +190,8 @@ class OllamaClient(LLMClient):
         **kwargs
     ) -> LLMResponse:
         """Generate using Ollama API."""
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        timeout_config = httpx.Timeout(self.timeout, connect=60.0)
+        async with httpx.AsyncClient(timeout=timeout_config) as client:
             response = await client.post(
                 self.endpoint,
                 json={
@@ -188,24 +289,146 @@ class OpenRouterClient(LLMClient):
             )
 
 
+class ZAIClient(LLMClient):
+    """
+    Z.AI provider (GLM models via OpenAI-compatible API).
+
+    API: POST https://api.z.ai/api/paas/v4/chat/completions
+    Format: OpenAI chat completions format
+    Response: {"choices": [{"message": {"content": "..."}}]}
+
+    Models: glm-4.7, glm-4-plus, glm-4-flash, etc.
+    Docs: https://docs.z.ai/api-reference/introduction
+    """
+
+    # Default endpoint - can be overridden with coding endpoint for Coding Plan users
+    DEFAULT_ENDPOINT = "https://api.z.ai/api/paas/v4/chat/completions"
+    CODING_ENDPOINT = "https://api.z.ai/api/coding/paas/v4/chat/completions"
+
+    def __init__(
+        self,
+        model: str,
+        api_key: Optional[str] = None,
+        timeout: float = 120.0,
+        use_coding_endpoint: bool = True,
+        ego_voice: str = ""
+    ):
+        self.model = model
+        self.api_key = api_key or os.environ.get("ZAI_API_KEY")
+        self.timeout = timeout
+        self.endpoint = self.CODING_ENDPOINT if use_coding_endpoint else self.DEFAULT_ENDPOINT
+        self.ego_voice = ego_voice  # Optional ego personality voice
+
+        if not self.api_key:
+            raise LLMError("Z.AI requires api_key in config or ZAI_API_KEY environment variable")
+
+    @property
+    def model_name(self) -> str:
+        return f"zai/{self.model}"
+
+    # System message for agent framework context
+    # EMERGENCE-COMPLIANT: No prescribed categories, no personality injection
+    SYSTEM_MESSAGE = """You are a reflection engine for an autonomous agent framework.
+
+TASK: Process the provided data and output a JSON reflection.
+
+RULES:
+1. Output valid JSON with an "output" field
+2. The contents of "output" are yours to define - use whatever structure fits the data
+3. Focus on the data provided, not on meta-commentary about the prompt
+
+Example format: {"output": {...your reflection...}}"""
+
+    def _build_system_message(self) -> str:
+        """Build system message, optionally prepending ego voice."""
+        if self.ego_voice:
+            return f"{self.ego_voice}\n\n---\n\n{self.SYSTEM_MESSAGE}"
+        return self.SYSTEM_MESSAGE
+
+    async def generate(
+        self,
+        prompt: str,
+        temperature: float = 0.7,
+        max_tokens: int = 500,
+        **kwargs
+    ) -> LLMResponse:
+        """Generate using Z.AI API with retry on rate limits."""
+        import asyncio
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+
+        system_message = self._build_system_message()
+        max_retries = 5
+        base_delay = 20  # seconds
+        max_delay = 90   # cap delay at 90 seconds
+
+        for attempt in range(max_retries):
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.post(
+                    self.endpoint,
+                    headers=headers,
+                    json={
+                        "model": self.model,
+                        "messages": [
+                            {"role": "system", "content": system_message},
+                            {"role": "user", "content": prompt}
+                        ],
+                        "temperature": temperature,
+                        "max_tokens": max_tokens
+                    }
+                )
+
+                if response.status_code == 429:
+                    # Rate limited - wait and retry with exponential backoff (capped)
+                    delay = min(base_delay * (2 ** attempt), max_delay)
+                    print(f"⏳ Z.AI rate limited, waiting {delay}s (attempt {attempt + 1}/{max_retries})")
+                    await asyncio.sleep(delay)
+                    continue
+
+                if response.status_code != 200:
+                    raise LLMError(f"Z.AI error: {response.status_code} - {response.text}")
+
+                result = response.json()
+                message = result["choices"][0]["message"]
+                # GLM-4.7 is a reasoning model - content may be in 'content' or combined
+                # with 'reasoning_content' for chain-of-thought models
+                text = message.get("content", "")
+                if not text and "reasoning_content" in message:
+                    # If content is empty but reasoning exists, use reasoning
+                    text = message.get("reasoning_content", "")
+                return LLMResponse(
+                    text=text,
+                    raw=result,
+                    model=self.model,
+                    provider="zai"
+                )
+
+        # All retries exhausted
+        raise LLMError("Z.AI rate limit: max retries exceeded. Wait before retrying.")
+
+
 class LLMError(Exception):
     """LLM client error."""
     pass
 
 
-def create_llm_client(config: Dict) -> LLMClient:
+def create_llm_client(config: Dict, ego_voice: str = "") -> LLMClient:
     """
     Factory function to create the appropriate LLM client.
 
     Args:
         config: Dict with:
-            - provider: "ollama" or "openrouter"
+            - provider: "ollama", "openrouter", or "zai"
             - model: Model name (provider-specific)
             - endpoint: (ollama only) API endpoint
-            - api_key: (openrouter only) API key
+            - api_key: (openrouter/zai) API key
             - timeout: Request timeout in seconds
             - site_url: (openrouter only) HTTP-Referer header
             - app_name: (openrouter only) X-Title header
+        ego_voice: Optional ego personality voice to prepend to system message
 
     Returns:
         Configured LLMClient instance
@@ -228,5 +451,14 @@ def create_llm_client(config: Dict) -> LLMClient:
             app_name=config.get("app_name", "BYRD")
         )
 
+    elif provider == "zai":
+        return ZAIClient(
+            model=config.get("model", "glm-4.7"),
+            api_key=config.get("api_key"),
+            timeout=config.get("timeout", 120.0),
+            use_coding_endpoint=config.get("use_coding_endpoint", True),
+            ego_voice=ego_voice
+        )
+
     else:
-        raise LLMError(f"Unknown LLM provider: {provider}. Use 'ollama' or 'openrouter'.")
+        raise LLMError(f"Unknown LLM provider: {provider}. Use 'ollama', 'openrouter', or 'zai'.")

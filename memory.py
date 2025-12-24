@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
 import json
+import re
 from neo4j import GraphDatabase, AsyncGraphDatabase
 import hashlib
 
@@ -82,12 +83,28 @@ class Memory:
     The single source of truth.
     All experiences, beliefs, desires, and capabilities live here.
     """
-    
+
     def __init__(self, config: Dict[str, str]):
         self.uri = config.get("neo4j_uri", "bolt://localhost:7687")
         self.user = config.get("neo4j_user", "neo4j")
         self.password = config.get("neo4j_password", "password")
         self.driver = None
+
+        # Experience noise filtering
+        filter_config = config.get("experience_filter", {})
+        self.filter_enabled = filter_config.get("enabled", False)
+        self.exclude_patterns = []
+        for pattern in filter_config.get("exclude_patterns", []):
+            try:
+                self.exclude_patterns.append(re.compile(pattern))
+            except re.error:
+                pass  # Skip invalid regex
+
+        # Salience-weighted retrieval configuration
+        retrieval_config = config.get("retrieval", {})
+        self.retrieval_strategy = retrieval_config.get("strategy", "recent")
+        self.salience_weight = retrieval_config.get("salience_weight", 0.3)
+        self.recency_weight = retrieval_config.get("recency_weight", 0.7)
     
     async def connect(self):
         """Initialize connection to Neo4j (idempotent - safe to call multiple times)."""
@@ -151,14 +168,42 @@ class Memory:
     # =========================================================================
     # EXPERIENCES
     # =========================================================================
-    
+
+    def _is_noise(self, content: str) -> bool:
+        """Check if content matches noise patterns that should be filtered."""
+        if not self.filter_enabled or not self.exclude_patterns:
+            return False
+
+        for pattern in self.exclude_patterns:
+            if pattern.search(content):
+                return True
+
+        return False
+
     async def record_experience(
         self,
         content: str,
         type: str,
-        embedding: Optional[List[float]] = None
-    ) -> str:
-        """Record a new experience."""
+        embedding: Optional[List[float]] = None,
+        force: bool = False
+    ) -> Optional[str]:
+        """
+        Record a new experience.
+
+        Args:
+            content: The experience content
+            type: Experience type (open string)
+            embedding: Optional embedding vector
+            force: If True, bypass noise filtering
+
+        Returns:
+            Experience ID, or None if filtered as noise
+        """
+        # Apply noise filtering (unless forced or system type)
+        if not force and type not in ("system", "awakening", "action"):
+            if self._is_noise(content):
+                return None  # Silently filter noise
+
         exp_id = self._generate_id(content)
 
         async with self.driver.session() as session:
@@ -185,11 +230,32 @@ class Memory:
         return exp_id
     
     async def get_recent_experiences(
-        self, 
+        self,
         limit: int = 50,
         type: Optional[str] = None
     ) -> List[Dict]:
-        """Get recent experiences, optionally filtered by type."""
+        """
+        Get recent experiences using configured retrieval strategy.
+
+        Strategies:
+        - "recent": Pure chronological (default)
+        - "salient": By connection count (most connected first)
+        - "hybrid": Mix of recent and salient based on weights
+        """
+        if self.retrieval_strategy == "hybrid":
+            return await self._get_hybrid_experiences(limit, type)
+        elif self.retrieval_strategy == "salient":
+            return await self._get_salient_experiences(limit, type)
+        else:
+            # Default: pure recent
+            return await self._get_recent_experiences(limit, type)
+
+    async def _get_recent_experiences(
+        self,
+        limit: int,
+        type: Optional[str] = None
+    ) -> List[Dict]:
+        """Pure chronological retrieval."""
         query = """
             MATCH (e:Experience)
             WHERE $type IS NULL OR e.type = $type
@@ -197,11 +263,85 @@ class Memory:
             ORDER BY e.timestamp DESC
             LIMIT $limit
         """
-        
+
         async with self.driver.session() as session:
             result = await session.run(query, type=type, limit=limit)
             records = await result.data()
             return [r["e"] for r in records]
+
+    async def _get_salient_experiences(
+        self,
+        limit: int,
+        type: Optional[str] = None
+    ) -> List[Dict]:
+        """Retrieval by salience (connection count)."""
+        query = """
+            MATCH (e:Experience)
+            WHERE $type IS NULL OR e.type = $type
+            OPTIONAL MATCH (e)-[r]-()
+            WITH e, count(r) as connections
+            RETURN e, connections
+            ORDER BY connections DESC, e.timestamp DESC
+            LIMIT $limit
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(query, type=type, limit=limit)
+            records = await result.data()
+            return [r["e"] for r in records]
+
+    async def _get_hybrid_experiences(
+        self,
+        limit: int,
+        type: Optional[str] = None
+    ) -> List[Dict]:
+        """
+        Hybrid retrieval: mix of recent and salient experiences.
+
+        Uses configured weights to blend results:
+        - recency_weight portion from most recent
+        - salience_weight portion from most connected
+        """
+        recent_count = int(limit * self.recency_weight)
+        salient_count = int(limit * self.salience_weight)
+
+        # Ensure we get at least 1 of each if weights are non-zero
+        if self.recency_weight > 0 and recent_count == 0:
+            recent_count = 1
+        if self.salience_weight > 0 and salient_count == 0:
+            salient_count = 1
+
+        # Get recent experiences
+        recent = await self._get_recent_experiences(recent_count, type)
+
+        # Get salient experiences (excluding those already in recent)
+        recent_ids = {e.get("id") for e in recent}
+
+        salient_query = """
+            MATCH (e:Experience)
+            WHERE ($type IS NULL OR e.type = $type)
+            AND NOT e.id IN $exclude_ids
+            OPTIONAL MATCH (e)-[r]-()
+            WITH e, count(r) as connections
+            WHERE connections > 0
+            RETURN e
+            ORDER BY connections DESC
+            LIMIT $limit
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(
+                salient_query,
+                type=type,
+                exclude_ids=list(recent_ids),
+                limit=salient_count
+            )
+            records = await result.data()
+            salient = [r["e"] for r in records]
+
+        # Combine: recent first, then salient
+        combined = recent + salient
+        return combined[:limit]
     
     async def get_related_memories(
         self,
@@ -279,7 +419,8 @@ class Memory:
             type=EventType.REFLECTION_CREATED,
             data={
                 "id": ref_id,
-                "output_keys": list(raw_output.keys()) if isinstance(raw_output, dict) else []
+                "output_keys": list(raw_output.keys()) if isinstance(raw_output, dict) else [],
+                "raw_output": raw_output
             }
         ))
 
@@ -413,7 +554,24 @@ class Memory:
                 MATCH (b:Belief {id: $id})
                 SET b.confidence = $confidence
             """, id=belief_id, confidence=new_confidence)
-    
+
+    async def reinforce_belief(self, content_hint: str, boost: float = 0.02):
+        """
+        Reinforce a belief when it's re-asserted.
+        Increases confidence slightly and tracks reinforcement.
+        """
+        async with self.driver.session() as session:
+            await session.run("""
+                MATCH (b:Belief)
+                WHERE toLower(b.content) CONTAINS toLower($hint)
+                SET b.confidence = CASE
+                    WHEN b.confidence + $boost > 1.0 THEN 1.0
+                    ELSE b.confidence + $boost
+                END,
+                b.reinforcement_count = COALESCE(b.reinforcement_count, 0) + 1,
+                b.last_reinforced = datetime()
+            """, hint=content_hint, boost=boost)
+
     # =========================================================================
     # DESIRES
     # =========================================================================

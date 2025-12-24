@@ -54,6 +54,8 @@ class ConstitutionalConstraints:
         "memory.py",
         "byrd.py",
         "config.yaml",
+        # LLM abstraction
+        "llm_client.py",
         # Event system
         "event_bus.py",
         # Server
@@ -81,6 +83,7 @@ class ConstitutionalConstraints:
         "memory",
         "byrd",
         "config",
+        "llm_client",
         "event_bus",
         "server",
         "coder",
@@ -88,27 +91,28 @@ class ConstitutionalConstraints:
         "installers",
     }
 
-    # Patterns that indicate dangerous modifications
+    # Patterns that are ACTUALLY dangerous (block these)
     DANGEROUS_PATTERNS: List[str] = [
-        "os.system",
-        "subprocess.call",
-        "subprocess.run",
-        "eval(",
-        "exec(",
-        "__import__",
-        "importlib",
-        "open(",  # Direct file I/O should use memory system
-        "requests.",  # Network calls should use seeker
-        "httpx.",  # Network calls should use seeker
+        "os.system",        # Shell injection risk
+        "subprocess.call",  # Deprecated, use run() instead
+        "eval(",            # Arbitrary code execution
+        "exec(",            # Arbitrary code execution
+        "__import__",       # Dynamic imports bypass safety
     ]
 
-    # Modifications that require extra scrutiny
+    # Patterns that need review but aren't inherently dangerous
+    # These generate warnings, not blocks
     SENSITIVE_PATTERNS: List[str] = [
-        "async def",  # Changing async signatures
-        "class ",  # Class definitions
-        "__init__",  # Constructor changes
-        "import ",  # New imports
-        "from ",  # New imports
+        "subprocess.run",   # OK with proper args (used in seeker.py)
+        "open(",            # OK for legitimate file I/O (used in modification_log.py)
+        "httpx.",           # OK for HTTP requests (used in seeker.py, aitmpl_client.py)
+        "requests.",        # OK for HTTP requests
+        "importlib",        # OK for controlled dynamic imports
+        "async def",        # Changing async signatures
+        "class ",           # Class definitions
+        "__init__",         # Constructor changes
+        "import ",          # New imports
+        "from ",            # New imports
     ]
 
     @classmethod
@@ -225,6 +229,7 @@ MODIFIABLE (With proper provenance):
 - memory.py: The memory storage and retrieval system
 - byrd.py: The main orchestration logic
 - config.yaml: Configuration parameters
+- llm_client.py: LLM provider abstraction layer
 - event_bus.py: Real-time event streaming system
 - server.py: FastAPI WebSocket server
 - coder.py: Claude Code CLI wrapper

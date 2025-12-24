@@ -6,9 +6,12 @@ Centralized event emission for real-time UI streaming.
 import asyncio
 import json
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
 from dataclasses import dataclass, field
 from enum import Enum
+
+if TYPE_CHECKING:
+    from narrator import EventNarrator
 
 
 class EventType(Enum):
@@ -73,14 +76,18 @@ class Event:
     type: EventType
     data: Dict[str, Any]
     timestamp: datetime = field(default_factory=datetime.now)
+    narration: Optional[str] = None  # BYRD's inner voice summary
 
     def to_dict(self) -> Dict:
         """Convert to dictionary for JSON serialization."""
-        return {
+        result = {
             "type": self.type.value,
             "data": self.data,
             "timestamp": self.timestamp.isoformat()
         }
+        if self.narration:
+            result["narration"] = self.narration
+        return result
 
     def to_json(self) -> str:
         """Convert to JSON string."""
@@ -129,6 +136,10 @@ class EventBus:
 
     async def emit(self, event: Event):
         """Emit an event to all subscribers."""
+        # Auto-generate narration if not provided
+        if event.narration is None:
+            event.narration = self._generate_narration(event)
+
         # Store in history
         self._history.append(event)
         if len(self._history) > self._max_history:
@@ -150,6 +161,10 @@ class EventBus:
 
     def emit_sync(self, event: Event):
         """Emit event synchronously (for non-async contexts)."""
+        # Auto-generate narration if not provided
+        if event.narration is None:
+            event.narration = self._generate_narration(event)
+
         self._history.append(event)
         if len(self._history) > self._max_history:
             self._history = self._history[-self._max_history:]
@@ -159,6 +174,15 @@ class EventBus:
                 callback(event)
             except Exception as e:
                 print(f"Event subscriber error: {e}")
+
+    def _generate_narration(self, event: Event) -> Optional[str]:
+        """Generate a narration for an event using the EventNarrator."""
+        try:
+            from narrator import narrate_event
+            return narrate_event(event.type, event.data)
+        except Exception:
+            # Narrator not available or error - return None
+            return None
 
     def get_history(
         self,

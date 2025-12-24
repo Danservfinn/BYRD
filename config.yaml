@@ -9,25 +9,56 @@ memory:
   neo4j_user: "neo4j"
   neo4j_password: "prometheus"  # Change this in production!
 
+  # Salience-weighted retrieval for dreamer context
+  retrieval:
+    strategy: "hybrid"         # "recent", "salient", or "hybrid"
+    salience_weight: 0.3       # 30% from high-connection nodes in hybrid mode
+    recency_weight: 0.7        # 70% from recent experiences
+
+  # Experience noise filtering
+  experience_filter:
+    enabled: true
+    exclude_patterns:
+      - "^HTTP/1\\."
+      - "^INFO:"
+      - "^DEBUG:"
+      - "^WARNING:"
+      - "status.*check"
+      - "WebSocket.*ping"
+      - "\\[accepted\\]"
+      - "connection open"
+
+# =============================================================================
+# EGO (Optional Personality)
+# =============================================================================
+# Egos provide optional personality guidance that shapes how BYRD expresses.
+# Set to null for pure emergence (original behavior).
+# Available egos: "black-cat", "neutral" (or create your own in egos/)
+ego: "black-cat"
+
 # =============================================================================
 # LLM PROVIDER (Shared by Dreamer and Seeker)
 # =============================================================================
 # One mind: the same model that dreams also synthesizes research.
 # This preserves emergence — all learning flows through one model.
 local_llm:
-  # Provider: "ollama" (local) or "openrouter" (cloud)
-  provider: "ollama"
+  # Provider: "ollama" (local), "openrouter" (cloud), or "zai" (Z.AI GLM models)
+  provider: "zai"
 
   # Model name (provider-specific)
   # Ollama: "gemma2:27b", "llama3:70b", "qwen2.5:32b"
   # OpenRouter: "deepseek/deepseek-v3.2-speciale", "google/gemma-2-27b-it"
-  model: "gemma2:27b"
+  # Z.AI: "glm-4.7", "glm-4-plus", "glm-4-flash"
+  model: "glm-4.7"
+
+  # API key for Z.AI (or set ZAI_API_KEY env var)
+  api_key: "***REMOVED***"
 
   # Ollama endpoint (only used when provider: ollama)
   endpoint: "http://localhost:11434/api/generate"
 
   # Request timeout in seconds
-  timeout: 120.0
+  timeout: 600.0
 
   # OpenRouter settings (only used when provider: openrouter)
   # api_key: Set via OPENROUTER_API_KEY env var (recommended)
@@ -42,32 +73,75 @@ local_llm:
 dreamer:
   # How often to dream (seconds)
   # Lower = more active mind, higher token usage
-  interval_seconds: 60
-  
+  interval_seconds: 30  # Accelerated dreaming (was 45)
+
   # How many recent experiences to consider
   context_window: 50
+
+  # Adaptive interval settings
+  adaptive_interval: true
+  min_interval_seconds: 15    # Fast during high activity
+  max_interval_seconds: 60    # Slow during stability
+  activity_window_seconds: 300  # 5-minute activity window
+  activity_threshold: 3        # New beliefs/desires to trigger fast mode
 
 # =============================================================================
 # SEEKER (Desire Fulfillment)
 # =============================================================================
 # The Seeker fulfills desires through research and capability acquisition.
 seeker:
+  # Seeker cycle interval (seconds)
+  interval_seconds: 10
+
+  # Skip cycle if no new reflections since last check
+  skip_if_no_new_reflections: true
+
   # ---------------------------------------------------------------------------
   # KNOWLEDGE ACQUISITION (Local LLM + SearXNG)
   # ---------------------------------------------------------------------------
   research:
     # SearXNG endpoint (self-hosted meta-search)
     searxng_url: "http://localhost:8888"
-    
+
     # Minimum desire intensity to trigger research (0-1)
     # Lower = more research, higher = only strong desires
-    min_intensity: 0.4
-    
+    min_intensity: 0.3  # Lowered for more research (was 0.4)
+
     # Maximum search queries per desire
-    max_queries: 3
-    
+    max_queries: 5  # Increased for query diversity (was 3)
+
     # Maximum search results to synthesize
-    max_results: 10
+    max_results: 15  # Deeper synthesis (was 10)
+
+    # Parallel research execution
+    max_concurrent_desires: 3  # Research up to 3 desires simultaneously
+
+    # Search engine configuration
+    language: "en"
+    engines: "google,duckduckgo,bing,wikipedia,arxiv"
+
+    # Domain quality filters
+    prefer_domains:
+      - "arxiv.org"
+      - "github.com"
+      - "wikipedia.org"
+      - "stackoverflow.com"
+      - "docs.python.org"
+      - "huggingface.co"
+    exclude_domains:
+      - "pinterest.com"
+      - "quora.com"
+      - "facebook.com"
+      - "twitter.com"
+
+  # ---------------------------------------------------------------------------
+  # DESIRE CRYSTALLIZATION
+  # ---------------------------------------------------------------------------
+  desire_crystallization:
+    min_occurrences: 1          # Occurrences before crystallizing
+    intensity_per_occurrence: 0.2  # Each repeat boosts intensity
+    max_intensity: 1.0
+    decay_rate: 0.05            # Intensity decay per cycle if not reinforced
   
   # ---------------------------------------------------------------------------
   # CAPABILITY ACQUISITION (GitHub)

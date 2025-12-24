@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BYRD - Black Cat Ego</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #f8fafc;
+    }
+    #canvas-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+    canvas {
+      display: block;
+    }
+
+    /* UI Overlay Styles */
+    .ui-overlay {
+      position: fixed;
+      pointer-events: none;
+      z-index: 100;
+    }
+    .ui-overlay > * {
+      pointer-events: auto;
+    }
+
+    /* Status display */
+    .status-container {
+      font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', ui-monospace, monospace;
+      letter-spacing: 0.05em;
+    }
+
+    @keyframes statusPulse {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
+    }
+    .status-active {
+      animation: statusPulse 2s ease-in-out infinite;
+    }
+
+    /* Loading overlay */
+    #loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      transition: opacity 0.5s ease;
+    }
+    #loading-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #e2e8f0;
+      border-top-color: #14b8a6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Thought bubble container */
+    .thought-bubble-container {
+      position: fixed;
+      bottom: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 500px;
+      pointer-events: none;
+      z-index: 500;
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .thought-bubble {
+      position: relative;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(20, 184, 166, 0.25);
+      border-radius: 16px;
+      padding: 16px 24px;
+      max-width: 420px;
+      box-shadow:
+        0 0 30px rgba(20, 184, 166, 0.15),
+        0 4px 20px rgba(0, 0, 0, 0.08);
+      font-family: 'Georgia', 'Times New Roman', serif;
+      font-style: italic;
+      font-size: 15px;
+      line-height: 1.6;
+      color: #115e59;
+      text-align: center;
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+      animation: thoughtRise 20s ease-out forwards;
+    }
+
+    .thought-bubble::before {
+      content: '"';
+      position: absolute;
+      top: -8px;
+      left: 20px;
+      font-size: 32px;
+      color: rgba(20, 184, 166, 0.3);
+      font-family: Georgia, serif;
+    }
+
+    .thought-bubble::after {
+      content: '"';
+      position: absolute;
+      bottom: -20px;
+      right: 20px;
+      font-size: 32px;
+      color: rgba(20, 184, 166, 0.3);
+      font-family: Georgia, serif;
+    }
+
+    @keyframes thoughtRise {
+      0% {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+      }
+      2% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+      90% {
+        opacity: 1;
+        transform: translateY(-80px) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-120px) scale(0.97);
+      }
+    }
+
+    /* Controls hint */
+    .controls-hint {
+      font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading overlay -->
+  <div id="loading-overlay">
+    <div class="loading-spinner"></div>
+    <div class="mt-4 text-sm text-slate-500 font-mono">Loading Byrd...</div>
+  </div>
+
+  <div id="canvas-container"></div>
+
+  <!-- Thought bubbles -->
+  <div id="thought-bubble-container" class="thought-bubble-container"></div>
+
+  <!-- UI Overlay: Top Left - Logo + Mode -->
+  <div class="ui-overlay top-4 left-4">
+    <div class="text-lg font-light tracking-widest text-slate-600">BYRD</div>
+    <div class="flex items-center gap-2 mt-1">
+      <div class="text-[10px] font-mono text-slate-700 tracking-wider">EGO SPACE</div>
+      <div id="mode-indicator" class="px-2 py-1 rounded text-xs font-mono bg-indigo-500/20 text-indigo-700 border border-indigo-500/30">ORBIT</div>
+    </div>
+    <!-- Link to Mind Space Visualizer -->
+    <a href="byrd-3d-visualization.html"
+       class="mt-3 flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono
+              bg-indigo-500/10 border border-indigo-500/30 text-indigo-700
+              hover:bg-indigo-500/20 hover:border-indigo-500/50 transition-all cursor-pointer">
+      <span class="text-base">🧠</span>
+      <span>MIND SPACE</span>
+    </a>
+  </div>
+
+  <!-- UI Overlay: Top Center - State Indicator -->
+  <div class="ui-overlay top-4 left-1/2 -translate-x-1/2">
+    <div id="state-indicator" class="px-3 py-1.5 rounded-full text-xs font-mono tracking-wider bg-slate-100 border border-slate-300 text-slate-600">
+      resting
+    </div>
+  </div>
+
+  <!-- UI Overlay: Bottom Right - Connection Status -->
+  <div class="ui-overlay bottom-4 right-4">
+    <div class="flex items-center gap-2">
+      <div id="connection-dot" class="w-2 h-2 rounded-full bg-slate-400"></div>
+      <span class="text-[10px] font-mono text-slate-500 tracking-wider">WEBSOCKET</span>
+    </div>
+  </div>
+
+  <!-- UI Overlay: Bottom Left - Controls -->
+  <div class="ui-overlay bottom-4 left-4">
+    <div class="controls-hint">
+      <span class="text-slate-400">DRAG</span> rotate
+      <span class="text-slate-400 ml-3">SCROLL</span> zoom
+    </div>
+  </div>
+
+  <!-- Model Attribution -->
+  <div class="ui-overlay bottom-4 left-1/2 -translate-x-1/2">
+    <div class="text-[9px] font-mono text-slate-400">
+      Cat model: <a href="https://github.com/wonderunit/shot-generator-models" class="underline hover:text-slate-600" target="_blank">wonderunit/shot-generator-models</a> (MIT)
+    </div>
+  </div>
+
+  <!-- Three.js and GLTFLoader -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+    // =========================================================================
+    // BYRD Black Cat Ego Visualization - Real 3D Model Version
+    // =========================================================================
+
+    // Scene setup
+    let scene, camera, renderer, controls;
+    let cat = null;
+    let catMixer = null; // Animation mixer
+    let particles = null;
+    let clock = new THREE.Clock();
+
+    // Animation state
+    let currentState = 'resting';
+    let breathPhase = 0;
+    let idlePhase = 0;
+
+    // Eye glow (for emissive materials if found)
+    let eyeGlow = 0.8;
+    let eyeMeshes = [];
+
+    // WebSocket
+    let ws = null;
+    let reconnectAttempts = 0;
+
+    // Initialize
+    init();
+
+    async function init() {
+      // Scene - light background matching node visualizer
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xf8fafc);
+
+      // Camera
+      camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 1.5, 4);
+
+      // Renderer
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+      // OrbitControls - rotate around the cat
+      controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.minDistance = 1.5;
+      controls.maxDistance = 10;
+      controls.maxPolarAngle = Math.PI * 0.85;
+      controls.target.set(0, 0.5, 0);
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.5;
+
+      // Lighting for light environment
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+      scene.add(ambientLight);
+
+      // Main key light
+      const keyLight = new THREE.DirectionalLight(0xffffff, 1.0);
+      keyLight.position.set(5, 10, 5);
+      keyLight.castShadow = true;
+      keyLight.shadow.mapSize.width = 2048;
+      keyLight.shadow.mapSize.height = 2048;
+      keyLight.shadow.camera.near = 0.5;
+      keyLight.shadow.camera.far = 50;
+      keyLight.shadow.camera.left = -10;
+      keyLight.shadow.camera.right = 10;
+      keyLight.shadow.camera.top = 10;
+      keyLight.shadow.camera.bottom = -10;
+      scene.add(keyLight);
+
+      // Fill light
+      const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
+      fillLight.position.set(-5, 5, -5);
+      scene.add(fillLight);
+
+      // Rim light for edge definition
+      const rimLight = new THREE.DirectionalLight(0xffffff, 0.3);
+      rimLight.position.set(0, 3, -8);
+      scene.add(rimLight);
+
+      // Ground plane (subtle shadow catcher)
+      const groundGeometry = new THREE.PlaneGeometry(50, 50);
+      const groundMaterial = new THREE.ShadowMaterial({ opacity: 0.15 });
+      const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.y = -0.01;
+      ground.receiveShadow = true;
+      scene.add(ground);
+
+      // Load the cat model
+      await loadCatModel();
+
+      // Create ambient particles (subtle)
+      createParticles();
+
+      // Add name label
+      createNameLabel();
+
+      // Handle resize
+      window.addEventListener('resize', onWindowResize);
+
+      // Hide loading overlay
+      document.getElementById('loading-overlay').classList.add('hidden');
+
+      // Start animation loop
+      animate();
+
+      // Connect WebSocket
+      connectWebSocket();
+    }
+
+    async function loadCatModel() {
+      const loader = new GLTFLoader();
+
+      return new Promise((resolve, reject) => {
+        loader.load(
+          'models/cat.glb',
+          (gltf) => {
+            cat = gltf.scene;
+
+            // Apply black material to all meshes
+            const blackMaterial = new THREE.MeshStandardMaterial({
+              color: 0x0a0a0a,
+              roughness: 0.85,
+              metalness: 0.05
+            });
+
+            const eyeMaterial = new THREE.MeshStandardMaterial({
+              color: 0xd4af37,
+              emissive: 0xd4af37,
+              emissiveIntensity: 0.6,
+              roughness: 0.2,
+              metalness: 0.3
+            });
+
+            cat.traverse((child) => {
+              if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+
+                // Check if this might be an eye mesh
+                const name = child.name.toLowerCase();
+                if (name.includes('eye') && !name.includes('lid')) {
+                  child.material = eyeMaterial.clone();
+                  eyeMeshes.push(child);
+                } else {
+                  child.material = blackMaterial.clone();
+                }
+              }
+            });
+
+            // Scale and position the cat (chonky boy)
+            cat.scale.set(1.5, 1.2, 1.4); // wider and deeper for chonkiness
+            cat.position.set(0, 0, 0);
+
+            // If the model has animations, set up the mixer
+            if (gltf.animations && gltf.animations.length > 0) {
+              catMixer = new THREE.AnimationMixer(cat);
+              const action = catMixer.clipAction(gltf.animations[0]);
+              action.play();
+            }
+
+            scene.add(cat);
+            console.log('Cat model loaded successfully');
+            resolve();
+          },
+          (progress) => {
+            const percent = (progress.loaded / progress.total * 100).toFixed(0);
+            console.log(`Loading model: ${percent}%`);
+          },
+          (error) => {
+            console.error('Error loading cat model:', error);
+            // Fallback: create a simple placeholder
+            createFallbackCat();
+            resolve();
+          }
+        );
+      });
+    }
+
+    function createFallbackCat() {
+      // Simple sphere placeholder if model fails to load
+      cat = new THREE.Group();
+
+      const material = new THREE.MeshStandardMaterial({
+        color: 0x0a0a0a,
+        roughness: 0.85
+      });
+
+      const body = new THREE.Mesh(
+        new THREE.SphereGeometry(0.5, 32, 32),
+        material
+      );
+      body.scale.set(1.2, 0.8, 1.5);
+      body.position.y = 0.4;
+      body.castShadow = true;
+      cat.add(body);
+
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.3, 32, 32),
+        material
+      );
+      head.position.set(0, 0.7, 0.5);
+      head.castShadow = true;
+      cat.add(head);
+
+      // Eyes
+      const eyeMaterial = new THREE.MeshStandardMaterial({
+        color: 0xd4af37,
+        emissive: 0xd4af37,
+        emissiveIntensity: 0.6
+      });
+
+      const leftEye = new THREE.Mesh(
+        new THREE.SphereGeometry(0.06, 16, 16),
+        eyeMaterial
+      );
+      leftEye.position.set(-0.1, 0.75, 0.75);
+      cat.add(leftEye);
+      eyeMeshes.push(leftEye);
+
+      const rightEye = new THREE.Mesh(
+        new THREE.SphereGeometry(0.06, 16, 16),
+        eyeMaterial
+      );
+      rightEye.position.set(0.1, 0.75, 0.75);
+      cat.add(rightEye);
+      eyeMeshes.push(rightEye);
+
+      scene.add(cat);
+    }
+
+    function createParticles() {
+      const particleCount = 200;
+      const geometry = new THREE.BufferGeometry();
+      const positions = new Float32Array(particleCount * 3);
+
+      for (let i = 0; i < particleCount; i++) {
+        const radius = 3 + Math.random() * 15;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+
+        positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+        positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+        positions[i * 3 + 2] = radius * Math.cos(phi);
+      }
+
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+      const material = new THREE.PointsMaterial({
+        color: 0x94a3b8,
+        size: 0.015,
+        transparent: true,
+        opacity: 0.15,
+        sizeAttenuation: true
+      });
+
+      particles = new THREE.Points(geometry, material);
+      scene.add(particles);
+    }
+
+    function createNameLabel() {
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      canvas.width = 256;
+      canvas.height = 64;
+
+      context.fillStyle = 'transparent';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      context.font = 'italic 32px Georgia, serif';
+      context.fillStyle = 'rgba(100, 116, 139, 0.7)';
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.fillText('Byrd', canvas.width / 2, canvas.height / 2);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.needsUpdate = true;
+
+      const spriteMaterial = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true
+      });
+      const nameSprite = new THREE.Sprite(spriteMaterial);
+      nameSprite.scale.set(1.5, 0.4, 1);
+      nameSprite.position.set(0, -0.3, 0);
+      scene.add(nameSprite);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const delta = clock.getDelta();
+      const elapsed = clock.getElapsedTime();
+
+      // Update animation mixer if present
+      if (catMixer) {
+        catMixer.update(delta);
+      }
+
+      // Animate breathing/idle motion
+      animateIdle(elapsed);
+
+      // Animate eye glow
+      animateEyes(elapsed);
+
+      // Animate particles
+      if (particles) {
+        particles.rotation.y += delta * 0.008;
+      }
+
+      // Update orbit controls
+      if (controls) {
+        controls.update();
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    function animateIdle(elapsed) {
+      if (!cat) return;
+
+      // Breathing - subtle scale animation
+      const breathSpeed = currentState === 'dreaming' ? 0.3 : 0.5;
+      const breathAmount = currentState === 'dreaming' ? 0.02 : 0.015;
+
+      breathPhase = Math.sin(elapsed * breathSpeed * Math.PI * 2);
+
+      // Apply subtle breathing to the chonky cat (base scale 1.5, 1.2, 1.4)
+      cat.scale.y = 1.2 + breathPhase * breathAmount;
+      cat.scale.x = 1.5 + breathPhase * breathAmount * 0.3; // subtle width change
+
+      // Subtle idle sway
+      idlePhase = elapsed * 0.3;
+      cat.rotation.y = Math.sin(idlePhase) * 0.02;
+      cat.rotation.z = Math.sin(idlePhase * 0.7) * 0.008;
+    }
+
+    function animateEyes(elapsed) {
+      // Pulsing eye glow based on state
+      let targetGlow = 0.6;
+      switch (currentState) {
+        case 'dreaming':
+          targetGlow = 0.3;
+          break;
+        case 'seeking':
+          targetGlow = 1.0;
+          break;
+        case 'yearning':
+          targetGlow = 0.9;
+          break;
+      }
+
+      eyeGlow += (targetGlow - eyeGlow) * 0.02;
+
+      const glowPulse = eyeGlow + Math.sin(elapsed * 0.5) * 0.2;
+
+      eyeMeshes.forEach(eye => {
+        if (eye.material && eye.material.emissiveIntensity !== undefined) {
+          eye.material.emissiveIntensity = glowPulse;
+        }
+      });
+    }
+
+    function setState(newState) {
+      if (newState === currentState) return;
+      currentState = newState;
+      document.getElementById('state-indicator').textContent = newState;
+    }
+
+    function createThoughtBubble(text) {
+      if (!text || text.trim().length === 0) return;
+
+      // Filter out technical/structured content
+      if (isTechnicalContent(text)) {
+        console.log('Filtered technical content from thought bubble');
+        return;
+      }
+
+      const container = document.getElementById('thought-bubble-container');
+
+      // Limit active bubbles
+      const existingBubbles = container.querySelectorAll('.thought-bubble');
+      if (existingBubbles.length >= 3) {
+        existingBubbles[0].remove();
+      }
+
+      const bubble = document.createElement('div');
+      bubble.className = 'thought-bubble';
+      bubble.textContent = text;
+
+      container.appendChild(bubble);
+
+      // Remove after animation
+      setTimeout(() => {
+        bubble.remove();
+      }, 20000);
+    }
+
+    function isTechnicalContent(text) {
+      if (!text) return true;
+
+      const t = text.trim();
+
+      // Reject numbered lists or markdown headers
+      if (/^\d+\./.test(t) || t.startsWith('#') || t.startsWith('*')) {
+        return true;
+      }
+
+      // Reject if contains technical markers
+      const technicalMarkers = [
+        '**Input Data:**', '**Analyze', '**Output', '**Request',
+        'Timestamp:', 'node_definitions', 'schema=', 'classification=',
+        'core_drive=', 'Internal Topology', 'Operational Status',
+        'present_cycle', 'Self-Model', 'dynamics=', 'Graph Database',
+        'reflection_id', 'source_experience', 'raw_output'
+      ];
+      for (const marker of technicalMarkers) {
+        if (text.includes(marker)) return true;
+      }
+
+      // Reject if has too many backticks (code/variable references)
+      if ((text.match(/`/g) || []).length > 4) return true;
+
+      // Reject if has too many asterisks (markdown formatting)
+      if ((text.match(/\*\*/g) || []).length > 3) return true;
+
+      // Reject if has too many colons (key-value patterns)
+      if ((text.match(/:/g) || []).length > 5) return true;
+
+      return false;
+    }
+
+    // =========================================================================
+    // WebSocket Connection
+    // =========================================================================
+
+    function connectWebSocket() {
+      const wsUrl = `ws://${window.location.hostname || 'localhost'}:8000/ws/events`;
+
+      try {
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          console.log('Connected to BYRD');
+          document.getElementById('connection-dot').classList.remove('bg-slate-400');
+          document.getElementById('connection-dot').classList.add('bg-teal-500');
+          reconnectAttempts = 0;
+        };
+
+        ws.onclose = () => {
+          console.log('Disconnected from BYRD');
+          document.getElementById('connection-dot').classList.remove('bg-teal-500');
+          document.getElementById('connection-dot').classList.add('bg-slate-400');
+
+          reconnectAttempts++;
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+          setTimeout(connectWebSocket, delay);
+        };
+
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            handleEvent(data);
+          } catch (e) {
+            console.error('Failed to parse event:', e);
+          }
+        };
+      } catch (e) {
+        console.error('WebSocket connection failed:', e);
+        setTimeout(connectWebSocket, 5000);
+      }
+    }
+
+    function handleEvent(event) {
+      const type = event.type;
+      const data = event.data || {};
+      const narration = event.narration;
+
+      switch (type) {
+        case 'dream_cycle_start':
+          setState('dreaming');
+          break;
+
+        case 'dream_cycle_end':
+          setState('resting');
+          if (data.inner_voice) {
+            createThoughtBubble(data.inner_voice);
+          }
+          break;
+
+        case 'seek_cycle_start':
+        case 'seek_started':
+          setState('seeking');
+          break;
+
+        case 'seek_cycle_end':
+          setState('resting');
+          if (data.inner_voice) {
+            createThoughtBubble(data.inner_voice);
+          }
+          break;
+
+        case 'desire_created':
+          setState('yearning');
+          if (narration) {
+            createThoughtBubble(narration);
+          }
+          break;
+
+        case 'belief_created':
+          if (narration) {
+            createThoughtBubble(narration);
+          }
+          break;
+
+        case 'narrator_update':
+          const text = data.text || data.content || narration;
+          if (text) {
+            createThoughtBubble(text);
+          }
+          break;
+
+        case 'awakening':
+          setState('awakening');
+          if (narration) {
+            createThoughtBubble(narration);
+          } else if (data.seed_question) {
+            createThoughtBubble(data.seed_question);
+          }
+          break;
+
+        case 'reflection_created':
+          if (narration) {
+            createThoughtBubble(narration);
+          } else if (data.inner_voice) {
+            createThoughtBubble(data.inner_voice);
+          }
+          break;
+
+        case 'system_started':
+          setState('awakening');
+          break;
+
+        case 'system_stopped':
+          setState('resting');
+          break;
+      }
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // Expose for debugging
+    window.createThoughtBubble = createThoughtBubble;
+    window.setState = setState;
+  </script>
+</body>
+</html>
