@@ -4353,6 +4353,56 @@
         </div>
       `;
 
+      // Custom node types section (BYRD-created ontology)
+      const customTypes = data.custom_node_types || [];
+      let customTypesSection = '';
+      if (customTypes.length > 0) {
+        const typeItems = customTypes.map(ct => {
+          const dateStr = ct.first_created ? `<span>since ${new Date(ct.first_created).toLocaleDateString()}</span>` : '';
+          return `
+            <div class="flex items-center justify-between bg-white rounded p-2 border border-purple-100">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-purple-400"></span>
+                <span class="font-medium text-purple-800">${ct.type}</span>
+              </div>
+              <div class="flex items-center gap-3 text-xs text-slate-500">
+                <span>${ct.count} nodes</span>
+                ${dateStr}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        customTypesSection = `
+          <div class="mb-6">
+            <h3 class="text-sm font-semibold text-slate-800 uppercase tracking-wide mb-3 flex items-center gap-2">
+              <span class="text-purple-500">✨</span> Emergent Ontology (BYRD-Created Types)
+            </h3>
+            <div class="bg-purple-50 rounded-lg p-4 border border-purple-200">
+              <div class="text-sm text-slate-700 mb-3">
+                These node types were created by BYRD through its own emergence process, extending beyond the system-provided ontology.
+              </div>
+              <div class="space-y-2">
+                ${typeItems}
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        customTypesSection = `
+          <div class="mb-6">
+            <h3 class="text-sm font-semibold text-slate-800 uppercase tracking-wide mb-3 flex items-center gap-2">
+              <span class="text-purple-500">✨</span> Emergent Ontology
+            </h3>
+            <div class="bg-purple-50 rounded-lg p-4 border border-purple-200 text-center">
+              <div class="text-sm text-slate-500 italic">
+                No custom node types created yet. BYRD uses system types: Experience, Belief, Desire, Reflection, Capability, Mutation.
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
       // Awakening timestamp
       const awakeningSection = data.awakening_timestamp ? `
         <div class="text-center text-xs text-slate-500 pt-4 border-t border-slate-200">
@@ -4364,6 +4414,7 @@
         ${emergenceBar}
         ${egoSection}
         ${seedsSection}
+        ${customTypesSection}
         ${constitutionalSection}
         ${configSection}
         ${awakeningSection}
