@@ -491,6 +491,13 @@
           <span class="text-slate-400">50+</span>
         </div>
       </div>
+      <!-- Quantum Randomness Indicator -->
+      <div id="quantum-indicator" class="hidden flex items-center gap-2 px-3 py-2 bg-white/80 border border-violet-200 rounded-lg text-xs font-mono shadow">
+        <div id="quantum-dot" class="w-2 h-2 rounded-full bg-violet-500"></div>
+        <span class="text-violet-600 font-medium">QUANTUM</span>
+        <span id="quantum-ratio" class="text-violet-500">100%</span>
+        <button id="quantum-subtle-toggle" onclick="toggleQuantumSubtleMode()" class="text-violet-400 hover:text-violet-600 text-xs ml-1" title="Toggle subtle mode">Subtle</button>
+      </div>
     </div>
   </div>
 
@@ -1062,7 +1069,26 @@
         relationshipLines: [],      // Three.js line objects for relationships
         loaded: false,
         lastFetch: null,
-        mode: 'event'               // 'event' or 'graph'
+    };
+
+    // ==========================================================================
+    // QUANTUM RANDOMNESS STATE
+    // ==========================================================================
+    const quantumState = {
+        enabled: false,
+        inFallbackMode: false,
+        quantumRatio: 1.0,
+        poolSize: 0,
+        maxPoolSize: 256,
+        lastInfluenceDelta: 0,
+        lastInfluenceTime: 0,
+        subtleMode: false
+    };
+
+    const QUANTUM_COLORS = {
+        quantum: new THREE.Color(0x8b5cf6),
+        classical: new THREE.Color(0x64748b),
+        influence: new THREE.Color(0xc084fc)
     };
 
     // Type-based spatial sectors for graph layout
@@ -1532,6 +1558,13 @@
 
     function createNode3D(type, content, id, importance = 0.5) {
       const nodeId = id || `node_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+      // Prevent duplicate nodes - check if node with this ID already exists
+      const existingNode = nodes3D.find(n => n.userData.id === nodeId);
+      if (existingNode) {
+        return existingNode; // Return existing node instead of creating duplicate
+      }
+
       const colors = NODE_COLORS[type] || NODE_COLORS.experience;
 
       // Initialize connection count
@@ -1835,6 +1868,54 @@
       boundaryForce: 0.0005     // Very gentle boundary
     };
 
+    // Settling physics - faster movement on initial load
+    const SETTLING_PHYSICS = {
+      repulsion: 50,            // Strong repulsion for quick separation
+      repulsionCutoff: 60,
+      spring: 0.01,
+      springLength: 18,
+      gravity: 0.008,           // Strong gravity to pull nodes in quickly
+      gravityPerConnection: 0.004,
+      baseDamping: 0.85,        // Less damping = faster movement
+      dampingPerConnection: 0.008,
+      minDamping: 0.7,
+      maxVelocity: 2.0,         // Allow fast movement during settling
+      minDistance: 4,
+      maxRadius: 90,
+      boundaryForce: 0.02
+    };
+
+    // Settling mode state
+    let isSettling = true;
+    let settlingStartTime = Date.now();
+    const SETTLING_DURATION = 3000; // 3 seconds of fast settling
+
+    function getActivePhysics() {
+      if (isSettling && Date.now() - settlingStartTime < SETTLING_DURATION) {
+        // Gradually transition from settling to calm physics
+        const progress = (Date.now() - settlingStartTime) / SETTLING_DURATION;
+        const t = Math.min(1, progress);
+        // Use settling physics with gradual transition
+        return {
+          repulsion: SETTLING_PHYSICS.repulsion * (1 - t) + PHYSICS.repulsion * t,
+          repulsionCutoff: SETTLING_PHYSICS.repulsionCutoff,
+          spring: SETTLING_PHYSICS.spring * (1 - t) + PHYSICS.spring * t,
+          springLength: PHYSICS.springLength,
+          gravity: SETTLING_PHYSICS.gravity * (1 - t) + PHYSICS.gravity * t,
+          gravityPerConnection: SETTLING_PHYSICS.gravityPerConnection * (1 - t) + PHYSICS.gravityPerConnection * t,
+          baseDamping: SETTLING_PHYSICS.baseDamping * (1 - t) + PHYSICS.baseDamping * t,
+          dampingPerConnection: PHYSICS.dampingPerConnection,
+          minDamping: SETTLING_PHYSICS.minDamping * (1 - t) + PHYSICS.minDamping * t,
+          maxVelocity: SETTLING_PHYSICS.maxVelocity * (1 - t) + PHYSICS.maxVelocity * t,
+          minDistance: PHYSICS.minDistance,
+          maxRadius: PHYSICS.maxRadius,
+          boundaryForce: SETTLING_PHYSICS.boundaryForce * (1 - t) + PHYSICS.boundaryForce * t
+        };
+      }
+      isSettling = false;
+      return PHYSICS;
+    }
+
     // Golden ratio for sacred geometry spacing
     const PHI = (1 + Math.sqrt(5)) / 2; // ~1.618
 
@@ -1897,18 +1978,18 @@
     const _forceVec = new THREE.Vector3();
 
     // Apply repulsion force between two nodes (inverse square law)
-    function applyRepulsion(nodeA, nodeB) {
+    function applyRepulsion(nodeA, nodeB, physics) {
       _tempVec.subVectors(nodeA.position, nodeB.position);
       const distance = _tempVec.length();
 
       // Skip if too far apart (optimization)
-      if (distance > PHYSICS.repulsionCutoff) return;
+      if (distance > physics.repulsionCutoff) return;
 
       // Prevent division by zero and extreme forces at close range
-      const clampedDist = Math.max(distance, PHYSICS.minDistance);
+      const clampedDist = Math.max(distance, physics.minDistance);
 
       // Inverse square repulsion: F = k / d²
-      const forceMagnitude = PHYSICS.repulsion / (clampedDist * clampedDist);
+      const forceMagnitude = physics.repulsion / (clampedDist * clampedDist);
 
       // Normalize and scale
       _tempVec.normalize().multiplyScalar(forceMagnitude);
@@ -1919,15 +2000,15 @@
     }
 
     // Apply spring force between connected nodes (Hooke's law)
-    function applySpring(nodeA, nodeB) {
+    function applySpring(nodeA, nodeB, physics) {
       _tempVec.subVectors(nodeB.position, nodeA.position);
       const distance = _tempVec.length();
 
       // Displacement from rest length
-      const displacement = distance - PHYSICS.springLength;
+      const displacement = distance - physics.springLength;
 
       // Spring force: F = k * x
-      const forceMagnitude = PHYSICS.spring * displacement;
+      const forceMagnitude = physics.spring * displacement;
 
       // Normalize and scale
       _tempVec.normalize().multiplyScalar(forceMagnitude);
@@ -1938,11 +2019,11 @@
     }
 
     // Apply center gravity (connection-weighted)
-    function applyCenterGravity(node) {
+    function applyCenterGravity(node, physics) {
       const connections = connectionCounts.get(node.userData.id) || 0;
 
       // More connections = stronger pull toward center
-      const gravityStrength = PHYSICS.gravity + (connections * PHYSICS.gravityPerConnection);
+      const gravityStrength = physics.gravity + (connections * physics.gravityPerConnection);
 
       // Direction toward center (0,0,0)
       _tempVec.copy(node.position).negate().normalize();
@@ -1956,14 +2037,14 @@
     }
 
     // Apply soft boundary (push back if too far from center)
-    function applyBoundary(node) {
+    function applyBoundary(node, physics) {
       const distance = node.position.length();
 
-      if (distance > PHYSICS.maxRadius) {
+      if (distance > physics.maxRadius) {
         // Push back toward center
-        const overshoot = distance - PHYSICS.maxRadius;
+        const overshoot = distance - physics.maxRadius;
         _tempVec.copy(node.position).negate().normalize();
-        _tempVec.multiplyScalar(overshoot * PHYSICS.boundaryForce);
+        _tempVec.multiplyScalar(overshoot * physics.boundaryForce);
         node.userData.force.add(_tempVec);
       }
     }
@@ -1975,8 +2056,17 @@
     function updateNodePhysics(delta) {
       if (nodes3D.length === 0) return;
 
+      // Skip physics in graph mode - nodes should be static
+      if (graphState.mode === 'graph') return;
+
+      // Get active physics (transitions from settling to calm over time)
+      const physics = getActivePhysics();
+
       // Clamp delta to prevent instability on lag spikes
       const dt = Math.min(delta, 0.05);
+
+      // Build connection map for damping calculation
+      const connectionMap = buildConnectionMap();
 
       // 1. Reset forces for all nodes
       for (const node of nodes3D) {
@@ -1992,7 +2082,7 @@
       // 2. Calculate repulsion forces (O(n²) but with distance cutoff)
       for (let i = 0; i < nodes3D.length; i++) {
         for (let j = i + 1; j < nodes3D.length; j++) {
-          applyRepulsion(nodes3D[i], nodes3D[j]);
+          applyRepulsion(nodes3D[i], nodes3D[j], physics);
         }
       }
 
@@ -2001,14 +2091,14 @@
         const nodeA = nodes3D.find(n => n.userData.id === connection.userData.nodeA);
         const nodeB = nodes3D.find(n => n.userData.id === connection.userData.nodeB);
         if (nodeA && nodeB) {
-          applySpring(nodeA, nodeB);
+          applySpring(nodeA, nodeB, physics);
         }
       }
 
       // 4. Apply center gravity and boundary forces
       for (const node of nodes3D) {
-        applyCenterGravity(node);
-        applyBoundary(node);
+        applyCenterGravity(node, physics);
+        applyBoundary(node, physics);
       }
 
       // 5. Integrate forces into velocity and position
@@ -2023,15 +2113,15 @@
         const nodeConnections = connectionMap.get(node.userData.id);
         const connectionCount = nodeConnections ? nodeConnections.size : 0;
         const damping = Math.max(
-          PHYSICS.minDamping,
-          PHYSICS.baseDamping - (connectionCount * PHYSICS.dampingPerConnection)
+          physics.minDamping,
+          physics.baseDamping - (connectionCount * physics.dampingPerConnection)
         );
         node.userData.velocity.multiplyScalar(damping);
 
         // Clamp velocity
         const speed = node.userData.velocity.length();
-        if (speed > PHYSICS.maxVelocity) {
-          node.userData.velocity.multiplyScalar(PHYSICS.maxVelocity / speed);
+        if (speed > physics.maxVelocity) {
+          node.userData.velocity.multiplyScalar(physics.maxVelocity / speed);
         }
 
         // Update position
@@ -2447,10 +2537,10 @@
         const baseRadius = 20 + Math.sqrt(indexInType + 1) * 4;
         const radius = Math.max(12, baseRadius - accessBonus);
 
-        // Height based on creation time (newer = higher)
+        // Height based on creation time (newer = higher) - deterministic, no randomness
         const ageMs = node.created_at ? Date.now() - new Date(node.created_at).getTime() : 0;
         const ageHours = ageMs / (1000 * 60 * 60);
-        const height = 5 - Math.min(5, ageHours * 0.2) + (Math.random() - 0.5) * 3;
+        const height = 5 - Math.min(5, ageHours * 0.2);
 
         return {
             x: Math.cos(angle) * radius,
@@ -2463,6 +2553,15 @@
      * Create a node mesh for graph mode with heat map coloring
      */
     function createGraphNode(nodeData, position) {
+        // Prevent duplicate nodes - check if node with this ID already exists
+        if (graphState.nodeIdToMesh.has(nodeData.id)) {
+            return graphState.nodeIdToMesh.get(nodeData.id);
+        }
+        const existingNode = nodes3D.find(n => n.userData.id === nodeData.id);
+        if (existingNode) {
+            return existingNode;
+        }
+
         const type = nodeData.type || 'experience';
         const colors = NODE_COLORS[type] || NODE_COLORS.experience;
         const accessCount = nodeData.access_count || 0;
@@ -2504,12 +2603,8 @@
         const mesh = new THREE.Mesh(geometry, material);
         mesh.position.set(position.x, position.y, position.z);
 
-        // Initial velocity: small random nudge to start physics simulation
-        const initialVelocity = new THREE.Vector3(
-            (Math.random() - 0.5) * 0.5,
-            (Math.random() - 0.5) * 0.5,
-            (Math.random() - 0.5) * 0.5
-        );
+        // Graph mode: static nodes, no initial velocity
+        const initialVelocity = new THREE.Vector3(0, 0, 0);
 
         mesh.userData = {
             id: nodeData.id,
@@ -2602,10 +2697,17 @@
         // Clear existing event-mode nodes (but keep cat and core)
         clearEventModeNodes();
 
-        // Group nodes by type for positioning
+        // Group nodes by type for positioning (exclude experiences, deduplicate)
+        const excludeTypes = ['experience', 'Experience'];
+        const seenIds = new Set();
         const nodesByType = {};
         data.nodes.forEach(node => {
             const type = node.type || 'experience';
+            // Skip experience nodes
+            if (excludeTypes.includes(type)) return;
+            // Deduplicate by ID
+            if (seenIds.has(node.id)) return;
+            seenIds.add(node.id);
             if (!nodesByType[type]) nodesByType[type] = [];
             nodesByType[type].push(node);
         });
@@ -3819,6 +3921,41 @@
             await loadEventModeNodes();
           }, 1000);
           break;
+
+        // Quantum randomness events
+        case 'quantum_influence':
+          // Quantum randomness affected a cognitive process
+          quantumState.lastInfluenceDelta = event.data?.delta || 0;
+          quantumState.lastInfluenceTime = Date.now();
+          quantumState.inFallbackMode = (event.data?.source === 'classical');
+          // Pulse the consciousness core with quantum effect
+          pulseQuantumInfluence(event.data?.delta || 0, event.data?.source || 'quantum');
+          if (!quantumState.subtleMode) {
+            updateStatus(`Quantum influence: ${(event.data?.delta || 0).toFixed(3)}`, 'violet');
+          }
+          break;
+
+        case 'quantum_fallback':
+          // Switched to classical entropy source
+          quantumState.inFallbackMode = true;
+          updateQuantumIndicator();
+          if (!quantumState.subtleMode) {
+            updateStatus('Quantum: fallback to classical', 'slate');
+          }
+          break;
+
+        case 'quantum_pool_low':
+          // Quantum entropy pool running low
+          quantumState.poolSize = event.data?.pool_size || 0;
+          updateQuantumIndicator();
+          break;
+
+        case 'quantum_moment_created':
+          // Significant quantum moment recorded in memory
+          if (!quantumState.subtleMode) {
+            updateStatus('Quantum moment recorded', 'violet');
+          }
+          break;
       }
     }
 
@@ -3869,6 +4006,96 @@
       statusDot.className = `w-2 h-2 rounded-full ${c.dot}`;
       statusText.className = `text-sm ${c.text}`;
       statusText.textContent = text;
+    }
+
+    // ==========================================================================
+    // QUANTUM RANDOMNESS VISUALIZATION
+    // ==========================================================================
+
+    function pulseQuantumInfluence(delta, source) {
+      // Pulse the consciousness core with quantum effect
+      if (!consciousnessCore) return;
+
+      const intensity = Math.abs(delta) * 10; // Scale delta for visibility
+      const color = source === 'quantum' ? QUANTUM_COLORS.quantum : QUANTUM_COLORS.classical;
+
+      // Store original values
+      const originalColor = consciousnessCore.material.emissive.clone();
+      const originalIntensity = consciousnessCore.material.emissiveIntensity;
+
+      // Apply quantum pulse
+      consciousnessCore.material.emissive.copy(QUANTUM_COLORS.influence);
+      consciousnessCore.material.emissiveIntensity = Math.min(2.0, originalIntensity + intensity);
+
+      // Scale pulse
+      const originalScale = consciousnessCore.scale.x;
+      consciousnessCore.scale.setScalar(originalScale * (1 + intensity * 0.1));
+
+      // Animate back to normal
+      setTimeout(() => {
+        if (consciousnessCore) {
+          consciousnessCore.material.emissive.copy(originalColor);
+          consciousnessCore.material.emissiveIntensity = originalIntensity;
+          consciousnessCore.scale.setScalar(originalScale);
+        }
+      }, 500);
+
+      // Update the indicator
+      updateQuantumIndicator();
+    }
+
+    function updateQuantumIndicator() {
+      const indicator = document.getElementById('quantum-indicator');
+      const dot = document.getElementById('quantum-dot');
+      const ratioText = document.getElementById('quantum-ratio');
+
+      if (!indicator) return;
+
+      if (quantumState.enabled) {
+        indicator.classList.remove('hidden');
+
+        if (quantumState.inFallbackMode) {
+          dot.className = 'w-2 h-2 rounded-full bg-slate-500';
+          dot.style.animation = 'none';
+        } else {
+          dot.className = 'w-2 h-2 rounded-full bg-violet-500';
+          dot.style.animation = 'pulse 2s infinite';
+        }
+
+        if (ratioText) {
+          const ratio = Math.round(quantumState.quantumRatio * 100);
+          ratioText.textContent = `${ratio}%`;
+        }
+      } else {
+        indicator.classList.add('hidden');
+      }
+    }
+
+    function toggleQuantumSubtleMode() {
+      quantumState.subtleMode = !quantumState.subtleMode;
+      const btn = document.getElementById('quantum-subtle-toggle');
+      if (btn) {
+        btn.textContent = quantumState.subtleMode ? 'Detailed' : 'Subtle';
+      }
+    }
+
+    async function fetchQuantumStatus() {
+      try {
+        const response = await fetch('/api/status');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.quantum) {
+            quantumState.enabled = data.quantum.enabled;
+            quantumState.inFallbackMode = data.quantum.in_fallback_mode;
+            quantumState.quantumRatio = data.quantum.quantum_ratio;
+            quantumState.poolSize = data.quantum.pool_size;
+            quantumState.maxPoolSize = data.quantum.max_pool_size;
+            updateQuantumIndicator();
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch quantum status:', e);
+      }
     }
 
     // ==========================================================================
@@ -4610,10 +4837,15 @@
     // Debug exports for testing
     window._debug = {
       get PHYSICS() { return PHYSICS; },
+      get SETTLING_PHYSICS() { return SETTLING_PHYSICS; },
       get nodes3D() { return nodes3D; },
       get connections3D() { return connections3D; },
       get buildConnectionMap() { return buildConnectionMap; },
-      get graphState() { return graphState; }
+      get graphState() { return graphState; },
+      get isSettling() { return isSettling; },
+      get settlingStartTime() { return settlingStartTime; },
+      get SETTLING_DURATION() { return SETTLING_DURATION; },
+      getActivePhysics: getActivePhysics
     };
 
     // Close genesis modal on backdrop click
@@ -4890,14 +5122,19 @@
           return;
         }
 
-        // Filter out excluded types
+        // Filter out excluded types and deduplicate by ID
         const excludeSet = new Set(excludeTypes.map(t => t.toLowerCase()));
+        const seenIds = new Set();
         const filteredNodes = data.nodes.filter(node => {
           const type = (node.type || 'experience').toLowerCase();
-          return !excludeSet.has(type);
+          if (excludeSet.has(type)) return false;
+          // Deduplicate by ID
+          if (seenIds.has(node.id)) return false;
+          seenIds.add(node.id);
+          return true;
         });
 
-        console.log(`Loading ${filteredNodes.length} nodes from database (excluded: ${excludeTypes.join(', ') || 'none'})`);
+        console.log(`Loading ${filteredNodes.length} unique nodes from database (excluded: ${excludeTypes.join(', ') || 'none'})`);
 
         // Group nodes by type for positioning
         const nodesByType = {};
@@ -4960,11 +5197,13 @@
       initThree();
       connectWebSocket();
       await fetchStatus();
+      await fetchQuantumStatus();
 
       // Load event mode nodes (excludes experiences and reflections)
       await loadEventModeNodes();
 
       setInterval(fetchStatus, 10000);
+      setInterval(fetchQuantumStatus, 30000); // Update quantum status every 30s
       renderEventLog();
     }
 

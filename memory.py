@@ -796,6 +796,85 @@ class Memory:
             }
         ))
 
+    async def record_quantum_moment(self, influence: Dict) -> Optional[str]:
+        """
+        Record a significant quantum influence moment.
+
+        These are moments when true quantum randomness (from ANU QRNG)
+        significantly affected BYRD's cognitive temperature during reflection.
+        Each moment represents genuine physical indeterminacy influencing
+        the emergence of thoughts.
+
+        Args:
+            influence: Dict with quantum influence data:
+                - quantum_value: float [0, 1) - the random value
+                - source: str - "quantum" or "classical"
+                - influence_type: str - what was influenced
+                - original_value: float - value before modulation
+                - modified_value: float - value after modulation
+                - delta: float - difference
+                - context: str - what was being generated
+                - timestamp: str - ISO timestamp
+
+        Returns:
+            QuantumMoment node ID
+        """
+        moment_id = self._generate_id(f"quantum_{influence.get('timestamp', '')}")
+
+        async with self.driver.session() as session:
+            await session.run("""
+                CREATE (q:QuantumMoment {
+                    id: $id,
+                    quantum_value: $quantum_value,
+                    source: $source,
+                    influence_type: $influence_type,
+                    original_temp: $original_value,
+                    modified_temp: $modified_value,
+                    delta: $delta,
+                    context: $context,
+                    timestamp: datetime()
+                })
+            """,
+                id=moment_id,
+                quantum_value=influence.get("quantum_value", 0),
+                source=influence.get("source", "unknown"),
+                influence_type=influence.get("influence_type", "temperature"),
+                original_value=influence.get("original_value", 0),
+                modified_value=influence.get("modified_value", 0),
+                delta=influence.get("delta", 0),
+                context=influence.get("context", "unknown")
+            )
+
+        # Emit event for visualization
+        await event_bus.emit(Event(
+            type=EventType.QUANTUM_MOMENT_CREATED,
+            data={
+                "id": moment_id,
+                "source": influence.get("source"),
+                "delta": influence.get("delta"),
+                "context": influence.get("context")
+            }
+        ))
+
+        return moment_id
+
+    async def get_quantum_moments(self, limit: int = 50) -> List[Dict]:
+        """
+        Get recent quantum influence moments.
+
+        Returns list of QuantumMoment nodes, newest first.
+        """
+        query = """
+            MATCH (q:QuantumMoment)
+            RETURN q
+            ORDER BY q.timestamp DESC
+            LIMIT $limit
+        """
+        async with self.driver.session() as session:
+            result = await session.run(query, limit=limit)
+            records = await result.data()
+            return [r["q"] for r in records]
+
     async def get_desires_needing_reflection(self, limit: int = 5) -> List[Dict]:
         """
         Get desires that need Dreamer reflection.

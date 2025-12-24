@@ -74,6 +74,12 @@ class EventType(Enum):
     # Narrator events (BYRD's inner voice for UI)
     NARRATOR_UPDATE = "narrator_update"
 
+    # Quantum randomness events (physical indeterminacy in cognition)
+    QUANTUM_INFLUENCE = "quantum_influence"        # Quantum value affected temperature
+    QUANTUM_POOL_LOW = "quantum_pool_low"          # Entropy pool below threshold
+    QUANTUM_FALLBACK = "quantum_fallback"          # Switched to classical entropy
+    QUANTUM_MOMENT_CREATED = "quantum_moment_created"  # Significant moment recorded
+
 
 @dataclass
 class Event:
