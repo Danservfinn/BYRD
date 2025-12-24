@@ -2941,12 +2941,22 @@
         const colors = NODE_COLORS[type] || NODE_COLORS.experience;
         const accessCount = nodeData.access_count || 0;
         const isExperience = type === 'experience' || type === 'Experience';
+        const isReflection = type === 'reflection' || type === 'Reflection';
 
-        // Size based on importance (confidence for beliefs, intensity for desires)
-        // Experiences are much smaller - they're just connection endpoints
+        // Size based on type and importance
+        // Experiences: tiny dots (connection endpoints)
+        // Reflections: medium size (easily visible)
+        // Others: standard size
         const importance = nodeData.confidence || nodeData.intensity || 0.5;
         const heatBonus = getHeatIntensity(accessCount) * 0.4;
-        const baseSize = isExperience ? 0.15 : (0.8 + importance * 0.6 + heatBonus);
+        let baseSize;
+        if (isExperience) {
+            baseSize = 0.15;  // Tiny dots
+        } else if (isReflection) {
+            baseSize = 1.2 + heatBonus;  // Larger, more visible
+        } else {
+            baseSize = 0.8 + importance * 0.6 + heatBonus;
+        }
         const size = baseSize;
 
         // Geometry based on type
