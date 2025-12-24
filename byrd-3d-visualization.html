@@ -469,73 +469,66 @@
     </div>
   </div>
 
-  <!-- UI Overlay: Bottom Center - Controls -->
+  <!-- UI Overlay: Bottom Center - Simplified Controls -->
   <div class="ui-overlay bottom-4 left-1/2 -translate-x-1/2">
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-2">
+      <!-- Primary Controls -->
       <button id="btn-toggle" class="px-4 py-2 rounded-lg text-sm font-medium bg-green-500 border border-green-600 text-white hover:bg-green-600 transition-all shadow">
         ▶ Start
       </button>
-      <button id="btn-reset" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-all">
-        &#128260; Reset
-      </button>
       <button id="btn-graph-mode" class="px-4 py-2 rounded-lg text-sm font-medium bg-purple-100 border border-purple-300 text-purple-700 hover:bg-purple-200 transition-all">
-        🧬 Graph Mode
+        🧬 Graph
       </button>
-      <button id="btn-status" class="px-4 py-2 rounded-lg text-sm font-medium bg-indigo-100 border border-indigo-300 text-indigo-700 hover:bg-indigo-200 transition-all" onclick="showStatusModal()">
-        🧠 What's BYRD doing?
-      </button>
-      <button id="btn-genesis" class="px-4 py-2 rounded-lg text-sm font-medium bg-amber-100 border border-amber-300 text-amber-700 hover:bg-amber-200 transition-all" onclick="showGenesisModal()">
-        🧬 Genesis
-      </button>
-      <div id="stats" class="flex items-center gap-3 px-3 py-2 bg-white/80 border border-slate-200 rounded-lg text-xs font-mono shadow flex-wrap">
-        <span class="text-indigo-600">Dreams: <span id="dream-count">0</span></span>
-        <span class="text-cyan-600">Seeks: <span id="seek-count">0</span></span>
-        <span class="text-slate-300">|</span>
-        <span class="text-sky-600">Exp: <span id="exp-count">0</span></span>
-        <span class="text-amber-600">Beliefs: <span id="belief-count">0</span></span>
-        <span class="text-purple-600">Reflect: <span id="reflection-count">0</span></span>
-        <span class="text-rose-600">Desires: <span id="desire-count">0</span></span>
-        <span class="text-emerald-600">Mutations: <span id="mutation-count">0</span></span>
-        <!-- Custom node types container - dynamically populated -->
-        <span id="custom-types-container" class="contents"></span>
-        <span class="text-slate-300">|</span>
-        <span class="text-slate-500">Nodes: <span id="node-count">0</span></span>
+
+      <!-- Compact Stats -->
+      <div id="stats" class="flex items-center gap-2 px-3 py-2 bg-white/90 border border-slate-200 rounded-lg text-xs font-mono shadow">
+        <span class="text-amber-600" title="Beliefs"><span id="belief-count">0</span>💎</span>
+        <span class="text-rose-600" title="Desires"><span id="desire-count">0</span>💫</span>
+        <span class="text-slate-400" title="Total nodes"><span id="node-count">0</span></span>
       </div>
-      <!-- Heat Map Legend (shown in graph mode) -->
-      <div id="heat-legend" class="hidden flex items-center gap-2 px-3 py-2 bg-white/80 border border-slate-200 rounded-lg text-xs font-mono shadow">
-        <span class="text-slate-600 font-medium">Heat:</span>
-        <div class="flex items-center gap-1">
-          <div class="w-3 h-3 rounded-full" style="background: #3b82f6;" title="0 accesses"></div>
-          <span class="text-slate-400">0</span>
-        </div>
-        <div class="flex items-center gap-1">
-          <div class="w-3 h-3 rounded-full" style="background: #22c55e;" title="2+ accesses"></div>
-          <span class="text-slate-400">2+</span>
-        </div>
-        <div class="flex items-center gap-1">
-          <div class="w-3 h-3 rounded-full" style="background: #eab308;" title="5+ accesses"></div>
-          <span class="text-slate-400">5+</span>
-        </div>
-        <div class="flex items-center gap-1">
-          <div class="w-3 h-3 rounded-full" style="background: #f97316;" title="10+ accesses"></div>
-          <span class="text-slate-400">10+</span>
-        </div>
-        <div class="flex items-center gap-1">
-          <div class="w-3 h-3 rounded-full" style="background: #ef4444;" title="20+ accesses"></div>
-          <span class="text-slate-400">20+</span>
-        </div>
-        <div class="flex items-center gap-1">
-          <div class="w-3 h-3 rounded-full" style="background: #ec4899;" title="50+ accesses"></div>
-          <span class="text-slate-400">50+</span>
+
+      <!-- More Options Dropdown -->
+      <div class="relative">
+        <button id="btn-more" class="px-3 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-all" onclick="toggleMoreMenu()">
+          ⋯
+        </button>
+        <div id="more-menu" class="hidden absolute bottom-full mb-2 right-0 bg-white/95 border border-slate-200 rounded-lg shadow-lg py-1 min-w-[160px]">
+          <button class="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100" onclick="showStatusModal(); toggleMoreMenu();">
+            🧠 What's BYRD doing?
+          </button>
+          <button class="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100" onclick="showGenesisModal(); toggleMoreMenu();">
+            🧬 Genesis
+          </button>
+          <button id="btn-reset" class="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100">
+            🔄 Reset
+          </button>
+          <div class="border-t border-slate-200 my-1"></div>
+          <div class="px-3 py-2 text-xs text-slate-500">
+            <div class="flex justify-between"><span>Dreams</span><span id="dream-count">0</span></div>
+            <div class="flex justify-between"><span>Seeks</span><span id="seek-count">0</span></div>
+            <div class="flex justify-between"><span>Experiences</span><span id="exp-count">0</span></div>
+            <div class="flex justify-between"><span>Reflections</span><span id="reflection-count">0</span></div>
+            <div class="flex justify-between"><span>Mutations</span><span id="mutation-count">0</span></div>
+            <span id="custom-types-container" class="contents"></span>
+          </div>
         </div>
       </div>
-      <!-- Quantum Randomness Indicator -->
-      <div id="quantum-indicator" class="hidden flex items-center gap-2 px-3 py-2 bg-white/80 border border-violet-200 rounded-lg text-xs font-mono shadow">
+
+      <!-- Quantum Indicator (compact) -->
+      <div id="quantum-indicator" class="hidden flex items-center gap-1 px-2 py-2 bg-violet-50 border border-violet-200 rounded-lg text-xs font-mono">
         <div id="quantum-dot" class="w-2 h-2 rounded-full bg-violet-500"></div>
-        <span class="text-violet-600 font-medium">QUANTUM</span>
-        <span id="quantum-ratio" class="text-violet-500">100%</span>
-        <button id="quantum-subtle-toggle" onclick="toggleQuantumSubtleMode()" class="text-violet-400 hover:text-violet-600 text-xs ml-1" title="Toggle subtle mode">Subtle</button>
+        <span id="quantum-ratio" class="text-violet-600">100%</span>
       </div>
+    </div>
+
+    <!-- Heat Legend (shown below in graph mode) -->
+    <div id="heat-legend" class="hidden mt-2 flex items-center justify-center gap-2 px-3 py-1.5 bg-white/80 border border-slate-200 rounded-lg text-[10px] font-mono">
+      <span class="text-slate-500">Heat:</span>
+      <div class="w-2 h-2 rounded-full" style="background: #3b82f6;" title="Cold"></div>
+      <div class="w-2 h-2 rounded-full" style="background: #22c55e;"></div>
+      <div class="w-2 h-2 rounded-full" style="background: #eab308;"></div>
+      <div class="w-2 h-2 rounded-full" style="background: #f97316;"></div>
+      <div class="w-2 h-2 rounded-full" style="background: #ef4444;" title="Hot"></div>
     </div>
   </div>
 
@@ -4985,6 +4978,24 @@
     // Close modal on backdrop click
     document.getElementById('event-modal')?.addEventListener('click', (e) => {
       if (e.target.id === 'event-modal') closeEventModal();
+    });
+
+    // ==========================================================================
+    // MORE MENU DROPDOWN
+    // ==========================================================================
+
+    function toggleMoreMenu() {
+      const menu = document.getElementById('more-menu');
+      menu.classList.toggle('hidden');
+    }
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+      const menu = document.getElementById('more-menu');
+      const btn = document.getElementById('btn-more');
+      if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
+        menu.classList.add('hidden');
+      }
     });
 
     // ==========================================================================
