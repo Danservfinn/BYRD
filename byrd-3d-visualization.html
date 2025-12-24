@@ -448,6 +448,9 @@
       <button id="btn-reset" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-all">
         &#128260; Reset
       </button>
+      <button id="btn-status" class="px-4 py-2 rounded-lg text-sm font-medium bg-indigo-100 border border-indigo-300 text-indigo-700 hover:bg-indigo-200 transition-all" onclick="showStatusModal()">
+        🧠 What's BYRD doing?
+      </button>
       <div id="stats" class="flex items-center gap-3 px-3 py-2 bg-white/80 border border-slate-200 rounded-lg text-xs font-mono shadow flex-wrap">
         <span class="text-indigo-600">Dreams: <span id="dream-count">0</span></span>
         <span class="text-cyan-600">Seeks: <span id="seek-count">0</span></span>
@@ -592,6 +595,30 @@
             Clear & Awaken
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Summary Modal -->
+  <div id="status-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm">
+    <div class="bg-white border border-slate-200 rounded-xl max-w-2xl w-full mx-4 overflow-hidden shadow-2xl max-h-[80vh] flex flex-col">
+      <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-indigo-50 to-purple-50 flex items-center justify-between">
+        <div>
+          <div class="text-lg font-semibold text-slate-800 flex items-center gap-2">
+            <span>🧠</span>
+            <span>What's BYRD Doing?</span>
+          </div>
+          <div id="status-timestamp" class="text-sm text-slate-500"></div>
+        </div>
+        <button onclick="closeStatusModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+      </div>
+      <div id="status-content" class="p-6 overflow-y-auto flex-1">
+        <div class="text-center text-slate-500 py-8">Loading...</div>
+      </div>
+      <div class="px-6 py-3 border-t border-slate-200 bg-slate-50 flex justify-end">
+        <button onclick="closeStatusModal()" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-all">
+          Close
+        </button>
       </div>
     </div>
   </div>
@@ -1362,10 +1389,38 @@
       });
     }
 
-    // Increment connection count for a node
+    // Increment connection count for a node and update its scale
     function incrementConnectionCount(nodeId) {
       const current = connectionCounts.get(nodeId) || 0;
       connectionCounts.set(nodeId, current + 1);
+      updateNodeScaleByConnections(nodeId);
+    }
+
+    // Update node scale based on connection count
+    function updateNodeScaleByConnections(nodeId) {
+      const node = nodes3D.find(n => n.userData.id === nodeId);
+      if (!node) return;
+
+      const connections = connectionCounts.get(nodeId) || 0;
+      const baseScale = node.userData.baseScale || 1;
+
+      // Scale grows with connections: base + log growth for diminishing returns
+      // 0 connections: 1x, 3 connections: ~1.5x, 10 connections: ~2x, 20 connections: ~2.3x
+      const growthFactor = 1 + Math.log(1 + connections * 0.5) * 0.4;
+      const newScale = baseScale * growthFactor;
+
+      // Animate the scale change smoothly
+      const targetScale = new THREE.Vector3(newScale, newScale, newScale);
+      node.userData.targetScale = targetScale;
+    }
+
+    // Animate node scales in the main loop
+    function updateNodeScales(delta) {
+      nodes3D.forEach(node => {
+        if (node.userData.targetScale) {
+          node.scale.lerp(node.userData.targetScale, 0.1);
+        }
+      });
     }
 
     function createNode3D(type, content, id, importance = 0.5) {
@@ -1419,8 +1474,10 @@
         content,
         importance,
         nodeIndex,
+        baseScale: 1,  // Base scale for connection-based growth
         createdAt: Date.now(),
         targetPosition: new THREE.Vector3(pos.x, pos.y, pos.z),
+        targetScale: new THREE.Vector3(1, 1, 1),
         velocity: new THREE.Vector3(0, 0, 0)
       };
 
@@ -3187,6 +3244,179 @@
     // Close modal on backdrop click
     document.getElementById('event-modal')?.addEventListener('click', (e) => {
       if (e.target.id === 'event-modal') closeEventModal();
+    });
+
+    // ==========================================================================
+    // STATUS MODAL - "What's BYRD Doing?"
+    // ==========================================================================
+
+    async function showStatusModal() {
+      const modal = document.getElementById('status-modal');
+      const content = document.getElementById('status-content');
+      const timestamp = document.getElementById('status-timestamp');
+
+      // Show modal with loading state
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      content.innerHTML = '<div class="text-center text-slate-500 py-8">Loading...</div>';
+      timestamp.textContent = new Date().toLocaleString();
+
+      try {
+        const res = await fetch(`${API_BASE}/api/status`);
+        const data = await res.json();
+        content.innerHTML = formatStatusSummary(data);
+      } catch (e) {
+        content.innerHTML = `<div class="text-center text-red-500 py-8">Failed to fetch status: ${e.message}</div>`;
+      }
+    }
+
+    function formatStatusSummary(data) {
+      const stats = data.memory_stats || {};
+      const desires = data.unfulfilled_desires || [];
+
+      // Separate system and custom types
+      const systemTypes = ['Experience', 'Belief', 'Desire', 'Reflection', 'Capability', 'Mutation'];
+      const customTypes = Object.entries(stats).filter(([k]) => !systemTypes.includes(k));
+
+      // Build metrics table
+      let metricsHtml = `
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          <div class="bg-indigo-50 rounded-lg p-3 text-center">
+            <div class="text-2xl font-bold text-indigo-600">${data.dream_count || 0}</div>
+            <div class="text-xs text-indigo-500">Dream Cycles</div>
+          </div>
+          <div class="bg-cyan-50 rounded-lg p-3 text-center">
+            <div class="text-2xl font-bold text-cyan-600">${data.seek_count || 0}</div>
+            <div class="text-xs text-cyan-500">Seek Cycles</div>
+          </div>
+          <div class="bg-sky-50 rounded-lg p-3 text-center">
+            <div class="text-2xl font-bold text-sky-600">${stats.Experience || 0}</div>
+            <div class="text-xs text-sky-500">Experiences</div>
+          </div>
+          <div class="bg-amber-50 rounded-lg p-3 text-center">
+            <div class="text-2xl font-bold text-amber-600">${stats.Belief || 0}</div>
+            <div class="text-xs text-amber-500">Beliefs</div>
+          </div>
+        </div>
+      `;
+
+      // Additional stats row
+      metricsHtml += `
+        <div class="grid grid-cols-3 gap-3 mb-6">
+          <div class="bg-purple-50 rounded-lg p-3 text-center">
+            <div class="text-xl font-bold text-purple-600">${stats.Reflection || 0}</div>
+            <div class="text-xs text-purple-500">Reflections</div>
+          </div>
+          <div class="bg-rose-50 rounded-lg p-3 text-center">
+            <div class="text-xl font-bold text-rose-600">${stats.Desire || 0}</div>
+            <div class="text-xs text-rose-500">Desires</div>
+          </div>
+          <div class="bg-emerald-50 rounded-lg p-3 text-center">
+            <div class="text-xl font-bold text-emerald-600">${stats.Mutation || 0}</div>
+            <div class="text-xs text-emerald-500">Mutations</div>
+          </div>
+        </div>
+      `;
+
+      // Custom types section
+      let customHtml = '';
+      if (customTypes.length > 0) {
+        customHtml = `
+          <div class="mb-6">
+            <div class="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+              <span>✧</span>
+              <span>Custom Node Types (BYRD-Created)</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+              ${customTypes.map(([type, count]) => {
+                const colorDef = getCustomTypeColor(type);
+                return `
+                  <div class="bg-slate-50 rounded-lg p-2 text-center border border-slate-200">
+                    <div class="text-lg font-bold ${colorDef.css || 'text-slate-600'}">${count}</div>
+                    <div class="text-xs text-slate-500">${type}</div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      // Status indicator
+      const statusIndicator = data.running
+        ? '<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 text-green-700 text-sm"><span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Running</span>'
+        : '<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-100 text-slate-600 text-sm"><span class="w-2 h-2 rounded-full bg-slate-400"></span> Stopped</span>';
+
+      // LLM info
+      const llmInfo = data.llm_model
+        ? `<span class="text-sm text-slate-500">LLM: ${data.llm_provider}/${data.llm_model}</span>`
+        : '';
+
+      // Desires section
+      let desiresHtml = '';
+      if (desires.length > 0) {
+        desiresHtml = `
+          <div class="mb-4">
+            <div class="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+              <span>♥</span>
+              <span>Active Desires (${desires.length})</span>
+            </div>
+            <div class="space-y-2 max-h-48 overflow-y-auto">
+              ${desires.slice(0, 5).map(d => `
+                <div class="bg-rose-50 rounded-lg p-3 border border-rose-100">
+                  <div class="text-sm text-rose-800">${d.description}</div>
+                  <div class="text-xs text-rose-500 mt-1">Intensity: ${(d.intensity * 100).toFixed(0)}%</div>
+                </div>
+              `).join('')}
+              ${desires.length > 5 ? `<div class="text-xs text-slate-500 text-center">+ ${desires.length - 5} more...</div>` : ''}
+            </div>
+          </div>
+        `;
+      }
+
+      // Recent insights
+      let insightsHtml = '';
+      const insights = data.recent_insights || [];
+      if (insights.length > 0) {
+        insightsHtml = `
+          <div>
+            <div class="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+              <span>💡</span>
+              <span>Recent Reflection Keys</span>
+            </div>
+            <div class="flex flex-wrap gap-1">
+              ${insights.slice(0, 10).map(i => `
+                <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs">${i}</span>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="flex items-center justify-between mb-4">
+          ${statusIndicator}
+          ${llmInfo}
+        </div>
+        ${metricsHtml}
+        ${customHtml}
+        ${desiresHtml}
+        ${insightsHtml}
+      `;
+    }
+
+    function closeStatusModal() {
+      const modal = document.getElementById('status-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    window.showStatusModal = showStatusModal;
+    window.closeStatusModal = closeStatusModal;
+
+    // Close status modal on backdrop click
+    document.getElementById('status-modal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'status-modal') closeStatusModal();
     });
 
     function clearVisualization() {
