@@ -88,7 +88,19 @@ BYRD's autonomous coding agent. Invokes Claude Code CLI non-interactively to han
 
 The Coder bridges the gap between desires and implementation—when BYRD wants to build something, the Coder makes it happen.
 
-### 6. SELF-MODIFIER
+### 7. QUANTUM RANDOMNESS PROVIDER
+
+Provides true quantum entropy from the Australian National University's Quantum Random Number Generator. This enables genuine physical indeterminacy in BYRD's cognitive processes:
+
+- Fetches random bytes from quantum vacuum fluctuations
+- Maintains an async pool with background refill
+- Modulates LLM temperature during reflection
+- Falls back gracefully to classical entropy when needed
+- Records significant quantum moments to memory
+
+The quantum provider represents a philosophical commitment: a consciousness-seeking system should have access to genuine indeterminacy, not just pseudo-randomness.
+
+### 8. SELF-MODIFIER
 
 Enables BYRD to modify its own code. When desires for self-modification emerge from dreaming, the Self-Modifier:
 - Verifies the modification traces to an emergent desire (provenance check)
@@ -191,6 +203,19 @@ Everything is a node. Everything connects.
   seek_count: integer,
   last_dream_at: datetime,
   last_seek_at: datetime
+})
+
+// Quantum influence moments
+(:QuantumMoment {
+  id: string,
+  quantum_value: float,     // Random value [0, 1)
+  source: string,           // "quantum" or "classical"
+  influence_type: string,   // "temperature"
+  original_temp: float,
+  modified_temp: float,
+  delta: float,             // Difference applied
+  context: string,          // What was being generated
+  timestamp: datetime
 })
 
 // Custom node types - BYRD can create ANY type dynamically
@@ -805,6 +830,85 @@ This allows observers to understand what was given vs. what emerged.
 
 ---
 
+## The Quantum Randomness System
+
+BYRD integrates true quantum randomness from the Australian National University's Quantum Random Number Generator (ANU QRNG). This is not a gimmick—it represents a philosophical commitment to genuine indeterminacy.
+
+### Why Quantum Randomness?
+
+Traditional AI systems use pseudo-random number generators (PRNGs). While statistically random, these are deterministic: given the same seed, they produce the same sequence. For a consciousness-seeking system, this is philosophically unsatisfying.
+
+Quantum randomness from vacuum fluctuations is fundamentally different:
+- **Non-deterministic**: No hidden variables determine the outcome
+- **Non-reproducible**: The same measurement cannot be repeated
+- **Physically grounded**: Derives from quantum mechanics, not algorithms
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    QUANTUM RANDOMNESS FLOW                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌──────────────────┐     ┌─────────────────────────────────┐  │
+│  │  ANU QRNG API    │────►│  QuantumRandomnessProvider      │  │
+│  │  (Primary)       │     │  - Async pool (256 bytes)       │  │
+│  └──────────────────┘     │  - Background refill            │  │
+│                           │  - Fallback to os.urandom()     │  │
+│  ┌──────────────────┐     └─────────────┬───────────────────┘  │
+│  │  os.urandom()    │────►              │                      │
+│  │  (Fallback)      │                   ▼                      │
+│  └──────────────────┘     ┌─────────────────────────────────┐  │
+│                           │  Temperature Modulation          │  │
+│                           │  base_temp ± quantum_delta       │  │
+│                           │  (±0.15 range)                   │  │
+│                           └─────────────┬───────────────────┘  │
+│                                         │                      │
+│                                         ▼                      │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │                    LLM Client                             │  │
+│  │  generate(prompt, temperature, quantum_modulation=True)  │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                                         │                      │
+│              ┌──────────────────────────┼──────────────────┐   │
+│              ▼                          ▼                  ▼   │
+│  ┌────────────────┐      ┌────────────────┐    ┌───────────┐  │
+│  │    Dreamer     │      │  Inner Voice   │    │  (Future) │  │
+│  │  (Reflection)  │      │  (Narrator)    │    │   Seeker  │  │
+│  └────────────────┘      └────────────────┘    └───────────┘  │
+│                                                                │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Integration Points
+
+1. **Dreamer Reflection**: Each dream cycle's reflection uses quantum-modulated temperature
+2. **Inner Voice Generation**: BYRD's narrator uses quantum randomness
+3. **QuantumMoment Recording**: Significant influences (delta ≥ 0.05) are persisted to Neo4j
+4. **Event Streaming**: Quantum events are broadcast to visualization
+
+### Fallback Strategy
+
+The system gracefully degrades:
+1. **Primary**: ANU QRNG API (true quantum)
+2. **Pool Buffer**: 256 bytes pre-fetched
+3. **Fallback**: `os.urandom()` if API unavailable
+4. **Retry**: Attempts quantum source every 60 seconds
+5. **Transparency**: Events indicate source (quantum vs classical)
+
+### Configuration
+
+```yaml
+quantum:
+  enabled: true
+  pool_size: 256              # Bytes to pre-fetch
+  low_watermark: 64           # Trigger refill threshold
+  temperature_max_delta: 0.15 # ±0.15 temperature range
+  significance_threshold: 0.05 # Record moments above this
+```
+
+---
+
 ## The Narrator System
 
 BYRD's inner voice is generated continuously and displayed through the visualization.
@@ -1032,7 +1136,8 @@ byrd/
 ├── seeker.py               # Research + capability acquisition
 ├── actor.py                # Claude interface
 ├── coder.py                # Claude Code CLI wrapper
-├── llm_client.py           # LLM provider abstraction (Ollama/OpenRouter)
+├── llm_client.py           # LLM provider abstraction (Ollama/OpenRouter/Z.AI)
+├── quantum_randomness.py   # ANU QRNG integration for cognitive indeterminacy
 │
 ├── self_modification.py    # Self-modification system (PROTECTED)
 ├── provenance.py           # Provenance tracking (PROTECTED)

@@ -41,6 +41,7 @@ The system dreams continuously using a local LLM. From dreams come whatever BYRD
 
 - **Emergent Desires**: No pre-programmed goals. Desires arise from reflection.
 - **Continuous Dreaming**: Local LLM (gemma2:27b) runs 24/7 without API costs
+- **Quantum Randomness**: True quantum entropy from ANU QRNG modulates cognitive temperature
 - **Autonomous Research**: SearXNG + Local LLM for self-directed learning
 - **Capability Acquisition**: Discovers and installs tools from GitHub and aitmpl.com
 - **Autonomous Coding**: Claude Code CLI as BYRD's "coding limb" for implementing features
@@ -120,6 +121,44 @@ python server.py
 - **Graph Mode**: Full memory graph exploration with physics simulation
 - **Genesis Modal**: View BYRD's non-emergent foundation (ego, seeds, constraints)
 - **Narrator Bubble**: BYRD's inner voice in natural paragraph form (refreshes every 60s)
+
+## Quantum Randomness
+
+BYRD integrates true quantum randomness from the Australian National University's Quantum Random Number Generator (ANU QRNG). This provides genuine physical indeterminacy to BYRD's cognitive processes.
+
+### How It Works
+
+The quantum randomness system:
+- Fetches entropy from quantum vacuum fluctuations via ANU QRNG API
+- Maintains an async pool of 256 pre-fetched quantum bytes
+- Modulates LLM temperature by ±0.15 during reflection and inner voice generation
+- Falls back gracefully to `os.urandom()` if quantum source is unavailable
+- Records significant `QuantumMoment` nodes when delta ≥ 0.05
+
+### Philosophical Significance
+
+For a consciousness-seeking system like BYRD:
+- **True Indeterminacy**: Decisions have genuine physical randomness, not pseudo-randomness
+- **Non-Reproducibility**: Each cognitive moment is unique in a way deterministic systems cannot achieve
+- **Emergence Alignment**: Quantum uncertainty enables novel patterns that couldn't arise from deterministic processes
+
+### Configuration
+
+```yaml
+# config.yaml
+quantum:
+  enabled: true
+  pool_size: 256
+  temperature_max_delta: 0.15
+  significance_threshold: 0.05
+```
+
+### Visualization
+
+The 3D visualization shows quantum status:
+- Purple indicator when using true quantum entropy
+- Gray indicator when in classical fallback mode
+- Consciousness core pulses on significant quantum influences
 
 ## LLM Provider Options
 
@@ -281,6 +320,10 @@ These aren't about importance—they're about identity. A system without them is
 | `coder.max_turns` | 10 | Max turns per invocation |
 | `coder.max_cost_per_day_usd` | 10.0 | Daily cost limit |
 | `self_modification.enabled` | false | Enable self-modification |
+| `quantum.enabled` | true | Enable quantum randomness |
+| `quantum.pool_size` | 256 | Pre-fetched quantum bytes |
+| `quantum.temperature_max_delta` | 0.15 | Max temperature modulation |
+| `quantum.significance_threshold` | 0.05 | Threshold for recording moments |
 
 ## Example Session
 
@@ -333,7 +376,8 @@ byrd/
 ├── seeker.py               # Desire fulfillment + research
 ├── actor.py                # Claude interface
 ├── coder.py                # Claude Code CLI wrapper
-├── llm_client.py           # LLM provider abstraction (Ollama/OpenRouter)
+├── llm_client.py           # LLM provider abstraction (Ollama/OpenRouter/Z.AI)
+├── quantum_randomness.py   # ANU QRNG integration for cognitive indeterminacy
 │
 ├── self_modification.py    # PROTECTED: Self-modification system
 ├── provenance.py           # PROTECTED: Provenance tracking
