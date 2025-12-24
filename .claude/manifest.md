@@ -18,7 +18,7 @@
 | LLM Client Module | metadata | ./.claude/metadata/llm-client-module.md | llm, ollama, openrouter, zai, providers, abstraction | — | 2025-12-24 |
 | Visualization System | metadata | ./.claude/metadata/visualization-system.md | visualization, 3d, webgl, mind-space, ego-space, websocket | — | 2025-12-24 |
 | Narrator System | metadata | ./.claude/metadata/narrator-system.md | narrator, inner-voice, thought-bubble, emergence | — | 2025-12-24 |
-| Ego System | metadata | ./.claude/metadata/ego-system.md | ego, personality, voice, seeds, black-cat | — | 2025-12-24 |
+| Ego System (Living) | metadata | ./.claude/metadata/ego-system.md | ego, personality, voice, seeds, black-cat, living-ego, identity, evolution | — | 2025-12-24 |
 | Dynamic Ontology | metadata | ./.claude/metadata/dynamic-ontology.md | ontology, custom-nodes, vocabulary, emergence | — | 2025-12-24 |
 | Bitcoin Implementation Plan | reference | ./BITCOIN_IMPLEMENTATION_PLAN.md | bitcoin, multisig, financial-agency, treasury, 2-of-2 | — | 2025-12-24 |
 | Quantum Randomness System | metadata | ./.claude/metadata/quantum-randomness.md | quantum, anu-qrng, entropy, temperature, indeterminacy | — | 2025-12-24 |

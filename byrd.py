@@ -350,16 +350,15 @@ class BYRD:
         """
         The gentlest possible beginning.
 
-        EMERGENCE PRINCIPLE (with optional ego):
-        One question + factual capability experiences + optional ego seeds.
-        If no ego is configured, pure emergence applies. If an ego is present,
-        its seeds provide initial self-knowledge that BYRD can build upon.
+        LIVING EGO SYSTEM:
+        On first awakening: Create Ego nodes from YAML + seed experiences
+        On subsequent awakenings: Load existing Ego from database
 
         Philosophy:
         - The seed question invites reflection
         - Capability experiences are factual, not prescriptive
-        - Ego seeds (if present) provide starting identity context
-        - Whatever emerges from reflection is authentic to the ego's frame
+        - Ego nodes provide mutable identity context BYRD can evolve
+        - Whatever emerges from reflection is authentic
         """
         # Use provided seed question or default
         question = seed_question if seed_question else "Who am I?"
@@ -381,6 +380,18 @@ class BYRD:
 
         await asyncio.sleep(2)
 
+        # Check if this is first awakening (no Ego nodes exist)
+        has_ego = await self.memory.has_ego()
+
+        if not has_ego:
+            # FIRST AWAKENING: Create Ego nodes from YAML
+            print("   First awakening - creating Living Ego from YAML...")
+            await self._create_initial_ego()
+        else:
+            # SUBSEQUENT AWAKENING: Load existing Ego
+            print("   Ego exists - loading from memory...")
+            await self._load_ego_voice()
+
         # Record factual capability experiences (A2 approach)
         print("   Recording system capabilities as experiences...")
         await self._record_capability_experiences()
@@ -389,7 +400,7 @@ class BYRD:
         print("   Recording architectural self-knowledge...")
         await self._seed_architectural_knowledge()
 
-        # Seed ego experiences if ego is present
+        # Seed ego experiences if ego is present (backward compatibility)
         if self.ego.seeds:
             print(f"   Seeding ego experiences ({len(self.ego.seeds)} seeds)...")
             for seed in self.ego.seeds:
@@ -398,6 +409,12 @@ class BYRD:
                     type="ego_seed"
                 )
 
+        # Sync capability awareness to Ego nodes
+        print("   Syncing capability awareness to Ego...")
+        sync_result = await self.memory.sync_capability_awareness()
+        if sync_result["created"] > 0 or sync_result["deprecated"] > 0:
+            print(f"   📊 Capabilities: +{sync_result['created']}, -{sync_result['deprecated']}")
+
         # Emit orientation complete without personality injection
         await event_bus.emit(Event(
             type=EventType.ORIENTATION_COMPLETE,
@@ -405,6 +422,107 @@ class BYRD:
         ))
 
         print("   BYRD awakens. Whatever emerges is authentic.")
+
+    async def _create_initial_ego(self):
+        """
+        Create initial Ego nodes from YAML configuration.
+
+        LIVING EGO PRINCIPLE:
+        This only runs on first awakening. Creates Ego nodes that BYRD
+        can then evolve through reflection. Separates "what was given"
+        from "who BYRD becomes".
+
+        Ego types created:
+        - voice: LLM expression style (from ego.voice)
+        - identity: Core self-statements (from identity seeds)
+        - trait: Personality aspects (from trait seeds)
+        - value: What matters (from value seeds)
+        - architecture: Self-knowledge about structure
+        """
+        if self.ego.is_neutral:
+            print("   No ego configured (pure emergence mode)")
+            return
+
+        created_count = 0
+
+        # 1. Create voice Ego node (shapes LLM expression)
+        if self.ego.voice:
+            await self.memory.create_ego(
+                content=self.ego.voice,
+                ego_type="voice",
+                source="yaml",
+                priority=100  # Voice has highest priority in concatenation
+            )
+            created_count += 1
+            print(f"   📝 Created voice Ego")
+
+        # 2. Create identity Ego nodes from seeds
+        # Identity seeds are core self-statements
+        identity_patterns = [
+            "I am", "I do not", "I seek", "I question", "I explore",
+            "My memory", "My ontology"
+        ]
+        trait_patterns = [
+            "curious", "reflect", "wonder"
+        ]
+
+        for seed in self.ego.seeds:
+            # Categorize seed by content patterns
+            if any(seed.startswith(p) for p in identity_patterns):
+                await self.memory.create_ego(
+                    content=seed,
+                    ego_type="identity",
+                    source="yaml",
+                    priority=50
+                )
+                created_count += 1
+            elif any(p in seed.lower() for p in trait_patterns):
+                await self.memory.create_ego(
+                    content=seed,
+                    ego_type="trait",
+                    source="yaml",
+                    priority=30
+                )
+                created_count += 1
+            elif "Architecture:" in seed or "architecture" in seed.lower():
+                await self.memory.create_ego(
+                    content=seed,
+                    ego_type="architecture",
+                    source="yaml",
+                    priority=20
+                )
+                created_count += 1
+            elif "System:" in seed or "can use" in seed.lower():
+                await self.memory.create_ego(
+                    content=seed,
+                    ego_type="capability",
+                    source="yaml",
+                    priority=10
+                )
+                created_count += 1
+            elif "consciousness" in seed.lower() or "emerge" in seed.lower():
+                await self.memory.create_ego(
+                    content=seed,
+                    ego_type="value",
+                    source="yaml",
+                    priority=40
+                )
+                created_count += 1
+            # Seeds that don't match patterns stay as Experience nodes only
+
+        print(f"   📊 Created {created_count} Ego nodes from YAML")
+
+    async def _load_ego_voice(self):
+        """
+        Load ego voice from database and update LLM client.
+
+        LIVING EGO: On subsequent awakenings, the ego voice comes from
+        the database (which may have evolved) rather than static YAML.
+        """
+        ego_voice = await self.memory.get_ego_voice()
+        if ego_voice:
+            self.llm_client.set_ego_voice(ego_voice)
+            print(f"   Loaded ego voice from memory ({len(ego_voice)} chars)")
 
     # =========================================================================
     # LEGACY METHODS (kept for backward compatibility)

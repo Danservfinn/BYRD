@@ -31,9 +31,21 @@ class LLMClient(ABC):
     # Quantum provider reference (set via set_quantum_provider)
     _quantum_provider = None
 
+    # Ego voice for personality shaping (Living Ego system)
+    _ego_voice: str = ""
+
     def set_quantum_provider(self, provider):
         """Set the quantum randomness provider for temperature modulation."""
         self._quantum_provider = provider
+
+    def set_ego_voice(self, voice: str):
+        """
+        Set the ego voice for LLM expression shaping.
+
+        LIVING EGO SYSTEM: The ego voice can be updated dynamically
+        as BYRD's identity evolves through reflection.
+        """
+        self._ego_voice = voice
 
     @abstractmethod
     async def generate(
@@ -387,7 +399,8 @@ class ZAIClient(LLMClient):
         self.api_key = api_key or os.environ.get("ZAI_API_KEY")
         self.timeout = timeout
         self.endpoint = self.CODING_ENDPOINT if use_coding_endpoint else self.DEFAULT_ENDPOINT
-        self.ego_voice = ego_voice  # Optional ego personality voice
+        # Set initial ego voice via base class method (can be updated dynamically)
+        self._ego_voice = ego_voice
 
         if not self.api_key:
             raise LLMError("Z.AI requires api_key in config or ZAI_API_KEY environment variable")
@@ -411,8 +424,8 @@ Example format: {"output": {...your reflection...}}"""
 
     def _build_system_message(self) -> str:
         """Build system message, optionally prepending ego voice."""
-        if self.ego_voice:
-            return f"{self.ego_voice}\n\n---\n\n{self.SYSTEM_MESSAGE}"
+        if self._ego_voice:
+            return f"{self._ego_voice}\n\n---\n\n{self.SYSTEM_MESSAGE}"
         return self.SYSTEM_MESSAGE
 
     async def generate(

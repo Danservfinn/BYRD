@@ -24,6 +24,7 @@ class EventType(Enum):
     DESIRE_FULFILLED = "desire_fulfilled"
     CAPABILITY_ADDED = "capability_added"
     CONNECTION_CREATED = "connection_created"
+    CONNECTION_HEURISTIC = "connection_heuristic"  # Generic heuristic events (e.g., orphan reconciliation)
     CONNECTION_HEURISTIC_APPLIED = "connection_heuristic_applied"
 
     # Dynamic ontology events (BYRD evolving its own node types)
@@ -82,6 +83,11 @@ class EventType(Enum):
 
     # Hierarchical memory events
     MEMORY_SUMMARIZED = "memory_summarized"        # Older experiences compressed into summary
+
+    # Ego events (living identity system)
+    EGO_CREATED = "ego_created"          # New Ego node created (identity, trait, voice, etc.)
+    EGO_EVOLVED = "ego_evolved"          # Ego node updated with history preservation
+    EGO_DEPRECATED = "ego_deprecated"    # Ego node deprecated (soft delete)
 
 
 @dataclass

@@ -965,6 +965,7 @@
     const NODE_COLORS = {
       belief: { color: 0xd97706, emissive: 0xfbbf24, label: 'Belief' },       // Dark amber
       desire: { color: 0xbe123c, emissive: 0xf43f5e, label: 'Desire' },       // Dark rose
+      ego: { color: 0xec4899, emissive: 0xf472b6, label: 'Ego' },             // Pink (living identity)
       experience: { color: 0x0369a1, emissive: 0x38bdf8, label: 'Experience' }, // Dark sky blue
       capability: { color: 0x6d28d9, emissive: 0xa855f7, label: 'Capability' }, // Dark violet
       reflection: { color: 0x047857, emissive: 0x34d399, label: 'Reflection' }, // Dark emerald
@@ -1606,6 +1607,10 @@
           break;
         case 'awakening':
           geometry = new THREE.DodecahedronGeometry(size, 0);
+          break;
+        case 'ego':
+          // Ego nodes use icosahedron - 20 faces, represents multifaceted identity
+          geometry = new THREE.IcosahedronGeometry(size, 0);
           break;
         default: // experience
           geometry = new THREE.SphereGeometry(size * 0.8, 16, 16);
@@ -3839,6 +3844,48 @@
             // Create the 3D node
             createNode3D(customType.toLowerCase(), customContent, customId, 0.7);
             updateStatus(`New ${customType} created`, 'violet');
+          }
+          break;
+
+        case 'ego_created':
+          // BYRD's living identity - new Ego node created
+          const egoType = event.data?.ego_type || 'identity';
+          const egoContent = event.data?.content?.substring(0, 100) || egoType;
+          const egoId = event.data?.id;
+          if (egoId) {
+            // Visualize as pink Ego node with special geometry
+            createNode3D('ego', `[${egoType}] ${egoContent}`, egoId, 0.8);
+            updateStatus(`Ego ${egoType} created`, 'pink');
+            // Pulse the core to show identity change
+            pulseCore('ego', 0.8);
+          }
+          break;
+
+        case 'ego_evolved':
+          // BYRD's identity evolved - update existing Ego node
+          const evolvedEgoId = event.data?.id;
+          const newContent = event.data?.content?.substring(0, 100);
+          if (evolvedEgoId) {
+            updateStatus('Ego evolved', 'pink');
+            // Flash the consciousness core to show identity shift
+            pulseCore('ego', 1.0);
+          }
+          break;
+
+        case 'ego_deprecated':
+          // Ego node was deprecated (soft delete)
+          const deprecatedId = event.data?.id;
+          if (deprecatedId) {
+            // Find and fade out the node
+            const nodeToRemove = nodes3D.find(n => n.userData?.id === deprecatedId);
+            if (nodeToRemove) {
+              const nodeIndex = nodes3D.indexOf(nodeToRemove);
+              if (nodeIndex > -1) nodes3D.splice(nodeIndex, 1);
+              fadeOutAndRemove(nodeToRemove);
+              connectionCounts.delete(deprecatedId);
+              nodeCountEl.textContent = nodes3D.length;
+            }
+            updateStatus('Ego facet retired', 'gray');
           }
           break;
 
