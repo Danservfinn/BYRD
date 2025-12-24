@@ -259,13 +259,17 @@ class Dreamer:
         # Count what BYRD produced (without forcing categories)
         output_keys = list(reflection_output.get("output", {}).keys()) if isinstance(reflection_output.get("output"), dict) else []
 
+        # Apply connection heuristic to link orphaned experiences to beliefs
+        heuristic_result = await self._apply_connection_heuristic()
+
         # Emit end event
         await event_bus.emit(Event(
             type=EventType.DREAM_CYCLE_END,
             data={
                 "cycle": self._dream_count,
                 "output_keys": output_keys,
-                "inner_voice": inner_voice
+                "inner_voice": inner_voice,
+                "connections_created": heuristic_result.get("connections_created", 0)
             }
         ))
 
@@ -908,6 +912,53 @@ Write ONLY the inner thought, nothing else:"""
     def dream_count(self) -> int:
         """How many dream cycles have completed."""
         return self._dream_count
+
+    # =========================================================================
+    # CONNECTION HEURISTIC INTEGRATION
+    # Automatically links orphaned Experience nodes to Belief nodes
+    # =========================================================================
+
+    async def _apply_connection_heuristic(self) -> Dict:
+        """
+        Apply the connection heuristic to link orphaned experiences to beliefs.
+
+        This runs at the end of each dream cycle to incrementally improve
+        graph connectivity. It finds Experience nodes with no relationships
+        and connects them to semantically similar Belief nodes.
+
+        Returns:
+            Dict with heuristic results (orphans_found, connections_created, etc.)
+        """
+        try:
+            # Run the heuristic with conservative settings per dream cycle
+            result = await self.memory.apply_connection_heuristic(
+                threshold=0.3,        # Minimum similarity score
+                max_connections=5,    # Limit per cycle to avoid overwhelming
+                dry_run=False
+            )
+
+            connections = result.get("connections_created", 0)
+            orphans = result.get("orphans_found", 0)
+
+            if connections > 0:
+                print(f"🔗 Connection heuristic: linked {connections} experiences to beliefs "
+                      f"(found {orphans} orphans)")
+
+                # Emit dedicated event for connection heuristic
+                await event_bus.emit(Event(
+                    type=EventType.CONNECTION_HEURISTIC_APPLIED,
+                    data={
+                        "connections_created": connections,
+                        "orphans_found": orphans,
+                        "connections": result.get("connections", [])[:5]  # Sample
+                    }
+                ))
+
+            return result
+
+        except Exception as e:
+            print(f"🔗 Connection heuristic error: {e}")
+            return {"error": str(e), "connections_created": 0}
 
     # =========================================================================
     # LEGACY METHODS (kept for backward compatibility)

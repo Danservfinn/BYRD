@@ -1514,3 +1514,318 @@ class Memory:
         except Exception as e:
             print(f"Error getting mutation history: {e}")
             return []
+
+    # =========================================================================
+    # CONNECTION HEURISTIC (Automatic Graph Integration)
+    # =========================================================================
+
+    # Configuration for connection heuristic
+    CONNECTION_HEURISTIC_CONFIG = {
+        "similarity_threshold": 0.3,      # Minimum similarity to create link
+        "max_connections_per_run": 10,    # Limit connections per execution
+        "min_content_length": 20,         # Skip very short content
+        "relationship_type": "SEMANTICALLY_RELATED",
+    }
+
+    @staticmethod
+    def _compute_text_similarity(text1: str, text2: str) -> float:
+        """
+        Compute semantic similarity between two texts using Jaccard similarity
+        on word-level n-grams (unigrams and bigrams).
+
+        This is a lightweight, embedding-free approach that works well for
+        detecting topical overlap between experiences and beliefs.
+
+        Returns: float between 0.0 and 1.0
+        """
+        if not text1 or not text2:
+            return 0.0
+
+        # Normalize texts
+        text1 = text1.lower().strip()
+        text2 = text2.lower().strip()
+
+        # Tokenize into words (simple whitespace split, filter short words)
+        words1 = [w for w in re.split(r'\W+', text1) if len(w) > 2]
+        words2 = [w for w in re.split(r'\W+', text2) if len(w) > 2]
+
+        if not words1 or not words2:
+            return 0.0
+
+        # Create n-grams (unigrams + bigrams for better context)
+        def get_ngrams(words: List[str]) -> set:
+            ngrams = set(words)  # Unigrams
+            for i in range(len(words) - 1):
+                ngrams.add(f"{words[i]}_{words[i+1]}")  # Bigrams
+            return ngrams
+
+        set1 = get_ngrams(words1)
+        set2 = get_ngrams(words2)
+
+        # Jaccard similarity
+        intersection = len(set1 & set2)
+        union = len(set1 | set2)
+
+        if union == 0:
+            return 0.0
+
+        return intersection / union
+
+    async def get_orphaned_experiences(
+        self,
+        limit: int = 50,
+        min_content_length: int = None
+    ) -> List[Dict]:
+        """
+        Find Experience nodes with no relationships to other nodes.
+
+        These are isolated memories that haven't been integrated into
+        BYRD's knowledge graph through beliefs, reflections, or desires.
+
+        Args:
+            limit: Maximum number of orphaned experiences to return
+            min_content_length: Minimum content length to consider (filters noise)
+
+        Returns:
+            List of orphaned Experience dicts with id, content, type, timestamp
+        """
+        min_len = min_content_length or self.CONNECTION_HEURISTIC_CONFIG["min_content_length"]
+
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (e:Experience)
+                    WHERE NOT (e)--()
+                    AND size(e.content) >= $min_len
+                    AND NOT coalesce(e.archived, false)
+                    RETURN e.id as id, e.content as content,
+                           e.type as type, e.timestamp as timestamp
+                    ORDER BY e.timestamp DESC
+                    LIMIT $limit
+                """, min_len=min_len, limit=limit)
+                return await result.data()
+        except Exception as e:
+            print(f"Error finding orphaned experiences: {e}")
+            return []
+
+    async def find_similar_beliefs_for_experience(
+        self,
+        experience_content: str,
+        threshold: float = None,
+        limit: int = 5
+    ) -> List[Dict]:
+        """
+        Find beliefs that are semantically similar to an experience.
+
+        Uses text similarity to identify beliefs that share concepts
+        with the given experience content.
+
+        Args:
+            experience_content: The experience text to match against
+            threshold: Minimum similarity score (0.0-1.0)
+            limit: Maximum number of similar beliefs to return
+
+        Returns:
+            List of belief dicts with id, content, confidence, similarity_score
+        """
+        threshold = threshold or self.CONNECTION_HEURISTIC_CONFIG["similarity_threshold"]
+
+        try:
+            async with self.driver.session() as session:
+                # Get all beliefs
+                result = await session.run("""
+                    MATCH (b:Belief)
+                    WHERE NOT coalesce(b.archived, false)
+                    RETURN b.id as id, b.content as content, b.confidence as confidence
+                """)
+                beliefs = await result.data()
+
+                # Compute similarities
+                similar_beliefs = []
+                for belief in beliefs:
+                    similarity = self._compute_text_similarity(
+                        experience_content,
+                        belief.get("content", "")
+                    )
+                    if similarity >= threshold:
+                        similar_beliefs.append({
+                            "id": belief["id"],
+                            "content": belief["content"],
+                            "confidence": belief.get("confidence", 0.5),
+                            "similarity_score": round(similarity, 3)
+                        })
+
+                # Sort by similarity and return top matches
+                similar_beliefs.sort(key=lambda x: x["similarity_score"], reverse=True)
+                return similar_beliefs[:limit]
+
+        except Exception as e:
+            print(f"Error finding similar beliefs: {e}")
+            return []
+
+    async def apply_connection_heuristic(
+        self,
+        threshold: float = None,
+        max_connections: int = None,
+        dry_run: bool = False
+    ) -> Dict:
+        """
+        Automatically link orphaned Experience nodes to semantically similar Beliefs.
+
+        This implements the connection heuristic that improves BYRD's graph
+        integration by finding isolated experiences and connecting them to
+        existing beliefs that share semantic content.
+
+        Args:
+            threshold: Minimum similarity score to create a connection (0.0-1.0)
+            max_connections: Maximum number of connections to create per run
+            dry_run: If True, report what would be connected without making changes
+
+        Returns:
+            Dict with statistics:
+                - orphans_found: Number of orphaned experiences found
+                - connections_created: Number of new connections made
+                - connections: List of connection details (experience_id, belief_id, similarity)
+        """
+        threshold = threshold or self.CONNECTION_HEURISTIC_CONFIG["similarity_threshold"]
+        max_conns = max_connections or self.CONNECTION_HEURISTIC_CONFIG["max_connections_per_run"]
+        rel_type = self.CONNECTION_HEURISTIC_CONFIG["relationship_type"]
+
+        result = {
+            "orphans_found": 0,
+            "connections_created": 0,
+            "connections": [],
+            "dry_run": dry_run
+        }
+
+        try:
+            # Step 1: Find orphaned experiences
+            orphans = await self.get_orphaned_experiences(limit=max_conns * 2)
+            result["orphans_found"] = len(orphans)
+
+            if not orphans:
+                return result
+
+            connections_made = 0
+
+            # Step 2: For each orphan, find similar beliefs and create connections
+            for orphan in orphans:
+                if connections_made >= max_conns:
+                    break
+
+                similar_beliefs = await self.find_similar_beliefs_for_experience(
+                    orphan["content"],
+                    threshold=threshold,
+                    limit=3  # Connect to top 3 similar beliefs max
+                )
+
+                for belief in similar_beliefs:
+                    if connections_made >= max_conns:
+                        break
+
+                    connection_detail = {
+                        "experience_id": orphan["id"],
+                        "experience_content": orphan["content"][:100] + "..." if len(orphan["content"]) > 100 else orphan["content"],
+                        "belief_id": belief["id"],
+                        "belief_content": belief["content"][:100] + "..." if len(belief["content"]) > 100 else belief["content"],
+                        "similarity_score": belief["similarity_score"]
+                    }
+
+                    if not dry_run:
+                        # Create the connection
+                        await self.create_connection(
+                            from_id=orphan["id"],
+                            to_id=belief["id"],
+                            relationship=rel_type,
+                            properties={
+                                "similarity_score": belief["similarity_score"],
+                                "auto_generated": True,
+                                "heuristic": "semantic_similarity"
+                            }
+                        )
+                        connections_made += 1
+
+                    result["connections"].append(connection_detail)
+
+                    if not dry_run:
+                        result["connections_created"] = connections_made
+
+            # Emit event for monitoring
+            if not dry_run and connections_made > 0:
+                await event_bus.emit(Event(
+                    type=EventType.EXPERIENCE_CREATED,  # Reuse existing event type
+                    data={
+                        "action": "connection_heuristic_applied",
+                        "connections_created": connections_made,
+                        "orphans_processed": result["orphans_found"]
+                    }
+                ))
+
+            return result
+
+        except Exception as e:
+            print(f"Error applying connection heuristic: {e}")
+            result["error"] = str(e)
+            return result
+
+    async def get_connection_statistics(self) -> Dict:
+        """
+        Get statistics about graph connectivity to monitor heuristic effectiveness.
+
+        Returns metrics about orphaned nodes, connection density, and
+        auto-generated links from the connection heuristic.
+        """
+        try:
+            async with self.driver.session() as session:
+                # Count total experiences and orphaned ones
+                exp_result = await session.run("""
+                    MATCH (e:Experience)
+                    WITH count(e) as total
+                    MATCH (orphan:Experience)
+                    WHERE NOT (orphan)--()
+                    RETURN total, count(orphan) as orphaned
+                """)
+                exp_record = await exp_result.single()
+
+                # Count beliefs and their connectivity
+                belief_result = await session.run("""
+                    MATCH (b:Belief)
+                    WITH count(b) as total
+                    MATCH (connected:Belief)
+                    WHERE (connected)--()
+                    RETURN total, count(connected) as connected
+                """)
+                belief_record = await belief_result.single()
+
+                # Count auto-generated connections
+                auto_result = await session.run("""
+                    MATCH ()-[r]->()
+                    WHERE r.auto_generated = true
+                    RETURN count(r) as auto_connections
+                """)
+                auto_record = await auto_result.single()
+
+                total_exp = exp_record["total"] if exp_record else 0
+                orphaned_exp = exp_record["orphaned"] if exp_record else 0
+                total_beliefs = belief_record["total"] if belief_record else 0
+                connected_beliefs = belief_record["connected"] if belief_record else 0
+                auto_connections = auto_record["auto_connections"] if auto_record else 0
+
+                return {
+                    "experiences": {
+                        "total": total_exp,
+                        "orphaned": orphaned_exp,
+                        "connected": total_exp - orphaned_exp,
+                        "connectivity_ratio": round((total_exp - orphaned_exp) / total_exp, 3) if total_exp > 0 else 0
+                    },
+                    "beliefs": {
+                        "total": total_beliefs,
+                        "connected": connected_beliefs,
+                        "connectivity_ratio": round(connected_beliefs / total_beliefs, 3) if total_beliefs > 0 else 0
+                    },
+                    "auto_generated_connections": auto_connections
+                }
+
+        except Exception as e:
+            print(f"Error getting connection statistics: {e}")
+            return {}
