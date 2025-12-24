@@ -5611,115 +5611,138 @@
      * Runs many physics iterations quickly and positions nodes at their final locations.
      */
     function fastForwardPhysics() {
-      if (nodes3D.length === 0) return;
+      if (nodes3D.length === 0) {
+        console.log('Fast forward: No nodes to simulate');
+        showCameraIndicator('No nodes to simulate');
+        return;
+      }
 
-      // Disable settling mode
-      isSettling = false;
+      console.log(`Fast forward: Simulating ${nodes3D.length} nodes, ${graphState.relationshipLines.length} relationships`);
+      showCameraIndicator('Calculating equilibrium...');
 
-      // Run many physics iterations quickly
-      const iterations = 200;
-      const dt = 0.016; // 60fps timestep
+      // Use boosted physics for rapid equilibrium
+      const physics = {
+        repulsion: 80,              // Strong repulsion to separate nodes
+        repulsionCutoff: 50,        // Cutoff distance
+        spring: 0.02,               // Strong springs for connected nodes
+        springLength: 15,           // Ideal distance between connected nodes
+        gravity: 0.01,              // Pull toward center
+        gravityPerConnection: 0.003,
+        damping: 0.7,               // Less damping for faster convergence
+        maxVelocity: 3.0,           // Allow faster movement
+        maxRadius: 80,
+        boundaryForce: 0.8
+      };
 
-      for (let i = 0; i < iterations; i++) {
-        // Use calm physics for final positions
-        const physics = PHYSICS;
+      // Build a map of connected node IDs for spring forces
+      const connections = new Map(); // nodeId -> Set of connected nodeIds
+      for (const line of graphState.relationshipLines) {
+        const sourceId = line.userData.sourceId;
+        const targetId = line.userData.targetId;
+        if (sourceId && targetId) {
+          if (!connections.has(sourceId)) connections.set(sourceId, new Set());
+          if (!connections.has(targetId)) connections.set(targetId, new Set());
+          connections.get(sourceId).add(targetId);
+          connections.get(targetId).add(sourceId);
+        }
+      }
+      console.log(`Connection map built: ${connections.size} nodes have connections`);
 
+      // Create a node lookup map
+      const nodeById = new Map();
+      for (const node of nodes3D) {
+        nodeById.set(node.userData.id, node);
+      }
+
+      // Run physics iterations
+      const iterations = 150;
+      const dt = 0.5;
+
+      for (let iter = 0; iter < iterations; iter++) {
         // Reset forces
-        nodes3D.forEach(node => {
+        for (const node of nodes3D) {
+          if (!node.userData.force) node.userData.force = new THREE.Vector3();
+          if (!node.userData.velocity) node.userData.velocity = new THREE.Vector3();
           node.userData.force.set(0, 0, 0);
-        });
+        }
 
-        // Calculate all forces
+        // Repulsion between all nodes (O(n²) but necessary)
         for (let i = 0; i < nodes3D.length; i++) {
           const nodeA = nodes3D[i];
-          const posA = nodeA.position;
-
-          // Repulsion from other nodes
           for (let j = i + 1; j < nodes3D.length; j++) {
             const nodeB = nodes3D[j];
-            const posB = nodeB.position;
-
-            const diff = new THREE.Vector3().subVectors(posA, posB);
+            const diff = new THREE.Vector3().subVectors(nodeA.position, nodeB.position);
             const dist = diff.length();
 
-            if (dist < physics.repulsionCutoff && dist > 0.1) {
+            if (dist > 0.5 && dist < physics.repulsionCutoff) {
               const force = physics.repulsion / (dist * dist);
-              const repulsion = diff.normalize().multiplyScalar(force);
-              nodeA.userData.force.add(repulsion);
-              nodeB.userData.force.sub(repulsion);
+              const direction = diff.normalize();
+              nodeA.userData.force.addScaledVector(direction, force);
+              nodeB.userData.force.addScaledVector(direction, -force);
             }
           }
-
-          // Gravity toward center
-          const connCount = connectionCounts.get(nodeA.userData.id) || 0;
-          const gravity = physics.gravity + connCount * physics.gravityPerConnection;
-          const toCenter = posA.clone().negate().normalize().multiplyScalar(gravity);
-          nodeA.userData.force.add(toCenter);
-
-          // Boundary force
-          const distFromCenter = posA.length();
-          if (distFromCenter > physics.maxRadius) {
-            const pushBack = posA.clone().normalize().multiplyScalar(
-              -(distFromCenter - physics.maxRadius) * physics.boundaryForce
-            );
-            nodeA.userData.force.add(pushBack);
-          }
         }
 
-        // Apply spring forces from connections3D (event-mode connections)
-        for (const connection of connections3D) {
-          const nodeA = nodes3D.find(n => n.userData.id === connection.userData.nodeA);
-          const nodeB = nodes3D.find(n => n.userData.id === connection.userData.nodeB);
-          if (nodeA && nodeB) {
-            const diff = new THREE.Vector3().subVectors(nodeB.position, nodeA.position);
-            const dist = diff.length();
-            const displacement = dist - physics.springLength;
-            const springForce = diff.normalize().multiplyScalar(displacement * physics.spring);
-            nodeA.userData.force.add(springForce);
-            nodeB.userData.force.sub(springForce);
-          }
-        }
+        // Spring forces for connected nodes
+        for (const [nodeId, connectedIds] of connections) {
+          const nodeA = nodeById.get(nodeId);
+          if (!nodeA) continue;
 
-        // Apply spring forces from relationshipLines (database relationships)
-        for (const line of graphState.relationshipLines) {
-          const nodeA = line.userData.sourceMesh;
-          const nodeB = line.userData.targetMesh;
-          if (nodeA && nodeB && nodeA.userData?.force && nodeB.userData?.force) {
+          for (const connectedId of connectedIds) {
+            const nodeB = nodeById.get(connectedId);
+            if (!nodeB) continue;
+
             const diff = new THREE.Vector3().subVectors(nodeB.position, nodeA.position);
             const dist = diff.length();
             if (dist > 0.1) {
               const displacement = dist - physics.springLength;
-              const springForce = diff.normalize().multiplyScalar(displacement * physics.spring);
-              nodeA.userData.force.add(springForce);
-              nodeB.userData.force.sub(springForce);
+              const springForce = displacement * physics.spring;
+              const direction = diff.normalize();
+              nodeA.userData.force.addScaledVector(direction, springForce);
             }
           }
         }
 
-        // Update velocities and positions
-        nodes3D.forEach(node => {
-          const connCount = connectionCounts.get(node.userData.id) || 0;
-          const damping = Math.max(
-            physics.minDamping,
-            physics.baseDamping - connCount * physics.dampingPerConnection
-          );
+        // Center gravity and boundary forces
+        for (const node of nodes3D) {
+          const pos = node.position;
+          const distFromCenter = pos.length();
 
+          // Gravity toward center (stronger for connected nodes)
+          const connCount = connections.get(node.userData.id)?.size || 0;
+          const gravity = physics.gravity + connCount * physics.gravityPerConnection;
+          if (distFromCenter > 1) {
+            const toCenter = pos.clone().normalize().multiplyScalar(-gravity);
+            node.userData.force.add(toCenter);
+          }
+
+          // Boundary force
+          if (distFromCenter > physics.maxRadius) {
+            const pushBack = (distFromCenter - physics.maxRadius) * physics.boundaryForce;
+            const direction = pos.clone().normalize().multiplyScalar(-pushBack);
+            node.userData.force.add(direction);
+          }
+        }
+
+        // Integrate forces into velocities and positions
+        for (const node of nodes3D) {
           node.userData.velocity.add(node.userData.force);
-          node.userData.velocity.multiplyScalar(damping);
+          node.userData.velocity.multiplyScalar(physics.damping);
           node.userData.velocity.clampLength(0, physics.maxVelocity);
-          node.position.add(node.userData.velocity.clone().multiplyScalar(dt));
-        });
+          node.position.addScaledVector(node.userData.velocity, dt);
+        }
       }
 
       // Zero out all velocities for stability
-      nodes3D.forEach(node => {
+      for (const node of nodes3D) {
         node.userData.velocity.set(0, 0, 0);
-      });
+      }
 
       // Update all connection and relationship line positions
       updateConnectionPositions();
       updateRelationshipPositions();
 
+      console.log('Fast forward complete');
       showCameraIndicator('Fast-forwarded to equilibrium');
       updateStatus('Physics settled', 'green');
     }
