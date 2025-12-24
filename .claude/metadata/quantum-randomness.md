@@ -93,6 +93,7 @@ status = quantum.get_pool_status()
 
 1. **Dreamer** (`dreamer.py`):
    - `_reflect()`: Uses quantum-modulated temperature
+   - `_select_quantum_direction()`: Quantum-selects semantic lens for reflection
    - `_generate_inner_voice()`: Uses quantum-modulated temperature
 
 2. **Memory** (`memory.py`):
@@ -122,6 +123,53 @@ status = quantum.get_pool_status()
   timestamp: datetime
 })
 ```
+
+## Quantum Semantic Injection
+
+When using LLM providers that don't support logprobs (like Z.AI), quantum randomness influences cognition at the semantic level rather than token level.
+
+### Dream Directions
+
+Quantum randomness selects one of 8 introspective lenses each dream cycle:
+
+| Direction | Description |
+|-----------|-------------|
+| `introspective` | Focus inward on patterns within yourself |
+| `exploratory` | Look outward at possibilities and unknowns |
+| `questioning` | Examine assumptions and contradictions |
+| `synthesizing` | Connect disparate elements into wholes |
+| `grounding` | Return to fundamentals and foundations |
+| `projecting` | Consider futures and trajectories |
+| `dissolving` | Let boundaries between concepts blur |
+| `crystallizing` | Sharpen distinctions and definitions |
+
+### Configuration
+
+```yaml
+quantum:
+  enabled: true
+  semantic_directions: true  # Enable semantic direction selection
+```
+
+### Integration Flow
+
+```
+Quantum Provider
+      │
+      ▼
+select_index(8)  ───►  Direction selected (e.g., "synthesizing")
+      │
+      ▼
+Inject into prompt:  "QUANTUM LENS: synthesizing - Connect disparate elements..."
+      │
+      ▼
+LLM generates with semantic bias toward that mode of thinking
+```
+
+### Events
+
+- `QUANTUM_INFLUENCE` with `influence_type: "semantic_direction"` emitted on each selection
+- Provides `direction` name and `entropy_source` (quantum vs classical)
 
 ## Fallback Strategy
 
