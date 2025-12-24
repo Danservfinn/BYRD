@@ -1522,10 +1522,27 @@
     const CRYSTAL_TYPES = ['belief', 'desire', 'Belief', 'Desire'];
 
     /**
-     * Check if a node should be rendered as a crystal
+     * Check if a node type can potentially be a crystal
      */
     function isCrystalType(type) {
       return CRYSTAL_TYPES.includes(type);
+    }
+
+    /**
+     * Check if a node should actually render as a crystal.
+     * Only beliefs/desires that are "crystallized" (derived from 2+ sources)
+     * render as crystals. Single-source beliefs render as regular spheres.
+     */
+    function shouldRenderAsCrystal(node) {
+      const type = node.type || '';
+      if (!CRYSTAL_TYPES.some(t => t.toLowerCase() === type.toLowerCase())) {
+        return false;
+      }
+      // A belief/desire is "crystallized" when it has absorbed multiple sources
+      const derivedCount = node.derived_count || node.source_count || 0;
+      const isCrystallized = derivedCount >= 2;
+      console.log(`🔮 ${type} "${node.id?.slice(0,8)}..." derived_count=${derivedCount} → ${isCrystallized ? 'CRYSTAL' : 'sphere'}`);
+      return isCrystallized;
     }
 
     /**
@@ -3128,13 +3145,13 @@
         });
 
         // Create nodes with type-based positioning
-        // Use crystal rendering for belief/desire types
+        // Only crystallized beliefs/desires (2+ sources) render as crystals
         let totalCreated = 0;
         for (const [type, typeNodes] of Object.entries(nodesByType)) {
             typeNodes.forEach((node, index) => {
                 const pos = calculateGraphPosition(node, index, typeNodes.length);
 
-                if (isCrystalType(type)) {
+                if (shouldRenderAsCrystal(node)) {
                     createCrystalNode(node, pos);
                     crystalCount++;
                 } else {
@@ -3813,8 +3830,8 @@
     function showDetailPanel(node) {
       const data = node.userData;
 
-      // If this is a crystal node, show the crystal modal instead
-      if (data.isCrystal || isCrystalType(data.type)) {
+      // If this is a crystal node (actually rendered as crystal), show the crystal modal
+      if (data.isCrystal) {
         showCrystalModal(node);
         return;
       }
@@ -6193,7 +6210,7 @@
         });
 
         // Create nodes using the graph positioning logic
-        // Use crystal rendering for belief/desire types
+        // Only crystallized beliefs/desires (2+ sources) render as crystals
         let totalCreated = 0;
         let crystalCount = 0;
         for (const [type, typeNodes] of Object.entries(nodesByType)) {
@@ -6203,7 +6220,7 @@
             if (existingNode) return;
 
             const pos = calculateGraphPosition(node, index, typeNodes.length);
-            if (isCrystalType(type)) {
+            if (shouldRenderAsCrystal(node)) {
               createCrystalNode(node, pos);
               crystalCount++;
             } else {
