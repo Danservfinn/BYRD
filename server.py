@@ -228,6 +228,11 @@ class QuantumStatus(BaseModel):
     last_error: Optional[str] = None
 
 
+class EgoStatus(BaseModel):
+    name: str
+    archetype: str
+    description: str
+
 class StatusResponse(BaseModel):
     running: bool
     started_at: Optional[str] = None
@@ -242,6 +247,7 @@ class StatusResponse(BaseModel):
     llm_provider: str
     llm_model: str
     quantum: Optional[QuantumStatus] = None
+    ego: Optional[EgoStatus] = None
 
 
 class HistoryResponse(BaseModel):
@@ -356,6 +362,15 @@ async def get_status():
         else:
             quantum_status = QuantumStatus(enabled=False)
 
+        # Get ego info
+        ego_status = None
+        if byrd_instance.ego:
+            ego_status = EgoStatus(
+                name=byrd_instance.ego.name,
+                archetype=byrd_instance.ego.archetype,
+                description=byrd_instance.ego.description
+            )
+
         return StatusResponse(
             running=byrd_instance._running,
             started_at=started_at,
@@ -380,7 +395,8 @@ async def get_status():
             ],
             llm_provider=llm_provider,
             llm_model=llm_model,
-            quantum=quantum_status
+            quantum=quantum_status,
+            ego=ego_status
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
