@@ -677,6 +677,77 @@ Write ONLY the inner thought, nothing else:"""
         # Extract self-model beliefs from the reflection
         await self._extract_self_model_beliefs(output, source_experience_ids)
 
+        # Process custom node creation requests
+        await self._process_custom_node_creation(output, source_experience_ids)
+
+    async def _process_custom_node_creation(self, output: Dict, source_ids: List[str]):
+        """
+        Process custom node creation requests from reflection output.
+
+        BYRD can create custom node types by including 'create_nodes' in its reflection:
+        {
+            "output": {
+                "create_nodes": [
+                    {"type": "Insight", "content": "...", "importance": 0.9},
+                    {"type": "Theory", "content": "...", "confidence": 0.7}
+                ]
+            }
+        }
+
+        This enables BYRD to extend its own ontology when existing types don't fit.
+        """
+        if not isinstance(output, dict):
+            return
+
+        create_nodes = output.get("create_nodes", [])
+        if not create_nodes:
+            return
+
+        if not isinstance(create_nodes, list):
+            create_nodes = [create_nodes]
+
+        for node_spec in create_nodes:
+            if not isinstance(node_spec, dict):
+                continue
+
+            node_type = node_spec.get("type", "")
+            if not node_type:
+                continue
+
+            # Extract properties (everything except 'type')
+            properties = {k: v for k, v in node_spec.items() if k != "type"}
+
+            # Ensure content exists
+            if "content" not in properties:
+                properties["content"] = str(node_spec)
+
+            try:
+                node_id = await self.memory.create_node(
+                    node_type=node_type,
+                    properties=properties,
+                    connect_to=source_ids[:3],  # Connect to source experiences
+                    relationship="EMERGED_FROM"
+                )
+
+                # Emit event for visualization
+                await event_bus.emit(Event(
+                    type=EventType.CUSTOM_NODE_CREATED,
+                    data={
+                        "id": node_id,
+                        "type": node_type,
+                        "content": properties.get("content", "")[:100],
+                        "cycle": self._dream_count
+                    }
+                ))
+
+                print(f"✨ Created custom {node_type} node: {properties.get('content', '')[:50]}...")
+
+            except ValueError as e:
+                # Invalid type name or system type
+                print(f"⚠️ Could not create custom node: {e}")
+            except Exception as e:
+                print(f"⚠️ Error creating custom node: {e}")
+
     def _summarize_reflection(self, output: Any) -> str:
         """Create a brief summary of the reflection for the experience stream."""
         if not isinstance(output, dict):
