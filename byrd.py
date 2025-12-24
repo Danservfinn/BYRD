@@ -442,8 +442,10 @@ class BYRD:
         # Sync capability awareness to Ego nodes
         print("   Syncing capability awareness to Ego...")
         sync_result = await self.memory.sync_capability_awareness()
-        if sync_result["created"] > 0 or sync_result["deprecated"] > 0:
-            print(f"   📊 Capabilities: +{sync_result['created']}, -{sync_result['deprecated']}")
+        added = sync_result.get("added", 0)
+        deprecated = sync_result.get("deprecated", 0)
+        if added > 0 or deprecated > 0:
+            print(f"   📊 Capabilities: +{added}, -{deprecated}")
 
         # Emit orientation complete without personality injection
         await event_bus.emit(Event(
