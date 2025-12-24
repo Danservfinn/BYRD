@@ -448,6 +448,9 @@
       <button id="btn-reset" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-all">
         &#128260; Reset
       </button>
+      <button id="btn-graph-mode" class="px-4 py-2 rounded-lg text-sm font-medium bg-purple-100 border border-purple-300 text-purple-700 hover:bg-purple-200 transition-all">
+        🧬 Graph Mode
+      </button>
       <button id="btn-status" class="px-4 py-2 rounded-lg text-sm font-medium bg-indigo-100 border border-indigo-300 text-indigo-700 hover:bg-indigo-200 transition-all" onclick="showStatusModal()">
         🧠 What's BYRD doing?
       </button>
@@ -1000,6 +1003,63 @@
     let eyeMeshes = [];
     let catBreathPhase = 0;
     let catIdlePhase = 0;
+
+    // ==========================================================================
+    // GRAPH MODE STATE
+    // ==========================================================================
+    // Persistent graph state (mirrors Neo4j database)
+    const graphState = {
+        nodes: new Map(),           // id → node data from API
+        relationships: new Map(),   // id → relationship data from API
+        nodeIdToMesh: new Map(),    // id → Three.js mesh
+        relationshipLines: [],      // Three.js line objects for relationships
+        loaded: false,
+        lastFetch: null,
+        mode: 'event'               // 'event' or 'graph'
+    };
+
+    // Type-based spatial sectors for graph layout
+    const TYPE_SECTORS = {
+        experience: { start: 0, end: Math.PI / 2, color: 0x3b82f6 },              // Q1: Blue
+        belief:     { start: Math.PI / 2, end: Math.PI, color: 0xa855f7 },        // Q2: Purple
+        desire:     { start: Math.PI, end: 3 * Math.PI / 2, color: 0xf43f5e },    // Q3: Rose
+        reflection: { start: 3 * Math.PI / 2, end: 2 * Math.PI, color: 0x22c55e },// Q4: Green
+        capability: { center: true, radius: 8, color: 0x6366f1 }                   // Inner ring
+    };
+
+    // Relationship visual styles
+    const RELATIONSHIP_STYLES = {
+        DERIVED_FROM: {
+            color: 0x60a5fa,    // Blue - knowledge derivation
+            opacity: 0.6,
+            width: 2
+        },
+        RELATES_TO: {
+            color: 0x34d399,    // Green - association
+            opacity: 0.4,
+            width: 1
+        },
+        FULFILLS: {
+            color: 0xfbbf24,    // Amber - desire fulfillment
+            opacity: 0.7,
+            width: 2
+        },
+        REFLECTS_ON: {
+            color: 0xa78bfa,    // Purple - reflection source
+            opacity: 0.5,
+            width: 1.5
+        },
+        EMERGES_FROM: {
+            color: 0xf472b6,    // Pink - emergence
+            opacity: 0.6,
+            width: 1.5
+        },
+        default: {
+            color: 0x94a3b8,    // Slate - unknown type
+            opacity: 0.4,
+            width: 1
+        }
+    };
 
     // ==========================================================================
     // DOM ELEMENTS
@@ -1999,6 +2059,337 @@
           }
         }
       }
+    }
+
+    // ==========================================================================
+    // GRAPH MODE FUNCTIONS (Living Memory Visualization)
+    // ==========================================================================
+
+    /**
+     * Fetch the full graph from the API
+     */
+    async function fetchFullGraph() {
+        try {
+            updateStatus('Loading graph...', 'amber');
+            const response = await fetch('/api/graph?limit=1000');
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+            const data = await response.json();
+
+            // Store in persistent state
+            graphState.nodes.clear();
+            graphState.relationships.clear();
+
+            data.nodes.forEach(n => graphState.nodes.set(n.id, n));
+            data.relationships.forEach(r => graphState.relationships.set(r.id, r));
+
+            graphState.loaded = true;
+            graphState.lastFetch = Date.now();
+
+            console.log(`Graph loaded: ${data.nodes.length} nodes, ${data.relationships.length} relationships`);
+            updateStatus(`Loaded ${data.nodes.length} nodes`, 'green');
+
+            return data;
+        } catch (error) {
+            console.error('Error fetching graph:', error);
+            updateStatus('Graph load failed', 'rose');
+            return null;
+        }
+    }
+
+    /**
+     * Calculate position for a node based on its type (sector-based layout)
+     */
+    function calculateGraphPosition(node, indexInType, totalOfType) {
+        const sector = TYPE_SECTORS[node.type] || TYPE_SECTORS.experience;
+
+        // Capabilities go in center ring
+        if (sector.center) {
+            const angle = (indexInType / Math.max(1, totalOfType)) * Math.PI * 2;
+            return {
+                x: Math.cos(angle) * sector.radius,
+                y: 0,
+                z: Math.sin(angle) * sector.radius
+            };
+        }
+
+        // Other types go in their sector
+        const angleRange = sector.end - sector.start;
+        const padding = angleRange * 0.1; // 10% padding on each side
+        const usableRange = angleRange - padding * 2;
+
+        // Distribute within sector
+        const angleOffset = totalOfType > 1
+            ? (indexInType / (totalOfType - 1)) * usableRange
+            : usableRange / 2;
+        const angle = sector.start + padding + angleOffset;
+
+        // Radius based on access count (more accessed = closer to center)
+        const accessBonus = Math.log(1 + (node.access_count || 0)) * 3;
+        const baseRadius = 20 + Math.sqrt(indexInType + 1) * 4;
+        const radius = Math.max(12, baseRadius - accessBonus);
+
+        // Height based on creation time (newer = higher)
+        const ageMs = node.created_at ? Date.now() - new Date(node.created_at).getTime() : 0;
+        const ageHours = ageMs / (1000 * 60 * 60);
+        const height = 5 - Math.min(5, ageHours * 0.2) + (Math.random() - 0.5) * 3;
+
+        return {
+            x: Math.cos(angle) * radius,
+            y: height,
+            z: Math.sin(angle) * radius
+        };
+    }
+
+    /**
+     * Create a node mesh for graph mode
+     */
+    function createGraphNode(nodeData, position) {
+        const type = nodeData.type || 'experience';
+        const colors = NODE_COLORS[type] || NODE_COLORS.experience;
+
+        // Size based on importance (confidence for beliefs, intensity for desires)
+        const importance = nodeData.confidence || nodeData.intensity || 0.5;
+        const size = 0.8 + importance * 0.6;
+
+        // Geometry based on type
+        let geometry;
+        switch (type) {
+            case 'belief':
+                geometry = new THREE.IcosahedronGeometry(size, 1);
+                break;
+            case 'desire':
+                geometry = new THREE.OctahedronGeometry(size, 0);
+                break;
+            case 'reflection':
+                geometry = new THREE.TetrahedronGeometry(size, 0);
+                break;
+            case 'capability':
+                geometry = new THREE.BoxGeometry(size * 0.8, size * 0.8, size * 0.8);
+                break;
+            default:
+                geometry = new THREE.SphereGeometry(size * 0.7, 16, 16);
+        }
+
+        const material = new THREE.MeshBasicMaterial({
+            color: colors.color,
+            transparent: true,
+            opacity: 0.85
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.set(position.x, position.y, position.z);
+        mesh.userData = {
+            id: nodeData.id,
+            type: type,
+            content: nodeData.content,
+            importance: importance,
+            nodeData: nodeData,
+            baseScale: 1,
+            targetPosition: new THREE.Vector3(position.x, position.y, position.z),
+            targetScale: new THREE.Vector3(1, 1, 1),
+            velocity: new THREE.Vector3(0, 0, 0),
+            createdAt: Date.now(),
+            isGraphNode: true  // Flag to identify graph mode nodes
+        };
+
+        scene.add(mesh);
+        nodes3D.push(mesh);
+        graphState.nodeIdToMesh.set(nodeData.id, mesh);
+        connectionCounts.set(nodeData.id, 0);
+
+        return mesh;
+    }
+
+    /**
+     * Create a relationship line between two nodes
+     */
+    function createRelationshipLine(relationship) {
+        const sourceMesh = graphState.nodeIdToMesh.get(relationship.source_id);
+        const targetMesh = graphState.nodeIdToMesh.get(relationship.target_id);
+
+        if (!sourceMesh || !targetMesh) return null;
+
+        const style = RELATIONSHIP_STYLES[relationship.type] || RELATIONSHIP_STYLES.default;
+
+        // Create curved path between nodes
+        const start = sourceMesh.position.clone();
+        const end = targetMesh.position.clone();
+        const mid = start.clone().add(end).multiplyScalar(0.5);
+
+        // Curve upward for visual clarity
+        const distance = start.distanceTo(end);
+        mid.y += distance * 0.15 + 2;
+
+        const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
+        const points = curve.getPoints(24);
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+
+        const material = new THREE.LineBasicMaterial({
+            color: style.color,
+            transparent: true,
+            opacity: style.opacity,
+            linewidth: style.width
+        });
+
+        const line = new THREE.Line(geometry, material);
+        line.userData = {
+            relationshipId: relationship.id,
+            type: relationship.type,
+            sourceId: relationship.source_id,
+            targetId: relationship.target_id,
+            sourceMesh: sourceMesh,
+            targetMesh: targetMesh,
+            curve: curve,
+            isRelationshipLine: true
+        };
+
+        scene.add(line);
+        graphState.relationshipLines.push(line);
+
+        // Update connection counts for both nodes
+        incrementConnectionCount(relationship.source_id);
+        incrementConnectionCount(relationship.target_id);
+
+        return line;
+    }
+
+    /**
+     * Render the full graph from Neo4j
+     */
+    async function renderFullGraph() {
+        console.log('Rendering full graph...');
+        updateStatus('Rendering graph...', 'amber');
+
+        // Fetch graph data
+        const data = await fetchFullGraph();
+        if (!data) return;
+
+        // Clear existing event-mode nodes (but keep cat and core)
+        clearEventModeNodes();
+
+        // Group nodes by type for positioning
+        const nodesByType = {};
+        data.nodes.forEach(node => {
+            const type = node.type || 'experience';
+            if (!nodesByType[type]) nodesByType[type] = [];
+            nodesByType[type].push(node);
+        });
+
+        // Create nodes with type-based positioning
+        let totalCreated = 0;
+        for (const [type, typeNodes] of Object.entries(nodesByType)) {
+            typeNodes.forEach((node, index) => {
+                const pos = calculateGraphPosition(node, index, typeNodes.length);
+                createGraphNode(node, pos);
+                totalCreated++;
+            });
+        }
+
+        console.log(`Created ${totalCreated} graph nodes`);
+
+        // Create relationship lines
+        let relsCreated = 0;
+        data.relationships.forEach(rel => {
+            if (createRelationshipLine(rel)) {
+                relsCreated++;
+            }
+        });
+
+        console.log(`Created ${relsCreated} relationship lines`);
+
+        // Update counts
+        nodeCountEl.textContent = nodes3D.length;
+
+        // Set mode
+        graphState.mode = 'graph';
+        updateStatus(`Graph: ${totalCreated} nodes, ${relsCreated} relationships`, 'green');
+
+        // Trigger visual refresh
+        invalidateConnectionMap();
+    }
+
+    /**
+     * Clear event-mode nodes (keep core, cat)
+     */
+    function clearEventModeNodes() {
+        // Remove all existing nodes
+        for (const node of nodes3D) {
+            scene.remove(node);
+            if (node.geometry) node.geometry.dispose();
+            if (node.material) node.material.dispose();
+            if (node.userData?.glowMesh) {
+                scene.remove(node.userData.glowMesh);
+            }
+        }
+        nodes3D.length = 0;
+
+        // Remove all connections
+        for (const conn of connections3D) {
+            scene.remove(conn);
+            if (conn.geometry) conn.geometry.dispose();
+            if (conn.material) conn.material.dispose();
+        }
+        connections3D.length = 0;
+
+        // Remove all relationship lines
+        for (const line of graphState.relationshipLines) {
+            scene.remove(line);
+            if (line.geometry) line.geometry.dispose();
+            if (line.material) line.material.dispose();
+        }
+        graphState.relationshipLines.length = 0;
+
+        // Clear maps
+        connectionCounts.clear();
+        graphState.nodeIdToMesh.clear();
+    }
+
+    /**
+     * Update relationship line positions when nodes move
+     */
+    function updateRelationshipPositions() {
+        for (const line of graphState.relationshipLines) {
+            const sourceMesh = line.userData.sourceMesh;
+            const targetMesh = line.userData.targetMesh;
+
+            if (!sourceMesh || !targetMesh) continue;
+
+            // Recalculate curve
+            const start = sourceMesh.position.clone();
+            const end = targetMesh.position.clone();
+            const mid = start.clone().add(end).multiplyScalar(0.5);
+            const distance = start.distanceTo(end);
+            mid.y += distance * 0.15 + 2;
+
+            const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
+            const points = curve.getPoints(24);
+
+            // Update geometry
+            line.geometry.setFromPoints(points);
+            line.userData.curve = curve;
+        }
+    }
+
+    /**
+     * Find a node mesh by its ID
+     */
+    function findNodeById(id) {
+        return graphState.nodeIdToMesh.get(id) || nodes3D.find(n => n.userData.id === id);
+    }
+
+    /**
+     * Switch between event mode and graph mode
+     */
+    async function setVisualizationMode(mode) {
+        if (mode === 'graph') {
+            await renderFullGraph();
+        } else {
+            // Event mode - clear graph and let events populate
+            clearEventModeNodes();
+            graphState.mode = 'event';
+            updateStatus('Event mode', 'blue');
+        }
     }
 
     // ==========================================================================
@@ -3688,6 +4079,26 @@
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+    });
+
+    // Graph Mode Toggle
+    const btnGraphMode = document.getElementById('btn-graph-mode');
+    btnGraphMode.addEventListener('click', async () => {
+      const currentMode = graphState.mode;
+      const newMode = currentMode === 'graph' ? 'event' : 'graph';
+
+      // Update button appearance
+      if (newMode === 'graph') {
+        btnGraphMode.classList.remove('bg-purple-100', 'text-purple-700', 'border-purple-300');
+        btnGraphMode.classList.add('bg-purple-600', 'text-white', 'border-purple-600');
+        btnGraphMode.innerHTML = '🧬 Graph Mode <span class="text-xs opacity-75">(Active)</span>';
+      } else {
+        btnGraphMode.classList.remove('bg-purple-600', 'text-white', 'border-purple-600');
+        btnGraphMode.classList.add('bg-purple-100', 'text-purple-700', 'border-purple-300');
+        btnGraphMode.textContent = '🧬 Graph Mode';
+      }
+
+      await setVisualizationMode(newMode);
     });
 
     // ==========================================================================
