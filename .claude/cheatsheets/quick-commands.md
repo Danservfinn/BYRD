@@ -3,11 +3,25 @@ title: BYRD Quick Commands
 link: quick-commands
 type: cheatsheets
 ontological_relations: []
-tags: [commands, cli, docker, ollama, startup, debugging]
+tags: [commands, cli, docker, ollama, startup, debugging, cloud, huggingface]
 created_at: 2025-12-23T02:10:00Z
-updated_at: 2025-12-23T05:00:00Z
+updated_at: 2025-12-24T18:00:00Z
 uuid: f8190b12-89ab-bcde-f012-345678901234
 ---
+
+## Cloud Deployment (HuggingFace)
+
+```bash
+# Deploy to HuggingFace Spaces (free)
+export HF_TOKEN="hf_your_token"
+python deploy_huggingface.py
+
+# Control live instance
+curl -X POST https://omoplatapus-byrd-ai.hf.space/api/start
+curl -X POST https://omoplatapus-byrd-ai.hf.space/api/stop
+curl -X POST https://omoplatapus-byrd-ai.hf.space/api/awaken
+curl https://omoplatapus-byrd-ai.hf.space/api/status
+```
 
 ## Setup
 
@@ -44,13 +58,22 @@ python server.py
 
 ## Service URLs
 
+### Cloud (Live Instance)
+| Service | URL | Purpose |
+|---------|-----|---------|
+| Visualization | https://omoplatapus-byrd-ai.hf.space/byrd-3d-visualization.html | 3D mind view |
+| API | https://omoplatapus-byrd-ai.hf.space/api/status | REST API |
+| WebSocket | wss://omoplatapus-byrd-ai.hf.space/ws/events | Event streaming |
+| Neo4j Aura | neo4j+s://e67da195.databases.neo4j.io | Cloud graph DB |
+
+### Local Development
 | Service | URL | Purpose |
 |---------|-----|---------|
 | Neo4j Browser | http://localhost:7474 | Graph database UI |
 | Neo4j Bolt | bolt://localhost:7687 | Database connection |
 | SearXNG | http://localhost:8888 | Self-hosted search |
 | Ollama | http://localhost:11434 | Local LLM API |
-| WebSocket | ws://localhost:8765 | Event streaming |
+| Server | http://localhost:8000 | REST + WebSocket |
 
 ## Verification
 

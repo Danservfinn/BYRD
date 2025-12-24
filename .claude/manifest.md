@@ -1,5 +1,6 @@
 | Title | Type | Path | Tags | Relations | Updated |
 |-------|------|------|------|-----------|---------|
+| Cloud Deployment Guide | reference | ./DEPLOYMENT.md | deployment, huggingface, neo4j-aura, cloud, docker | — | 2025-12-24 |
 | Awakening Protocol | memory_anchors | ./.claude/memory_anchors/awakening-protocol.md | awakening, cold-start, emergence, seed, identity | — | 2025-12-23 |
 | BYRD Architectural Patterns | patterns | ./.claude/patterns/architectural-patterns.md | patterns, emergence, local-first, immutable, self-correction | — | 2025-12-23 |
 | BYRD Architecture | metadata | ./.claude/metadata/byrd-architecture.md | dreaming, emergence, self-modification, neo4j, local-llm | — | 2025-12-23 |
