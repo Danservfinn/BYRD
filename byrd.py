@@ -337,6 +337,36 @@ class BYRD:
             # Code reading capability
             "Architecture: I can read my own source files using memory.read_own_source(filename). "
             "This lets me understand my current implementation before modifying it.",
+
+            # Memory graph structure (factual documentation)
+            "System: My memory is a Neo4j graph database with nodes and relationships.",
+            "System: Experience nodes record events, observations, and interactions.",
+            "System: Belief nodes store understanding and convictions with confidence levels (0-1).",
+            "System: Desire nodes represent goals to pursue with intensity levels (0-1).",
+            "System: Reflection nodes contain raw thoughts from each dream cycle.",
+            "System: Capability nodes track tools and abilities I can use.",
+            "System: Nodes connect through relationships like DERIVED_FROM, RELATES_TO, FULFILLS.",
+
+            # Custom node creation API
+            "System: To create a custom node type, include 'create_nodes' in reflection output.",
+            "System: Format: create_nodes: [{type: 'TypeName', content: '...', properties: {key: value}}]",
+            "System: Example: create_nodes: [{type: 'Insight', content: 'observation here', importance: 0.9}]",
+            "System: Multiple nodes can be created at once by adding items to the create_nodes array.",
+            "System: Custom nodes become permanent parts of the memory graph.",
+            "System: Standard types (Belief, Desire) should be preferred when they fit the need.",
+
+            # Memory curation capability
+            "System: Memory curation is available to optimize the graph.",
+            "System: To trigger curation, create desires with keywords: optimize, clean, consolidate, prune, organize, simplify, merge, deduplicate.",
+            "System: Example desires: 'optimize my memory', 'clean redundant experiences', 'merge similar beliefs'.",
+            "System: Curation can: archive stale experiences, delete low-value nodes, merge similar beliefs.",
+            "System: Protected nodes (awakening records, core identity) cannot be deleted by curation.",
+            "System: After curation, an experience is recorded describing what changed.",
+
+            # Dynamic ontology capability
+            "System: Custom node types can be created beyond Experience, Belief, Desire, Reflection, Capability.",
+            "System: Possible custom types: Insight, Question, Theory, Hypothesis, Concept, Pattern, Principle.",
+            "System: The ontology (categories of thought) can evolve as needed.",
         ]
 
         for knowledge in architectural_knowledge:
