@@ -1049,10 +1049,10 @@
     const WS_URL = 'ws://localhost:8000/ws/events';
 
     const NODE_COLORS = {
-      belief: { color: 0xd97706, emissive: 0xfbbf24, label: 'Belief' },       // Dark amber
+      belief: { color: 0x3b82f6, emissive: 0x60a5fa, label: 'Belief' },       // Blue - convictions
       desire: { color: 0xbe123c, emissive: 0xf43f5e, label: 'Desire' },       // Dark rose
       ego: { color: 0xec4899, emissive: 0xf472b6, label: 'Ego' },             // Pink (living identity)
-      experience: { color: 0x0369a1, emissive: 0x38bdf8, label: 'Experience' }, // Dark sky blue
+      experience: { color: 0x0ea5e9, emissive: 0x38bdf8, label: 'Experience' }, // Sky blue - memory crystals
       capability: { color: 0x6d28d9, emissive: 0xa855f7, label: 'Capability' }, // Dark violet
       reflection: { color: 0x047857, emissive: 0x34d399, label: 'Reflection' }, // Dark emerald
       awakening: { color: 0xf59e0b, emissive: 0xfcd34d, label: 'Awakening' },  // Golden amber - consciousness
@@ -2943,8 +2943,8 @@
 
     /**
      * Create a node mesh for graph mode.
-     * EMERGENT STRUCTURE: All nodes start as uniform spheres.
-     * Size scales dynamically based on connection count (updated after relationships load).
+     * EMERGENT STRUCTURE: Size scales dynamically based on connection count.
+     * Experience nodes (memories) use crystal geometry; all others use spheres.
      * Color indicates type for visual identity; structure emerges from connections.
      */
     function createGraphNode(nodeData, position) {
@@ -2970,9 +2970,16 @@
         const heatBonus = getHeatIntensity(accessCount) * 0.3;
         const size = baseSize + heatBonus;
 
-        // EMERGENT GEOMETRY: All nodes use sphere (uniform shape)
-        // Differentiation comes from color (type) and size (connections)
-        const geometry = new THREE.SphereGeometry(size, 12, 12);
+        // GEOMETRY: Experience nodes (memories) use crystal shape; others use spheres
+        const typeLower = type.toLowerCase();
+        let geometry;
+        if (typeLower === 'experience') {
+            // Memory crystals - octahedron for crystalline appearance
+            geometry = new THREE.OctahedronGeometry(size * 1.2, 0);
+        } else {
+            // All other types use spheres (beliefs, desires, reflections, etc.)
+            geometry = new THREE.SphereGeometry(size, 12, 12);
+        }
 
         // Color indicates type for visual identity
         const nodeColor = new THREE.Color(colors.color);
