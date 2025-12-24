@@ -231,7 +231,7 @@
     /* Rising Consciousness - Inner Voice Bubbles */
     .thought-bubble-container {
       position: fixed;
-      bottom: 120px;
+      top: 120px;
       left: 50%;
       transform: translateX(-50%);
       width: 100%;
@@ -239,7 +239,7 @@
       pointer-events: none;
       z-index: 500;
       display: flex;
-      flex-direction: column-reverse;
+      flex-direction: column;
       align-items: center;
       gap: 12px;
     }
@@ -416,7 +416,10 @@
       <div class="text-[10px] font-mono text-slate-700 tracking-wider">3D MIND SPACE</div>
       <div id="mode-indicator" class="px-2 py-1 rounded text-xs font-mono bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">ORBIT</div>
     </div>
-    <div id="llm-indicator" class="mt-2 px-2 py-1 rounded text-[10px] font-mono bg-slate-100 border border-slate-300 text-slate-500">
+    <div id="ego-indicator" class="mt-2 px-2 py-1 rounded text-[10px] font-mono bg-purple-100 border border-purple-300 text-purple-700">
+      <span class="text-purple-500">EGO:</span> <span id="ego-name-text">loading...</span>
+    </div>
+    <div id="llm-indicator" class="mt-1 px-2 py-1 rounded text-[10px] font-mono bg-slate-100 border border-slate-300 text-slate-500">
       <span class="text-slate-400">LLM:</span> <span id="llm-model-text">loading...</span>
     </div>
     <!-- Link to Cat Ego Visualizer -->
@@ -459,9 +462,8 @@
     </div>
   </div>
 
-  <!-- UI Overlay: Bottom Center - Status -->
-  <!-- Status bar - positioned higher to avoid overlap -->
-  <div class="ui-overlay bottom-32 left-1/2 -translate-x-1/2 w-full max-w-3xl px-8">
+  <!-- UI Overlay: Top Center - Status (thought bubble) -->
+  <div class="ui-overlay top-16 left-1/2 -translate-x-1/2 w-full max-w-3xl px-8">
     <div class="status-container text-center bg-white/80 backdrop-blur-sm rounded-lg px-6 py-3 border border-slate-200 shadow-lg">
       <div class="flex items-start justify-center gap-2">
         <div id="status-dot" class="w-2 h-2 rounded-full bg-slate-400 mt-1.5 flex-shrink-0"></div>
@@ -479,6 +481,9 @@
       <span class="text-purple-600">Reflect: <span id="reflection-count">0</span></span>
       <span class="text-sky-600">Exp: <span id="exp-count">0</span></span>
       <span class="text-slate-400">Nodes: <span id="node-count">0</span></span>
+      <span class="text-indigo-600">Dreams: <span id="dream-count">0</span></span>
+      <span class="text-teal-600">Seeks: <span id="seek-count">0</span></span>
+      <span class="text-orange-600">Mutations: <span id="mutation-count">0</span></span>
       <span id="custom-types-container" class="contents"></span>
     </div>
 
@@ -494,26 +499,12 @@
         🧬 Graph
       </button>
 
-      <!-- More Options Dropdown -->
-      <div class="relative">
-        <button id="btn-more" class="px-3 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-all" onclick="toggleMoreMenu()">
-          ⋯
-        </button>
-        <div id="more-menu" class="hidden absolute bottom-full mb-2 right-0 bg-white/95 border border-slate-200 rounded-lg shadow-lg py-1 min-w-[160px]">
-          <button class="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100" onclick="showStatusModal(); toggleMoreMenu();">
-            🧠 What's BYRD doing?
-          </button>
-          <button class="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100" onclick="showGenesisModal(); toggleMoreMenu();">
-            🧬 Genesis
-          </button>
-          <div class="border-t border-slate-200 my-1"></div>
-          <div class="px-3 py-2 text-xs text-slate-500">
-            <div class="flex justify-between"><span>Dreams</span><span id="dream-count">0</span></div>
-            <div class="flex justify-between"><span>Seeks</span><span id="seek-count">0</span></div>
-            <div class="flex justify-between"><span>Mutations</span><span id="mutation-count">0</span></div>
-          </div>
-        </div>
-      </div>
+      <button id="btn-status" class="px-3 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-all" onclick="showStatusModal();">
+        🧠 Status
+      </button>
+      <button id="btn-genesis" class="px-3 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-all" onclick="showGenesisModal();">
+        🧬 Genesis
+      </button>
 
       <!-- Quantum Indicator -->
       <div id="quantum-indicator" class="hidden flex items-center gap-1 px-2 py-2 bg-violet-50 border border-violet-200 rounded-lg text-xs font-mono">
@@ -2976,12 +2967,14 @@
         const type = nodeData.type || 'experience';
         const colors = NODE_COLORS[type] || NODE_COLORS.experience;
         const accessCount = nodeData.access_count || 0;
+        const isExperience = type === 'experience' || type === 'Experience';
 
         // Size based on importance (confidence for beliefs, intensity for desires)
-        // Plus bonus size for frequently accessed nodes
+        // Experiences are much smaller - they're just connection endpoints
         const importance = nodeData.confidence || nodeData.intensity || 0.5;
-        const heatBonus = getHeatIntensity(accessCount) * 0.4;  // Up to 40% larger
-        const size = 0.8 + importance * 0.6 + heatBonus;
+        const heatBonus = getHeatIntensity(accessCount) * 0.4;
+        const baseSize = isExperience ? 0.15 : (0.8 + importance * 0.6 + heatBonus);
+        const size = baseSize;
 
         // Geometry based on type
         let geometry;
@@ -2999,16 +2992,19 @@
                 geometry = new THREE.BoxGeometry(size * 0.8, size * 0.8, size * 0.8);
                 break;
             default:
-                geometry = new THREE.SphereGeometry(size * 0.7, 16, 16);
+                // Experiences are tiny dots
+                geometry = new THREE.SphereGeometry(size, 8, 8);
         }
 
         // Calculate heat color based on access count
         const heatColor = calculateHeatColor(accessCount, colors.color);
 
+        // Experiences are more transparent
+        const baseOpacity = isExperience ? 0.3 : 0.85;
         const material = new THREE.MeshBasicMaterial({
             color: heatColor,
             transparent: true,
-            opacity: 0.85 + getHeatIntensity(accessCount) * 0.15  // More opaque when hot
+            opacity: baseOpacity + getHeatIntensity(accessCount) * 0.15
         });
 
         const mesh = new THREE.Mesh(geometry, material);
@@ -3123,9 +3119,6 @@
                 absorbedCount++;
                 return;
             }
-
-            // Skip regular experience nodes (keep absorbed check above for logging)
-            if (type === 'experience' || type === 'Experience') return;
 
             // Deduplicate by ID
             if (seenIds.has(node.id)) return;
@@ -4221,6 +4214,12 @@
           llmModelText.textContent = `${data.llm_provider}/${data.llm_model}`;
         }
 
+        // Update ego display
+        const egoNameText = document.getElementById('ego-name-text');
+        if (egoNameText && data.ego) {
+          egoNameText.textContent = `${data.ego.name} (${data.ego.archetype})`;
+        }
+
       } catch (e) {
         console.error('Failed to fetch status:', e);
       }
@@ -4979,24 +4978,6 @@
     // Close modal on backdrop click
     document.getElementById('event-modal')?.addEventListener('click', (e) => {
       if (e.target.id === 'event-modal') closeEventModal();
-    });
-
-    // ==========================================================================
-    // MORE MENU DROPDOWN
-    // ==========================================================================
-
-    function toggleMoreMenu() {
-      const menu = document.getElementById('more-menu');
-      menu.classList.toggle('hidden');
-    }
-
-    // Close menu when clicking outside
-    document.addEventListener('click', (e) => {
-      const menu = document.getElementById('more-menu');
-      const btn = document.getElementById('btn-more');
-      if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
-        menu.classList.add('hidden');
-      }
     });
 
     // ==========================================================================
@@ -5787,8 +5768,11 @@
         if (data.relationships) {
           const visibleNodeIds = new Set(filteredNodes.map(n => n.id));
           data.relationships.forEach(rel => {
+            // Backend returns source_id/target_id
+            const sourceId = rel.source_id;
+            const targetId = rel.target_id;
             // Only create relationships where both nodes are visible
-            if (visibleNodeIds.has(rel.source) && visibleNodeIds.has(rel.target)) {
+            if (visibleNodeIds.has(sourceId) && visibleNodeIds.has(targetId)) {
               if (createRelationshipLine(rel)) {
                 relsCreated++;
               }
