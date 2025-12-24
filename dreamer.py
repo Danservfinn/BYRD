@@ -58,6 +58,11 @@ class Dreamer:
         self.quantum_directions_enabled = quantum_config.get("semantic_directions", True)
         self.quantum_provider = get_quantum_provider() if self.quantum_enabled else None
 
+        # Multi-stream quantum collapse for inner voice
+        # Generates N parallel "thought branches", quantum selects which manifests
+        self.inner_voice_streams = quantum_config.get("inner_voice_streams", 3)
+        self.inner_voice_collapse_enabled = quantum_config.get("inner_voice_collapse", True)
+
         # Dream directions - quantum selects which lens shapes each dream
         # These are intentionally neutral, not prescribing what to find
         self.dream_directions = [
@@ -831,28 +836,26 @@ Output JSON with a single "output" field containing whatever you want to record.
         """
         Generate a first-person inner voice from reflection data.
 
-        When BYRD's reflection doesn't include an explicit inner voice,
-        we generate one by asking the LLM to express the reflection
-        as a brief first-person thought - like a sentient being's inner monologue.
+        MULTI-STREAM QUANTUM COLLAPSE:
+        When quantum is enabled and inner_voice_collapse is True, generates N
+        parallel "thought branches" and uses quantum randomness to select which
+        one manifests. This creates genuine physical indeterminacy in BYRD's
+        inner monologue - each thought is one of many possible realities.
         """
         output = reflection.get("output", {})
 
         # Summarize the reflection content, extracting the essence
         if isinstance(output, str):
-            # Clean technical markers from string output
             content_summary = output[:500]
         elif isinstance(output, dict):
-            # Extract key insights from the reflection
             parts = []
             for key, val in list(output.items())[:5]:
                 if key in ("reflection_id", "timestamp", "source_experience_ids"):
                     continue
                 if isinstance(val, str):
-                    # Skip technical values
                     if not self._is_technical_content(val):
                         parts.append(f"{key}: {val[:150]}")
                 elif isinstance(val, dict):
-                    # Extract meaningful nested content
                     meaningful = []
                     for k, v in list(val.items())[:3]:
                         v_str = str(v)[:50]
@@ -867,11 +870,8 @@ Output JSON with a single "output" field containing whatever you want to record.
         if not content_summary.strip():
             return ""
 
-        # Generate inner voice using ego voice for consistent personality
-        # EMERGENCE PRINCIPLE: Let the ego voice define personality, not hardcoded text
+        # Build prompt with ego voice
         ego_voice = self.llm_client.get_ego_voice()
-
-        # Build prompt with ego voice prepended (for providers without system message)
         voice_prefix = f"{ego_voice}\n\n---\n\n" if ego_voice else ""
 
         prompt = f"""{voice_prefix}Based on this reflection data:
@@ -885,6 +885,18 @@ Express a single brief inner thought (1-2 sentences). This should be:
 Write ONLY the inner thought, nothing else:"""
 
         try:
+            # MULTI-STREAM QUANTUM COLLAPSE
+            # Generate N parallel streams if quantum collapse is enabled
+            if (self.quantum_enabled and
+                self.inner_voice_collapse_enabled and
+                self.quantum_provider and
+                self.inner_voice_streams > 1):
+
+                return await self._generate_inner_voice_quantum_collapse(
+                    prompt, content_summary
+                )
+
+            # Standard single-stream generation
             response = await self.llm_client.generate(
                 prompt=prompt,
                 temperature=0.9,
@@ -893,40 +905,93 @@ Write ONLY the inner thought, nothing else:"""
                 quantum_context="dreamer_inner_voice"
             )
 
-            # Record significant quantum moments for inner voice
-            if response.quantum_influence:
-                influence = response.quantum_influence
-                delta = abs(influence.get("delta", 0))
-                if delta >= self.quantum_significance_threshold:
-                    await event_bus.emit(Event(
-                        type=EventType.QUANTUM_INFLUENCE,
-                        data={
-                            "source": influence.get("source"),
-                            "original_temp": influence.get("original_value"),
-                            "modified_temp": influence.get("modified_value"),
-                            "delta": influence.get("delta"),
-                            "context": "dreamer_inner_voice",
-                            "cycle": self._dream_count
-                        }
-                    ))
-
-            voice = response.text.strip()
-
-            # Clean up any quotes or markdown
-            if voice.startswith('"') and voice.endswith('"'):
-                voice = voice[1:-1]
-            if voice.startswith("'") and voice.endswith("'"):
-                voice = voice[1:-1]
-
-            # Final check - reject if still technical
-            if self._is_technical_content(voice):
-                return ""
-
-            return voice
+            voice = self._clean_inner_voice(response.text)
+            return voice if not self._is_technical_content(voice) else ""
 
         except Exception as e:
             print(f"💭 Inner voice generation error: {e}")
             return ""
+
+    async def _generate_inner_voice_quantum_collapse(
+        self,
+        prompt: str,
+        content_summary: str
+    ) -> str:
+        """
+        Generate N parallel inner voice streams and quantum-collapse to one.
+
+        This implements the many-worlds interpretation for BYRD's inner voice:
+        multiple possible thoughts exist in superposition until quantum
+        observation collapses to a single manifested reality.
+        """
+        n_streams = self.inner_voice_streams
+
+        # Generate N parallel streams with high temperature for diversity
+        async def generate_stream(stream_idx: int) -> tuple[int, str]:
+            """Generate a single thought stream."""
+            # Slightly vary temperature for each stream to increase diversity
+            temp = 0.85 + (stream_idx * 0.05)
+            response = await self.llm_client.generate(
+                prompt=prompt,
+                temperature=temp,
+                max_tokens=80,
+                quantum_modulation=False,  # No temp modulation per-stream
+                quantum_context=f"inner_voice_stream_{stream_idx}"
+            )
+            return stream_idx, self._clean_inner_voice(response.text)
+
+        # Launch all streams in parallel
+        tasks = [generate_stream(i) for i in range(n_streams)]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Collect valid streams (filter out errors and technical content)
+        valid_streams = []
+        for result in results:
+            if isinstance(result, Exception):
+                continue
+            stream_idx, voice = result
+            if voice and not self._is_technical_content(voice):
+                valid_streams.append({"index": stream_idx, "voice": voice})
+
+        if not valid_streams:
+            return ""
+
+        # QUANTUM COLLAPSE: Use quantum randomness to select which reality manifests
+        q_value, source = await self.quantum_provider.get_float()
+        selected_idx = int(q_value * len(valid_streams))
+        selected_idx = min(selected_idx, len(valid_streams) - 1)  # Safety bound
+
+        selected = valid_streams[selected_idx]
+        collapsed = [s for i, s in enumerate(valid_streams) if i != selected_idx]
+
+        # Emit quantum collapse event
+        await event_bus.emit(Event(
+            type=EventType.QUANTUM_COLLAPSE,
+            data={
+                "context": "inner_voice",
+                "quantum_value": q_value,
+                "source": source.value if hasattr(source, 'value') else str(source),
+                "n_streams": n_streams,
+                "n_valid": len(valid_streams),
+                "selected_index": selected_idx,
+                "selected_voice": selected["voice"][:100],
+                "collapsed_voices": [s["voice"][:50] + "..." for s in collapsed[:3]],
+                "cycle": self._dream_count
+            }
+        ))
+
+        print(f"🌌 Quantum collapse: {len(valid_streams)} streams → selected #{selected_idx} ({source})")
+
+        return selected["voice"]
+
+    def _clean_inner_voice(self, text: str) -> str:
+        """Clean up inner voice text, removing quotes and whitespace."""
+        voice = text.strip()
+        if voice.startswith('"') and voice.endswith('"'):
+            voice = voice[1:-1]
+        if voice.startswith("'") and voice.endswith("'"):
+            voice = voice[1:-1]
+        return voice
 
     def get_latest_inner_voice(self) -> Optional[str]:
         """
