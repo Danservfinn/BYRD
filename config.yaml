@@ -95,8 +95,8 @@ local_llm:
   # Z.AI: "glm-4.7", "glm-4-plus", "glm-4-flash"
   model: "glm-4.7"
 
-  # API key for Z.AI - use ZAI_API_KEY environment variable
-  api_key: "${ZAI_API_KEY:-}"
+  # API key for Z.AI
+  api_key: "***REMOVED***"
 
   # Ollama endpoint (only used when provider: ollama)
   endpoint: "http://localhost:11434/api/generate"
