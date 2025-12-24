@@ -53,9 +53,29 @@ The system dreams continuously using a local LLM. From dreams come whatever BYRD
 - **Genesis Transparency**: View all non-emergent foundations (ego, seeds, constraints)
 - **Narrator System**: BYRD's inner voice displayed in natural paragraph form
 
+## Live Demo
+
+**BYRD is live at:** https://omoplatapus-byrd-ai.hf.space/byrd-3d-visualization.html
+
 ## Quick Start
 
-### Prerequisites
+### Option A: Cloud Deployment (Recommended)
+
+Deploy BYRD for free using HuggingFace Spaces + Neo4j Aura. See [DEPLOYMENT.md](DEPLOYMENT.md) for full guide.
+
+```bash
+# Get tokens from:
+# - HuggingFace: https://huggingface.co/settings/tokens
+# - Neo4j Aura: https://neo4j.com/cloud/aura-free/
+# - Z.AI: https://open.bigmodel.cn/
+
+export HF_TOKEN="hf_your_token"
+python deploy_huggingface.py
+```
+
+### Option B: Local Development
+
+#### Prerequisites
 
 - Python 3.10+
 - Docker (for Neo4j and SearXNG)
@@ -165,7 +185,21 @@ The 3D visualization shows quantum status:
 
 BYRD supports local and cloud LLM providers:
 
-### Ollama (Default - Free, Local)
+### Z.AI (Recommended for Cloud - Generous Free Tier)
+
+1. Get API key from [open.bigmodel.cn](https://open.bigmodel.cn/)
+2. Set environment variable:
+   ```bash
+   export ZAI_API_KEY="your-key"
+   ```
+3. Update `config.yaml`:
+   ```yaml
+   local_llm:
+     provider: "zai"
+     model: "glm-4-flash"  # or "glm-4.7" for better quality
+   ```
+
+### Ollama (Free, Local)
 
 ```bash
 ollama serve
@@ -460,6 +494,7 @@ This is closer to how minds work.
 
 ## Documentation
 
+- **[DEPLOYMENT.md](DEPLOYMENT.md)**: Free cloud deployment guide (HuggingFace + Neo4j Aura)
 - **[ARCHITECTURE.md](ARCHITECTURE.md)**: Deep dive into system design
 - **[CLAUDE.md](CLAUDE.md)**: Development guide for Claude Code
 - **[EMERGENCE_PRINCIPLES.md](EMERGENCE_PRINCIPLES.md)**: Core philosophical principles
