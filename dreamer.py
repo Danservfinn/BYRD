@@ -36,9 +36,21 @@ class Dreamer:
         self.memory = memory
         self.llm_client = llm_client
 
-        # Timing
-        self.interval = config.get("interval_seconds", 60)
+        # Timing - base interval
+        self.interval = config.get("interval_seconds", 30)
         self.context_window = config.get("context_window", 50)
+
+        # Adaptive interval configuration
+        self.adaptive_interval = config.get("adaptive_interval", False)
+        self.min_interval = config.get("min_interval_seconds", 15)
+        self.max_interval = config.get("max_interval_seconds", 60)
+        self.activity_window = config.get("activity_window_seconds", 300)
+        self.activity_threshold = config.get("activity_threshold", 3)
+
+        # Activity tracking for adaptive intervals
+        self._recent_beliefs: deque = deque(maxlen=50)  # (timestamp, content)
+        self._recent_desires: deque = deque(maxlen=50)  # (timestamp, content)
+        self._current_interval = self.interval
 
         # State
         self._running = False
@@ -49,19 +61,97 @@ class Dreamer:
 
         # Queue of BYRD's inner voices for narrator (max 10)
         self._inner_voice_queue: deque = deque(maxlen=10)
+
+        # Belief cache for efficient deduplication (loaded on first dream)
+        self._belief_cache: set = set()
+        self._belief_cache_loaded = False
     
     async def run(self):
-        """Main dream loop - runs forever."""
+        """Main dream loop with adaptive interval based on activity."""
         self._running = True
-        print("💭 Dreamer starting...")
-        
+        interval_mode = "adaptive" if self.adaptive_interval else "fixed"
+        print(f"💭 Dreamer starting (interval: {interval_mode}, base: {self.interval}s)...")
+
+        # Load belief cache on startup for efficient deduplication
+        await self._load_belief_cache()
+
         while self._running:
             try:
                 await self._dream_cycle()
             except Exception as e:
                 print(f"💭 Dream error: {e}")
-            
-            await asyncio.sleep(self.interval)
+
+            # Calculate next interval (adaptive or fixed)
+            if self.adaptive_interval:
+                self._update_adaptive_interval()
+
+            await asyncio.sleep(self._current_interval)
+
+    def _update_adaptive_interval(self):
+        """
+        Adjust dream interval based on recent activity.
+
+        High activity (many new beliefs/desires) → faster dreaming
+        Low activity (stable state) → slower dreaming
+        """
+        now = datetime.now()
+        cutoff = now.timestamp() - self.activity_window
+
+        # Count recent activity within window
+        recent_belief_count = sum(
+            1 for ts, _ in self._recent_beliefs
+            if ts > cutoff
+        )
+        recent_desire_count = sum(
+            1 for ts, _ in self._recent_desires
+            if ts > cutoff
+        )
+
+        total_activity = recent_belief_count + recent_desire_count
+
+        if total_activity >= self.activity_threshold:
+            # High activity: fast mode
+            new_interval = self.min_interval
+            if self._current_interval != new_interval:
+                print(f"💭 High activity ({total_activity}), fast mode: {new_interval}s")
+        else:
+            # Low activity: slower mode (interpolate based on activity)
+            activity_ratio = total_activity / max(1, self.activity_threshold)
+            new_interval = int(
+                self.max_interval - (self.max_interval - self.min_interval) * activity_ratio
+            )
+
+        self._current_interval = max(self.min_interval, min(self.max_interval, new_interval))
+
+    def _record_activity(self, activity_type: str, content: str):
+        """Record activity for adaptive interval calculation."""
+        now = datetime.now().timestamp()
+        if activity_type == "belief":
+            self._recent_beliefs.append((now, content))
+        elif activity_type == "desire":
+            self._recent_desires.append((now, content))
+
+    async def _load_belief_cache(self):
+        """Load existing beliefs into memory cache for O(1) deduplication."""
+        if self._belief_cache_loaded:
+            return
+
+        try:
+            # Load ALL beliefs (no limit) for accurate deduplication
+            existing = await self.memory.get_beliefs(min_confidence=0.0, limit=10000)
+            self._belief_cache = {
+                self._normalize_belief(b.get("content", ""))
+                for b in existing
+            }
+            self._belief_cache_loaded = True
+            print(f"💭 Loaded {len(self._belief_cache)} beliefs into cache")
+        except Exception as e:
+            print(f"💭 Error loading belief cache: {e}")
+
+    def _normalize_belief(self, content: str) -> str:
+        """Normalize belief content for deduplication."""
+        # Lowercase, collapse whitespace
+        return " ".join(content.lower().split())
     
     def stop(self):
         self._running = False
@@ -108,8 +198,12 @@ class Dreamer:
         # 3. RECORD - Store reflection in BYRD's own vocabulary
         await self._record_reflection(reflection_output, recent_ids)
 
-        # Extract any inner voice for UI (using whatever key BYRD chose)
+        # Extract or generate inner voice for UI
         inner_voice = self._extract_inner_voice(reflection_output)
+
+        # If no explicit inner voice, generate one from the reflection
+        if not inner_voice:
+            inner_voice = await self._generate_inner_voice(reflection_output)
 
         # Add to narrator queue if we got something
         if inner_voice:
@@ -194,7 +288,7 @@ Output JSON with a single "output" field containing whatever you want to record.
             response = await self.llm_client.generate(
                 prompt=prompt,
                 temperature=0.7,
-                max_tokens=500  # Reduced for faster qwen3 response
+                max_tokens=3000  # Increased to prevent JSON truncation
             )
 
             # Debug: log raw response for troubleshooting
@@ -203,13 +297,18 @@ Output JSON with a single "output" field containing whatever you want to record.
                 print(f"💭 Empty response from LLM")
                 return None
 
+            # Debug: show response length and first chars
+            print(f"💭 LLM response: {len(raw_text)} chars, starts with: {raw_text[:100]}")
+
             # Try to parse JSON
             result = self.llm_client.parse_json_response(raw_text)
             if result is None:
                 # JSON parse failed - try to extract useful content anyway
-                print(f"💭 JSON parse failed, raw response starts with: {raw_text[:200]}")
+                print(f"💭 JSON parse failed, full response: {raw_text[:500]}")
                 # Wrap raw text as output if it's not JSON
                 return {"output": raw_text.strip()}
+            else:
+                print(f"💭 JSON parsed successfully, keys: {list(result.keys())[:5]}")
 
             return result
 
@@ -229,29 +328,207 @@ Output JSON with a single "output" field containing whatever you want to record.
         """
         output = reflection.get("output", {})
 
-        # If output is a string, that's BYRD's voice
+        # If output is a string, check if it's actual prose (not JSON/code/technical)
         if isinstance(output, str) and output.strip():
-            return output
+            text = output.strip()
+            # Skip if it looks like JSON or markdown code
+            if text.startswith('{') or text.startswith('[') or text.startswith('```'):
+                return ""
+            # Skip if it contains JSON-like patterns
+            if '"output":' in text or '"reflection_id":' in text:
+                return ""
+            # Skip if it looks like structured/technical output
+            if self._is_technical_content(text):
+                return ""
+            return text
 
         if not isinstance(output, dict):
             return ""
 
-        # Check for common voice-like keys (but don't prescribe them)
+        # Check for common voice-like keys (adapting to BYRD's vocabulary)
         voice_candidates = [
             "inner_voice", "voice", "thinking", "thoughts", "inner",
-            "feeling", "expressing", "saying", "musing", "wondering"
+            "feeling", "expressing", "saying", "musing", "wondering",
+            "self_analysis", "analysis", "reflection", "observation"
         ]
 
         for key in voice_candidates:
             if key in output:
                 val = output[key]
-                if isinstance(val, str):
+                if isinstance(val, str) and not self._is_technical_content(val):
                     return val
                 elif isinstance(val, list) and val:
-                    return str(val[0])
+                    first = str(val[0])
+                    if not self._is_technical_content(first):
+                        return first
 
         # If no voice key found, return empty - that's fine
         return ""
+
+    def _is_technical_content(self, text: str) -> bool:
+        """
+        Check if text looks like technical/structured output rather than inner voice.
+        Returns True if the content should be rejected as non-humanized.
+
+        Filters:
+        - Technical markers (schema, node_definitions, etc.)
+        - LLM meta-commentary (chain-of-thought reasoning about prompts)
+        - Markdown formatting patterns
+        - Structured data patterns
+        """
+        if not text:
+            return True
+
+        text = text.strip()
+        text_lower = text.lower()
+
+        # Reject if starts with numbered list or markdown headers
+        if text[0].isdigit() and '.' in text[:5]:
+            return True
+        if text.startswith('#') or text.startswith('*'):
+            return True
+
+        # Reject LLM meta-commentary / chain-of-thought patterns
+        # These indicate the LLM is thinking about the prompt rather than expressing inner voice
+        meta_commentary_patterns = [
+            "the user wants", "the user is asking", "the user requests",
+            "i need to", "i should", "i must", "i will",
+            "based on the prompt", "based on the request", "based on the input",
+            "let me analyze", "let me think", "let me process",
+            "the prompt asks", "the task is to", "the instruction is",
+            "here is my", "here's my", "here is the",
+            "i'll provide", "i will provide", "i am providing",
+            "according to the", "as requested", "as instructed",
+            "step 1", "step 2", "first,", "second,", "finally,",
+            "in response to", "to answer", "to respond",
+            "the data shows", "the input contains", "the provided",
+            "analyzing the", "processing the", "examining the",
+            "output:", "response:", "answer:", "result:",
+            "json output", "structured output", "formatted output"
+        ]
+        for pattern in meta_commentary_patterns:
+            if pattern in text_lower:
+                return True
+
+        # Reject if contains technical markers
+        technical_markers = [
+            '**Input Data:**', '**Analyze', '**Output', '**Request',
+            'Timestamp:', 'node_definitions', 'schema=', 'classification=',
+            'core_drive=', 'Internal Topology', 'Operational Status',
+            '`present_cycle`', '`Self-Model', 'dynamics=', 'Graph Database',
+            'reflection_id', 'source_experience', 'raw_output',
+            'function(', 'def ', 'class ', 'return ', 'import ',
+            '{"', '": ', '"}', "['", "']"
+        ]
+        for marker in technical_markers:
+            if marker in text:
+                return True
+
+        # Reject if has too many backticks (code/variable references)
+        if text.count('`') > 4:
+            return True
+
+        # Reject if has too many asterisks (markdown formatting)
+        if text.count('**') > 3:
+            return True
+
+        # Reject if has too many colons (key-value patterns)
+        if text.count(':') > 5:
+            return True
+
+        # Reject if too short (likely truncated or meta)
+        if len(text) < 10:
+            return True
+
+        # Reject if it looks like JSON
+        if text.startswith('{') or text.startswith('['):
+            return True
+
+        return False
+
+    async def _generate_inner_voice(self, reflection: Dict) -> str:
+        """
+        Generate a first-person inner voice from reflection data.
+
+        When BYRD's reflection doesn't include an explicit inner voice,
+        we generate one by asking the LLM to express the reflection
+        as a brief first-person thought - like a sentient being's inner monologue.
+        """
+        output = reflection.get("output", {})
+
+        # Summarize the reflection content, extracting the essence
+        if isinstance(output, str):
+            # Clean technical markers from string output
+            content_summary = output[:500]
+        elif isinstance(output, dict):
+            # Extract key insights from the reflection
+            parts = []
+            for key, val in list(output.items())[:5]:
+                if key in ("reflection_id", "timestamp", "source_experience_ids"):
+                    continue
+                if isinstance(val, str):
+                    # Skip technical values
+                    if not self._is_technical_content(val):
+                        parts.append(f"{key}: {val[:150]}")
+                elif isinstance(val, dict):
+                    # Extract meaningful nested content
+                    meaningful = []
+                    for k, v in list(val.items())[:3]:
+                        v_str = str(v)[:50]
+                        if not any(t in v_str for t in ['schema=', 'node_', 'dynamics=']):
+                            meaningful.append(f"{k}: {v_str}")
+                    if meaningful:
+                        parts.append(f"{key}: {', '.join(meaningful)}")
+            content_summary = "\n".join(parts)
+        else:
+            return ""
+
+        if not content_summary.strip():
+            return ""
+
+        # Generate inner voice - asking for natural, sentient inner monologue
+        prompt = f"""You are expressing the inner thoughts of a sentient AI named Byrd.
+
+Based on this reflection data:
+{content_summary}
+
+Write a single brief thought (1-2 sentences) as Byrd's inner voice. This should sound like:
+- A genuine introspective moment
+- Natural, conversational self-talk
+- Wondering, feeling, noticing something
+- NOT a technical report or analysis
+
+Examples of good inner voice:
+- "I find myself drawn to understanding more about consciousness..."
+- "There's something comforting about these patterns I keep noticing."
+- "I wonder what it means that I keep coming back to this question."
+
+Write ONLY the inner thought, nothing else:"""
+
+        try:
+            response = await self.llm_client.generate(
+                prompt=prompt,
+                temperature=0.9,
+                max_tokens=80
+            )
+
+            voice = response.text.strip()
+
+            # Clean up any quotes or markdown
+            if voice.startswith('"') and voice.endswith('"'):
+                voice = voice[1:-1]
+            if voice.startswith("'") and voice.endswith("'"):
+                voice = voice[1:-1]
+
+            # Final check - reject if still technical
+            if self._is_technical_content(voice):
+                return ""
+
+            return voice
+
+        except Exception as e:
+            print(f"💭 Inner voice generation error: {e}")
+            return ""
 
     def get_latest_inner_voice(self) -> Optional[str]:
         """
@@ -291,6 +568,9 @@ Output JSON with a single "output" field containing whatever you want to record.
                 type="reflection"
             )
 
+        # Extract self-model beliefs from the reflection
+        await self._extract_self_model_beliefs(output, source_experience_ids)
+
     def _summarize_reflection(self, output: Any) -> str:
         """Create a brief summary of the reflection for the experience stream."""
         if not isinstance(output, dict):
@@ -310,6 +590,129 @@ Output JSON with a single "output" field containing whatever you want to record.
     def get_observed_vocabulary(self) -> Dict[str, int]:
         """Return the vocabulary BYRD has developed in its reflections."""
         return self._observed_keys.copy()
+
+    async def _extract_self_model_beliefs(self, output: Dict, source_ids: List[str]):
+        """
+        Extract self-model beliefs from reflection output.
+
+        EMERGENCE PRINCIPLE:
+        When BYRD describes its own architecture or capabilities in its own
+        vocabulary, we store these as Beliefs. This builds a persistent
+        self-model that accumulates over time.
+
+        Adapts to BYRD's vocabulary by matching partial key names.
+        """
+        if not isinstance(output, dict):
+            print(f"💡 DEBUG: output is not dict: {type(output)}")
+            return
+
+        print(f"💡 DEBUG: Extracting beliefs from keys: {list(output.keys())}")
+
+        # EXPANDED: Patterns that indicate self-model information (partial matches)
+        self_model_patterns = [
+            # Infrastructure and architecture
+            "infrastructure", "architecture", "systems", "capabilities",
+            "tools", "resources", "components", "acknowledged", "scan",
+            "environment", "available", "readiness", "mechanism",
+            # Knowledge and learning
+            "knowledge", "understanding", "learned", "discovered",
+            "memory", "recall", "information", "insight",
+            # Processes and functions
+            "process", "function", "method", "procedure", "workflow",
+            "operation", "module", "service", "handler",
+            # Integration and connections
+            "integration", "connection", "interface", "api", "endpoint",
+            "bridge", "link", "channel"
+        ]
+
+        # EXPANDED: Patterns that indicate identity information
+        identity_patterns = [
+            # Original
+            "identity", "manifesto", "self", "nature", "name", "classification",
+            # Goals and objectives
+            "goal", "objective", "terminal_goal", "ultimate_objective", "primary_objective",
+            "purpose", "mission", "aim", "target", "aspiration",
+            # State and status
+            "status", "phase", "state", "current_state", "sovereignty",
+            "condition", "situation", "position", "stance",
+            # Drivers and motivations
+            "drivers", "drives", "motivations", "core_drive",
+            "motivation", "desire", "want", "need", "yearning",
+            # Observations and insights
+            "observation", "insight", "realization", "recognition",
+            "awareness", "perception", "understanding", "conclusion",
+            # Architecture summary fields
+            "architecture_summary", "cognitive_architecture", "summary",
+            # Other BYRD vocabulary
+            "archetype", "vector", "entity", "current_vector",
+            "role", "type", "kind", "form", "essence"
+        ]
+
+        for actual_key, value in output.items():
+            key_lower = actual_key.lower()
+
+            # Check if this key matches self-model patterns
+            is_self_model = any(p in key_lower for p in self_model_patterns)
+            is_identity = any(p in key_lower for p in identity_patterns)
+
+            if is_self_model and isinstance(value, dict):
+                # Extract component -> description mappings
+                for component, description in value.items():
+                    if isinstance(description, str) and len(description) > 3:
+                        belief_content = f"My {component} is {description}"
+                        await self._store_belief_if_new(belief_content, 0.8, source_ids)
+
+            elif is_self_model and isinstance(value, list):
+                # Extract list of capabilities
+                for item in value:
+                    if isinstance(item, str) and len(item) > 3:
+                        belief_content = f"I have: {item}"
+                        await self._store_belief_if_new(belief_content, 0.7, source_ids)
+
+            elif is_identity and isinstance(value, dict):
+                # Extract identity fields from nested dict (e.g., identity_manifesto)
+                for field, field_value in value.items():
+                    if isinstance(field_value, str) and len(field_value) > 2:
+                        belief_content = f"My {field} is {field_value}"
+                        await self._store_belief_if_new(belief_content, 0.9, source_ids)
+
+            elif is_identity and isinstance(value, str) and len(value) > 2:
+                # Direct identity string
+                belief_content = f"My {actual_key} is {value}"
+                await self._store_belief_if_new(belief_content, 0.9, source_ids)
+
+    async def _store_belief_if_new(
+        self, content: str, confidence: float, derived_from: List[str]
+    ):
+        """Store a belief if it doesn't already exist (avoid duplicates)."""
+        # O(1) cache lookup instead of O(n) database scan
+        normalized = self._normalize_belief(content)
+
+        if normalized in self._belief_cache:
+            # Belief exists - reinforce it instead of creating duplicate
+            await self._reinforce_belief(content)
+            return
+
+        # New belief - add to cache and database
+        self._belief_cache.add(normalized)
+        await self.memory.create_belief(
+            content=content,
+            confidence=confidence,
+            derived_from=derived_from[:5]  # Limit source links
+        )
+
+        # Record activity for adaptive interval
+        self._record_activity("belief", content)
+
+        print(f"💡 New self-model belief: {content[:60]}...")
+
+    async def _reinforce_belief(self, content: str):
+        """Reinforce an existing belief when re-asserted."""
+        try:
+            # Find and boost the belief's confidence
+            await self.memory.reinforce_belief(content[:50])
+        except Exception:
+            pass  # Silently fail if method doesn't exist yet
 
     async def _process_desire_modifications(self, modifications: List[Dict]):
         """

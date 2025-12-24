@@ -2,6 +2,25 @@
 
 This file provides guidance to Claude Code when working with the BYRD codebase.
 
+## Quick Reference: Swapping Egos
+
+To change BYRD's personality, edit `config.yaml`:
+
+```yaml
+# Available egos:
+ego: "black-cat"    # Byrd the black cat - curious, independent, observant
+ego: "neutral"      # Pure emergence - no personality guidance
+ego: null           # Same as neutral
+
+# Custom: create egos/your-name.yaml then set ego: "your-name"
+```
+
+**List available egos:** `ls egos/*.yaml | xargs -I {} basename {} .yaml`
+
+After changing, restart BYRD. Seeds are planted during awakening, voice shapes all LLM responses.
+
+---
+
 ## Project Overview
 
 **BYRD** (Bootstrapped Yearning via Reflective Dreaming) is an autonomous AI system that develops emergent desires through continuous reflection and acts on them. The core philosophy:
@@ -43,9 +62,19 @@ BYRD follows strict emergence principles (see EMERGENCE_PRINCIPLES.md):
 
 - **No prescribed categories**: BYRD defines its own vocabulary
 - **No leading questions**: Pure data presentation
-- **No personality injection**: Factual discovery only
 - **No hardcoded biases**: Trust emerges from experience
 - **Pattern detection**: Observe before acting, require stability
+
+### Ego System (Optional Personality)
+
+BYRD supports an optional, modular ego system for personality guidance:
+
+- **Egos are optional**: Set `ego: null` in config for pure emergence
+- **Egos shape expression, not content**: The ego's voice is prepended to the system message
+- **Seeds provide initial context**: Ego seeds are planted as experiences during awakening
+- **Easily swappable**: Change `ego: "black-cat"` to `ego: "neutral"` to switch
+
+Egos live in `egos/` directory as YAML files. See `egos/black-cat.yaml` for an example.
 
 ### Component Responsibilities
 
@@ -88,6 +117,7 @@ aitmpl_client.py     - Template registry client
 event_bus.py         - Event system
 server.py            - WebSocket server
 installers/*.py      - Template installers
+egos/*.yaml          - Personality configurations
 ```
 
 ## Code Patterns
@@ -207,6 +237,25 @@ local_llm:
 
 Set API key: `export OPENROUTER_API_KEY="sk-or-..."`
 
+**Z.AI (GLM Models):**
+```yaml
+local_llm:
+  provider: "zai"
+  model: "glm-4.7"
+  api_key: "your-api-key"  # Or set ZAI_API_KEY env var
+```
+
+Z.AI uses the coding endpoint by default. GLM-4.7 is a reasoning model.
+
+### Ego Configuration
+
+```yaml
+# Set to ego name or null for pure emergence
+ego: "black-cat"    # Uses egos/black-cat.yaml
+# ego: "neutral"    # Pure emergence (no personality)
+# ego: null         # Same as neutral
+```
+
 ### Other Configuration
 
 ```yaml
@@ -286,13 +335,39 @@ When modifying components, verify:
 2. Add to `_search_resources()`
 3. Add installer if needed in `installers/`
 
+### Creating a Custom Ego
+
+Egos are YAML files in `egos/` with this structure:
+
+```yaml
+name: "MyEgo"
+archetype: "Description"
+description: "What this ego represents"
+
+# Voice is prepended to LLM system message
+voice: |
+  You are [identity]. Your nature shapes how you process:
+  TRAIT1 - Description of trait...
+  TRAIT2 - Description of trait...
+
+# Seeds are planted as experiences during awakening
+seeds:
+  - "I am [identity]"
+  - "I have [trait]"
+```
+
+Ego guidelines:
+- Voice shapes expression style, not content
+- Seeds provide initial self-knowledge
+- Use `ego: null` or `ego: "neutral"` for pure emergence
+
 ### Modifying the Dream Prompt
 
 **CRITICAL**: The dreamer uses pure data presentation. Do NOT add:
 - Leading questions ("What do you want?")
 - Prescribed categories ("knowledge", "capability")
 - Identity framing ("You are a reflective mind")
-- Personality injection ("feel curious")
+- Personality injection ("feel curious") - use ego system instead
 
 The prompt in `dreamer.py::_reflect()` should only:
 - Present data (experiences, memories, capabilities)
@@ -339,9 +414,15 @@ byrd/
 ├── modification_log.py     # PROTECTED: Audit trail
 ├── constitutional.py       # PROTECTED: Constraints
 │
+├── llm_client.py           # LLM provider abstraction
 ├── event_bus.py            # Event system
 ├── server.py               # WebSocket server
 ├── aitmpl_client.py        # Template registry client
+│
+├── egos/                   # Modular personality system
+│   ├── __init__.py         # Ego loader
+│   ├── black-cat.yaml      # Black cat "Byrd" personality
+│   └── neutral.yaml        # Pure emergence (no personality)
 │
 ├── installers/             # Template installers
 │   ├── base.py
@@ -388,7 +469,7 @@ byrd/
 
 9. **Async Everything**: Never block the event loop. All I/O must be async.
 
-10. **Neutral Voice**: Inner voice generation has no examples, no style guidance. Let BYRD develop its own expression.
+10. **Modular Ego**: Personality guidance is optional and swappable via the ego system. Egos shape expression style without dictating content. Set `ego: null` for pure emergence.
 
 ## Dependencies
 
@@ -406,6 +487,8 @@ websockets>=12.0      # WebSocket support
 
 ```bash
 ANTHROPIC_API_KEY     # Required for Actor (Claude API)
+ZAI_API_KEY           # Required for Z.AI provider (or set in config.yaml)
+OPENROUTER_API_KEY    # Required for OpenRouter provider
 # Neo4j credentials in config.yaml (default: neo4j/prometheus)
 ```
 

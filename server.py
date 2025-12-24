@@ -9,7 +9,10 @@ from typing import Dict, List, Optional, Set
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
+import os
 
 from byrd import BYRD
 from event_bus import EventBus, Event, EventType, event_bus
@@ -107,6 +110,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Serve static HTML visualizations
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+@app.get("/{filename}.html")
+async def serve_html(filename: str):
+    """Serve HTML visualization files."""
+    filepath = os.path.join(BASE_DIR, f"{filename}.html")
+    if os.path.exists(filepath):
+        return FileResponse(filepath, media_type="text/html")
+    raise HTTPException(status_code=404, detail=f"File {filename}.html not found")
+
 
 # =============================================================================
 # PYDANTIC MODELS
@@ -131,6 +145,7 @@ class HistoryResponse(BaseModel):
 
 class ResetRequest(BaseModel):
     seed_question: Optional[str] = None
+    hard_reset: bool = True  # Default: complete wipe with no auto-awakening
 
 
 class ResetResponse(BaseModel):
@@ -324,14 +339,15 @@ async def stop_byrd():
 
 @app.post("/api/reset", response_model=ResetResponse)
 async def reset_byrd(request: ResetRequest = None):
-    """Reset BYRD - clear all memory and trigger fresh awakening."""
+    """Reset BYRD - clear all memory. By default does hard reset (no auto-awakening)."""
     global byrd_instance, byrd_task
 
     if not byrd_instance:
         raise HTTPException(status_code=503, detail="BYRD not initialized")
 
-    # Extract seed question from request if provided
+    # Extract options from request
     seed_question = request.seed_question if request else None
+    hard_reset = request.hard_reset if request else True  # Default to hard reset
 
     try:
         # 1. Stop if running
@@ -348,7 +364,7 @@ async def reset_byrd(request: ResetRequest = None):
         byrd_instance.dreamer.reset()
         byrd_instance.seeker.reset()
 
-        # 3. Clear memory (Neo4j database)
+        # 3. Clear memory (Neo4j database) - complete wipe
         await byrd_instance.memory.connect()
         await byrd_instance.memory.clear_all()
 
@@ -358,17 +374,23 @@ async def reset_byrd(request: ResetRequest = None):
         # 5. Emit reset event
         await event_bus.emit(Event(
             type=EventType.SYSTEM_RESET,
-            data={"message": "Memory cleared, preparing for awakening"}
+            data={"message": "Memory cleared - database is empty", "hard_reset": hard_reset}
         ))
 
-        # 6. Record capability experiences and awaken
-        await byrd_instance._record_capability_experiences()
+        if hard_reset:
+            # Hard reset: Stop here, no awakening, no background processes
+            return ResetResponse(
+                success=True,
+                message="Hard reset complete. Database cleared. Use /api/awaken to start fresh."
+            )
+
+        # Soft reset: Re-awaken and restart (legacy behavior)
         await byrd_instance._awaken(seed_question=seed_question)
 
-        # 7. Restart background processes
+        # Restart background processes
         byrd_task = asyncio.create_task(byrd_instance.start())
 
-        # 8. Emit system started event
+        # Emit system started event
         await event_bus.emit(Event(
             type=EventType.SYSTEM_STARTED,
             data={"message": "BYRD restarted after reset"}
@@ -384,6 +406,46 @@ async def reset_byrd(request: ResetRequest = None):
         return ResetResponse(
             success=False,
             message=f"Reset failed: {str(e)}"
+        )
+
+
+class AwakenRequest(BaseModel):
+    seed_question: Optional[str] = None
+
+
+@app.post("/api/awaken", response_model=ResetResponse)
+async def awaken_byrd(request: AwakenRequest = None):
+    """Awaken BYRD after a hard reset. Creates initial experiences and starts dreaming."""
+    global byrd_instance, byrd_task
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    seed_question = request.seed_question if request else None
+
+    try:
+        # Awaken (which internally records capability experiences and ego seeds)
+        await byrd_instance._awaken(seed_question=seed_question)
+
+        # Start background processes
+        byrd_task = asyncio.create_task(byrd_instance.start())
+
+        # Emit system started event
+        await event_bus.emit(Event(
+            type=EventType.SYSTEM_STARTED,
+            data={"message": "BYRD awakened"}
+        ))
+
+        used_question = seed_question if seed_question else "Who am I?"
+        return ResetResponse(
+            success=True,
+            message=f"BYRD awakened with '{used_question}'"
+        )
+
+    except Exception as e:
+        return ResetResponse(
+            success=False,
+            message=f"Awakening failed: {str(e)}"
         )
 
 

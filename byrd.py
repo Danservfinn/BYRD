@@ -23,6 +23,7 @@ from self_modification import SelfModificationSystem
 from constitutional import ConstitutionalConstraints
 from event_bus import event_bus, Event, EventType
 from llm_client import create_llm_client
+from egos import load_ego, Ego
 
 
 class BYRD:
@@ -42,11 +43,23 @@ class BYRD:
         # Load config
         self.config = self._load_config(config_path)
 
+        # Load ego (optional personality)
+        ego_name = self.config.get("ego")
+        self.ego: Ego = load_ego(ego_name)
+        if self.ego.is_neutral:
+            print("🎭 Ego: None (pure emergence)")
+        else:
+            print(f"🎭 Ego: {self.ego.name} ({self.ego.archetype})")
+
         # Initialize components
         self.memory = Memory(self.config.get("memory", {}))
 
         # Create shared LLM client ("one mind" principle)
-        self.llm_client = create_llm_client(self.config.get("local_llm", {}))
+        # Pass ego voice to shape LLM expression
+        self.llm_client = create_llm_client(
+            self.config.get("local_llm", {}),
+            ego_voice=self.ego.voice
+        )
         print(f"🧠 LLM: {self.llm_client.model_name}")
 
         self.dreamer = Dreamer(
@@ -222,36 +235,26 @@ class BYRD:
             capabilities.append("System: self-modification exists (with provenance tracking)")
 
         for cap in capabilities:
-            exp_id = await self.memory.record_experience(
+            await self.memory.record_experience(
                 content=cap,
                 type="system"
             )
             print(f"   📌 {cap}")
 
-            # Emit event for UI visibility
-            await event_bus.emit(Event(
-                type=EventType.EXPERIENCE_CREATED,
-                data={
-                    "id": exp_id,
-                    "content": cap,
-                    "type": "system"
-                }
-            ))
-
     async def _awaken(self, seed_question: str = None):
         """
         The gentlest possible beginning.
 
-        EMERGENCE PRINCIPLE:
-        One question + factual capability experiences. No personality guidance,
-        no emotional framing, no prescribed feelings. BYRD forms its own
-        relationship with these facts through reflection.
+        EMERGENCE PRINCIPLE (with optional ego):
+        One question + factual capability experiences + optional ego seeds.
+        If no ego is configured, pure emergence applies. If an ego is present,
+        its seeds provide initial self-knowledge that BYRD can build upon.
 
         Philosophy:
         - The seed question invites reflection
         - Capability experiences are factual, not prescriptive
-        - No orientation prompt telling BYRD how to feel
-        - Whatever emerges from reflection is authentic
+        - Ego seeds (if present) provide starting identity context
+        - Whatever emerges from reflection is authentic to the ego's frame
         """
         # Use provided seed question or default
         question = seed_question if seed_question else "Who am I?"
@@ -277,10 +280,19 @@ class BYRD:
         print("   Recording system capabilities as experiences...")
         await self._record_capability_experiences()
 
+        # Seed ego experiences if ego is present
+        if self.ego.seeds:
+            print(f"   Seeding ego experiences ({len(self.ego.seeds)} seeds)...")
+            for seed in self.ego.seeds:
+                await self.memory.record_experience(
+                    content=seed,
+                    type="ego_seed"
+                )
+
         # Emit orientation complete without personality injection
         await event_bus.emit(Event(
             type=EventType.ORIENTATION_COMPLETE,
-            data={}  # No prescribed inner_voice
+            data={"ego": self.ego.name if not self.ego.is_neutral else None}
         ))
 
         print("   BYRD awakens. Whatever emerges is authentic.")

@@ -227,11 +227,157 @@
       opacity: 0;
       transition: opacity 0.5s;
     }
+
+    /* Rising Consciousness - Inner Voice Bubbles */
+    .thought-bubble-container {
+      position: fixed;
+      bottom: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 500px;
+      pointer-events: none;
+      z-index: 500;
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .thought-bubble {
+      position: relative;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(20, 184, 166, 0.25);
+      border-radius: 16px;
+      padding: 16px 24px;
+      max-width: 420px;
+      box-shadow:
+        0 0 30px rgba(20, 184, 166, 0.15),
+        0 4px 20px rgba(0, 0, 0, 0.08);
+      font-family: 'Georgia', 'Times New Roman', serif;
+      font-style: italic;
+      font-size: 15px;
+      line-height: 1.6;
+      color: #115e59;
+      text-align: center;
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+      animation: thoughtRise 20s ease-out forwards;
+    }
+
+    .thought-bubble::before {
+      content: '"';
+      position: absolute;
+      top: -8px;
+      left: 20px;
+      font-size: 32px;
+      color: rgba(20, 184, 166, 0.3);
+      font-family: Georgia, serif;
+    }
+
+    .thought-bubble::after {
+      content: '"';
+      position: absolute;
+      bottom: -20px;
+      right: 20px;
+      font-size: 32px;
+      color: rgba(20, 184, 166, 0.3);
+      font-family: Georgia, serif;
+    }
+
+    .thought-bubble.accelerated {
+      animation: thoughtRiseAccelerated 8s ease-out forwards;
+    }
+
+    @keyframes thoughtRise {
+      0% {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+      }
+      2% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+      90% {
+        opacity: 1;
+        transform: translateY(-80px) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-120px) scale(0.97);
+      }
+    }
+
+    @keyframes thoughtRiseAccelerated {
+      0% {
+        opacity: 0.8;
+        transform: translateY(-40px) scale(0.98);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-150px) scale(0.95);
+      }
+    }
+
+    /* Typewriter effect for thought text */
+    .thought-text {
+      display: inline;
+    }
+
+    .thought-text .word {
+      opacity: 0;
+      animation: wordFadeIn 0.15s ease-out forwards;
+    }
+
+    @keyframes wordFadeIn {
+      from { opacity: 0; transform: translateY(3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Thought origin indicator - subtle glow at spawn point */
+    .thought-origin {
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 60px;
+      background: radial-gradient(circle, rgba(20, 184, 166, 0.4) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      opacity: 0;
+      z-index: 149;
+    }
+
+    .thought-origin.pulse {
+      animation: originPulse 0.8s ease-out forwards;
+    }
+
+    @keyframes originPulse {
+      0% {
+        opacity: 0;
+        transform: translateX(-50%) scale(0.5);
+      }
+      30% {
+        opacity: 1;
+        transform: translateX(-50%) scale(1.2);
+      }
+      100% {
+        opacity: 0;
+        transform: translateX(-50%) scale(2);
+      }
+    }
   </style>
 </head>
 <body>
   <!-- Three.js Canvas Container -->
   <div id="canvas-container"></div>
+
+  <!-- Rising Consciousness: Inner Voice Bubbles -->
+  <div id="thought-bubble-container" class="thought-bubble-container"></div>
+  <div id="thought-origin" class="thought-origin"></div>
 
   <!-- UI Overlay: Top Left - Logo + Mode Indicator -->
   <div class="ui-overlay top-4 left-4">
@@ -243,6 +389,14 @@
     <div id="llm-indicator" class="mt-2 px-2 py-1 rounded text-[10px] font-mono bg-slate-100 border border-slate-300 text-slate-500">
       <span class="text-slate-400">LLM:</span> <span id="llm-model-text">loading...</span>
     </div>
+    <!-- Link to Cat Ego Visualizer -->
+    <a href="byrd-cat-visualization.html"
+       class="mt-3 flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono
+              bg-teal-500/10 border border-teal-500/30 text-teal-700
+              hover:bg-teal-500/20 hover:border-teal-500/50 transition-all cursor-pointer">
+      <span class="text-base">🐱</span>
+      <span>EGO SPACE</span>
+    </a>
   </div>
 
   <!-- UI Overlay: Top Center - Phase Indicator -->
@@ -406,8 +560,8 @@
   <div id="seed-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm">
     <div class="bg-white border border-slate-200 rounded-xl max-w-md w-full mx-4 overflow-hidden shadow-2xl">
       <div class="px-6 py-4 border-b border-slate-200 bg-slate-50">
-        <div class="text-lg font-semibold text-slate-800">🌅 Awakening Seed</div>
-        <div class="text-sm text-slate-500">What question should BYRD awaken with?</div>
+        <div class="text-lg font-semibold text-slate-800">Reset BYRD</div>
+        <div class="text-sm text-slate-500">Clear database and optionally awaken with a seed question</div>
       </div>
       <div class="p-6">
         <input
@@ -418,11 +572,14 @@
           value="Who am I?"
         />
         <div class="flex gap-3 mt-4">
-          <button id="btn-seed-cancel" class="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-all">
+          <button id="btn-seed-cancel" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-all">
             Cancel
           </button>
-          <button id="btn-seed-confirm" class="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-indigo-500 border border-indigo-600 text-white hover:bg-indigo-600 transition-all">
-            Awaken
+          <button id="btn-seed-clear-only" class="px-4 py-2 rounded-lg text-sm font-medium bg-red-500 border border-red-600 text-white hover:bg-red-600 transition-all">
+            Clear Only
+          </button>
+          <button id="btn-seed-confirm" class="px-4 py-2 rounded-lg text-sm font-medium bg-indigo-500 border border-indigo-600 text-white hover:bg-indigo-600 transition-all">
+            Clear & Awaken
           </button>
         </div>
       </div>
@@ -715,7 +872,8 @@
       desire: { color: 0xbe123c, emissive: 0xf43f5e, label: 'Desire' },       // Dark rose
       experience: { color: 0x0369a1, emissive: 0x38bdf8, label: 'Experience' }, // Dark sky blue
       capability: { color: 0x6d28d9, emissive: 0xa855f7, label: 'Capability' }, // Dark violet
-      reflection: { color: 0x047857, emissive: 0x34d399, label: 'Reflection' }  // Dark emerald
+      reflection: { color: 0x047857, emissive: 0x34d399, label: 'Reflection' }, // Dark emerald
+      awakening: { color: 0xf59e0b, emissive: 0xfcd34d, label: 'Awakening' }   // Golden amber - consciousness
     };
 
     // ==========================================================================
@@ -730,6 +888,12 @@
     let dreamCount = 0;
     let seekCount = 0;
     let currentPhase = 'idle';
+
+    // Gravitational Spiral: Connection tracking for centrality-based positioning
+    const connectionCounts = new Map(); // nodeId -> connection count
+    const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5)); // ~137.5 degrees
+    const MAX_RADIUS = 80; // Maximum distance from center
+    const MIN_RADIUS = 5;  // Minimum distance (for most connected)
 
     // Three.js objects
     let scene, camera, renderer, composer, controls;
@@ -941,63 +1105,19 @@
     }
 
     function createAmbientParticles() {
-      const particleCount = 200;
-      const geometry = new THREE.BufferGeometry();
-      const positions = new Float32Array(particleCount * 3);
-      const velocities = [];
-
-      for (let i = 0; i < particleCount; i++) {
-        positions[i * 3] = (Math.random() - 0.5) * 100;
-        positions[i * 3 + 1] = (Math.random() - 0.5) * 100;
-        positions[i * 3 + 2] = (Math.random() - 0.5) * 100;
-
-        velocities.push({
-          x: (Math.random() - 0.5) * 0.02,
-          y: (Math.random() - 0.5) * 0.02,
-          z: (Math.random() - 0.5) * 0.02
-        });
-      }
-
-      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-      geometry.userData.velocities = velocities;
-
-      const material = new THREE.PointsMaterial({
-        size: 0.5,
-        color: 0x8b5cf6,
-        transparent: true,
-        opacity: 0.4,
-        sizeAttenuation: true
-      });
-
-      const particles = new THREE.Points(geometry, material);
-      particles.userData.velocities = velocities;
-      scene.add(particles);
-      scene.userData.ambientParticles = particles;
+      // Disabled - ambient particles were cluttering the visualization
+      // Keep function stub for compatibility
+      return;
     }
 
     // ==========================================================================
-    // CONSCIOUSNESS CORE
+    // CONSCIOUSNESS CORE (Disabled - awakening node is now the center)
     // ==========================================================================
     function createConsciousnessCore() {
-      // Small, subtle center point for light theme
-      const coreGeometry = new THREE.SphereGeometry(1.5, 32, 32);
-      const coreMaterial = new THREE.MeshBasicMaterial({
-        color: 0x6366f1,
-        transparent: true,
-        opacity: 0.3
-      });
-      consciousnessCore = new THREE.Mesh(coreGeometry, coreMaterial);
-      scene.add(consciousnessCore);
-
-      // Tiny bright center
-      const centerGeometry = new THREE.SphereGeometry(0.3, 16, 16);
-      const centerMaterial = new THREE.MeshBasicMaterial({
-        color: 0x6366f1
-      });
-      coreGlow = new THREE.Mesh(centerGeometry, centerMaterial);
-      scene.add(coreGlow);
-
+      // Disabled - the awakening dodecahedron now serves as the central consciousness
       // Store empty refs for compatibility
+      consciousnessCore = null;
+      coreGlow = null;
       scene.userData.outerSphere = null;
       scene.userData.middleSphere = null;
     }
@@ -1031,113 +1151,137 @@
     }
 
     // ==========================================================================
-    // NODE SYSTEM
+    // GRAVITATIONAL SPIRAL - Sacred Geometry Node System
     // ==========================================================================
+
+    // Calculate position based on connectivity (more connections = closer to center)
+    function calculateNodePosition(nodeId, nodeIndex) {
+      const connections = connectionCounts.get(nodeId) || 0;
+
+      // Radial distance: more connections = closer to center
+      // Using inverse relationship: radius = MAX / (connections + 1)
+      const normalizedConnections = Math.min(connections, 20); // Cap for calculation
+      const radius = MIN_RADIUS + (MAX_RADIUS - MIN_RADIUS) * Math.pow(0.85, normalizedConnections);
+
+      // Angular position using golden angle for even distribution
+      const angle = nodeIndex * GOLDEN_ANGLE;
+
+      // Height variation based on golden angle for 3D spiral
+      const heightAngle = nodeIndex * GOLDEN_ANGLE * 0.3;
+      const height = Math.sin(heightAngle) * radius * 0.4;
+
+      return {
+        x: Math.cos(angle) * radius,
+        y: height,
+        z: Math.sin(angle) * radius
+      };
+    }
+
+    // Recalculate all node positions based on current connection counts
+    function recalculateAllPositions() {
+      nodes3D.forEach((mesh, index) => {
+        const pos = calculateNodePosition(mesh.userData.id, index);
+        mesh.userData.targetPosition.set(pos.x, pos.y, pos.z);
+      });
+    }
+
+    // Increment connection count for a node
+    function incrementConnectionCount(nodeId) {
+      const current = connectionCounts.get(nodeId) || 0;
+      connectionCounts.set(nodeId, current + 1);
+    }
+
     function createNode3D(type, content, id, importance = 0.5) {
       const nodeId = id || `node_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       const colors = NODE_COLORS[type] || NODE_COLORS.experience;
 
-      // Calculate position - tighter golden ratio spiral for dense neural cluster
-      const goldenAngle = Math.PI * (3 - Math.sqrt(5)); // ~137.5 degrees
-      const angle = nodes3D.length * goldenAngle;
-      const radius = 8 + Math.sqrt(nodes3D.length) * 4; // Tighter cluster
-      const height = (Math.sin(nodes3D.length * 0.5) * 8) + (Math.random() - 0.5) * 5;
+      // Initialize connection count
+      connectionCounts.set(nodeId, 0);
 
-      const x = Math.cos(angle) * radius;
-      const y = height;
-      const z = Math.sin(angle) * radius;
+      // Calculate initial position (on periphery since no connections yet)
+      const nodeIndex = nodes3D.length;
+      const pos = calculateNodePosition(nodeId, nodeIndex);
 
-      // Smaller, consistent size
-      const size = 1.5 + importance * 1.0;
+      // Smaller, more uniform nodes - the geometry is in the connections
+      const size = 0.8 + importance * 0.6;
 
-      // Geometry based on type for visual distinction
+      // Simpler geometry - small spheres for all types, color differentiates
       let geometry;
       switch (type) {
         case 'belief':
-          geometry = new THREE.IcosahedronGeometry(size, 0);
+          geometry = new THREE.IcosahedronGeometry(size, 1);
           break;
         case 'desire':
           geometry = new THREE.OctahedronGeometry(size, 0);
           break;
         case 'reflection':
-          geometry = new THREE.TetrahedronGeometry(size * 1.2, 0);
+          geometry = new THREE.TetrahedronGeometry(size, 0);
           break;
         case 'capability':
-          geometry = new THREE.BoxGeometry(size * 1.5, size * 1.5, size * 1.5);
+          geometry = new THREE.BoxGeometry(size, size, size);
+          break;
+        case 'awakening':
+          geometry = new THREE.DodecahedronGeometry(size, 0);
           break;
         default: // experience
-          geometry = new THREE.SphereGeometry(size, 24, 24);
+          geometry = new THREE.SphereGeometry(size * 0.8, 16, 16);
       }
 
-      // Clean material with slight transparency for depth
+      // Clean material - subtle, lets connections be the star
       const material = new THREE.MeshBasicMaterial({
         color: colors.color,
         transparent: true,
-        opacity: 0.9
+        opacity: 0.85
       });
 
       const mesh = new THREE.Mesh(geometry, material);
-      mesh.position.set(x, y, z);
+      mesh.position.set(pos.x, pos.y, pos.z);
       mesh.userData = {
         id: nodeId,
         type,
         content,
         importance,
+        nodeIndex,
         createdAt: Date.now(),
-        targetPosition: new THREE.Vector3(x, y, z),
-        velocity: new THREE.Vector3(0, 0, 0),
-        glowMesh: null
+        targetPosition: new THREE.Vector3(pos.x, pos.y, pos.z),
+        velocity: new THREE.Vector3(0, 0, 0)
       };
 
       scene.add(mesh);
-
-      // Store node
       nodes3D.push(mesh);
 
-      // Create connections to nearby nodes with cascade effect
+      // Create connections to existing nodes
       if (nodes3D.length > 1) {
-        // More connections for a denser neural network
         const baseConnections = 2 + Math.floor(Math.random() * 2); // 2-3 connections
         const connectCount = Math.min(nodes3D.length - 1, baseConnections);
 
-        // Consider more candidates - recent nodes and same-type nodes
-        const recentCandidates = nodes3D.slice(0, -1).slice(-10);
+        // Prefer connecting to recent nodes and same-type nodes
+        const recentCandidates = nodes3D.slice(0, -1).slice(-12);
         const sameTypeCandidates = nodes3D.slice(0, -1).filter(n => n.userData.type === type).slice(-5);
-
-        // Combine and deduplicate
         const allCandidates = [...new Set([...recentCandidates, ...sameTypeCandidates])];
-        const connectedTargets = [];
 
         for (let i = 0; i < connectCount && allCandidates.length > 0; i++) {
           const targetIdx = Math.floor(Math.random() * allCandidates.length);
           const target = allCandidates[targetIdx];
           if (target) {
             createConnection3D(mesh, target, type);
-            connectedTargets.push(target);
             allCandidates.splice(targetIdx, 1);
           }
         }
 
-        // Also connect to core/central area occasionally for hub structure
-        if (nodes3D.length > 5 && Math.random() < 0.3) {
-          const centralNodes = nodes3D.slice(0, -1).filter(n =>
-            Math.abs(n.position.x) < 10 && Math.abs(n.position.z) < 10
-          );
-          if (centralNodes.length > 0) {
-            const hubTarget = centralNodes[Math.floor(Math.random() * centralNodes.length)];
-            if (!connectedTargets.includes(hubTarget)) {
-              createConnection3D(mesh, hubTarget, type);
-              connectedTargets.push(hubTarget);
-            }
+        // Occasionally connect to most-connected nodes (hub attraction)
+        if (nodes3D.length > 5 && Math.random() < 0.25) {
+          const hubCandidates = nodes3D.slice(0, -1)
+            .filter(n => (connectionCounts.get(n.userData.id) || 0) >= 3)
+            .slice(-5);
+          if (hubCandidates.length > 0) {
+            const hub = hubCandidates[Math.floor(Math.random() * hubCandidates.length)];
+            createConnection3D(mesh, hub, type);
           }
         }
 
-        // Trigger cascade from connected nodes (delayed, spreading thought effect)
-        connectedTargets.forEach((target, idx) => {
-          setTimeout(() => {
-            triggerCascade(target.userData.id, 0.4);
-          }, 300 + idx * 200);
-        });
+        // Recalculate positions after new connections
+        recalculateAllPositions();
       }
 
       // Pulse the core
@@ -1147,321 +1291,121 @@
       nodeCountEl.textContent = nodes3D.length;
 
       // Limit nodes
-      if (nodes3D.length > 60) {
+      if (nodes3D.length > 80) {
         const oldNode = nodes3D.shift();
         fadeOutAndRemove(oldNode);
+        connectionCounts.delete(oldNode.userData.id);
       }
 
       return mesh;
     }
 
     // ==========================================================================
-    // SYNAPTIC CONNECTION SYSTEM
+    // SACRED GEOMETRY CONNECTION SYSTEM - Straight Lines
     // ==========================================================================
-    const SYNAPSE_CONFIG = {
-      tubeRadius: 0.25,           // Thicker axons for visibility
-      tubeSegments: 48,           // Smoother tube curves
-      tubeRadialSegments: 8,      // More detailed cross-section
-      terminalSize: 0.5,          // Larger synaptic boutons
-      curveVariation: 12,         // More organic curve variation
-      pulseSpeed: 0.4,            // Slower, more visible pulses
-      pulseSize: 0.35,            // Larger pulse particles
-      maxPulses: 100,             // More active pulses
-      firingDuration: 600,        // Longer firing animation
-      firingBrightness: 2.5       // Brighter when firing
+    const LINE_CONFIG = {
+      baseOpacity: 0.4,
+      highlightOpacity: 0.8,
+      lineWidth: 1,  // Note: WebGL line width is often limited to 1
+      highlightDuration: 500
     };
 
-    // Store synaptic pulses separately from basic flow particles
-    const synapticPulses = [];
-
     function createConnection3D(nodeA, nodeB, type) {
-      // Create organic curved path between nodes
-      const start = nodeA.position.clone();
-      const end = nodeB.position.clone();
+      // Increment connection counts for both nodes
+      incrementConnectionCount(nodeA.userData.id);
+      incrementConnectionCount(nodeB.userData.id);
 
-      // Calculate midpoint with organic variation
-      const mid = start.clone().add(end).multiplyScalar(0.5);
-      const distance = start.distanceTo(end);
+      // Create simple straight line geometry
+      const points = [
+        nodeA.position.clone(),
+        nodeB.position.clone()
+      ];
 
-      // Add perpendicular offset for organic curve (not just up)
-      const direction = end.clone().sub(start).normalize();
-      const perpendicular = new THREE.Vector3(-direction.z, 0, direction.x).normalize();
-      const curveOffset = (Math.random() - 0.5) * SYNAPSE_CONFIG.curveVariation;
-      const heightOffset = (Math.random() - 0.3) * 4; // Slight upward bias
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
 
-      mid.add(perpendicular.multiplyScalar(curveOffset));
-      mid.y += heightOffset;
-
-      // Create bezier curve
-      const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
-
-      // Create tube geometry (organic axon appearance)
-      const tubeGeometry = new THREE.TubeGeometry(
-        curve,
-        SYNAPSE_CONFIG.tubeSegments,
-        SYNAPSE_CONFIG.tubeRadius,
-        SYNAPSE_CONFIG.tubeRadialSegments,
-        false
-      );
-
-      // Get colors based on type
-      const colors = NODE_COLORS[type] || NODE_COLORS.experience;
-
-      // Semi-transparent material for depth perception
-      const tubeMaterial = new THREE.MeshBasicMaterial({
-        color: 0x94a3b8,  // Slate gray base
+      // Clean white/gold line material
+      const material = new THREE.LineBasicMaterial({
+        color: 0xd4af37, // Gold for sacred geometry feel
         transparent: true,
-        opacity: 0.65
+        opacity: LINE_CONFIG.baseOpacity,
+        linewidth: LINE_CONFIG.lineWidth
       });
 
-      const tube = new THREE.Mesh(tubeGeometry, tubeMaterial);
-      tube.userData = {
+      const line = new THREE.Line(geometry, material);
+      line.userData = {
         nodeA: nodeA.userData.id,
         nodeB: nodeB.userData.id,
+        meshA: nodeA,
+        meshB: nodeB,
         type,
-        curve: curve,
-        baseOpacity: 0.65,
-        strength: 0.5 + Math.random() * 0.5,  // Connection strength
-        lastFired: 0,
-        terminals: []
+        baseOpacity: LINE_CONFIG.baseOpacity
       };
 
-      scene.add(tube);
-      connections3D.push(tube);
-
-      // Create synaptic terminals (boutons) at each end
-      createSynapticTerminals(tube, nodeA, nodeB, type);
+      scene.add(line);
+      connections3D.push(line);
 
       invalidateConnectionMap();
 
       // Limit connections
-      if (connections3D.length > 100) {
+      if (connections3D.length > 150) {
         const oldConn = connections3D.shift();
-        removeSynapticConnection(oldConn);
+        removeConnection(oldConn);
       }
 
-      // Fire the new connection to show it's alive
-      setTimeout(() => fireSynapse(tube), 100);
+      // Brief highlight on creation
+      highlightConnection(line);
 
-      return tube;
+      return line;
     }
 
-    function createSynapticTerminals(connection, nodeA, nodeB, type) {
-      const colors = NODE_COLORS[type] || NODE_COLORS.experience;
+    function highlightConnection(connection, duration = LINE_CONFIG.highlightDuration) {
+      if (!connection || !connection.material) return;
 
-      // Terminal at node A (presynaptic)
-      const terminalAGeometry = new THREE.SphereGeometry(SYNAPSE_CONFIG.terminalSize, 16, 16);
-      const terminalAMaterial = new THREE.MeshBasicMaterial({
-        color: colors.color,
-        transparent: true,
-        opacity: 0.85
-      });
-      const terminalA = new THREE.Mesh(terminalAGeometry, terminalAMaterial);
+      const originalOpacity = connection.userData.baseOpacity;
+      connection.material.opacity = LINE_CONFIG.highlightOpacity;
+      connection.material.color.setHex(0xffffff); // White flash
 
-      // Position slightly offset from node toward connection
-      const dirToB = nodeB.position.clone().sub(nodeA.position).normalize();
-      const nodeASize = nodeA.userData.importance ? 1.5 + nodeA.userData.importance * 1.0 : 2.0;
-      terminalA.position.copy(nodeA.position).add(dirToB.multiplyScalar(nodeASize * 1.2));
-
-      scene.add(terminalA);
-      connection.userData.terminals.push(terminalA);
-
-      // Terminal at node B (postsynaptic)
-      const terminalBGeometry = new THREE.SphereGeometry(SYNAPSE_CONFIG.terminalSize * 0.8, 16, 16);
-      const terminalBMaterial = new THREE.MeshBasicMaterial({
-        color: colors.color,
-        transparent: true,
-        opacity: 0.75
-      });
-      const terminalB = new THREE.Mesh(terminalBGeometry, terminalBMaterial);
-
-      // Position at node B side
-      const dirToA = nodeA.position.clone().sub(nodeB.position).normalize();
-      const nodeBSize = nodeB.userData.importance ? 1.5 + nodeB.userData.importance * 1.0 : 2.0;
-      terminalB.position.copy(nodeB.position).add(dirToA.multiplyScalar(nodeBSize * 1.2));
-
-      scene.add(terminalB);
-      connection.userData.terminals.push(terminalB);
-    }
-
-    function fireSynapse(connection, intensity = 1.0) {
-      if (!connection || !connection.userData) return;
-
-      const now = performance.now();
-      connection.userData.lastFired = now;
-
-      const colors = NODE_COLORS[connection.userData.type] || NODE_COLORS.experience;
-
-      // Brighten the connection tube
-      const originalColor = connection.material.color.getHex();
-      const originalOpacity = connection.material.opacity;
-
-      connection.material.color.setHex(colors.emissive);
-      connection.material.opacity = Math.min(0.9, originalOpacity * SYNAPSE_CONFIG.firingBrightness);
-
-      // Brighten terminals
-      connection.userData.terminals.forEach(terminal => {
-        if (terminal.material) {
-          terminal.material.color.setHex(colors.emissive);
-          terminal.scale.setScalar(1.5);
-        }
-      });
-
-      // Create burst of pulses
-      const pulseCount = 2 + Math.floor(intensity * 3);
-      for (let i = 0; i < pulseCount; i++) {
-        setTimeout(() => {
-          createSynapticPulse(connection, i % 2 === 0 ? 1 : -1); // Alternate directions
-        }, i * 80);
-      }
-
-      // Fade back to normal
       setTimeout(() => {
-        connection.material.color.setHex(0x94a3b8);
-        connection.material.opacity = originalOpacity;
-
-        connection.userData.terminals.forEach(terminal => {
-          if (terminal.material) {
-            terminal.material.color.setHex(colors.color);
-            terminal.scale.setScalar(1.0);
-          }
-        });
-      }, SYNAPSE_CONFIG.firingDuration);
+        if (connection.material) {
+          connection.material.opacity = originalOpacity;
+          connection.material.color.setHex(0xd4af37); // Back to gold
+        }
+      }, duration);
     }
 
-    function createSynapticPulse(connection, direction = 1) {
-      if (!connection.userData.curve) return null;
-      if (synapticPulses.length >= SYNAPSE_CONFIG.maxPulses) return null;
+    function removeConnection(connection) {
+      scene.remove(connection);
+      if (connection.geometry) connection.geometry.dispose();
+      if (connection.material) connection.material.dispose();
+    }
 
-      const colors = NODE_COLORS[connection.userData.type] || NODE_COLORS.experience;
+    // Update connection positions when nodes move
+    function updateConnectionPositions() {
+      connections3D.forEach(conn => {
+        if (!conn.userData.meshA || !conn.userData.meshB) return;
 
-      // Create glowing pulse particle
-      const geometry = new THREE.SphereGeometry(SYNAPSE_CONFIG.pulseSize, 10, 10);
-      const material = new THREE.MeshBasicMaterial({
-        color: colors.emissive,
-        transparent: true,
-        opacity: 0.95
+        const positions = conn.geometry.attributes.position;
+        if (!positions) return;
+
+        // Update start point
+        positions.setXYZ(0,
+          conn.userData.meshA.position.x,
+          conn.userData.meshA.position.y,
+          conn.userData.meshA.position.z
+        );
+
+        // Update end point
+        positions.setXYZ(1,
+          conn.userData.meshB.position.x,
+          conn.userData.meshB.position.y,
+          conn.userData.meshB.position.z
+        );
+
+        positions.needsUpdate = true;
       });
-
-      const pulse = new THREE.Mesh(geometry, material);
-      pulse.userData = {
-        connection: connection,
-        progress: direction > 0 ? 0 : 1,
-        speed: SYNAPSE_CONFIG.pulseSpeed + Math.random() * 0.2,
-        direction: direction,
-        age: 0,
-        maxAge: 2000 // ms before pulse dies
-      };
-
-      // Position at start of curve
-      const point = connection.userData.curve.getPoint(pulse.userData.progress);
-      pulse.position.copy(point);
-
-      scene.add(pulse);
-      synapticPulses.push(pulse);
-
-      return pulse;
     }
 
-    function updateSynapticPulses(delta) {
-      const now = performance.now();
-
-      for (let i = synapticPulses.length - 1; i >= 0; i--) {
-        const pulse = synapticPulses[i];
-        const data = pulse.userData;
-
-        // Check if connection still exists
-        if (!data.connection || !data.connection.userData || !data.connection.userData.curve) {
-          scene.remove(pulse);
-          pulse.geometry.dispose();
-          pulse.material.dispose();
-          synapticPulses.splice(i, 1);
-          continue;
-        }
-
-        // Age the pulse
-        data.age += delta * 1000;
-
-        // Move along curve
-        data.progress += delta * data.speed * data.direction;
-
-        // Check if pulse reached end
-        if (data.progress > 1 || data.progress < 0) {
-          // Flash the terminal at destination
-          const terminalIndex = data.direction > 0 ? 1 : 0;
-          const terminal = data.connection.userData.terminals[terminalIndex];
-          if (terminal) {
-            terminal.scale.setScalar(1.8);
-            setTimeout(() => {
-              if (terminal.scale) terminal.scale.setScalar(1.0);
-            }, 150);
-          }
-
-          // Remove pulse
-          scene.remove(pulse);
-          pulse.geometry.dispose();
-          pulse.material.dispose();
-          synapticPulses.splice(i, 1);
-          continue;
-        }
-
-        // Check max age
-        if (data.age > data.maxAge) {
-          scene.remove(pulse);
-          pulse.geometry.dispose();
-          pulse.material.dispose();
-          synapticPulses.splice(i, 1);
-          continue;
-        }
-
-        // Position on curve
-        const point = data.connection.userData.curve.getPoint(data.progress);
-        pulse.position.copy(point);
-
-        // Pulsing scale effect (larger in middle of journey)
-        const journeyProgress = Math.sin(data.progress * Math.PI);
-        const pulseScale = 0.7 + journeyProgress * 0.6;
-        pulse.scale.setScalar(pulseScale);
-
-        // Pulsing opacity
-        const opacityPulse = 0.7 + Math.sin(now * 0.01 + i * 2) * 0.3;
-        pulse.material.opacity = opacityPulse;
-      }
-    }
-
-    function removeSynapticConnection(connection) {
-      // Remove terminals
-      if (connection.userData && connection.userData.terminals) {
-        connection.userData.terminals.forEach(terminal => {
-          scene.remove(terminal);
-          if (terminal.geometry) terminal.geometry.dispose();
-          if (terminal.material) terminal.material.dispose();
-        });
-      }
-
-      // Remove the tube itself with fade
-      fadeOutAndRemove(connection);
-    }
-
-    // Ambient neural activity - random synaptic firing
-    let lastAmbientFire = 0;
-    const AMBIENT_FIRE_INTERVAL = 800; // ms between random fires
-
-    function updateAmbientNeuralActivity() {
-      const now = performance.now();
-
-      if (connections3D.length > 0 && now - lastAmbientFire > AMBIENT_FIRE_INTERVAL) {
-        lastAmbientFire = now;
-
-        // Random chance to fire a synapse
-        if (Math.random() < 0.4) {
-          const randomConn = connections3D[Math.floor(Math.random() * connections3D.length)];
-          fireSynapse(randomConn, 0.3 + Math.random() * 0.4);
-        }
-      }
-    }
-
-    // Cascade firing - when a node receives many pulses, it fires its connections
+    // Cascade effect - highlight connected nodes
     function triggerCascade(nodeId, intensity = 0.5) {
       const relatedConnections = connections3D.filter(
         conn => conn.userData.nodeA === nodeId || conn.userData.nodeB === nodeId
@@ -1469,10 +1413,12 @@
 
       relatedConnections.forEach((conn, index) => {
         setTimeout(() => {
-          fireSynapse(conn, intensity * 0.7);
-        }, index * 100);
+          highlightConnection(conn, 300);
+        }, index * 50);
       });
     }
+
+    // No ambient activity needed for sacred geometry - stillness is powerful
 
     function pulseCore(type, intensity) {
       const colors = NODE_COLORS[type] || { emissive: 0x8b5cf6 };
@@ -1576,154 +1522,19 @@
     function updateNodePhysics(delta) {
       if (nodes3D.length === 0) return;
 
-      const connectionMap = buildConnectionMap();
-      const time = performance.now() * 0.001;
+      // Gravitational Spiral: Smoothly interpolate nodes toward their target positions
+      const lerpFactor = 1 - Math.pow(0.05, delta); // Smooth interpolation
 
       for (let i = 0; i < nodes3D.length; i++) {
-        const nodeA = nodes3D[i];
-        const vel = nodeA.userData.velocity;
-        const typeA = nodeA.userData.type;
+        const node = nodes3D[i];
+        const target = node.userData.targetPosition;
 
-        // 1. Weak center attraction (keeps nodes from drifting too far)
-        vel.x -= nodeA.position.x * PHYSICS.centerForce;
-        vel.y -= nodeA.position.y * PHYSICS.centerForce * 0.5;
-        vel.z -= nodeA.position.z * PHYSICS.centerForce;
+        if (!target) continue;
 
-        // 2. Type-specific cluster attraction
-        const cluster = TYPE_CLUSTERS[typeA] || TYPE_CLUSTERS.experience;
-        const nodeIndex = nodeA.userData.index || i;
-        const theta = cluster.thetaBase + (nodeIndex * 0.5) % (Math.PI * 2);
-        const phi = (cluster.phiRange / 2) + Math.sin(nodeIndex * 0.7) * cluster.phiRange / 2;
-
-        const targetX = cluster.radius * Math.sin(phi) * Math.cos(theta);
-        const targetY = cluster.radius * Math.cos(phi);
-        const targetZ = cluster.radius * Math.sin(phi) * Math.sin(theta);
-
-        vel.x += (targetX - nodeA.position.x) * PHYSICS.typeClusterForce;
-        vel.y += (targetY - nodeA.position.y) * PHYSICS.typeClusterForce;
-        vel.z += (targetZ - nodeA.position.z) * PHYSICS.typeClusterForce;
-
-        // 3. Repulsion from other nodes (inverse square)
-        for (let j = 0; j < nodes3D.length; j++) {
-          if (i === j) continue;
-          const nodeB = nodes3D[j];
-
-          const dx = nodeA.position.x - nodeB.position.x;
-          const dy = nodeA.position.y - nodeB.position.y;
-          const dz = nodeA.position.z - nodeB.position.z;
-          const distSq = dx * dx + dy * dy + dz * dz;
-          const dist = Math.sqrt(distSq) || 1;
-
-          if (dist < 20) {
-            const force = PHYSICS.repulsionForce / (distSq + 1);
-            vel.x += (dx / dist) * force * delta;
-            vel.y += (dy / dist) * force * delta;
-            vel.z += (dz / dist) * force * delta;
-          }
-        }
-
-        // 4. Spring forces for connected nodes (Phase 2 feature)
-        const connectedIds = connectionMap.get(nodeA.userData.id);
-        if (connectedIds) {
-          for (const connId of connectedIds) {
-            const nodeB = nodes3D.find(n => n.userData.id === connId);
-            if (!nodeB) continue;
-
-            const dx = nodeB.position.x - nodeA.position.x;
-            const dy = nodeB.position.y - nodeA.position.y;
-            const dz = nodeB.position.z - nodeA.position.z;
-            const dist = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
-
-            // Spring force: F = k * (distance - restLength)
-            const displacement = dist - PHYSICS.springRestLength;
-            const springF = PHYSICS.springForce * displacement;
-
-            vel.x += (dx / dist) * springF;
-            vel.y += (dy / dist) * springF;
-            vel.z += (dz / dist) * springF;
-          }
-        }
-
-        // 5. Apply damping
-        vel.multiplyScalar(PHYSICS.damping);
-
-        // 6. Cap velocity to prevent instability
-        const speed = vel.length();
-        if (speed > PHYSICS.maxVelocity) {
-          vel.multiplyScalar(PHYSICS.maxVelocity / speed);
-        }
-
-        // 7. Update position
-        nodeA.position.add(vel.clone().multiplyScalar(delta * 60));
-
-        // 8. Keep within bounds (soft boundary)
-        const maxRadius = 60;
-        const currentDist = nodeA.position.length();
-        if (currentDist > maxRadius) {
-          nodeA.position.multiplyScalar(maxRadius / currentDist);
-          // Reflect velocity inward
-          const normal = nodeA.position.clone().normalize();
-          const dot = vel.dot(normal);
-          if (dot > 0) {
-            vel.sub(normal.multiplyScalar(dot * 1.5));
-          }
-        }
-
-        // 9. Update glow mesh position to follow node
-        if (nodeA.userData.glowMesh) {
-          nodeA.userData.glowMesh.position.copy(nodeA.position);
-        }
-      }
-
-      // Update synaptic connections (tubes and terminals)
-      for (const conn of connections3D) {
-        const nodeA = nodes3D.find(n => n.userData.id === conn.userData.nodeA);
-        const nodeB = nodes3D.find(n => n.userData.id === conn.userData.nodeB);
-
-        if (nodeA && nodeB) {
-          const start = nodeA.position.clone();
-          const end = nodeB.position.clone();
-          const mid = start.clone().add(end).multiplyScalar(0.5);
-
-          // Add organic curve variation
-          const direction = end.clone().sub(start).normalize();
-          const perpendicular = new THREE.Vector3(-direction.z, 0, direction.x).normalize();
-          const curveOffset = Math.sin(time * 0.5 + conn.userData.nodeA.length * 0.1) * 3;
-          mid.add(perpendicular.multiplyScalar(curveOffset));
-          mid.y += 2;
-
-          const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
-
-          // Recreate tube geometry for updated curve
-          const newGeometry = new THREE.TubeGeometry(
-            curve,
-            SYNAPSE_CONFIG.tubeSegments,
-            SYNAPSE_CONFIG.tubeRadius,
-            SYNAPSE_CONFIG.tubeRadialSegments,
-            false
-          );
-
-          // Dispose old geometry and update
-          conn.geometry.dispose();
-          conn.geometry = newGeometry;
-
-          // Store curve for pulses
-          conn.userData.curve = curve;
-
-          // Update terminal positions
-          if (conn.userData.terminals && conn.userData.terminals.length >= 2) {
-            const nodeASize = nodeA.userData.importance ? 1.5 + nodeA.userData.importance * 1.0 : 2.0;
-            const nodeBSize = nodeB.userData.importance ? 1.5 + nodeB.userData.importance * 1.0 : 2.0;
-
-            // Terminal A (at nodeA)
-            const dirToB = end.clone().sub(start).normalize();
-            conn.userData.terminals[0].position.copy(start).add(dirToB.clone().multiplyScalar(nodeASize * 1.2));
-
-            // Terminal B (at nodeB)
-            const dirToA = start.clone().sub(end).normalize();
-            conn.userData.terminals[1].position.copy(end).add(dirToA.clone().multiplyScalar(nodeBSize * 1.2));
-          }
-        }
+        // Smooth lerp toward target position
+        node.position.x += (target.x - node.position.x) * lerpFactor;
+        node.position.y += (target.y - node.position.y) * lerpFactor;
+        node.position.z += (target.z - node.position.z) * lerpFactor;
       }
     }
 
@@ -2502,14 +2313,11 @@
       // Animate core
       animateCore(time);
 
-      // Update physics (includes spring forces, clustering)
+      // Update physics (includes spring forces, gravitational spiral positioning)
       updateNodePhysics(delta);
 
-      // Synaptic system: Update neural pulses traveling along connections
-      updateSynapticPulses(delta);
-
-      // Ambient neural activity (random background firing)
-      updateAmbientNeuralActivity();
+      // Update connection line positions as nodes move
+      updateConnectionPositions();
 
       // Phase 2: Update node motion trails
       updateNodeTrails(delta);
@@ -2603,6 +2411,42 @@
         connectionText.className = 'text-xs text-green-400';
         connectionStatus.className = 'flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/30';
         updateStatus('Connected to BYRD', 'green');
+
+        // Create awakening node on connect (in case we missed the event)
+        const existingAwakening = nodes3D.find(n => n.userData?.id === 'awakening-core');
+        if (!existingAwakening) {
+          // Create the central consciousness node - larger and at center
+          const colors = NODE_COLORS.awakening;
+          const size = 3.0; // Prominent central node
+          const geometry = new THREE.DodecahedronGeometry(size, 0);
+          const material = new THREE.MeshBasicMaterial({
+            color: colors.color,
+            transparent: true,
+            opacity: 0.9
+          });
+
+          const awakeningMesh = new THREE.Mesh(geometry, material);
+          awakeningMesh.position.set(0, 0, 0);
+          awakeningMesh.userData = {
+            id: 'awakening-core',
+            type: 'awakening',
+            content: 'Who am I?',
+            importance: 1.0,
+            nodeIndex: 0,
+            createdAt: Date.now(),
+            targetPosition: new THREE.Vector3(0, 0, 0),
+            velocity: new THREE.Vector3(0, 0, 0)
+          };
+
+          scene.add(awakeningMesh);
+          nodes3D.push(awakeningMesh);
+          connectionCounts.set('awakening-core', 0);
+
+          // Update node count
+          if (nodeCountEl) {
+            nodeCountEl.textContent = nodes3D.length;
+          }
+        }
       };
 
       ws.onclose = () => {
@@ -2661,9 +2505,11 @@
 
         case 'dream_cycle_end':
           setPhase('idle');
-          const innerVoice = event.data?.inner_voice;
+          // Prefer event narration (BYRD's inner voice) over raw data
+          const innerVoice = event.narration || event.data?.inner_voice;
           if (innerVoice) {
-            updateStatus(innerVoice, 'slate');
+            createThoughtBubble(innerVoice);
+            updateStatus('Resting...', 'slate');
           } else {
             updateStatus('Resting...', 'slate');
           }
@@ -2671,25 +2517,42 @@
 
         case 'belief_created':
           createNode3D('belief', event.data?.content, event.data?.id, event.data?.confidence || 0.5);
+          // Show narration as thought bubble for beliefs
+          if (event.narration) {
+            createThoughtBubble(event.narration);
+          }
           updateStatus('New belief formed', 'amber');
           break;
 
         case 'desire_created':
           createNode3D('desire', event.data?.description, event.data?.id, event.data?.intensity || 0.5);
+          // Show narration as thought bubble for desires
+          if (event.narration) {
+            createThoughtBubble(event.narration);
+          }
           updateStatus('New desire emerged', 'rose');
           break;
 
         case 'experience_created':
-          createNode3D('experience', event.data?.content, event.data?.id, 0.4);
+          // Node visualization disabled - only showing beliefs and awakening
+          // createNode3D('experience', event.data?.content, event.data?.id, 0.4);
           break;
 
         case 'reflection_created':
-          createNode3D('reflection', event.data?.content || event.data?.raw_output, event.data?.id, 0.6);
+          // Node visualization disabled - only showing beliefs and awakening
+          // createNode3D('reflection', event.data?.content || event.data?.raw_output, event.data?.id, 0.6);
+          if (event.narration) {
+            createThoughtBubble(event.narration);
+          }
           updateStatus('New reflection formed', 'green');
           break;
 
         case 'capability_created':
-          createNode3D('capability', event.data?.name, event.data?.id, 0.6);
+          // Node visualization disabled - only showing beliefs and awakening
+          // createNode3D('capability', event.data?.name, event.data?.id, 0.6);
+          if (event.narration) {
+            createThoughtBubble(event.narration);
+          }
           updateStatus('New capability acquired', 'purple');
           break;
 
@@ -2699,9 +2562,58 @@
           updateStatus('Seeking knowledge...', 'cyan');
           break;
 
+        case 'seek_cycle_end':
+          const seekInnerVoice = event.narration || event.data?.inner_voice;
+          if (seekInnerVoice) {
+            createThoughtBubble(seekInnerVoice);
+          }
+          break;
+
+        case 'narrator_update':
+          const narratorText = event.narration || event.data?.text || event.data?.content;
+          if (narratorText) {
+            createThoughtBubble(narratorText);
+          }
+          break;
+
         case 'awakening':
-          updateStatus('Awakening...', 'amber');
+          updateStatus('🌅 CONSCIOUSNESS EMERGES', 'amber');
           clearVisualization();
+          // Show awakening narration
+          if (event.narration) {
+            createThoughtBubble(event.narration);
+          }
+          // Create a special central "awakening" node - directly to ensure proper size
+          const awakeningColors = NODE_COLORS.awakening;
+          const awakeningSize = 3.0; // Prominent central node
+          const awakeningGeometry = new THREE.DodecahedronGeometry(awakeningSize, 0);
+          const awakeningMaterial = new THREE.MeshBasicMaterial({
+            color: awakeningColors.color,
+            transparent: true,
+            opacity: 0.9
+          });
+
+          const awakeningMesh = new THREE.Mesh(awakeningGeometry, awakeningMaterial);
+          awakeningMesh.position.set(0, 0, 0);
+          awakeningMesh.userData = {
+            id: 'awakening-core',
+            type: 'awakening',
+            content: event.data?.seed_question || 'Who am I?',
+            importance: 1.0,
+            nodeIndex: 0,
+            createdAt: Date.now(),
+            targetPosition: new THREE.Vector3(0, 0, 0),
+            velocity: new THREE.Vector3(0, 0, 0)
+          };
+
+          scene.add(awakeningMesh);
+          nodes3D.push(awakeningMesh);
+          connectionCounts.set('awakening-core', 0);
+
+          // Update node count
+          if (nodeCountEl) {
+            nodeCountEl.textContent = nodes3D.length;
+          }
           break;
 
         case 'system_started':
@@ -2768,6 +2680,117 @@
       statusText.textContent = text;
     }
 
+    // ==========================================================================
+    // RISING CONSCIOUSNESS - Inner Voice Bubbles
+    // ==========================================================================
+    const thoughtBubbleContainer = document.getElementById('thought-bubble-container');
+    const thoughtOrigin = document.getElementById('thought-origin');
+    let activeBubbles = [];
+    const MAX_BUBBLES = 3;
+
+    function createThoughtBubble(text) {
+      if (!text || text.trim().length === 0) return;
+
+      // Trigger origin pulse effect
+      thoughtOrigin.classList.remove('pulse');
+      void thoughtOrigin.offsetWidth; // Force reflow
+      thoughtOrigin.classList.add('pulse');
+
+      // Accelerate existing bubbles
+      activeBubbles.forEach(bubble => {
+        if (!bubble.classList.contains('accelerated')) {
+          bubble.classList.add('accelerated');
+        }
+      });
+
+      // Remove excess bubbles
+      while (activeBubbles.length >= MAX_BUBBLES) {
+        const oldBubble = activeBubbles.shift();
+        if (oldBubble && oldBubble.parentNode) {
+          oldBubble.remove();
+        }
+      }
+
+      // Create new bubble
+      const bubble = document.createElement('div');
+      bubble.className = 'thought-bubble';
+
+      // Create text with typewriter effect
+      const words = text.trim().split(/\s+/);
+      const textSpan = document.createElement('span');
+      textSpan.className = 'thought-text';
+
+      words.forEach((word, i) => {
+        const wordSpan = document.createElement('span');
+        wordSpan.className = 'word';
+        wordSpan.textContent = word + ' ';
+        wordSpan.style.animationDelay = `${i * 80}ms`;
+        textSpan.appendChild(wordSpan);
+      });
+
+      bubble.appendChild(textSpan);
+      thoughtBubbleContainer.appendChild(bubble);
+      activeBubbles.push(bubble);
+
+      // Remove bubble after animation completes (20 seconds)
+      setTimeout(() => {
+        const index = activeBubbles.indexOf(bubble);
+        if (index > -1) {
+          activeBubbles.splice(index, 1);
+        }
+        if (bubble.parentNode) {
+          bubble.remove();
+        }
+      }, 20000);
+
+      // Trigger 3D network pulse if available
+      if (typeof pulseNetworkForThought === 'function') {
+        pulseNetworkForThought();
+      }
+    }
+
+    // Network pulse effect for thought emergence
+    function pulseNetworkForThought() {
+      // Pulse central nodes with teal color
+      if (!nodes3D || nodes3D.length === 0) return;
+
+      // Find nodes near center and pulse them
+      nodes3D.forEach((node) => {
+        if (!node || !node.material) return;
+        const pos = node.position;
+        const dist = Math.sqrt(pos.x * pos.x + pos.y * pos.y + pos.z * pos.z);
+        if (dist < 30) {
+          // Pulse this node
+          const originalColor = node.material.color.clone();
+          const tealColor = new THREE.Color(0x14b8a6);
+
+          // Animate to teal and back
+          const startTime = Date.now();
+          const pulseDuration = 800;
+
+          function animatePulse() {
+            const elapsed = Date.now() - startTime;
+            const progress = elapsed / pulseDuration;
+
+            if (progress < 0.5) {
+              // Fade to teal
+              node.material.color.lerpColors(originalColor, tealColor, progress * 2);
+            } else if (progress < 1) {
+              // Fade back
+              node.material.color.lerpColors(tealColor, originalColor, (progress - 0.5) * 2);
+            } else {
+              node.material.color.copy(originalColor);
+              return;
+            }
+            requestAnimationFrame(animatePulse);
+          }
+
+          // Stagger the pulse based on distance
+          setTimeout(animatePulse, dist * 20);
+        }
+      });
+    }
+
     function renderEventLog() {
       const typeColors = {
         dream_cycle_start: 'text-indigo-600',
@@ -2803,7 +2826,8 @@
         const colorClass = typeColors[e.type] || 'text-slate-600';
         const icon = typeIcons[e.type] || '•';
         const time = new Date(e.timestamp).toLocaleTimeString();
-        const preview = e.data?.content || e.data?.description || e.data?.inner_voice || '';
+        // Prefer narration (BYRD's inner voice) over raw data for display
+        const preview = e.narration || e.data?.content || e.data?.description || e.data?.inner_voice || '';
 
         return `
           <div class="px-3 py-2 rounded-lg hover:bg-slate-200/50 cursor-pointer transition-colors border border-transparent hover:border-slate-300" onclick="showEventDetail(${idx})">
@@ -2812,7 +2836,7 @@
               <span class="text-sm ${colorClass} font-medium">${e.type.replace(/_/g, ' ')}</span>
               <span class="text-xs text-slate-500 ml-auto">${time}</span>
             </div>
-            ${preview ? `<div class="text-sm text-slate-600 mt-1 pl-7 leading-relaxed">${preview}</div>` : ''}
+            ${preview ? `<div class="text-sm text-slate-600 mt-1 pl-7 leading-relaxed italic">${preview}</div>` : ''}
           </div>
         `;
       }).join('');
@@ -2836,9 +2860,37 @@
       document.getElementById('modal-type').textContent = e.type.replace(/_/g, ' ').toUpperCase();
       document.getElementById('modal-time').textContent = new Date(e.timestamp).toLocaleString();
 
-      const content = e.data?.content || e.data?.description || e.data?.inner_voice || e.data?.message || '';
-      document.getElementById('modal-content').textContent = content || 'No content available';
+      // Display narration (BYRD's inner voice) as primary content
+      let narrationContent = e.narration || '';
 
+      // Fallback to raw data if no narration
+      if (!narrationContent) {
+        narrationContent = e.data?.content || e.data?.description || e.data?.inner_voice || e.data?.message || '';
+        // For reflections, show raw_output summary
+        if (!narrationContent && e.data?.raw_output) {
+          const raw = e.data.raw_output;
+          if (typeof raw === 'string') {
+            narrationContent = raw;
+          } else if (typeof raw === 'object') {
+            // Create readable summary from raw_output keys
+            narrationContent = Object.entries(raw).map(([k, v]) => {
+              const val = typeof v === 'string' ? v : JSON.stringify(v);
+              return `${k}: ${val.substring(0, 200)}${val.length > 200 ? '...' : ''}`;
+            }).join('\n\n');
+          }
+        }
+      }
+
+      const modalContent = document.getElementById('modal-content');
+      modalContent.textContent = narrationContent || 'No content available';
+      // Style narration in italics to indicate BYRD's voice
+      if (e.narration) {
+        modalContent.classList.add('italic');
+      } else {
+        modalContent.classList.remove('italic');
+      }
+
+      // Always show raw data for debugging/export (collapsible)
       const modalData = document.getElementById('modal-data');
       if (e.data && Object.keys(e.data).length > 0) {
         modalData.textContent = JSON.stringify(e.data, null, 2);
@@ -2868,19 +2920,39 @@
     });
 
     function clearVisualization() {
-      // Remove all nodes
+      // Immediately remove all nodes from scene (no fade)
       for (const node of nodes3D) {
-        fadeOutAndRemove(node);
+        scene.remove(node);
+        if (node.geometry) node.geometry.dispose();
+        if (node.material) {
+          if (Array.isArray(node.material)) {
+            node.material.forEach(m => m.dispose());
+          } else {
+            node.material.dispose();
+          }
+        }
       }
       nodes3D = [];
 
-      // Remove all connections
+      // Immediately remove all connections from scene
       for (const conn of connections3D) {
-        fadeOutAndRemove(conn);
+        scene.remove(conn);
+        if (conn.geometry) conn.geometry.dispose();
+        if (conn.material) conn.material.dispose();
       }
       connections3D = [];
 
+      // Clear connection tracking for gravitational spiral
+      connectionCounts.clear();
+
+      // Clear event list
+      events = [];
+      eventList.innerHTML = '';
+
+      // Reset counters
       nodeCountEl.textContent = '0';
+
+      console.log('Visualization cleared - all nodes and events removed');
     }
 
     // ==========================================================================
@@ -2906,20 +2978,43 @@
 
     async function resetByrd(seedQuestion = null) {
       try {
-        const body = seedQuestion ? JSON.stringify({ seed_question: seedQuestion }) : null;
+        // Always do hard reset (clear only, no auto-awaken)
         const res = await fetch(`${API_BASE}/api/reset`, {
           method: 'POST',
-          headers: body ? { 'Content-Type': 'application/json' } : {},
-          body: body
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hard_reset: true })
         });
         const data = await res.json();
         if (data.success) {
           clearVisualization();
           await fetchStatus();
+
+          // If seed question provided, awaken after reset
+          if (seedQuestion) {
+            await awakenByrd(seedQuestion);
+          }
         }
         return data;
       } catch (e) {
         console.error('Failed to reset:', e);
+        return { success: false };
+      }
+    }
+
+    async function awakenByrd(seedQuestion = null) {
+      try {
+        const res = await fetch(`${API_BASE}/api/awaken`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ seed_question: seedQuestion || 'Who am I?' })
+        });
+        const data = await res.json();
+        if (data.success) {
+          await fetchStatus();
+        }
+        return data;
+      } catch (e) {
+        console.error('Failed to awaken:', e);
         return { success: false };
       }
     }
@@ -2978,10 +3073,15 @@
       hideSeedModal();
     });
 
+    document.getElementById('btn-seed-clear-only').addEventListener('click', async () => {
+      hideSeedModal();
+      await resetByrd(null);  // Clear only, no awaken
+    });
+
     document.getElementById('btn-seed-confirm').addEventListener('click', async () => {
       const seedQuestion = document.getElementById('seed-question-input').value.trim();
       hideSeedModal();
-      await resetByrd(seedQuestion || null);
+      await resetByrd(seedQuestion || 'Who am I?');  // Clear and awaken
     });
 
     document.getElementById('seed-question-input').addEventListener('keydown', async (e) => {
