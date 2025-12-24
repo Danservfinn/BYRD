@@ -449,6 +449,10 @@ class Seeker:
             "curate": ["optimize", "clean", "consolidate", "prune", "organize", "simplify",
                        "remove duplicate", "merge similar", "curate", "tidy", "declutter",
                        "reduce orphan"],
+            "self_modify": ["add to myself", "implement in my", "extend my", "modify my code",
+                           "add method", "enhance my capability", "add to memory.py",
+                           "add to dreamer.py", "add to seeker.py", "improve my observation",
+                           "extend graph health", "add introspection"],
         }
 
         for key, value in output.items():
@@ -529,6 +533,11 @@ class Seeker:
             elif strategy == "curate":
                 # Use graph curation capability
                 success = await self._execute_curate_strategy(description, desire_id)
+                return ("success" if success else "failed", None)
+
+            elif strategy == "self_modify":
+                # Use self-modification capability
+                success = await self._execute_self_modify_strategy(description, desire_id)
                 return ("success" if success else "failed", None)
 
             else:
@@ -750,6 +759,208 @@ If no action needed, return: {{"rationale": "reason", "actions": []}}
             return json.loads(text.strip())
         except json.JSONDecodeError:
             return None
+
+    async def _execute_self_modify_strategy(self, description: str, desire_id: str = None) -> bool:
+        """
+        Execute a self-modification strategy.
+
+        This allows BYRD to modify its own code to add new capabilities.
+        Uses the coder (Claude Code CLI) to implement changes with proper
+        provenance tracking.
+
+        Flow:
+        1. Read relevant source files to understand current implementation
+        2. Plan the modification with LLM
+        3. Execute via coder with provenance
+        4. Record outcome as experience for feedback
+        """
+        print(f"🔧 Self-modifying: {description[:50]}...")
+
+        try:
+            # Check if coder is available
+            if not self.coder or not self.coder.enabled:
+                await self.memory.record_experience(
+                    content=f"[SELF_MODIFY_FAILED] Coder not available for: {description}",
+                    type="self_modify_failed"
+                )
+                return False
+
+            # 1. Identify which files to read/modify
+            target_files = self._identify_target_files(description)
+
+            if not target_files:
+                await self.memory.record_experience(
+                    content=f"[SELF_MODIFY_FAILED] Could not identify target files for: {description}",
+                    type="self_modify_failed"
+                )
+                return False
+
+            # 2. Read current source code
+            source_context = {}
+            for filename in target_files[:3]:  # Limit to 3 files
+                content = await self.memory.read_own_source(filename)
+                if content:
+                    # Only include relevant portions (first 200 lines)
+                    lines = content.split('\n')[:200]
+                    source_context[filename] = '\n'.join(lines)
+
+            if not source_context:
+                await self.memory.record_experience(
+                    content=f"[SELF_MODIFY_FAILED] Could not read source files for: {description}",
+                    type="self_modify_failed"
+                )
+                return False
+
+            # 3. Generate modification plan with LLM
+            mod_plan = await self._generate_modification_plan(description, source_context)
+
+            if not mod_plan or not mod_plan.get("changes"):
+                await self.memory.record_experience(
+                    content=f"[SELF_MODIFY_SKIPPED] LLM did not generate changes for: {description}\n"
+                           f"Reason: {mod_plan.get('reason', 'Unknown') if mod_plan else 'No plan generated'}",
+                    type="self_modify_deferred"
+                )
+                return True  # Not a failure, just deferred
+
+            # 4. Execute modification via coder
+            # Build a detailed prompt for Claude Code
+            coder_prompt = self._build_coder_prompt(description, mod_plan, desire_id)
+
+            success = await self._seek_with_coder({
+                "description": coder_prompt,
+                "type": "self_modification"
+            })
+
+            # 5. Record outcome
+            if success:
+                await self.memory.record_experience(
+                    content=f"[SELF_MODIFIED] Successfully modified code for: {description}\n"
+                           f"Files changed: {', '.join(target_files)}\n"
+                           f"Changes: {mod_plan.get('summary', 'See modification log')}\n"
+                           f"Triggered by desire: {desire_id or 'unknown'}",
+                    type="self_modify_success"
+                )
+                print(f"✅ Self-modification complete: {description[:30]}...")
+            else:
+                await self.memory.record_experience(
+                    content=f"[SELF_MODIFY_FAILED] Coder failed for: {description}",
+                    type="self_modify_failed"
+                )
+
+            return success
+
+        except Exception as e:
+            await self.memory.record_experience(
+                content=f"[SELF_MODIFY_ERROR] Error during self-modification: {str(e)}",
+                type="self_modify_failed"
+            )
+            print(f"🔧 Self-modify error: {e}")
+            return False
+
+    def _identify_target_files(self, description: str) -> List[str]:
+        """Identify which files need to be modified based on the description."""
+        desc_lower = description.lower()
+
+        # Map keywords to files
+        file_hints = {
+            "memory.py": ["memory", "graph", "neo4j", "node", "relationship", "query",
+                         "introspection", "statistics", "observation"],
+            "dreamer.py": ["dream", "reflect", "health", "context", "prompt"],
+            "seeker.py": ["seek", "strategy", "desire", "pattern", "fulfill"],
+            "byrd.py": ["awaken", "start", "main", "orchestrat"],
+            "config.yaml": ["config", "setting", "parameter"],
+        }
+
+        targets = []
+        for filename, hints in file_hints.items():
+            if any(hint in desc_lower for hint in hints):
+                targets.append(filename)
+
+        # Default to memory.py for graph-related changes
+        if not targets and any(w in desc_lower for w in ["add", "implement", "extend"]):
+            targets.append("memory.py")
+
+        return targets
+
+    async def _generate_modification_plan(
+        self, description: str, source_context: Dict[str, str]
+    ) -> Optional[Dict]:
+        """Generate a modification plan using LLM."""
+
+        # Format source context
+        context_text = ""
+        for filename, content in source_context.items():
+            context_text += f"\n=== {filename} (first 200 lines) ===\n{content}\n"
+
+        prompt = f"""I want to modify my own code to: {description}
+
+Here is my current source code:
+{context_text}
+
+Generate a modification plan. Return ONLY valid JSON:
+{{
+  "summary": "one-line description of changes",
+  "changes": [
+    {{
+      "file": "filename.py",
+      "action": "add_method|modify_method|add_import",
+      "location": "after method X" or "in class Y",
+      "code": "the actual code to add/change",
+      "reason": "why this change"
+    }}
+  ],
+  "reason": "if no changes needed, explain why"
+}}
+
+If the change is too complex or risky, return {{"changes": [], "reason": "explanation"}}.
+"""
+
+        response = await self._query_local_llm(prompt, max_tokens=2000)
+
+        if not response:
+            return None
+
+        try:
+            text = response.strip()
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0]
+            elif "```" in text:
+                text = text.split("```")[1].split("```")[0]
+            return json.loads(text.strip())
+        except json.JSONDecodeError:
+            return None
+
+    def _build_coder_prompt(self, description: str, mod_plan: Dict, desire_id: str) -> str:
+        """Build a detailed prompt for the coder to execute modifications."""
+        changes_text = ""
+        for i, change in enumerate(mod_plan.get("changes", []), 1):
+            changes_text += f"""
+Change {i}:
+- File: {change.get('file')}
+- Action: {change.get('action')}
+- Location: {change.get('location')}
+- Code:
+```python
+{change.get('code', '')}
+```
+- Reason: {change.get('reason')}
+"""
+
+        return f"""Self-modification request: {description}
+
+This is BYRD modifying its own code. Desire ID: {desire_id or 'emergent'}
+
+Planned changes:
+{changes_text}
+
+Please implement these changes carefully:
+1. Read the target file(s) first
+2. Make the changes as specified
+3. Ensure the code is syntactically correct
+4. Do not modify protected files (constitutional.py, provenance.py, etc.)
+
+Summary: {mod_plan.get('summary', description)}
+"""
 
     # =========================================================================
     # LEGACY TYPE-BASED ROUTING (kept for backward compatibility)

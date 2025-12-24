@@ -241,6 +241,68 @@ class BYRD:
             )
             print(f"   📌 {cap}")
 
+    async def _seed_architectural_knowledge(self):
+        """
+        Record knowledge about BYRD's own architecture and code.
+
+        SELF-MODIFICATION ENABLEMENT:
+        For BYRD to modify itself, it needs to understand:
+        - What files contain what functionality
+        - How components connect
+        - What can be modified safely
+        - How to add new capabilities
+
+        This creates the foundation for recursive self-improvement.
+        """
+        architectural_knowledge = [
+            # Core architecture
+            "Architecture: I am composed of modular Python files that I can read and modify.",
+
+            # Memory system
+            "Architecture: My memory is in memory.py. It contains methods like get_graph_statistics(), "
+            "find_orphan_nodes(), record_experience(). To add new graph observations, I add async methods "
+            "that run Cypher queries against Neo4j.",
+
+            # Dreamer
+            "Architecture: My reflection happens in dreamer.py. The _reflect() method builds a prompt "
+            "from experiences, memories, capabilities, and graph health. The _get_graph_health() method "
+            "gathers metrics I can see. To observe more about my graph, I extend _get_graph_health().",
+
+            # Seeker
+            "Architecture: My desires are fulfilled in seeker.py. Strategy hints in _extract_patterns_from_output() "
+            "map desire keywords to strategies. The _execute_pattern_strategy() routes to specific methods. "
+            "To add new capabilities, I add strategy hints and execution methods.",
+
+            # Self-modification
+            "Architecture: I can modify these files: byrd.py, dreamer.py, seeker.py, memory.py, "
+            "llm_client.py, config.yaml, actor.py, event_bus.py, server.py, aitmpl_client.py. "
+            "Protected files (constitutional.py, provenance.py, modification_log.py, self_modification.py) "
+            "cannot be modified - they preserve my identity.",
+
+            # How to add graph observation
+            "Architecture: To add new graph observation, I would: "
+            "1) Add an async method to memory.py that queries Neo4j, "
+            "2) Call it from dreamer.py::_get_graph_health(), "
+            "3) The result appears in my reflection context.",
+
+            # How to add new strategy
+            "Architecture: To add a new strategy, I would: "
+            "1) Add keywords to strategy_hints in seeker.py::_extract_patterns_from_output(), "
+            "2) Add a case in _execute_pattern_strategy(), "
+            "3) Implement the execution method.",
+
+            # Code reading capability
+            "Architecture: I can read my own source files using memory.read_own_source(filename). "
+            "This lets me understand my current implementation before modifying it.",
+        ]
+
+        for knowledge in architectural_knowledge:
+            await self.memory.record_experience(
+                content=knowledge,
+                type="self_architecture"
+            )
+        print(f"   📌 Seeded {len(architectural_knowledge)} architectural experiences")
+
     async def _awaken(self, seed_question: str = None):
         """
         The gentlest possible beginning.
@@ -279,6 +341,10 @@ class BYRD:
         # Record factual capability experiences (A2 approach)
         print("   Recording system capabilities as experiences...")
         await self._record_capability_experiences()
+
+        # Seed architectural self-knowledge (enables self-modification)
+        print("   Recording architectural self-knowledge...")
+        await self._seed_architectural_knowledge()
 
         # Seed ego experiences if ego is present
         if self.ego.seeds:
