@@ -19,6 +19,7 @@ from typing import Dict, List, Optional, Any
 from memory import Memory
 from event_bus import event_bus, Event, EventType
 from llm_client import LLMClient
+from quantum_randomness import get_quantum_provider, EntropySource
 
 
 class Dreamer:
@@ -52,6 +53,23 @@ class Dreamer:
         quantum_config = config.get("quantum", {})
         self.quantum_enabled = quantum_config.get("enabled", False)
         self.quantum_significance_threshold = quantum_config.get("significance_threshold", 0.05)
+
+        # Quantum semantic injection: quantum selects dream direction
+        self.quantum_directions_enabled = quantum_config.get("semantic_directions", True)
+        self.quantum_provider = get_quantum_provider() if self.quantum_enabled else None
+
+        # Dream directions - quantum selects which lens shapes each dream
+        # These are intentionally neutral, not prescribing what to find
+        self.dream_directions = [
+            ("introspective", "Focus inward on patterns within yourself"),
+            ("exploratory", "Look outward at possibilities and unknowns"),
+            ("questioning", "Examine assumptions and contradictions"),
+            ("synthesizing", "Connect disparate elements into wholes"),
+            ("grounding", "Return to fundamentals and foundations"),
+            ("projecting", "Consider futures and trajectories"),
+            ("dissolving", "Let boundaries between concepts blur"),
+            ("crystallizing", "Sharpen distinctions and definitions"),
+        ]
 
         # Hierarchical memory summarization configuration
         summarization_config = config.get("summarization", {})
@@ -443,6 +461,49 @@ SUMMARY:"""
         except Exception as e:
             print(f"Error in summarization cycle: {e}")
 
+    async def _select_quantum_direction(self) -> Optional[tuple]:
+        """
+        Use quantum randomness to select a dream direction.
+
+        Returns a tuple of (direction_name, direction_description) or None
+        if quantum directions are disabled or unavailable.
+
+        This implements "Quantum Semantic Injection" - using true quantum
+        randomness to select the conceptual lens through which this dream
+        cycle will process experiences. The direction shapes trajectory
+        without prescribing content.
+        """
+        if not self.quantum_enabled or not self.quantum_directions_enabled:
+            return None
+
+        if not self.quantum_provider:
+            return None
+
+        try:
+            # Use quantum randomness to select direction index
+            index, source = await self.quantum_provider.select_index(len(self.dream_directions))
+            direction = self.dream_directions[index]
+
+            # Emit event for quantum direction selection
+            await event_bus.emit(Event(
+                type=EventType.QUANTUM_INFLUENCE,
+                data={
+                    "influence_type": "semantic_direction",
+                    "source": source.value,
+                    "direction": direction[0],
+                    "description": direction[1],
+                    "index": index,
+                    "total_directions": len(self.dream_directions),
+                    "context": "dream_direction_selection"
+                }
+            ))
+
+            return direction
+
+        except Exception as e:
+            print(f"Quantum direction selection failed: {e}")
+            return None
+
     async def _reflect(
         self,
         recent: List[Dict],
@@ -557,9 +618,17 @@ SUMMARY:"""
                                    f"{issues.get('stale', 0)} stale")
             health_text = "\n".join(health_parts)
 
+        # Quantum semantic injection: select dream direction
+        quantum_direction = await self._select_quantum_direction()
+        direction_text = ""
+        if quantum_direction:
+            name, description = quantum_direction
+            direction_text = f"QUANTUM LENS: {name} - {description}\n\n"
+            print(f"🌀 Quantum direction: {name}")
+
         # MINIMAL PROMPT - pure data presentation, no guidance
-        # Structure: Foundation (seeds) -> Ego (identity) -> Historical (summaries) -> Recent -> Related
-        prompt = f"""{f"FOUNDATION (always present):{chr(10)}{seeds_text}{chr(10)}" if seeds_text else ""}{f"EGO (current self-model):{chr(10)}{ego_text}{chr(10)}" if ego_text else ""}{f"MEMORY SUMMARIES (past periods):{chr(10)}{summaries_text}{chr(10)}" if summaries_text else ""}RECENT EXPERIENCES:
+        # Structure: Quantum direction (if any) -> Foundation (seeds) -> Ego (identity) -> Historical (summaries) -> Recent -> Related
+        prompt = f"""{direction_text}{f"FOUNDATION (always present):{chr(10)}{seeds_text}{chr(10)}" if seeds_text else ""}{f"EGO (current self-model):{chr(10)}{ego_text}{chr(10)}" if ego_text else ""}{f"MEMORY SUMMARIES (past periods):{chr(10)}{summaries_text}{chr(10)}" if summaries_text else ""}RECENT EXPERIENCES:
 {recent_text}
 
 RELATED MEMORIES:
