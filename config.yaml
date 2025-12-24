@@ -347,3 +347,10 @@ quantum:
   # This prevents flooding the graph with insignificant moments
   record_significant_moments: true
   significance_threshold: 0.05
+
+  # Multi-stream quantum collapse for inner voice
+  # Generates N parallel "thought branches" in superposition, then
+  # quantum observation collapses to a single manifested reality.
+  # This implements many-worlds interpretation for BYRD's inner monologue.
+  inner_voice_streams: 3         # Number of parallel thought branches
+  inner_voice_collapse: true     # Enable quantum selection of which manifests
