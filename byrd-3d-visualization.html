@@ -1624,7 +1624,7 @@
       controls.minDistance = 5;          // Get very close to nodes
       controls.maxDistance = 500;        // See entire mind space
       controls.autoRotate = true;
-      controls.autoRotateSpeed = 0.3;
+      controls.autoRotateSpeed = 0.03;  // Slowed to 10% of original
       controls.maxPolarAngle = Math.PI * 0.95;  // Almost full vertical range
       controls.minPolarAngle = Math.PI * 0.05;
       controls.enablePan = true;         // Enable right-click panning
@@ -4569,9 +4569,9 @@
       const phases = ['recall', 'associate', 'reflect', 'form'];
       const phaseIndex = phases.indexOf(phase);
 
-      // Update controls auto-rotate speed based on phase
+      // Update controls auto-rotate speed based on phase (slowed to 10%)
       if (controls) {
-        controls.autoRotateSpeed = phase === 'idle' ? 0.3 : 0.8;
+        controls.autoRotateSpeed = phase === 'idle' ? 0.03 : 0.08;
       }
 
       phases.forEach((p, i) => {
