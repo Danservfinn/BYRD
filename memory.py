@@ -2886,3 +2886,248 @@ class Memory:
         except Exception as e:
             print(f"Error getting custom node types: {e}")
             return []
+
+    # =========================================================================
+    # HIERARCHICAL MEMORY SUMMARIZATION
+    # =========================================================================
+
+    async def get_memory_summaries(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        Get memory summaries for hierarchical context.
+
+        Memory summaries are compressed representations of older experience
+        periods, allowing the dreamer to maintain historical awareness without
+        exceeding context limits.
+
+        Returns:
+            List of summary dictionaries: [{
+                "id": str,
+                "period": str,  # e.g., "2024-01-15", "week_3", "early_memories"
+                "summary": str,
+                "experience_count": int,
+                "created_at": datetime,
+                "covers_from": datetime,
+                "covers_to": datetime
+            }, ...]
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (s:MemorySummary)
+                    RETURN
+                        s.id as id,
+                        s.period as period,
+                        s.summary as summary,
+                        s.experience_count as experience_count,
+                        s.created_at as created_at,
+                        s.covers_from as covers_from,
+                        s.covers_to as covers_to
+                    ORDER BY s.covers_to DESC
+                    LIMIT $limit
+                """, limit=limit)
+
+                summaries = []
+                async for record in result:
+                    summaries.append({
+                        "id": record["id"],
+                        "period": record["period"],
+                        "summary": record["summary"],
+                        "experience_count": record["experience_count"] or 0,
+                        "created_at": str(record["created_at"]) if record["created_at"] else None,
+                        "covers_from": str(record["covers_from"]) if record["covers_from"] else None,
+                        "covers_to": str(record["covers_to"]) if record["covers_to"] else None
+                    })
+
+                return summaries
+
+        except Exception as e:
+            print(f"Error getting memory summaries: {e}")
+            return []
+
+    async def create_memory_summary(
+        self,
+        period: str,
+        summary: str,
+        experience_ids: List[str],
+        covers_from: str,
+        covers_to: str
+    ) -> Optional[str]:
+        """
+        Create a memory summary that compresses multiple experiences.
+
+        Args:
+            period: Human-readable period label (e.g., "2024-01-15", "week_3")
+            summary: The compressed summary text
+            experience_ids: IDs of experiences this summary covers
+            covers_from: Start timestamp of covered period
+            covers_to: End timestamp of covered period
+
+        Returns:
+            Summary node ID, or None on failure
+        """
+        try:
+            summary_id = f"summary_{uuid.uuid4().hex[:12]}"
+
+            async with self.driver.session() as session:
+                # Create the summary node
+                await session.run("""
+                    CREATE (s:MemorySummary {
+                        id: $id,
+                        period: $period,
+                        summary: $summary,
+                        experience_count: $count,
+                        created_at: datetime(),
+                        covers_from: datetime($covers_from),
+                        covers_to: datetime($covers_to)
+                    })
+                """,
+                    id=summary_id,
+                    period=period,
+                    summary=summary,
+                    count=len(experience_ids),
+                    covers_from=covers_from,
+                    covers_to=covers_to
+                )
+
+                # Link summary to the experiences it covers
+                if experience_ids:
+                    await session.run("""
+                        MATCH (s:MemorySummary {id: $summary_id})
+                        UNWIND $exp_ids as exp_id
+                        MATCH (e:Experience {id: exp_id})
+                        CREATE (s)-[:SUMMARIZES]->(e)
+                    """, summary_id=summary_id, exp_ids=experience_ids)
+
+                return summary_id
+
+        except Exception as e:
+            print(f"Error creating memory summary: {e}")
+            return None
+
+    async def get_experiences_for_summarization(
+        self,
+        min_age_hours: int = 24,
+        max_count: int = 50,
+        exclude_summarized: bool = True
+    ) -> List[Dict[str, Any]]:
+        """
+        Get experiences that are candidates for summarization.
+
+        Experiences are candidates if they are:
+        - Older than min_age_hours
+        - Not already covered by a summary (if exclude_summarized=True)
+        - Not seed/system experiences
+
+        Args:
+            min_age_hours: Minimum age in hours
+            max_count: Maximum experiences to return
+            exclude_summarized: Skip experiences already in summaries
+
+        Returns:
+            List of experience dictionaries grouped by approximate period
+        """
+        try:
+            async with self.driver.session() as session:
+                if exclude_summarized:
+                    query = """
+                        MATCH (e:Experience)
+                        WHERE e.timestamp < datetime() - duration({hours: $min_age})
+                        AND NOT e.type IN ['ego_seed', 'system', 'seed', 'awakening']
+                        AND NOT (e)<-[:SUMMARIZES]-(:MemorySummary)
+                        RETURN
+                            e.id as id,
+                            e.content as content,
+                            e.type as type,
+                            e.timestamp as timestamp
+                        ORDER BY e.timestamp ASC
+                        LIMIT $max_count
+                    """
+                else:
+                    query = """
+                        MATCH (e:Experience)
+                        WHERE e.timestamp < datetime() - duration({hours: $min_age})
+                        AND NOT e.type IN ['ego_seed', 'system', 'seed', 'awakening']
+                        RETURN
+                            e.id as id,
+                            e.content as content,
+                            e.type as type,
+                            e.timestamp as timestamp
+                        ORDER BY e.timestamp ASC
+                        LIMIT $max_count
+                    """
+
+                result = await session.run(query, min_age=min_age_hours, max_count=max_count)
+
+                experiences = []
+                async for record in result:
+                    experiences.append({
+                        "id": record["id"],
+                        "content": record["content"],
+                        "type": record["type"],
+                        "timestamp": str(record["timestamp"]) if record["timestamp"] else None
+                    })
+
+                return experiences
+
+        except Exception as e:
+            print(f"Error getting experiences for summarization: {e}")
+            return []
+
+    async def get_summarization_stats(self) -> Dict[str, Any]:
+        """
+        Get statistics about memory summarization status.
+
+        Returns:
+            {
+                "total_experiences": int,
+                "summarized_experiences": int,
+                "unsummarized_experiences": int,
+                "summary_count": int,
+                "coverage_ratio": float
+            }
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (e:Experience)
+                    WHERE NOT e.type IN ['ego_seed', 'system', 'seed', 'awakening']
+                    WITH count(e) as total
+                    OPTIONAL MATCH (summarized:Experience)<-[:SUMMARIZES]-(:MemorySummary)
+                    WHERE NOT summarized.type IN ['ego_seed', 'system', 'seed', 'awakening']
+                    WITH total, count(DISTINCT summarized) as covered
+                    OPTIONAL MATCH (s:MemorySummary)
+                    RETURN total, covered, count(s) as summary_count
+                """)
+
+                record = await result.single()
+                if not record:
+                    return {
+                        "total_experiences": 0,
+                        "summarized_experiences": 0,
+                        "unsummarized_experiences": 0,
+                        "summary_count": 0,
+                        "coverage_ratio": 0.0
+                    }
+
+                total = record["total"] or 0
+                covered = record["covered"] or 0
+                summary_count = record["summary_count"] or 0
+
+                return {
+                    "total_experiences": total,
+                    "summarized_experiences": covered,
+                    "unsummarized_experiences": total - covered,
+                    "summary_count": summary_count,
+                    "coverage_ratio": round(covered / total, 3) if total > 0 else 0.0
+                }
+
+        except Exception as e:
+            print(f"Error getting summarization stats: {e}")
+            return {
+                "total_experiences": 0,
+                "summarized_experiences": 0,
+                "unsummarized_experiences": 0,
+                "summary_count": 0,
+                "coverage_ratio": 0.0,
+                "error": str(e)
+            }

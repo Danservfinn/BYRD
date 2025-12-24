@@ -80,6 +80,9 @@ class EventType(Enum):
     QUANTUM_FALLBACK = "quantum_fallback"          # Switched to classical entropy
     QUANTUM_MOMENT_CREATED = "quantum_moment_created"  # Significant moment recorded
 
+    # Hierarchical memory events
+    MEMORY_SUMMARIZED = "memory_summarized"        # Older experiences compressed into summary
+
 
 @dataclass
 class Event:

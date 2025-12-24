@@ -42,6 +42,7 @@ The system dreams continuously using a local LLM. From dreams come whatever BYRD
 - **Emergent Desires**: No pre-programmed goals. Desires arise from reflection.
 - **Continuous Dreaming**: Local LLM (gemma2:27b) runs 24/7 without API costs
 - **Quantum Randomness**: True quantum entropy from ANU QRNG modulates cognitive temperature
+- **Hierarchical Memory**: Seeds always present, older experiences compressed into summaries
 - **Autonomous Research**: SearXNG + Local LLM for self-directed learning
 - **Capability Acquisition**: Discovers and installs tools from GitHub and aitmpl.com
 - **Autonomous Coding**: Claude Code CLI as BYRD's "coding limb" for implementing features

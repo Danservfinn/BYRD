@@ -22,3 +22,4 @@
 | Dynamic Ontology | metadata | ./.claude/metadata/dynamic-ontology.md | ontology, custom-nodes, vocabulary, emergence | — | 2025-12-24 |
 | Bitcoin Implementation Plan | reference | ./BITCOIN_IMPLEMENTATION_PLAN.md | bitcoin, multisig, financial-agency, treasury, 2-of-2 | — | 2025-12-24 |
 | Quantum Randomness System | metadata | ./.claude/metadata/quantum-randomness.md | quantum, anu-qrng, entropy, temperature, indeterminacy | — | 2025-12-24 |
+| Hierarchical Memory System | metadata | ./.claude/metadata/hierarchical-memory.md | memory, summarization, seeds, context, compression | — | 2025-12-24 |

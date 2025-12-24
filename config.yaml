@@ -130,6 +130,14 @@ dreamer:
   activity_window_seconds: 300  # 5-minute activity window
   activity_threshold: 3        # New beliefs/desires to trigger fast mode
 
+  # Hierarchical memory summarization
+  # Compresses older experiences into summaries for efficient context
+  summarization:
+    enabled: true
+    min_age_hours: 24         # Only summarize experiences older than this
+    batch_size: 20            # Max experiences to process per cycle
+    interval_cycles: 10       # Run summarization every N dream cycles
+
 # =============================================================================
 # SEEKER (Desire Fulfillment)
 # =============================================================================

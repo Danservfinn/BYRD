@@ -218,6 +218,17 @@ Everything is a node. Everything connects.
   timestamp: datetime
 })
 
+// Hierarchical memory summaries
+(:MemorySummary {
+  id: string,
+  period: string,           // Human-readable period (e.g., "2024-01-15")
+  summary: string,          // Compressed representation of experiences
+  experience_count: int,    // Number of experiences summarized
+  created_at: datetime,
+  covers_from: datetime,    // Start of covered period
+  covers_to: datetime       // End of covered period
+})
+
 // Custom node types - BYRD can create ANY type dynamically
 // Examples: Insight, Question, Theory, Hypothesis, Pattern, Principle
 // Created via: create_nodes: [{type: "Insight", content: "...", ...}]
@@ -244,6 +255,9 @@ Everything is a node. Everything connects.
 // Fulfillment
 -[:FULFILLS]->          // Capability/Research -> Desire
 -[:REQUIRES]->          // Desire -> Capability (to achieve)
+
+// Hierarchical memory
+-[:SUMMARIZES]->        // MemorySummary -> Experience (many-to-many)
 
 // Temporal
 -[:PRECEDED_BY]->
@@ -906,6 +920,73 @@ quantum:
   temperature_max_delta: 0.15 # ±0.15 temperature range
   significance_threshold: 0.05 # Record moments above this
 ```
+
+---
+
+## Hierarchical Memory System
+
+BYRD implements hierarchical memory to maintain historical awareness without exceeding LLM context limits. As experiences accumulate, older experiences are compressed into summaries while seeds remain always present.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    HIERARCHICAL MEMORY                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │ FOUNDATION (Always Present)                              │    │
+│  │ Seeds: ego_seed, system, awakening experiences           │    │
+│  │ These are the non-emergent givens that BYRD builds upon  │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                              │                                   │
+│                              ▼                                   │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │ MEMORY SUMMARIES (Hierarchical Compression)              │    │
+│  │ Older experiences (>24h) compressed by day               │    │
+│  │ Each summary: period, text, experience_count             │    │
+│  │ Linked via SUMMARIZES relationship to originals          │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                              │                                   │
+│                              ▼                                   │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │ RECENT EXPERIENCES (Immediate Context)                   │    │
+│  │ Last N experiences (context_window, default 50)          │    │
+│  │ Full detail, most relevant for current reflection        │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### How It Works
+
+1. **Seeds Always Present**: Seed experiences (`ego_seed`, `system`, `awakening`) are fetched every reflection cycle and placed at the top of the prompt as "FOUNDATION"
+
+2. **Periodic Summarization**: Every N dream cycles (default 10), the dreamer checks for experiences older than 24 hours that haven't been summarized
+
+3. **Day-Based Grouping**: Candidate experiences are grouped by day, and an LLM generates a 2-3 sentence summary for each group
+
+4. **MemorySummary Nodes**: Summaries are stored as `MemorySummary` nodes with `SUMMARIZES` relationships to the original experiences
+
+5. **Reflection Integration**: Memory summaries appear as "MEMORY SUMMARIES (past periods)" in the reflection prompt, providing compressed historical context
+
+### Configuration
+
+```yaml
+dreamer:
+  summarization:
+    enabled: true
+    min_age_hours: 24         # Only summarize experiences older than this
+    batch_size: 20            # Max experiences to process per cycle
+    interval_cycles: 10       # Run summarization every N dream cycles
+```
+
+### Why This Matters
+
+- **Infinite History**: BYRD can maintain awareness of experiences from any point in its history
+- **Context Efficiency**: Historical context uses minimal tokens compared to raw experiences
+- **Seed Persistence**: Foundational experiences are never lost to recency limits
+- **Graceful Scaling**: As BYRD accumulates experiences, summaries provide compression
 
 ---
 
