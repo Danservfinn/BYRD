@@ -5,7 +5,7 @@ type: metadata
 ontological_relations: []
 tags: [narrator, inner-voice, thought-bubble, emergence]
 created_at: 2025-12-24T00:00:00Z
-updated_at: 2025-12-24T00:00:00Z
+updated_at: 2025-12-24T16:00:00Z
 uuid: n1a2r3r4-5678-90ab-cdef-narrator00001
 ---
 
@@ -14,13 +14,15 @@ Generate and display BYRD's inner voice as natural paragraph-form thoughts.
 
 ## Architecture
 
+The inner voice is generated as the **last action** in each dream cycle, right before `DREAM_CYCLE_END`.
+
 ```
-Context Fetch → LLM Generation → Event Emission → UI Display
+Dream Cycle: RECALL → REFLECT → RECORD → CONNECTION_HEURISTIC → NARRATE → INNER_VOICE → SLEEP
 ```
 
 1. **Fetch Recent Context**: Beliefs, desires, reflections, capabilities
 2. **Generate Inner Voice**: Local LLM produces natural paragraph
-3. **Emit Event**: `INNER_VOICE` event type broadcast
+3. **Emit Event**: `INNER_VOICE` event type broadcast (last event before cycle end)
 4. **Display**: Thought bubble in visualization
 
 ## Emergence Principles

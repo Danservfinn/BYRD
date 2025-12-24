@@ -5,7 +5,7 @@ type: metadata
 ontological_relations: []
 tags: [dreamer, local-llm, reflection, emergence, vocabulary, meta-schema]
 created_at: 2025-12-23T02:10:00Z
-updated_at: 2025-12-23T03:00:00Z
+updated_at: 2025-12-24T16:00:00Z
 uuid: f2b34c50-2345-5678-9abc-def012345678
 ---
 
@@ -32,14 +32,17 @@ dreamer:
 ## Dream Cycle Flow
 
 ```
-RECALL → REFLECT → RECORD → SLEEP → LOOP
+RECALL → REFLECT → RECORD → CONNECTION_HEURISTIC → NARRATE → INNER_VOICE → SLEEP → LOOP
 ```
 
 1. **RECALL**: Gather recent experiences + related memories + previous reflections
 2. **REFLECT**: Present data to LLM with minimal prompt
 3. **RECORD**: Store raw output in Reflection node (BYRD's vocabulary)
-4. **SLEEP**: Wait interval_seconds
-5. **LOOP**: Repeat
+4. **CONNECTION_HEURISTIC**: Apply heuristics to strengthen graph connections (orphan reconciliation, etc.)
+5. **NARRATE**: Generate inner voice from reflection output
+6. **INNER_VOICE**: Emit `INNER_VOICE` event (last action before cycle end)
+7. **SLEEP**: Wait interval_seconds (fixed 60s)
+8. **LOOP**: Repeat
 
 ## Output Format (Meta-Schema)
 
