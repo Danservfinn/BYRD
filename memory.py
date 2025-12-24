@@ -26,13 +26,15 @@ from event_bus import event_bus, Event, EventType
 # System types have dedicated methods; custom types use the generic API.
 
 SYSTEM_NODE_TYPES = frozenset({
-    'Experience',   # Raw observations, interactions, events
-    'Belief',       # Derived understanding with confidence
-    'Desire',       # Goals and motivations with intensity
-    'Reflection',   # Dream cycle outputs (BYRD's raw thoughts)
-    'Capability',   # Tools and abilities
-    'Mutation',     # Audit trail of self-modifications (protected)
-    'Ego',          # Living identity (mutable by BYRD)
+    'Experience',     # Raw observations, interactions, events
+    'Belief',         # Derived understanding with confidence
+    'Desire',         # Goals and motivations with intensity
+    'Reflection',     # Dream cycle outputs (BYRD's raw thoughts)
+    'Capability',     # Tools and abilities
+    'Mutation',       # Audit trail of self-modifications (protected)
+    'Ego',            # Living identity (mutable by BYRD)
+    'QuantumMoment',  # Quantum influence tracking (system-created)
+    'SystemState',    # System counters and state (system-created)
 })
 
 # Properties managed by the system - cannot be set via create_node
