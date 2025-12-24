@@ -95,25 +95,25 @@
 
     .thought-bubble {
       position: relative;
-      background: rgba(255, 255, 255, 0.92);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      border: 1px solid rgba(20, 184, 166, 0.25);
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(20, 184, 166, 0.3);
       border-radius: 16px;
-      padding: 16px 24px;
-      max-width: 420px;
+      padding: 20px 28px;
+      max-width: 480px;
       box-shadow:
         0 0 30px rgba(20, 184, 166, 0.15),
         0 4px 20px rgba(0, 0, 0, 0.08);
       font-family: 'Georgia', 'Times New Roman', serif;
       font-style: italic;
       font-size: 15px;
-      line-height: 1.6;
+      line-height: 1.7;
       color: #115e59;
-      text-align: center;
+      text-align: left;
       opacity: 0;
-      transform: translateY(20px) scale(0.95);
-      animation: thoughtRise 20s ease-out forwards;
+      transform: scale(0.95);
+      animation: thoughtAppear 0.4s ease-out forwards;
     }
 
     .thought-bubble::before {
@@ -136,23 +136,30 @@
       font-family: Georgia, serif;
     }
 
-    @keyframes thoughtRise {
+    @keyframes thoughtAppear {
       0% {
         opacity: 0;
-        transform: translateY(20px) scale(0.95);
+        transform: scale(0.95);
       }
-      2% {
+      100% {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: scale(1);
       }
-      90% {
+    }
+
+    @keyframes thoughtFadeOut {
+      0% {
         opacity: 1;
-        transform: translateY(-80px) scale(1);
+        transform: scale(1);
       }
       100% {
         opacity: 0;
-        transform: translateY(-120px) scale(0.97);
+        transform: scale(0.95);
       }
+    }
+
+    .thought-bubble.fading {
+      animation: thoughtFadeOut 0.3s ease-out forwards;
     }
 
     /* Controls hint */
@@ -610,33 +617,107 @@
       document.getElementById('state-indicator').textContent = newState;
     }
 
-    function createThoughtBubble(text) {
+    // ==========================================================================
+    // BYRD'S INNER VOICE - Narrator Display (Single Static Bubble)
+    // ==========================================================================
+    const thoughtBubbleContainer = document.getElementById('thought-bubble-container');
+    let currentBubble = null;
+    let narratorRefreshTimer = null;
+    const NARRATOR_REFRESH_INTERVAL = 60000; // 60 seconds
+
+    function clearCurrentBubble() {
+      if (currentBubble) {
+        currentBubble.classList.add('fading');
+        const bubbleToRemove = currentBubble;
+        setTimeout(() => {
+          if (bubbleToRemove.parentNode) {
+            bubbleToRemove.remove();
+          }
+        }, 300);
+        currentBubble = null;
+      }
+    }
+
+    function showNarratorUpdate(text) {
       if (!text || text.trim().length === 0) return;
 
-      // Filter out technical/structured content
+      // Filter out technical content
       if (isTechnicalContent(text)) {
         console.log('Filtered technical content from thought bubble');
         return;
       }
 
-      const container = document.getElementById('thought-bubble-container');
+      // Clear any existing bubble first
+      clearCurrentBubble();
 
-      // Limit active bubbles
-      const existingBubbles = container.querySelectorAll('.thought-bubble');
-      if (existingBubbles.length >= 3) {
-        existingBubbles[0].remove();
-      }
-
+      // Create new bubble
       const bubble = document.createElement('div');
       bubble.className = 'thought-bubble';
-      bubble.textContent = text;
 
-      container.appendChild(bubble);
+      // Create paragraph text (natural reading)
+      const textSpan = document.createElement('span');
+      textSpan.className = 'thought-text';
+      textSpan.textContent = text.trim();
 
-      // Remove after animation
-      setTimeout(() => {
-        bubble.remove();
-      }, 20000);
+      // Add close button with pointer events
+      const closeBtn = document.createElement('button');
+      closeBtn.innerHTML = '×';
+      closeBtn.style.cssText = `
+        position: absolute; top: 12px; right: 12px; width: 28px; height: 28px;
+        border-radius: 50%; background: rgba(100, 116, 139, 0.2);
+        border: none; cursor: pointer; display: flex; align-items: center;
+        justify-content: center; font-size: 20px; font-weight: bold;
+        color: #64748b; transition: all 0.2s; pointer-events: auto;
+      `;
+      closeBtn.onmouseover = () => { closeBtn.style.background = 'rgba(100, 116, 139, 0.4)'; closeBtn.style.color = '#334155'; };
+      closeBtn.onmouseout = () => { closeBtn.style.background = 'rgba(100, 116, 139, 0.2)'; closeBtn.style.color = '#64748b'; };
+      closeBtn.onclick = (e) => {
+        e.stopPropagation();
+        clearCurrentBubble();
+      };
+
+      bubble.style.position = 'relative';
+      bubble.style.pointerEvents = 'auto';
+      bubble.appendChild(closeBtn);
+      bubble.appendChild(textSpan);
+      thoughtBubbleContainer.appendChild(bubble);
+      currentBubble = bubble;
+    }
+
+    // Fetch latest narrator summary from backend
+    async function refreshNarratorSummary() {
+      try {
+        const response = await fetch('/api/narrator-summary');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.summary) {
+            showNarratorUpdate(data.summary);
+          }
+        }
+      } catch (e) {
+        console.debug('Narrator refresh failed:', e);
+      }
+    }
+
+    // Start narrator refresh timer
+    function startNarratorRefresh() {
+      if (narratorRefreshTimer) {
+        clearInterval(narratorRefreshTimer);
+      }
+      narratorRefreshTimer = setInterval(refreshNarratorSummary, NARRATOR_REFRESH_INTERVAL);
+    }
+
+    // Stop narrator refresh timer
+    function stopNarratorRefresh() {
+      if (narratorRefreshTimer) {
+        clearInterval(narratorRefreshTimer);
+        narratorRefreshTimer = null;
+      }
+    }
+
+    // Legacy function for backward compatibility
+    function createThoughtBubble(text) {
+      showNarratorUpdate(text);
     }
 
     function isTechnicalContent(text) {
@@ -688,12 +769,18 @@
           document.getElementById('connection-dot').classList.remove('bg-slate-400');
           document.getElementById('connection-dot').classList.add('bg-teal-500');
           reconnectAttempts = 0;
+          // Start 60-second narrator refresh timer
+          startNarratorRefresh();
+          // Initial fetch of narrator summary
+          refreshNarratorSummary();
         };
 
         ws.onclose = () => {
           console.log('Disconnected from BYRD');
           document.getElementById('connection-dot').classList.remove('bg-teal-500');
           document.getElementById('connection-dot').classList.add('bg-slate-400');
+          // Stop narrator refresh when disconnected
+          stopNarratorRefresh();
 
           reconnectAttempts++;
           const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
@@ -730,9 +817,6 @@
 
         case 'dream_cycle_end':
           setState('resting');
-          if (data.inner_voice) {
-            createThoughtBubble(data.inner_voice);
-          }
           break;
 
         case 'seek_cycle_start':
@@ -742,46 +826,36 @@
 
         case 'seek_cycle_end':
           setState('resting');
-          if (data.inner_voice) {
-            createThoughtBubble(data.inner_voice);
-          }
           break;
 
         case 'desire_created':
           setState('yearning');
-          if (narration) {
-            createThoughtBubble(narration);
-          }
           break;
 
         case 'belief_created':
-          if (narration) {
-            createThoughtBubble(narration);
-          }
+          // State change only - bubbles now come from narrator_update
           break;
 
         case 'narrator_update':
+          // Only narrator_update events display in the thought bubble
           const text = data.text || data.content || narration;
           if (text) {
-            createThoughtBubble(text);
+            showNarratorUpdate(text);
           }
           break;
 
         case 'awakening':
           setState('awakening');
+          // Show awakening narration as narrator update
           if (narration) {
-            createThoughtBubble(narration);
+            showNarratorUpdate(narration);
           } else if (data.seed_question) {
-            createThoughtBubble(data.seed_question);
+            showNarratorUpdate(data.seed_question);
           }
           break;
 
         case 'reflection_created':
-          if (narration) {
-            createThoughtBubble(narration);
-          } else if (data.inner_voice) {
-            createThoughtBubble(data.inner_voice);
-          }
+          // State change only - bubbles now come from narrator_update
           break;
 
         case 'system_started':

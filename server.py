@@ -524,6 +524,63 @@ async def get_genesis():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/narrator-summary")
+async def get_narrator_summary():
+    """
+    Get BYRD's current narrator summary - a natural voice reflection
+    of recent thoughts and reasoning.
+
+    This endpoint generates a brief paragraph summarizing BYRD's
+    current mental state based on recent reflections and experiences.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        return {"summary": None, "reason": "BYRD not initialized"}
+
+    try:
+        await byrd_instance.memory.connect()
+
+        # Get BYRD's latest inner voice from dreamer queue if available
+        if hasattr(byrd_instance, 'dreamer') and byrd_instance.dreamer:
+            inner_voice = byrd_instance.dreamer.get_latest_inner_voice()
+            if inner_voice:
+                return {"summary": inner_voice}
+
+        # If no inner voice in queue, generate one from recent reflections
+        recent_reflections = await byrd_instance.memory.get_recent_reflections(limit=3)
+
+        if not recent_reflections:
+            # No reflections yet - return a default state
+            return {"summary": "I rest in stillness, waiting for thoughts to emerge."}
+
+        # Extract key insights from recent reflections
+        insights = []
+        for ref in recent_reflections:
+            raw = ref.get("raw_output", {})
+            if isinstance(raw, dict):
+                output = raw.get("output", raw)
+                if isinstance(output, dict):
+                    # Look for common reflection keys
+                    for key in ["thinking", "thoughts", "observation", "insight", "musing", "wondering"]:
+                        if key in output and output[key]:
+                            val = output[key]
+                            if isinstance(val, str) and len(val) > 10:
+                                insights.append(val[:200])
+                                break
+
+        if insights:
+            # Use the most recent insight as the narrator voice
+            return {"summary": insights[0]}
+        else:
+            # Generate a default based on reflection count
+            count = len(recent_reflections)
+            return {"summary": f"I have reflected {count} times recently, processing and integrating my experiences."}
+
+    except Exception as e:
+        return {"summary": None, "error": str(e)}
+
+
 @app.get("/api/graph", response_model=GraphResponse)
 async def get_graph(limit: int = 1000):
     """
