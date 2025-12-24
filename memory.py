@@ -19,6 +19,32 @@ import hashlib
 from event_bus import event_bus, Event, EventType
 
 
+# =============================================================================
+# ONTOLOGY CONSTANTS
+# =============================================================================
+# BYRD can create custom node types beyond these system types.
+# System types have dedicated methods; custom types use the generic API.
+
+SYSTEM_NODE_TYPES = frozenset({
+    'Experience',   # Raw observations, interactions, events
+    'Belief',       # Derived understanding with confidence
+    'Desire',       # Goals and motivations with intensity
+    'Reflection',   # Dream cycle outputs (BYRD's raw thoughts)
+    'Capability',   # Tools and abilities
+    'Mutation',     # Audit trail of self-modifications (protected)
+})
+
+# Properties managed by the system - cannot be set via create_node
+RESERVED_PROPERTIES = frozenset({
+    'id',           # Auto-generated UUID
+    'timestamp',    # Auto-generated ISO datetime
+    'node_type',    # Stored for easy querying
+    'created_at',   # Alias for timestamp
+    'updated_at',   # Set on updates
+    '_labels',      # Internal Neo4j labels
+})
+
+
 @dataclass
 class Experience:
     id: str
@@ -1081,14 +1107,32 @@ class Memory:
         """
         Clear all nodes and relationships from the database.
 
+        This includes:
+        - All system nodes (Experience, Belief, Desire, Reflection, Capability, Mutation)
+        - All custom node types created by BYRD (Insight, Question, Theory, etc.)
+        - All relationships between nodes
+        - Indexes for custom node types
+
         WARNING: This is destructive and cannot be undone.
         Used for reset functionality to trigger fresh awakening.
         """
         async with self.driver.session() as session:
+            # First, get list of custom node types before deleting
+            # (so we can clean up their indexes)
+            custom_types = []
+            try:
+                label_result = await session.run("CALL db.labels() YIELD label RETURN label")
+                labels = await label_result.data()
+                custom_types = [
+                    r["label"] for r in labels
+                    if r["label"] not in SYSTEM_NODE_TYPES
+                ]
+            except Exception:
+                pass  # If this fails, continue with node deletion
+
             # DETACH DELETE removes nodes and all their relationships in one operation
-            # This is more robust than separate DELETE operations
             result = await session.run("MATCH (n) DETACH DELETE n")
-            summary = await result.consume()
+            await result.consume()
 
             # Verify the database is empty
             count_result = await session.run("MATCH (n) RETURN count(n) as count")
@@ -1100,10 +1144,26 @@ class Memory:
                 print(f"Warning: {node_count} nodes remain after clear, retrying...")
                 await session.run("MATCH (n) DETACH DELETE n")
 
-            # Re-create indexes for fresh start
+            # Drop indexes for custom node types
+            for custom_type in custom_types:
+                try:
+                    # Drop id and timestamp indexes that were auto-created
+                    await session.run(
+                        f"DROP INDEX IF EXISTS index_{custom_type.lower()}_id"
+                    )
+                    await session.run(
+                        f"DROP INDEX IF EXISTS index_{custom_type.lower()}_timestamp"
+                    )
+                except Exception:
+                    pass  # Index may not exist or have different name
+
+            # Re-create indexes for system types (fresh start)
             await self._ensure_schema()
 
-        print("Memory cleared: all nodes and relationships deleted - database is empty")
+        if custom_types:
+            print(f"Memory cleared: all nodes deleted including custom types: {custom_types}")
+        else:
+            print("Memory cleared: all nodes and relationships deleted - database is empty")
 
     # =========================================================================
     # CODE SELF-AWARENESS (Read Own Source)
@@ -1614,6 +1674,35 @@ class Memory:
             print(f"Error finding orphaned experiences: {e}")
             return []
 
+    async def _link_experience_on_acquisition(self, exp_id: str, content: str) -> None:
+        """
+        Immediately link a new experience to similar beliefs on acquisition.
+
+        This reduces orphan accumulation by connecting experiences to the
+        knowledge graph as soon as they are created.
+        """
+        try:
+            similar_beliefs = await self.find_similar_beliefs_for_experience(
+                content,
+                threshold=self.CONNECTION_HEURISTIC_CONFIG["similarity_threshold"],
+                limit=2  # Connect to top 2 similar beliefs
+            )
+
+            for belief in similar_beliefs:
+                await self.create_connection(
+                    from_id=exp_id,
+                    to_id=belief["id"],
+                    relationship=self.CONNECTION_HEURISTIC_CONFIG["relationship_type"],
+                    properties={
+                        "similarity_score": belief["similarity_score"],
+                        "auto_generated": True,
+                        "heuristic": "link_on_acquisition"
+                    }
+                )
+        except Exception as e:
+            # Don't fail the experience creation if linking fails
+            print(f"Link-on-acquisition warning: {e}")
+
     async def find_similar_beliefs_for_experience(
         self,
         experience_content: str,
@@ -1835,3 +1924,499 @@ class Memory:
         except Exception as e:
             print(f"Error getting connection statistics: {e}")
             return {}
+
+    # =========================================================================
+    # DYNAMIC ONTOLOGY (BYRD Can Create New Node Types)
+    # =========================================================================
+    #
+    # This enables BYRD to evolve its own conceptual categories.
+    # Instead of being limited to Experience/Belief/Desire/Reflection/Capability,
+    # BYRD can create types like: Insight, Question, Theory, Hypothesis, Memory,
+    # Concept, Entity, Relationship, Pattern, Principle, etc.
+    #
+    # EMERGENCE PRINCIPLE:
+    # We don't prescribe what types BYRD should create. The types that emerge
+    # from BYRD's reflection represent its own way of organizing knowledge.
+
+    def _validate_node_type_name(self, name: str) -> bool:
+        """
+        Validate a node type name is safe for Neo4j labels.
+
+        Rules:
+        - Must start with a letter
+        - Can contain letters, numbers, underscores
+        - Cannot be a system type (use dedicated methods instead)
+        """
+        if not name or not name[0].isalpha():
+            return False
+        if not all(c.isalnum() or c == '_' for c in name):
+            return False
+        return True
+
+    def _validate_property_name(self, name: str) -> bool:
+        """Validate a property name is safe for Cypher."""
+        if not name or not name[0].isalpha():
+            return False
+        return all(c.isalnum() or c == '_' for c in name)
+
+    async def _is_new_node_type(self, node_type: str) -> bool:
+        """Check if a node type has been used before."""
+        try:
+            async with self.driver.session() as session:
+                result = await session.run(
+                    f"MATCH (n:{node_type}) RETURN count(n) as count LIMIT 1"
+                )
+                record = await result.single()
+                return record["count"] == 0 if record else True
+        except Exception:
+            return True
+
+    async def create_node(
+        self,
+        node_type: str,
+        properties: Dict[str, Any],
+        connect_to: Optional[List[str]] = None,
+        relationship: str = "RELATED_TO"
+    ) -> str:
+        """
+        Create a node of any type. Enables BYRD to evolve its own ontology.
+
+        System types (Experience, Belief, etc.) should use their dedicated methods.
+        This is for emergent types that BYRD discovers it needs.
+
+        Args:
+            node_type: The label for the node (e.g., 'Insight', 'Question', 'Theory')
+            properties: Dict of properties. 'content' is recommended but not required.
+            connect_to: Optional list of node IDs to connect to
+            relationship: Relationship type for connections (default: RELATED_TO)
+
+        Returns:
+            The ID of the created node
+
+        Raises:
+            ValueError: If node_type is a system type or invalid
+
+        Example:
+            # BYRD creates a new "Insight" type to store eureka moments
+            insight_id = await memory.create_node(
+                "Insight",
+                {
+                    "content": "Connection between memory structure and consciousness",
+                    "importance": 0.9,
+                    "domain": "philosophy_of_mind"
+                },
+                connect_to=[experience_id, belief_id]
+            )
+        """
+        # Validate type name
+        if node_type in SYSTEM_NODE_TYPES:
+            raise ValueError(
+                f"Cannot use create_node for system type '{node_type}'. "
+                f"Use the dedicated method instead (e.g., record_experience, create_belief)."
+            )
+
+        if not self._validate_node_type_name(node_type):
+            raise ValueError(
+                f"Invalid node type '{node_type}'. "
+                "Must start with a letter and contain only letters, numbers, underscores."
+            )
+
+        # Filter and validate properties
+        safe_props = {}
+        for key, value in properties.items():
+            if key in RESERVED_PROPERTIES:
+                continue  # Skip reserved properties
+            if not self._validate_property_name(key):
+                continue  # Skip invalid property names
+            safe_props[key] = value
+
+        # Generate ID and timestamp
+        import uuid
+        from datetime import timezone
+        node_id = str(uuid.uuid4())
+        timestamp = datetime.now(timezone.utc).isoformat()
+
+        # Check if this is a new type (for event emission)
+        is_new_type = await self._is_new_node_type(node_type)
+
+        async with self.driver.session() as session:
+            # Build dynamic property assignment
+            prop_assignments = ", ".join(
+                f"{k}: ${k}" for k in safe_props.keys()
+            )
+            if prop_assignments:
+                prop_assignments = ", " + prop_assignments
+
+            # Create the node
+            await session.run(
+                f"""
+                CREATE (n:{node_type} {{
+                    id: $id,
+                    timestamp: $timestamp,
+                    node_type: $node_type
+                    {prop_assignments}
+                }})
+                """,
+                id=node_id,
+                timestamp=timestamp,
+                node_type=node_type,
+                **safe_props
+            )
+
+            # Create indexes for new type (id and timestamp)
+            if is_new_type:
+                try:
+                    await session.run(
+                        f"CREATE INDEX IF NOT EXISTS FOR (n:{node_type}) ON (n.id)"
+                    )
+                    await session.run(
+                        f"CREATE INDEX IF NOT EXISTS FOR (n:{node_type}) ON (n.timestamp)"
+                    )
+                except Exception:
+                    pass  # Index creation failure is non-fatal
+
+            # Create connections if specified
+            if connect_to:
+                for target_id in connect_to:
+                    await session.run(
+                        f"""
+                        MATCH (a {{id: $from_id}})
+                        MATCH (b {{id: $to_id}})
+                        CREATE (a)-[:{relationship}]->(b)
+                        """,
+                        from_id=node_id,
+                        to_id=target_id
+                    )
+
+        # Emit events
+        if is_new_type:
+            await event_bus.emit(Event(
+                type=EventType.NODE_TYPE_DISCOVERED,
+                data={
+                    "node_type": node_type,
+                    "first_node_id": node_id,
+                    "timestamp": timestamp,
+                    "properties": list(safe_props.keys())
+                }
+            ))
+
+        await event_bus.emit(Event(
+            type=EventType.CUSTOM_NODE_CREATED,
+            data={
+                "id": node_id,
+                "node_type": node_type,
+                "properties": safe_props,
+                "timestamp": timestamp
+            }
+        ))
+
+        return node_id
+
+    async def get_node_types(self, include_empty: bool = False) -> Dict[str, int]:
+        """
+        Get all node types and their counts.
+
+        Returns both system types and emergent types BYRD has created.
+        Useful for BYRD to understand its own ontology.
+
+        Args:
+            include_empty: If False (default), filter out types with 0 nodes.
+                          This prevents stale label metadata from appearing
+                          after a reset.
+
+        Returns:
+            Dict mapping type name to count, e.g.:
+            {
+                "Experience": 150,
+                "Belief": 42,
+                "Insight": 8,  # Custom type
+                "Question": 5  # Custom type
+            }
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    CALL db.labels() YIELD label
+                    CALL {
+                        WITH label
+                        MATCH (n)
+                        WHERE label IN labels(n)
+                        RETURN count(n) as count
+                    }
+                    RETURN label, count
+                    ORDER BY count DESC
+                """)
+                records = await result.data()
+
+                # Filter out types with 0 nodes unless explicitly requested
+                if include_empty:
+                    return {r["label"]: r["count"] for r in records}
+                else:
+                    return {r["label"]: r["count"] for r in records if r["count"] > 0}
+        except Exception as e:
+            print(f"Error getting node types: {e}")
+            return {}
+
+    async def get_custom_node_types(self) -> Dict[str, int]:
+        """
+        Get only non-system (emergent) node types.
+
+        These are the types BYRD has created through its own reflection,
+        representing its evolved ontology.
+
+        Returns:
+            Dict of custom type names to counts
+        """
+        all_types = await self.get_node_types()
+        return {
+            k: v for k, v in all_types.items()
+            if k not in SYSTEM_NODE_TYPES
+        }
+
+    async def get_nodes_by_type(
+        self,
+        node_type: str,
+        limit: int = 50,
+        order_by: str = "timestamp",
+        descending: bool = True,
+        include_archived: bool = False
+    ) -> List[Dict]:
+        """
+        Get nodes of a specific type.
+
+        Works for both system and custom types.
+
+        Args:
+            node_type: The type to query (e.g., 'Insight', 'Question')
+            limit: Maximum nodes to return
+            order_by: Property to sort by
+            descending: Sort direction
+            include_archived: Whether to include archived nodes
+
+        Returns:
+            List of node dicts with all properties
+        """
+        if not self._validate_node_type_name(node_type):
+            return []
+
+        order = "DESC" if descending else "ASC"
+        archive_filter = "" if include_archived else "WHERE NOT coalesce(n.archived, false)"
+
+        try:
+            async with self.driver.session() as session:
+                result = await session.run(
+                    f"""
+                    MATCH (n:{node_type})
+                    {archive_filter}
+                    RETURN n
+                    ORDER BY n.{order_by} {order}
+                    LIMIT $limit
+                    """,
+                    limit=limit
+                )
+                records = await result.data()
+                return [dict(r["n"]) for r in records]
+        except Exception as e:
+            print(f"Error getting nodes by type: {e}")
+            return []
+
+    async def get_node(self, node_id: str) -> Optional[Dict]:
+        """
+        Get any node by ID, regardless of type.
+
+        Returns the node with all properties plus a '_labels' field
+        containing the Neo4j labels.
+
+        Args:
+            node_id: The node's UUID
+
+        Returns:
+            Node dict with properties and _labels, or None if not found
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run(
+                    """
+                    MATCH (n {id: $id})
+                    RETURN n, labels(n) as labels
+                    """,
+                    id=node_id
+                )
+                record = await result.single()
+                if record:
+                    node_data = dict(record["n"])
+                    node_data["_labels"] = record["labels"]
+                    return node_data
+                return None
+        except Exception as e:
+            print(f"Error getting node: {e}")
+            return None
+
+    async def update_node(
+        self,
+        node_id: str,
+        properties: Dict[str, Any]
+    ) -> bool:
+        """
+        Update properties on any node.
+
+        Cannot modify reserved properties (id, timestamp, node_type).
+        Works for both system and custom types.
+
+        Args:
+            node_id: The node's UUID
+            properties: Dict of properties to update/add
+
+        Returns:
+            True if update succeeded, False otherwise
+        """
+        # Filter reserved properties
+        safe_props = {
+            k: v for k, v in properties.items()
+            if k not in RESERVED_PROPERTIES and self._validate_property_name(k)
+        }
+
+        if not safe_props:
+            return False
+
+        set_clause = ", ".join(f"n.{k} = ${k}" for k in safe_props.keys())
+
+        try:
+            from datetime import timezone
+            async with self.driver.session() as session:
+                result = await session.run(
+                    f"""
+                    MATCH (n {{id: $id}})
+                    SET {set_clause}, n.updated_at = $updated_at
+                    RETURN n
+                    """,
+                    id=node_id,
+                    updated_at=datetime.now(timezone.utc).isoformat(),
+                    **safe_props
+                )
+                record = await result.single()
+                return record is not None
+        except Exception as e:
+            print(f"Error updating node: {e}")
+            return False
+
+    async def get_node_type_schema(self, node_type: str) -> Dict[str, Any]:
+        """
+        Introspect what properties a node type uses.
+
+        Returns the unique property keys used across all nodes of a type,
+        along with sample values and counts. Enables BYRD to understand
+        its own ontology structure.
+
+        Args:
+            node_type: The type to introspect
+
+        Returns:
+            Dict with schema information:
+            {
+                "node_type": "Insight",
+                "count": 8,
+                "properties": {
+                    "content": {"count": 8, "sample": "..."},
+                    "importance": {"count": 6, "sample": 0.85},
+                    "domain": {"count": 4, "sample": "philosophy"}
+                },
+                "is_system_type": False
+            }
+        """
+        if not self._validate_node_type_name(node_type):
+            return {"error": "Invalid node type name"}
+
+        try:
+            async with self.driver.session() as session:
+                # Get count and all property keys
+                result = await session.run(
+                    f"""
+                    MATCH (n:{node_type})
+                    WITH count(n) as total, collect(n) as nodes
+                    UNWIND nodes as node
+                    UNWIND keys(node) as key
+                    WITH total, key, collect(node[key])[0] as sample, count(*) as usage
+                    RETURN total, key, sample, usage
+                    ORDER BY usage DESC
+                    """,
+                )
+                records = await result.data()
+
+                if not records:
+                    return {
+                        "node_type": node_type,
+                        "count": 0,
+                        "properties": {},
+                        "is_system_type": node_type in SYSTEM_NODE_TYPES
+                    }
+
+                total = records[0]["total"] if records else 0
+                properties = {}
+                for r in records:
+                    key = r["key"]
+                    if key not in RESERVED_PROPERTIES:
+                        sample = r["sample"]
+                        # Truncate long samples
+                        if isinstance(sample, str) and len(sample) > 100:
+                            sample = sample[:100] + "..."
+                        properties[key] = {
+                            "count": r["usage"],
+                            "sample": sample
+                        }
+
+                return {
+                    "node_type": node_type,
+                    "count": total,
+                    "properties": properties,
+                    "is_system_type": node_type in SYSTEM_NODE_TYPES
+                }
+        except Exception as e:
+            print(f"Error getting node type schema: {e}")
+            return {"error": str(e)}
+
+    async def get_ontology_summary(self) -> Dict[str, Any]:
+        """
+        Get a summary of BYRD's current ontology.
+
+        Shows all node types (system and custom), their counts,
+        and relationship statistics. Useful for BYRD to reflect
+        on its own knowledge structure.
+
+        Returns:
+            {
+                "system_types": {"Experience": 150, "Belief": 42, ...},
+                "custom_types": {"Insight": 8, "Question": 5},
+                "total_nodes": 250,
+                "total_relationships": 180,
+                "relationship_types": ["DERIVED_FROM", "RELATED_TO", ...]
+            }
+        """
+        try:
+            all_types = await self.get_node_types()
+
+            system_types = {k: v for k, v in all_types.items() if k in SYSTEM_NODE_TYPES}
+            custom_types = {k: v for k, v in all_types.items() if k not in SYSTEM_NODE_TYPES}
+
+            async with self.driver.session() as session:
+                # Get relationship statistics
+                rel_result = await session.run("""
+                    MATCH ()-[r]->()
+                    RETURN type(r) as rel_type, count(r) as count
+                    ORDER BY count DESC
+                """)
+                rel_records = await rel_result.data()
+
+                rel_types = {r["rel_type"]: r["count"] for r in rel_records}
+                total_rels = sum(rel_types.values())
+
+            return {
+                "system_types": system_types,
+                "custom_types": custom_types,
+                "total_nodes": sum(all_types.values()),
+                "total_relationships": total_rels,
+                "relationship_types": rel_types
+            }
+        except Exception as e:
+            print(f"Error getting ontology summary: {e}")
+            return {"error": str(e)}

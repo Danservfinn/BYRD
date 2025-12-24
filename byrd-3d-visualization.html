@@ -448,17 +448,17 @@
       <button id="btn-reset" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-all">
         &#128260; Reset
       </button>
-      <div id="stats" class="flex items-center gap-2 px-3 py-2 bg-white/80 border border-slate-200 rounded-lg text-xs font-mono shadow">
-        <span class="text-indigo-600" title="Dream cycles">💭 <span id="dream-count">0</span></span>
-        <span class="text-cyan-600" title="Seek cycles">🔍 <span id="seek-count">0</span></span>
-        <span class="text-slate-400">|</span>
-        <span class="text-sky-600" title="Experiences">📝 <span id="exp-count">0</span></span>
-        <span class="text-amber-600" title="Beliefs">💡 <span id="belief-count">0</span></span>
-        <span class="text-purple-600" title="Reflections">🪞 <span id="reflection-count">0</span></span>
-        <span class="text-rose-600" title="Desires">🔥 <span id="desire-count">0</span></span>
-        <span class="text-emerald-600" title="Mutations">🧬 <span id="mutation-count">0</span></span>
-        <span class="text-slate-400">|</span>
-        <span class="text-slate-500" title="Visual nodes">◆ <span id="node-count">0</span></span>
+      <div id="stats" class="flex items-center gap-3 px-3 py-2 bg-white/80 border border-slate-200 rounded-lg text-xs font-mono shadow">
+        <span class="text-indigo-600">Dreams: <span id="dream-count">0</span></span>
+        <span class="text-cyan-600">Seeks: <span id="seek-count">0</span></span>
+        <span class="text-slate-300">|</span>
+        <span class="text-sky-600">Exp: <span id="exp-count">0</span></span>
+        <span class="text-amber-600">Beliefs: <span id="belief-count">0</span></span>
+        <span class="text-purple-600">Reflect: <span id="reflection-count">0</span></span>
+        <span class="text-rose-600">Desires: <span id="desire-count">0</span></span>
+        <span class="text-emerald-600">Mutations: <span id="mutation-count">0</span></span>
+        <span class="text-slate-300">|</span>
+        <span class="text-slate-500">Nodes: <span id="node-count">0</span></span>
       </div>
     </div>
   </div>
@@ -466,7 +466,7 @@
   <!-- Old controls hint removed - replaced by Phase 4 keyboard shortcuts hint -->
 
   <!-- UI Overlay: Right - Event Log -->
-  <div class="ui-overlay top-16 right-4 bottom-4 w-96">
+  <div id="event-panel-container" class="ui-overlay top-16 right-4 bottom-4 w-96 transition-all duration-300">
     <div class="event-panel h-full bg-white/90 rounded-lg border border-slate-200 overflow-hidden flex flex-col shadow-xl">
       <div class="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-slate-50">
         <div class="flex items-center gap-2">
@@ -476,9 +476,10 @@
         <div class="flex items-center gap-1">
           <button id="btn-export-log" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-200">Export</button>
           <button id="btn-clear-log" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-200">Clear</button>
+          <button id="btn-toggle-log" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-200" title="Minimize/Expand">▼</button>
         </div>
       </div>
-      <div id="event-list" class="flex-1 overflow-y-auto p-2 space-y-1">
+      <div id="event-list" class="flex-1 overflow-y-auto p-2 space-y-1 transition-all duration-300">
         <div class="text-sm text-slate-500 text-center py-4">Connecting to BYRD...</div>
       </div>
     </div>
@@ -941,6 +942,8 @@
     const reflectionCountEl = document.getElementById('reflection-count');
     const desireCountEl = document.getElementById('desire-count');
     const mutationCountEl = document.getElementById('mutation-count');
+    const btnToggleLog = document.getElementById('btn-toggle-log');
+    const eventPanelContainer = document.getElementById('event-panel-container');
     const tooltip = document.getElementById('node-tooltip');
     const tooltipType = document.getElementById('tooltip-type');
     const tooltipContent = document.getElementById('tooltip-content');
@@ -2857,6 +2860,20 @@
         textSpan.appendChild(wordSpan);
       });
 
+      // Add close button
+      const closeBtn = document.createElement('button');
+      closeBtn.innerHTML = '×';
+      closeBtn.className = 'absolute top-2 right-2 w-6 h-6 rounded-full bg-slate-200/50 hover:bg-slate-300/70 text-slate-500 hover:text-slate-700 text-lg font-bold leading-none transition-all';
+      closeBtn.style.cssText = 'cursor: pointer; border: none; display: flex; align-items: center; justify-content: center;';
+      closeBtn.onclick = (e) => {
+        e.stopPropagation();
+        const index = activeBubbles.indexOf(bubble);
+        if (index > -1) activeBubbles.splice(index, 1);
+        bubble.remove();
+      };
+
+      bubble.style.position = 'relative';
+      bubble.appendChild(closeBtn);
       bubble.appendChild(textSpan);
       thoughtBubbleContainer.appendChild(bubble);
       activeBubbles.push(bubble);
@@ -3230,6 +3247,25 @@
     btnClearLog.addEventListener('click', () => {
       events = [];
       renderEventLog();
+    });
+
+    // Event log minimize/expand toggle
+    let eventLogMinimized = false;
+    btnToggleLog.addEventListener('click', () => {
+      eventLogMinimized = !eventLogMinimized;
+      if (eventLogMinimized) {
+        eventPanelContainer.style.bottom = 'auto';
+        eventPanelContainer.style.height = '52px';
+        eventList.style.display = 'none';
+        btnToggleLog.textContent = '▲';
+        btnToggleLog.title = 'Expand';
+      } else {
+        eventPanelContainer.style.bottom = '1rem';
+        eventPanelContainer.style.height = '';
+        eventList.style.display = '';
+        btnToggleLog.textContent = '▼';
+        btnToggleLog.title = 'Minimize';
+      }
     });
 
     btnExportLog.addEventListener('click', () => {
