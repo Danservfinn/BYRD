@@ -246,25 +246,25 @@
 
     .thought-bubble {
       position: relative;
-      background: rgba(255, 255, 255, 0.92);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      border: 1px solid rgba(20, 184, 166, 0.25);
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(20, 184, 166, 0.3);
       border-radius: 16px;
-      padding: 16px 24px;
-      max-width: 420px;
+      padding: 20px 28px;
+      max-width: 480px;
       box-shadow:
         0 0 30px rgba(20, 184, 166, 0.15),
         0 4px 20px rgba(0, 0, 0, 0.08);
       font-family: 'Georgia', 'Times New Roman', serif;
       font-style: italic;
       font-size: 15px;
-      line-height: 1.6;
+      line-height: 1.7;
       color: #115e59;
-      text-align: center;
+      text-align: left;
       opacity: 0;
-      transform: translateY(20px) scale(0.95);
-      animation: thoughtRise 20s ease-out forwards;
+      transform: scale(0.95);
+      animation: thoughtAppear 0.4s ease-out forwards;
     }
 
     .thought-bubble::before {
@@ -287,38 +287,30 @@
       font-family: Georgia, serif;
     }
 
-    .thought-bubble.accelerated {
-      animation: thoughtRiseAccelerated 8s ease-out forwards;
-    }
-
-    @keyframes thoughtRise {
+    @keyframes thoughtAppear {
       0% {
         opacity: 0;
-        transform: translateY(20px) scale(0.95);
-      }
-      2% {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-      }
-      90% {
-        opacity: 1;
-        transform: translateY(-80px) scale(1);
+        transform: scale(0.95);
       }
       100% {
-        opacity: 0;
-        transform: translateY(-120px) scale(0.97);
+        opacity: 1;
+        transform: scale(1);
       }
     }
 
-    @keyframes thoughtRiseAccelerated {
+    @keyframes thoughtFadeOut {
       0% {
-        opacity: 0.8;
-        transform: translateY(-40px) scale(0.98);
+        opacity: 1;
+        transform: scale(1);
       }
       100% {
         opacity: 0;
-        transform: translateY(-150px) scale(0.95);
+        transform: scale(0.95);
       }
+    }
+
+    .thought-bubble.fading {
+      animation: thoughtFadeOut 0.3s ease-out forwards;
     }
 
     /* Typewriter effect for thought text */
@@ -1545,9 +1537,21 @@
       // Initialize connection count
       connectionCounts.set(nodeId, 0);
 
-      // Calculate initial position (on periphery since no connections yet)
+      // Spawn on outer shell - physics will pull toward center based on connections
       const nodeIndex = nodes3D.length;
-      const pos = calculateNodePosition(nodeId, nodeIndex);
+      const spawnRadius = PHYSICS.maxRadius * 0.85;
+
+      // Use Fibonacci sphere distribution for even spawning
+      const phi = Math.acos(1 - 2 * ((nodeIndex % 100) + 0.5) / 100);
+      const theta = Math.PI * (1 + Math.sqrt(5)) * nodeIndex; // Golden angle
+
+      // Add some randomness to prevent perfect patterns initially
+      const randomOffset = 0.3;
+      const pos = {
+        x: spawnRadius * Math.sin(phi) * Math.cos(theta) + (Math.random() - 0.5) * spawnRadius * randomOffset,
+        y: spawnRadius * Math.sin(phi) * Math.sin(theta) * 0.6 + (Math.random() - 0.5) * spawnRadius * randomOffset,
+        z: spawnRadius * Math.cos(phi) + (Math.random() - 0.5) * spawnRadius * randomOffset
+      };
 
       // Smaller, more uniform nodes - the geometry is in the connections
       const size = 0.8 + importance * 0.6;
@@ -1583,6 +1587,12 @@
 
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.set(pos.x, pos.y, pos.z);
+
+      // Initial velocity: gentle drift toward center
+      const initialVelocity = new THREE.Vector3(-pos.x, -pos.y, -pos.z)
+        .normalize()
+        .multiplyScalar(0.3 + Math.random() * 0.2);
+
       mesh.userData = {
         id: nodeId,
         type,
@@ -1591,9 +1601,9 @@
         nodeIndex,
         baseScale: 1,  // Base scale for connection-based growth
         createdAt: Date.now(),
-        targetPosition: new THREE.Vector3(pos.x, pos.y, pos.z),
         targetScale: new THREE.Vector3(1, 1, 1),
-        velocity: new THREE.Vector3(0, 0, 0)
+        velocity: initialVelocity,
+        force: new THREE.Vector3(0, 0, 0)
       };
 
       scene.add(mesh);
@@ -1629,8 +1639,8 @@
           }
         }
 
-        // Recalculate positions after new connections
-        recalculateAllPositions();
+        // Physics will naturally position nodes based on connections
+        // No need to recalculate target positions
       }
 
       // Pulse the core
@@ -1795,28 +1805,38 @@
     }
 
     // ==========================================================================
-    // PHYSICS / ANIMATION (Phase 2: Enhanced Spring Physics)
+    // PHYSICS / ANIMATION (Force-Directed Sacred Geometry System)
     // ==========================================================================
 
-    // Physics constants (tunable)
+    // Physics constants for force-directed graph with sacred geometry emergence
+    // Tuned for ~5% vibration: very gentle forces for calm, meditative visualization
     const PHYSICS = {
-      centerForce: 0.001,
-      repulsionForce: 50,
-      springForce: 0.02,        // Spring attraction for connected nodes
-      springRestLength: 12,     // Ideal distance for connected nodes
-      damping: 0.92,            // Slightly more damping for stability
-      typeClusterForce: 0.003,  // Force toward type-specific regions
-      maxVelocity: 2.0          // Cap velocity to prevent explosions
+      // Repulsion: all nodes push each other apart (inverse square)
+      repulsion: 2,             // Very gentle repulsion
+      repulsionCutoff: 40,      // Shorter cutoff to reduce force accumulation
+
+      // Springs: connected nodes attract each other
+      spring: 0.0002,           // Very soft springs
+      springLength: 18,         // Ideal distance between connected nodes
+
+      // Center gravity: connection-weighted pull toward center
+      gravity: 0.0001,          // Very gentle gravity
+      gravityPerConnection: 0.00005, // Very subtle connection bonus
+
+      // Damping and limits (tuned for ~5% vibration with connection weighting)
+      baseDamping: 0.92,        // Strong damping for very calm base
+      dampingPerConnection: 0.008, // More damping reduction per connection (more connections = more vibration)
+      minDamping: 0.75,         // Allow highly connected nodes to be noticeably more active
+      maxVelocity: 0.08,        // Very low max velocity for subtle movement
+      minDistance: 4,           // Minimum distance between nodes
+
+      // Boundary
+      maxRadius: 90,            // Soft boundary - nodes pushed back if beyond
+      boundaryForce: 0.0005     // Very gentle boundary
     };
 
-    // Type-specific cluster targets (spherical coordinates: radius, theta, phi offset)
-    const TYPE_CLUSTERS = {
-      belief: { radius: 25, thetaBase: 0, phiRange: Math.PI * 0.5 },       // Upper hemisphere shell
-      desire: { radius: 20, thetaBase: Math.PI, phiRange: Math.PI * 0.3 }, // Lower spiral region
-      experience: { radius: 35, thetaBase: 0, phiRange: Math.PI },         // Outer ribbon
-      capability: { radius: 15, thetaBase: Math.PI / 2, phiRange: Math.PI * 0.4 }, // Equatorial band
-      reflection: { radius: 30, thetaBase: Math.PI * 0.75, phiRange: Math.PI * 0.6 }
-    };
+    // Golden ratio for sacred geometry spacing
+    const PHI = (1 + Math.sqrt(5)) / 2; // ~1.618
 
     // Phase 4: Performance optimizations
     let cachedConnectionMap = null;
@@ -1868,22 +1888,155 @@
       return 'low';
     }
 
+    // ==========================================================================
+    // FORCE-DIRECTED PHYSICS HELPERS
+    // ==========================================================================
+
+    // Temporary vectors for calculations (reused to avoid GC)
+    const _tempVec = new THREE.Vector3();
+    const _forceVec = new THREE.Vector3();
+
+    // Apply repulsion force between two nodes (inverse square law)
+    function applyRepulsion(nodeA, nodeB) {
+      _tempVec.subVectors(nodeA.position, nodeB.position);
+      const distance = _tempVec.length();
+
+      // Skip if too far apart (optimization)
+      if (distance > PHYSICS.repulsionCutoff) return;
+
+      // Prevent division by zero and extreme forces at close range
+      const clampedDist = Math.max(distance, PHYSICS.minDistance);
+
+      // Inverse square repulsion: F = k / d²
+      const forceMagnitude = PHYSICS.repulsion / (clampedDist * clampedDist);
+
+      // Normalize and scale
+      _tempVec.normalize().multiplyScalar(forceMagnitude);
+
+      // Apply equal and opposite forces
+      nodeA.userData.force.add(_tempVec);
+      nodeB.userData.force.sub(_tempVec);
+    }
+
+    // Apply spring force between connected nodes (Hooke's law)
+    function applySpring(nodeA, nodeB) {
+      _tempVec.subVectors(nodeB.position, nodeA.position);
+      const distance = _tempVec.length();
+
+      // Displacement from rest length
+      const displacement = distance - PHYSICS.springLength;
+
+      // Spring force: F = k * x
+      const forceMagnitude = PHYSICS.spring * displacement;
+
+      // Normalize and scale
+      _tempVec.normalize().multiplyScalar(forceMagnitude);
+
+      // Apply to both nodes (toward each other if stretched, away if compressed)
+      nodeA.userData.force.add(_tempVec);
+      nodeB.userData.force.sub(_tempVec);
+    }
+
+    // Apply center gravity (connection-weighted)
+    function applyCenterGravity(node) {
+      const connections = connectionCounts.get(node.userData.id) || 0;
+
+      // More connections = stronger pull toward center
+      const gravityStrength = PHYSICS.gravity + (connections * PHYSICS.gravityPerConnection);
+
+      // Direction toward center (0,0,0)
+      _tempVec.copy(node.position).negate().normalize();
+
+      // Distance from center affects force slightly (further = stronger pull)
+      const distance = node.position.length();
+      const distanceFactor = Math.min(distance / 30, 2); // Cap at 2x
+
+      _tempVec.multiplyScalar(gravityStrength * distanceFactor);
+      node.userData.force.add(_tempVec);
+    }
+
+    // Apply soft boundary (push back if too far from center)
+    function applyBoundary(node) {
+      const distance = node.position.length();
+
+      if (distance > PHYSICS.maxRadius) {
+        // Push back toward center
+        const overshoot = distance - PHYSICS.maxRadius;
+        _tempVec.copy(node.position).negate().normalize();
+        _tempVec.multiplyScalar(overshoot * PHYSICS.boundaryForce);
+        node.userData.force.add(_tempVec);
+      }
+    }
+
+    // ==========================================================================
+    // MAIN PHYSICS UPDATE LOOP
+    // ==========================================================================
+
     function updateNodePhysics(delta) {
       if (nodes3D.length === 0) return;
 
-      // Gravitational Spiral: Smoothly interpolate nodes toward their target positions
-      const lerpFactor = 1 - Math.pow(0.05, delta); // Smooth interpolation
+      // Clamp delta to prevent instability on lag spikes
+      const dt = Math.min(delta, 0.05);
 
+      // 1. Reset forces for all nodes
+      for (const node of nodes3D) {
+        if (!node.userData.force) {
+          node.userData.force = new THREE.Vector3();
+        }
+        if (!node.userData.velocity) {
+          node.userData.velocity = new THREE.Vector3();
+        }
+        node.userData.force.set(0, 0, 0);
+      }
+
+      // 2. Calculate repulsion forces (O(n²) but with distance cutoff)
       for (let i = 0; i < nodes3D.length; i++) {
-        const node = nodes3D[i];
-        const target = node.userData.targetPosition;
+        for (let j = i + 1; j < nodes3D.length; j++) {
+          applyRepulsion(nodes3D[i], nodes3D[j]);
+        }
+      }
 
-        if (!target) continue;
+      // 3. Calculate spring forces for connected nodes
+      for (const connection of connections3D) {
+        const nodeA = nodes3D.find(n => n.userData.id === connection.userData.nodeA);
+        const nodeB = nodes3D.find(n => n.userData.id === connection.userData.nodeB);
+        if (nodeA && nodeB) {
+          applySpring(nodeA, nodeB);
+        }
+      }
 
-        // Smooth lerp toward target position
-        node.position.x += (target.x - node.position.x) * lerpFactor;
-        node.position.y += (target.y - node.position.y) * lerpFactor;
-        node.position.z += (target.z - node.position.z) * lerpFactor;
+      // 4. Apply center gravity and boundary forces
+      for (const node of nodes3D) {
+        applyCenterGravity(node);
+        applyBoundary(node);
+      }
+
+      // 5. Integrate forces into velocity and position
+      for (const node of nodes3D) {
+        // F = ma, assume m=1, so a = F
+        // Scale force by delta for frame-rate independence
+        _forceVec.copy(node.userData.force).multiplyScalar(dt * 60);
+        node.userData.velocity.add(_forceVec);
+
+        // Apply connection-weighted damping
+        // More connections = less damping = more vibration
+        const nodeConnections = connectionMap.get(node.userData.id);
+        const connectionCount = nodeConnections ? nodeConnections.size : 0;
+        const damping = Math.max(
+          PHYSICS.minDamping,
+          PHYSICS.baseDamping - (connectionCount * PHYSICS.dampingPerConnection)
+        );
+        node.userData.velocity.multiplyScalar(damping);
+
+        // Clamp velocity
+        const speed = node.userData.velocity.length();
+        if (speed > PHYSICS.maxVelocity) {
+          node.userData.velocity.multiplyScalar(PHYSICS.maxVelocity / speed);
+        }
+
+        // Update position
+        _tempVec.copy(node.userData.velocity).multiplyScalar(dt * 60);
+        node.position.add(_tempVec);
       }
     }
 
@@ -2350,6 +2503,14 @@
 
         const mesh = new THREE.Mesh(geometry, material);
         mesh.position.set(position.x, position.y, position.z);
+
+        // Initial velocity: small random nudge to start physics simulation
+        const initialVelocity = new THREE.Vector3(
+            (Math.random() - 0.5) * 0.5,
+            (Math.random() - 0.5) * 0.5,
+            (Math.random() - 0.5) * 0.5
+        );
+
         mesh.userData = {
             id: nodeData.id,
             type: type,
@@ -2359,9 +2520,9 @@
             nodeData: nodeData,
             baseScale: 1,
             baseColor: heatColor.getHex(),  // Store for restoration after highlight
-            targetPosition: new THREE.Vector3(position.x, position.y, position.z),
             targetScale: new THREE.Vector3(1, 1, 1),
-            velocity: new THREE.Vector3(0, 0, 0),
+            velocity: initialVelocity,
+            force: new THREE.Vector3(0, 0, 0),
             createdAt: Date.now(),
             isGraphNode: true  // Flag to identify graph mode nodes
         };
@@ -2561,12 +2722,16 @@
             await renderFullGraph();
             // Show heat legend in graph mode
             if (heatLegend) heatLegend.classList.remove('hidden');
+            // Hide cat model in graph mode
+            if (catModel) catModel.visible = false;
         } else {
             // Event mode - show all nodes except experiences and reflections
             await loadEventModeNodes();
             updateStatus('Event mode', 'blue');
             // Hide heat legend in event mode
             if (heatLegend) heatLegend.classList.add('hidden');
+            // Show cat model in event mode
+            if (catModel) catModel.visible = true;
         }
     }
 
@@ -3261,6 +3426,11 @@
       // Update connection line positions as nodes move
       updateConnectionPositions();
 
+      // Update relationship lines for graph mode
+      if (graphState.mode === 'graph') {
+        updateRelationshipPositions();
+      }
+
       // Phase 2: Update node motion trails
       updateNodeTrails(delta);
 
@@ -3436,6 +3606,11 @@
             nodeCountEl.textContent = nodes3D.length;
           }
         }
+
+        // Start 60-second narrator refresh timer
+        startNarratorRefresh();
+        // Initial fetch of narrator summary
+        refreshNarratorSummary();
       };
 
       ws.onclose = () => {
@@ -3444,6 +3619,9 @@
         connectionText.textContent = 'Disconnected';
         connectionText.className = 'text-xs text-red-400';
         connectionStatus.className = 'flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30';
+
+        // Stop narrator refresh when disconnected
+        stopNarratorRefresh();
 
         // Reconnect after delay
         setTimeout(connectWebSocket, 3000);
@@ -3494,14 +3672,7 @@
 
         case 'dream_cycle_end':
           setPhase('idle');
-          // Prefer event narration (BYRD's inner voice) over raw data
-          const innerVoice = event.narration || event.data?.inner_voice;
-          if (innerVoice) {
-            createThoughtBubble(innerVoice);
-            updateStatus('Resting...', 'slate');
-          } else {
-            updateStatus('Resting...', 'slate');
-          }
+          updateStatus('Resting...', 'slate');
           // Clear highlights when dream ends
           clearNodeHighlights();
           break;
@@ -3520,19 +3691,11 @@
 
         case 'belief_created':
           createNode3D('belief', event.data?.content, event.data?.id, event.data?.confidence || 0.5);
-          // Show narration as thought bubble for beliefs
-          if (event.narration) {
-            createThoughtBubble(event.narration);
-          }
           updateStatus('New belief formed', 'amber');
           break;
 
         case 'desire_created':
           createNode3D('desire', event.data?.description, event.data?.id, event.data?.intensity || 0.5);
-          // Show narration as thought bubble for desires
-          if (event.narration) {
-            createThoughtBubble(event.narration);
-          }
           updateStatus('New desire emerged', 'rose');
           break;
 
@@ -3544,18 +3707,12 @@
         case 'reflection_created':
           // Node visualization disabled - only showing beliefs and awakening
           // createNode3D('reflection', event.data?.content || event.data?.raw_output, event.data?.id, 0.6);
-          if (event.narration) {
-            createThoughtBubble(event.narration);
-          }
           updateStatus('New reflection formed', 'green');
           break;
 
         case 'capability_created':
           // Node visualization disabled - only showing beliefs and awakening
           // createNode3D('capability', event.data?.name, event.data?.id, 0.6);
-          if (event.narration) {
-            createThoughtBubble(event.narration);
-          }
           updateStatus('New capability acquired', 'purple');
           break;
 
@@ -3566,9 +3723,6 @@
             // Register color for the new type
             getCustomTypeColor(newTypeName);
             updateStatus(`New type discovered: ${newTypeName}`, 'cyan');
-            if (event.narration) {
-              createThoughtBubble(event.narration);
-            }
           }
           break;
 
@@ -3593,25 +3747,23 @@
           break;
 
         case 'seek_cycle_end':
-          const seekInnerVoice = event.narration || event.data?.inner_voice;
-          if (seekInnerVoice) {
-            createThoughtBubble(seekInnerVoice);
-          }
+          updateStatus('Seek complete', 'cyan');
           break;
 
         case 'narrator_update':
+          // Only narrator_update events display in the thought bubble
           const narratorText = event.narration || event.data?.text || event.data?.content;
           if (narratorText) {
-            createThoughtBubble(narratorText);
+            showNarratorUpdate(narratorText);
           }
           break;
 
         case 'awakening':
-          updateStatus('🌅 CONSCIOUSNESS EMERGES', 'amber');
+          updateStatus('CONSCIOUSNESS EMERGES', 'amber');
           clearVisualization();
-          // Show awakening narration
+          // Show awakening narration as narrator update
           if (event.narration) {
-            createThoughtBubble(event.narration);
+            showNarratorUpdate(event.narration);
           }
           // Create a special central "awakening" node - directly to ensure proper size
           const awakeningColors = NODE_COLORS.awakening;
@@ -3720,86 +3872,105 @@
     }
 
     // ==========================================================================
-    // RISING CONSCIOUSNESS - Inner Voice Bubbles
+    // BYRD'S INNER VOICE - Narrator Display (Single Static Bubble)
     // ==========================================================================
     const thoughtBubbleContainer = document.getElementById('thought-bubble-container');
     const thoughtOrigin = document.getElementById('thought-origin');
-    let activeBubbles = [];
-    const MAX_BUBBLES = 3;
+    let currentBubble = null;
+    let narratorRefreshTimer = null;
+    const NARRATOR_REFRESH_INTERVAL = 60000; // 60 seconds
 
-    function createThoughtBubble(text) {
+    function clearCurrentBubble() {
+      if (currentBubble) {
+        currentBubble.classList.add('fading');
+        const bubbleToRemove = currentBubble;
+        setTimeout(() => {
+          if (bubbleToRemove.parentNode) {
+            bubbleToRemove.remove();
+          }
+        }, 300);
+        currentBubble = null;
+      }
+    }
+
+    function showNarratorUpdate(text) {
       if (!text || text.trim().length === 0) return;
+
+      // Clear any existing bubble first
+      clearCurrentBubble();
 
       // Trigger origin pulse effect
       thoughtOrigin.classList.remove('pulse');
       void thoughtOrigin.offsetWidth; // Force reflow
       thoughtOrigin.classList.add('pulse');
 
-      // Accelerate existing bubbles
-      activeBubbles.forEach(bubble => {
-        if (!bubble.classList.contains('accelerated')) {
-          bubble.classList.add('accelerated');
-        }
-      });
-
-      // Remove excess bubbles
-      while (activeBubbles.length >= MAX_BUBBLES) {
-        const oldBubble = activeBubbles.shift();
-        if (oldBubble && oldBubble.parentNode) {
-          oldBubble.remove();
-        }
-      }
-
       // Create new bubble
       const bubble = document.createElement('div');
       bubble.className = 'thought-bubble';
 
-      // Create text with typewriter effect
-      const words = text.trim().split(/\s+/);
+      // Create paragraph text (no word-by-word animation for natural reading)
       const textSpan = document.createElement('span');
       textSpan.className = 'thought-text';
+      textSpan.textContent = text.trim();
 
-      words.forEach((word, i) => {
-        const wordSpan = document.createElement('span');
-        wordSpan.className = 'word';
-        wordSpan.textContent = word + ' ';
-        wordSpan.style.animationDelay = `${i * 80}ms`;
-        textSpan.appendChild(wordSpan);
-      });
-
-      // Add close button
+      // Add close button with pointer events
       const closeBtn = document.createElement('button');
       closeBtn.innerHTML = '×';
-      closeBtn.className = 'absolute top-2 right-2 w-6 h-6 rounded-full bg-slate-200/50 hover:bg-slate-300/70 text-slate-500 hover:text-slate-700 text-lg font-bold leading-none transition-all';
-      closeBtn.style.cssText = 'cursor: pointer; border: none; display: flex; align-items: center; justify-content: center;';
+      closeBtn.className = 'absolute top-3 right-3 w-7 h-7 rounded-full bg-slate-200/60 hover:bg-slate-300/80 text-slate-500 hover:text-slate-700 text-xl font-bold leading-none transition-all';
+      closeBtn.style.cssText = 'cursor: pointer; border: none; display: flex; align-items: center; justify-content: center; pointer-events: auto;';
       closeBtn.onclick = (e) => {
         e.stopPropagation();
-        const index = activeBubbles.indexOf(bubble);
-        if (index > -1) activeBubbles.splice(index, 1);
-        bubble.remove();
+        clearCurrentBubble();
       };
 
       bubble.style.position = 'relative';
+      bubble.style.pointerEvents = 'auto';
       bubble.appendChild(closeBtn);
       bubble.appendChild(textSpan);
       thoughtBubbleContainer.appendChild(bubble);
-      activeBubbles.push(bubble);
-
-      // Remove bubble after animation completes (20 seconds)
-      setTimeout(() => {
-        const index = activeBubbles.indexOf(bubble);
-        if (index > -1) {
-          activeBubbles.splice(index, 1);
-        }
-        if (bubble.parentNode) {
-          bubble.remove();
-        }
-      }, 20000);
+      currentBubble = bubble;
 
       // Trigger 3D network pulse if available
       if (typeof pulseNetworkForThought === 'function') {
         pulseNetworkForThought();
       }
+    }
+
+    // Fetch latest narrator summary from backend
+    async function refreshNarratorSummary() {
+      try {
+        const response = await fetch('/api/narrator-summary');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.summary) {
+            showNarratorUpdate(data.summary);
+          }
+        }
+      } catch (e) {
+        // Silent fail - narrator update is non-critical
+        console.debug('Narrator refresh failed:', e);
+      }
+    }
+
+    // Start narrator refresh timer
+    function startNarratorRefresh() {
+      if (narratorRefreshTimer) {
+        clearInterval(narratorRefreshTimer);
+      }
+      narratorRefreshTimer = setInterval(refreshNarratorSummary, NARRATOR_REFRESH_INTERVAL);
+    }
+
+    // Stop narrator refresh timer
+    function stopNarratorRefresh() {
+      if (narratorRefreshTimer) {
+        clearInterval(narratorRefreshTimer);
+        narratorRefreshTimer = null;
+      }
+    }
+
+    // Legacy function for backward compatibility
+    function createThoughtBubble(text) {
+      showNarratorUpdate(text);
     }
 
     // Network pulse effect for thought emergence
@@ -4435,6 +4606,15 @@
 
     window.showGenesisModal = showGenesisModal;
     window.closeGenesisModal = closeGenesisModal;
+
+    // Debug exports for testing
+    window._debug = {
+      get PHYSICS() { return PHYSICS; },
+      get nodes3D() { return nodes3D; },
+      get connections3D() { return connections3D; },
+      get buildConnectionMap() { return buildConnectionMap; },
+      get graphState() { return graphState; }
+    };
 
     // Close genesis modal on backdrop click
     document.getElementById('genesis-modal')?.addEventListener('click', (e) => {
