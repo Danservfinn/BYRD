@@ -2420,3 +2420,150 @@ class Memory:
         except Exception as e:
             print(f"Error getting ontology summary: {e}")
             return {"error": str(e)}
+
+    # =========================================================================
+    # GRAPH VISUALIZATION METHODS
+    # =========================================================================
+
+    async def get_full_graph(self, limit: int = 1000) -> Dict[str, Any]:
+        """
+        Get the complete graph structure for visualization.
+
+        Returns all nodes and relationships with their types and properties,
+        suitable for rendering the full memory graph in 3D.
+
+        Args:
+            limit: Maximum number of nodes to return (default 1000)
+
+        Returns:
+            {
+                "nodes": [{id, type, content, confidence, intensity, created_at, access_count, last_accessed}, ...],
+                "relationships": [{id, type, source_id, target_id, properties}, ...],
+                "stats": {total_nodes, total_relationships, by_type}
+            }
+        """
+        try:
+            async with self.driver.session() as session:
+                # Get all nodes with their properties
+                nodes_result = await session.run("""
+                    MATCH (n)
+                    WHERE n:Experience OR n:Belief OR n:Desire OR n:Reflection OR n:Capability
+                    RETURN
+                        n.id as id,
+                        labels(n)[0] as type,
+                        n.content as content,
+                        n.description as description,
+                        n.name as name,
+                        n.confidence as confidence,
+                        n.intensity as intensity,
+                        n.timestamp as created_at,
+                        n.type as subtype,
+                        n.status as status,
+                        n.access_count as access_count,
+                        n.last_accessed as last_accessed
+                    ORDER BY n.timestamp DESC
+                    LIMIT $limit
+                """, limit=limit)
+
+                nodes = []
+                by_type = {}
+                async for record in nodes_result:
+                    node_type = record["type"].lower() if record["type"] else "unknown"
+
+                    # Get display content based on node type
+                    content = (
+                        record["content"] or
+                        record["description"] or
+                        record["name"] or
+                        ""
+                    )
+
+                    nodes.append({
+                        "id": record["id"],
+                        "type": node_type,
+                        "content": content,
+                        "subtype": record["subtype"],
+                        "confidence": record["confidence"],
+                        "intensity": record["intensity"],
+                        "status": record["status"],
+                        "created_at": str(record["created_at"]) if record["created_at"] else None,
+                        "access_count": record["access_count"] or 0,
+                        "last_accessed": str(record["last_accessed"]) if record["last_accessed"] else None
+                    })
+
+                    # Count by type
+                    by_type[node_type] = by_type.get(node_type, 0) + 1
+
+                # Get all relationships between these nodes
+                rels_result = await session.run("""
+                    MATCH (a)-[r]->(b)
+                    WHERE (a:Experience OR a:Belief OR a:Desire OR a:Reflection OR a:Capability)
+                      AND (b:Experience OR b:Belief OR b:Desire OR b:Reflection OR b:Capability)
+                    RETURN
+                        id(r) as id,
+                        type(r) as type,
+                        a.id as source_id,
+                        b.id as target_id
+                    LIMIT $limit
+                """, limit=limit * 3)  # More relationships than nodes typically
+
+                relationships = []
+                async for record in rels_result:
+                    relationships.append({
+                        "id": str(record["id"]),
+                        "type": record["type"],
+                        "source_id": record["source_id"],
+                        "target_id": record["target_id"]
+                    })
+
+                return {
+                    "nodes": nodes,
+                    "relationships": relationships,
+                    "stats": {
+                        "total_nodes": len(nodes),
+                        "total_relationships": len(relationships),
+                        "by_type": by_type
+                    }
+                }
+
+        except Exception as e:
+            print(f"Error getting full graph: {e}")
+            return {
+                "nodes": [],
+                "relationships": [],
+                "stats": {"total_nodes": 0, "total_relationships": 0, "by_type": {}},
+                "error": str(e)
+            }
+
+    async def increment_access_count(self, node_ids: List[str]) -> int:
+        """
+        Increment access count for nodes being accessed during reflection.
+
+        This tracks which memories are being used, enabling the heat map
+        visualization to show frequently/recently accessed nodes.
+
+        Args:
+            node_ids: List of node IDs being accessed
+
+        Returns:
+            Number of nodes updated
+        """
+        if not node_ids:
+            return 0
+
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    UNWIND $ids AS nodeId
+                    MATCH (n) WHERE n.id = nodeId
+                    SET n.access_count = COALESCE(n.access_count, 0) + 1,
+                        n.last_accessed = datetime()
+                    RETURN count(n) as updated
+                """, ids=node_ids)
+
+                record = await result.single()
+                return record["updated"] if record else 0
+
+        except Exception as e:
+            print(f"Error incrementing access count: {e}")
+            return 0
