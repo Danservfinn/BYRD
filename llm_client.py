@@ -1,6 +1,6 @@
 """
 BYRD LLM Client - Unified interface for LLM providers.
-Supports Ollama (local) and OpenRouter (cloud).
+Supports Ollama (local), OpenRouter (cloud), and Z.AI (GLM models).
 
 The "one mind" principle: Dreamer and Seeker share the same LLM client,
 ensuring all reflection and synthesis flows through a single model.
