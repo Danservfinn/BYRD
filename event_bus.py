@@ -90,6 +90,18 @@ class EventType(Enum):
     EGO_EVOLVED = "ego_evolved"          # Ego node updated with history preservation
     EGO_DEPRECATED = "ego_deprecated"    # Ego node deprecated (soft delete)
 
+    # Prediction events (belief validation loop)
+    PREDICTION_CREATED = "prediction_created"          # Testable hypothesis from belief
+    PREDICTION_VALIDATED = "prediction_validated"      # Prediction confirmed by outcome
+    PREDICTION_FALSIFIED = "prediction_falsified"      # Prediction contradicted by outcome
+    BELIEF_CONFIDENCE_CHANGED = "belief_confidence_changed"  # Confidence adjusted
+
+    # Task events (external goal injection)
+    TASK_CREATED = "task_created"        # External or emergent task added
+    TASK_STARTED = "task_started"        # Task execution began
+    TASK_COMPLETED = "task_completed"    # Task finished successfully
+    TASK_FAILED = "task_failed"          # Task failed with error
+
 
 @dataclass
 class Event:

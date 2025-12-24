@@ -176,6 +176,9 @@ class Seeker:
             self._installs_today = 0
             self._last_reset = datetime.now()
 
+        # Process external tasks (enables learning about the world)
+        await self._process_pending_tasks()
+
         # Get recent reflections
         reflections = await self.memory.get_recent_reflections(limit=10)
 
@@ -574,10 +577,230 @@ class Seeker:
         else:
             content = f"[ACTION_SKIPPED] Pursued: {description}\nStrategy: {strategy}\nReason: {reason or 'No strategy'}"
 
-        await self.memory.record_experience(
+        exp_id = await self.memory.record_experience(
             content=content,
             type="action_outcome"
         )
+
+        # Check if this outcome validates or falsifies any pending predictions
+        await self._check_predictions_against_outcome(exp_id, content)
+
+    async def _check_predictions_against_outcome(self, outcome_exp_id: str, outcome_content: str):
+        """
+        Check if any pending predictions are validated or falsified by this outcome.
+
+        This is the core of the adaptive learning loop:
+        1. Get pending predictions
+        2. Ask LLM if this outcome matches any prediction's condition
+        3. If so, validate/falsify and adjust belief confidence
+        """
+        try:
+            pending = await self.memory.get_pending_predictions(limit=20)
+
+            if not pending:
+                return
+
+            # Create a summary of predictions for efficient LLM check
+            predictions_text = "\n".join([
+                f"[{i}] Prediction: {p.get('prediction', '')}\n    Condition: {p.get('condition', '')}\n    Expected: {p.get('expected_outcome', '')}"
+                for i, p in enumerate(pending)
+            ])
+
+            prompt = f"""Given this action outcome and list of pending predictions, identify if any predictions are now validated or falsified.
+
+ACTION OUTCOME:
+{outcome_content}
+
+PENDING PREDICTIONS:
+{predictions_text}
+
+For each prediction where this outcome is relevant:
+- If the condition was met AND the outcome matches expected → validated
+- If the condition was met BUT the outcome differs from expected → falsified
+- If the condition was NOT met → skip (still pending)
+
+Output JSON:
+{{"results": [
+    {{"index": 0, "status": "validated"|"falsified", "reasoning": "why"}}
+]}}
+
+If no predictions are affected, return {{"results": []}}
+"""
+
+            response = await self._query_local_llm(prompt, max_tokens=500)
+
+            # Parse response
+            text = response.strip()
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0]
+            elif "```" in text:
+                text = text.split("```")[1].split("```")[0]
+
+            result = json.loads(text.strip())
+
+            for r in result.get("results", []):
+                idx = r.get("index")
+                status = r.get("status")
+
+                if idx is not None and idx < len(pending) and status in ["validated", "falsified"]:
+                    pred = pending[idx]
+                    matched = (status == "validated")
+
+                    # Validate/falsify the prediction
+                    await self.memory.validate_prediction(
+                        pred_id=pred.get("id"),
+                        outcome_exp_id=outcome_exp_id,
+                        actual_outcome=outcome_content[:500],
+                        matched=matched
+                    )
+
+                    # Adjust belief confidence
+                    delta = 0.1 if matched else -0.15
+                    await self.memory.adjust_belief_confidence(
+                        pred.get("belief_id"),
+                        delta
+                    )
+
+                    status_emoji = "✅" if matched else "❌"
+                    print(f"{status_emoji} Prediction {status}: {pred.get('prediction', '')[:50]}...")
+
+        except (json.JSONDecodeError, KeyError) as e:
+            print(f"⚠️ Prediction check parse error: {e}")
+        except Exception as e:
+            print(f"⚠️ Prediction check failed: {e}")
+
+    async def _process_pending_tasks(self):
+        """
+        Process external tasks alongside desire-driven behavior.
+
+        Tasks enable learning about the world by executing externally-defined
+        goals and recording the resulting experiences and learnings.
+        """
+        try:
+            # Get high-priority pending tasks (limit 2 per cycle to not overwhelm)
+            tasks = await self.memory.get_pending_tasks(limit=2)
+
+            if not tasks:
+                return
+
+            for task in tasks:
+                task_id = task.get("id")
+                description = task.get("description", "")
+                objective = task.get("objective", "")
+
+                print(f"📋 Processing task: {description[:50]}...")
+
+                # Mark as in progress
+                await self.memory.update_task_status(task_id, "in_progress")
+
+                experiences_generated = []
+                learnings = []
+
+                try:
+                    # Determine strategy based on task description
+                    strategy = await self._determine_task_strategy(task)
+
+                    # Execute based on strategy
+                    if strategy == "research":
+                        # Research task - use knowledge seeking
+                        success = await self._seek_knowledge_semantic(description, None)
+                        if success:
+                            exp_id = await self.memory.record_experience(
+                                content=f"[TASK_RESEARCH] {description}\nObjective: {objective}\nCompleted research phase.",
+                                type="task_execution"
+                            )
+                            experiences_generated.append(exp_id)
+                            learnings.append(f"Researched: {description[:100]}")
+
+                    elif strategy == "code":
+                        # Coding task
+                        success = await self._execute_code_strategy(description)
+                        if success:
+                            exp_id = await self.memory.record_experience(
+                                content=f"[TASK_CODE] {description}\nObjective: {objective}\nCompleted coding phase.",
+                                type="task_execution"
+                            )
+                            experiences_generated.append(exp_id)
+                            learnings.append(f"Implemented: {description[:100]}")
+
+                    else:
+                        # Generic execution
+                        exp_id = await self.memory.record_experience(
+                            content=f"[TASK_GENERIC] {description}\nObjective: {objective}\nAttempted execution.",
+                            type="task_execution"
+                        )
+                        experiences_generated.append(exp_id)
+
+                    # Extract learnings from the task
+                    task_learnings = await self._extract_task_learnings(task, experiences_generated)
+                    learnings.extend(task_learnings)
+
+                    # Complete the task
+                    await self.memory.complete_task(
+                        task_id=task_id,
+                        outcome=f"Completed: {objective[:100]}",
+                        learnings=learnings[:5],  # Max 5 learnings
+                        experience_ids=experiences_generated
+                    )
+
+                    print(f"✅ Task completed: {description[:40]}... ({len(learnings)} learnings)")
+
+                except Exception as e:
+                    # Task failed
+                    await self.memory.fail_task(task_id, str(e)[:200])
+                    print(f"❌ Task failed: {description[:40]}... - {e}")
+
+        except Exception as e:
+            print(f"⚠️ Task processing error: {e}")
+
+    async def _determine_task_strategy(self, task: Dict) -> str:
+        """Determine the best strategy for executing a task."""
+        description = task.get("description", "").lower()
+
+        # Simple heuristic - could be enhanced with LLM
+        if any(kw in description for kw in ["research", "find", "search", "learn about", "understand"]):
+            return "research"
+        elif any(kw in description for kw in ["implement", "code", "build", "create", "write"]):
+            return "code"
+        else:
+            return "generic"
+
+    async def _extract_task_learnings(self, task: Dict, experience_ids: List[str]) -> List[str]:
+        """Extract learnings from task execution using LLM."""
+        try:
+            description = task.get("description", "")
+            objective = task.get("objective", "")
+
+            # Get the experiences we just created
+            experiences_text = ""
+            for exp_id in experience_ids[:3]:
+                # Note: simplified - in production would fetch experience content
+                experiences_text += f"\n- Experience recorded during task execution"
+
+            prompt = f"""Analyze this completed task and extract key learnings.
+
+TASK: {description}
+OBJECTIVE: {objective}
+EXPERIENCES GENERATED: {len(experience_ids)}
+
+What did we learn from executing this task? Extract 2-3 concrete learnings.
+
+Output JSON: {{"learnings": ["learning 1", "learning 2"]}}
+"""
+
+            response = await self._query_local_llm(prompt, max_tokens=300)
+
+            text = response.strip()
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0]
+            elif "```" in text:
+                text = text.split("```")[1].split("```")[0]
+
+            result = json.loads(text.strip())
+            return result.get("learnings", [])[:3]
+
+        except Exception:
+            return [f"Completed task: {task.get('description', '')[:50]}"]
 
     async def _seek_knowledge_semantic(self, description: str, desire_id: str = None) -> bool:
         """Semantic knowledge seeking - uses LLM to generate queries."""

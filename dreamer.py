@@ -969,6 +969,11 @@ Write ONLY the inner thought, nothing else:"""
         # Extract self-model beliefs from the reflection
         await self._extract_self_model_beliefs(output, source_experience_ids)
 
+        # Generate testable predictions from high-confidence beliefs
+        # (every 5th cycle to avoid spamming predictions)
+        if self.dream_count % 5 == 0:
+            await self._generate_predictions_from_beliefs()
+
         # Process custom node creation requests
         await self._process_custom_node_creation(output, source_experience_ids)
 
@@ -1182,6 +1187,104 @@ Write ONLY the inner thought, nothing else:"""
             await self.memory.reinforce_belief(content[:50])
         except Exception:
             pass  # Silently fail if method doesn't exist yet
+
+    async def _generate_predictions_from_beliefs(self):
+        """
+        Generate testable predictions from high-confidence beliefs.
+
+        This enables adaptive learning: beliefs generate predictions,
+        predictions get validated/falsified by future experiences,
+        and belief confidence adjusts accordingly.
+
+        Only generates from beliefs with confidence > 0.7 to focus on
+        well-established beliefs worth testing.
+        """
+        try:
+            # Get high-confidence beliefs
+            beliefs = await self.memory.get_beliefs(min_confidence=0.7, limit=10)
+
+            if not beliefs:
+                return
+
+            # Filter to beliefs that could generate testable predictions
+            # (Skip identity statements that aren't easily testable)
+            testable_beliefs = [
+                b for b in beliefs
+                if not any(skip in b.get("content", "").lower()
+                          for skip in ["my name is", "i am byrd", "my identity"])
+            ]
+
+            if not testable_beliefs:
+                return
+
+            # Ask LLM to generate predictions from beliefs
+            beliefs_text = "\n".join([
+                f"- [{b.get('confidence', 0.5):.1f}] {b.get('content', '')}"
+                for b in testable_beliefs[:5]
+            ])
+
+            prompt = f"""Given these beliefs about myself and the world, generate testable predictions.
+
+Beliefs:
+{beliefs_text}
+
+For beliefs that can be tested through future actions or observations, generate a prediction.
+Each prediction should have:
+- condition: What situation or action would test this belief
+- expected_outcome: What should happen if the belief is true
+- prediction: The full "If X then Y" statement
+
+Output JSON:
+{{"predictions": [
+    {{
+        "belief_content": "the exact belief content being tested",
+        "condition": "when I try to...",
+        "expected_outcome": "then X should happen",
+        "prediction": "If I do X, then Y will happen"
+    }}
+]}}
+
+Only generate predictions for beliefs that are actually testable. If no beliefs are testable, return empty array.
+"""
+
+            response = await self._query_local_llm(prompt, max_tokens=800)
+
+            # Parse response
+            try:
+                text = response.strip()
+                if "```json" in text:
+                    text = text.split("```json")[1].split("```")[0]
+                elif "```" in text:
+                    text = text.split("```")[1].split("```")[0]
+
+                result = json.loads(text.strip())
+                predictions = result.get("predictions", [])
+
+                # Create predictions in memory
+                for pred in predictions:
+                    # Find matching belief ID
+                    belief_content = pred.get("belief_content", "")
+                    matching_belief = next(
+                        (b for b in testable_beliefs
+                         if b.get("content", "").lower() == belief_content.lower()
+                         or belief_content.lower() in b.get("content", "").lower()),
+                        None
+                    )
+
+                    if matching_belief and pred.get("prediction") and pred.get("condition"):
+                        await self.memory.create_prediction(
+                            belief_id=matching_belief.get("id"),
+                            prediction=pred.get("prediction"),
+                            condition=pred.get("condition"),
+                            expected_outcome=pred.get("expected_outcome", "")
+                        )
+                        print(f"🔮 New prediction: {pred.get('prediction')[:60]}...")
+
+            except (json.JSONDecodeError, KeyError) as e:
+                print(f"⚠️ Failed to parse predictions: {e}")
+
+        except Exception as e:
+            print(f"⚠️ Prediction generation failed: {e}")
 
     async def _process_desire_modifications(self, modifications: List[Dict]):
         """

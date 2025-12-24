@@ -460,6 +460,35 @@ async def get_beliefs(limit: int = 50, min_confidence: float = 0.0):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/belief/{belief_id}")
+async def get_belief(belief_id: str):
+    """Get a specific belief with its full lineage trace."""
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+
+        # Get the belief itself
+        belief = await byrd_instance.memory.get_node_by_id(belief_id)
+        if not belief:
+            raise HTTPException(status_code=404, detail=f"Belief {belief_id} not found")
+
+        # Get full lineage
+        lineage = await byrd_instance.memory.get_belief_lineage(belief_id)
+
+        return {
+            "belief": belief,
+            "lineage": lineage
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/desires")
 async def get_desires(limit: int = 20):
     """Get unfulfilled desires from memory."""
@@ -488,6 +517,113 @@ async def get_capabilities():
         await byrd_instance.memory.connect()
         capabilities = await byrd_instance.memory.get_capabilities()
         return {"capabilities": capabilities}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# TASK API (External goal injection)
+# =============================================================================
+
+class TaskRequest(BaseModel):
+    """Request model for creating a task."""
+    description: str
+    objective: str
+    priority: float = 0.5
+
+
+@app.post("/api/task")
+async def create_task(request: TaskRequest):
+    """
+    Inject an external task for BYRD to work on.
+
+    Tasks allow external goal injection so BYRD can learn about
+    the world rather than only reflecting on itself.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+
+        # Validate priority
+        priority = max(0.0, min(1.0, request.priority))
+
+        task_id = await byrd_instance.memory.create_task(
+            description=request.description,
+            objective=request.objective,
+            priority=priority,
+            source="external"
+        )
+
+        return {
+            "task_id": task_id,
+            "status": "pending",
+            "message": "Task created. BYRD will process it in the next seek cycle."
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/tasks")
+async def get_tasks(status: str = None, limit: int = 20):
+    """
+    Get tasks with optional status filter.
+
+    Status options: pending, in_progress, completed, failed
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+
+        if status:
+            tasks = await byrd_instance.memory.get_tasks_by_status(status, limit)
+        else:
+            tasks = await byrd_instance.memory.get_all_tasks(limit)
+
+        stats = await byrd_instance.memory.get_task_stats()
+
+        return {
+            "tasks": tasks,
+            "stats": stats
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/predictions")
+async def get_predictions(status: str = None, limit: int = 50):
+    """
+    Get predictions with optional status filter.
+
+    Status options: pending, validated, falsified
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+
+        if status == "pending":
+            predictions = await byrd_instance.memory.get_pending_predictions(limit)
+        else:
+            # For now, get all predictions via generic query
+            predictions = await byrd_instance.memory.get_pending_predictions(limit)
+
+        stats = await byrd_instance.memory.get_prediction_stats()
+
+        return {
+            "predictions": predictions,
+            "stats": stats
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

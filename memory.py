@@ -562,7 +562,62 @@ class Memory:
         ))
 
         return belief_id
-    
+
+    async def get_node_by_id(self, node_id: str) -> Optional[Dict]:
+        """Get any node by its ID, regardless of type."""
+        query = """
+            MATCH (n)
+            WHERE n.id = $node_id
+            RETURN n, labels(n) as node_labels
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(query, node_id=node_id)
+            record = await result.single()
+            if record:
+                node_data = dict(record["n"])
+                node_data["_labels"] = record["node_labels"]
+                return node_data
+            return None
+
+    async def get_belief_lineage(self, belief_id: str, max_depth: int = 5) -> Dict:
+        """
+        Trace a belief back to its source experiences through DERIVED_FROM chain.
+        Returns the belief itself plus all lineage paths.
+        """
+        query = f"""
+            MATCH (b:Belief {{id: $belief_id}})
+            OPTIONAL MATCH path = (b)-[:DERIVED_FROM*1..{max_depth}]->(source)
+            WHERE source:Experience OR source:Reflection OR source:Belief
+            WITH b, path,
+                 [node in nodes(path) | {{
+                     id: node.id,
+                     type: labels(node)[0],
+                     content: COALESCE(node.content, node.raw_output),
+                     confidence: node.confidence,
+                     created_at: COALESCE(node.formed_at, node.occurred_at, node.created_at)
+                 }}] as chain
+            RETURN chain, length(path) as depth
+            ORDER BY depth
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(query, belief_id=belief_id)
+            records = await result.data()
+
+            # Filter out empty chains (from OPTIONAL MATCH with no paths)
+            chains = [r["chain"] for r in records if r["chain"] and len(r["chain"]) > 1]
+            max_depth_found = max((r["depth"] for r in records if r["depth"]), default=0)
+
+            return {
+                "belief_id": belief_id,
+                "lineage_chains": chains,
+                "max_depth_found": max_depth_found,
+                "total_sources": len(set(
+                    node["id"] for chain in chains for node in chain[1:]  # Skip belief itself
+                ))
+            }
+
     async def get_beliefs(
         self, 
         min_confidence: float = 0.0,
@@ -954,6 +1009,386 @@ class Memory:
                 SET d.attempt_count = 0,
                     d.last_attempted = null
             """, id=desire_id)
+
+    # =========================================================================
+    # PREDICTIONS (Testable hypotheses from beliefs)
+    # =========================================================================
+
+    async def create_prediction(
+        self,
+        belief_id: str,
+        prediction: str,
+        condition: str,
+        expected_outcome: str
+    ) -> str:
+        """
+        Create a testable prediction from a belief.
+        Predictions are hypotheses that can be validated or falsified
+        by future experiences, enabling adaptive learning.
+        """
+        pred_id = f"pred_{uuid.uuid4().hex[:8]}"
+
+        async with self.driver.session() as session:
+            # Create prediction and link to source belief
+            await session.run("""
+                MATCH (b:Belief {id: $belief_id})
+                CREATE (p:Prediction {
+                    id: $pred_id,
+                    belief_id: $belief_id,
+                    prediction: $prediction,
+                    condition: $condition,
+                    expected_outcome: $expected_outcome,
+                    status: 'pending',
+                    created_at: datetime()
+                })
+                CREATE (p)-[:PREDICTS_FROM]->(b)
+            """,
+            pred_id=pred_id,
+            belief_id=belief_id,
+            prediction=prediction,
+            condition=condition,
+            expected_outcome=expected_outcome
+            )
+
+        # Emit event for real-time UI
+        await event_bus.emit(Event(
+            type=EventType.PREDICTION_CREATED,
+            data={
+                "id": pred_id,
+                "belief_id": belief_id,
+                "prediction": prediction,
+                "condition": condition
+            }
+        ))
+
+        return pred_id
+
+    async def get_pending_predictions(self, limit: int = 50) -> List[Dict]:
+        """Get all pending predictions that could be tested."""
+        query = """
+            MATCH (p:Prediction {status: 'pending'})-[:PREDICTS_FROM]->(b:Belief)
+            RETURN p, b.content as belief_content, b.confidence as belief_confidence
+            ORDER BY p.created_at DESC
+            LIMIT $limit
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(query, limit=limit)
+            records = await result.data()
+            return [{
+                **dict(r["p"]),
+                "belief_content": r["belief_content"],
+                "belief_confidence": r["belief_confidence"]
+            } for r in records]
+
+    async def validate_prediction(
+        self,
+        pred_id: str,
+        outcome_exp_id: str,
+        actual_outcome: str,
+        matched: bool
+    ) -> None:
+        """
+        Record prediction validation result.
+        Links the prediction to the experience that validated/falsified it.
+        """
+        status = "validated" if matched else "falsified"
+        rel_type = "VALIDATED_BY" if matched else "FALSIFIED_BY"
+
+        async with self.driver.session() as session:
+            await session.run(f"""
+                MATCH (p:Prediction {{id: $pred_id}})
+                MATCH (e:Experience {{id: $exp_id}})
+                SET p.status = $status,
+                    p.validated_at = datetime(),
+                    p.actual_outcome = $actual_outcome
+                CREATE (p)-[:{rel_type}]->(e)
+            """,
+            pred_id=pred_id,
+            exp_id=outcome_exp_id,
+            status=status,
+            actual_outcome=actual_outcome
+            )
+
+        # Get belief_id for the event
+        async with self.driver.session() as session:
+            result = await session.run("""
+                MATCH (p:Prediction {id: $pred_id})
+                RETURN p.belief_id as belief_id
+            """, pred_id=pred_id)
+            record = await result.single()
+            belief_id = record["belief_id"] if record else None
+
+        # Emit appropriate event
+        event_type = EventType.PREDICTION_VALIDATED if matched else EventType.PREDICTION_FALSIFIED
+        await event_bus.emit(Event(
+            type=event_type,
+            data={
+                "id": pred_id,
+                "belief_id": belief_id,
+                "matched": matched,
+                "actual_outcome": actual_outcome
+            }
+        ))
+
+    async def adjust_belief_confidence(self, belief_id: str, delta: float) -> float:
+        """
+        Adjust belief confidence based on prediction outcomes.
+        Returns the new confidence value.
+        """
+        async with self.driver.session() as session:
+            result = await session.run("""
+                MATCH (b:Belief {id: $belief_id})
+                SET b.confidence = CASE
+                    WHEN b.confidence + $delta > 1.0 THEN 1.0
+                    WHEN b.confidence + $delta < 0.0 THEN 0.0
+                    ELSE b.confidence + $delta
+                END
+                RETURN b.confidence as new_confidence
+            """, belief_id=belief_id, delta=delta)
+            record = await result.single()
+            new_confidence = record["new_confidence"] if record else 0.5
+
+        # Emit event for confidence change
+        await event_bus.emit(Event(
+            type=EventType.BELIEF_CONFIDENCE_CHANGED,
+            data={
+                "belief_id": belief_id,
+                "delta": delta,
+                "new_confidence": new_confidence
+            }
+        ))
+
+        return new_confidence
+
+    async def get_prediction_stats(self) -> Dict:
+        """Get statistics on predictions for monitoring learning effectiveness."""
+        query = """
+            MATCH (p:Prediction)
+            WITH p.status as status, count(*) as count
+            RETURN collect({status: status, count: count}) as stats
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(query)
+            record = await result.single()
+            stats_list = record["stats"] if record else []
+
+            stats = {s["status"]: s["count"] for s in stats_list}
+            total = sum(stats.values())
+            validated = stats.get("validated", 0)
+            falsified = stats.get("falsified", 0)
+            tested = validated + falsified
+
+            return {
+                "pending": stats.get("pending", 0),
+                "validated": validated,
+                "falsified": falsified,
+                "total": total,
+                "accuracy": validated / tested if tested > 0 else None
+            }
+
+    # =========================================================================
+    # TASKS (External goal injection for world-directed learning)
+    # =========================================================================
+
+    async def create_task(
+        self,
+        description: str,
+        objective: str,
+        priority: float = 0.5,
+        source: str = "external"
+    ) -> str:
+        """
+        Create a new task for BYRD to work on.
+
+        Tasks are external goals that allow BYRD to learn about
+        the world rather than only reflecting on itself.
+
+        Args:
+            description: What the task is
+            objective: What success looks like
+            priority: 0.0-1.0, higher = more urgent
+            source: "external" (user-injected) or "emergent" (BYRD-generated)
+        """
+        task_id = f"task_{uuid.uuid4().hex[:8]}"
+
+        async with self.driver.session() as session:
+            await session.run("""
+                CREATE (t:Task {
+                    id: $task_id,
+                    description: $description,
+                    objective: $objective,
+                    status: 'pending',
+                    priority: $priority,
+                    source: $source,
+                    created_at: datetime(),
+                    learnings: []
+                })
+            """,
+            task_id=task_id,
+            description=description,
+            objective=objective,
+            priority=priority,
+            source=source
+            )
+
+        # Emit event for real-time UI
+        await event_bus.emit(Event(
+            type=EventType.TASK_CREATED,
+            data={
+                "id": task_id,
+                "description": description,
+                "objective": objective,
+                "priority": priority,
+                "source": source
+            }
+        ))
+
+        return task_id
+
+    async def get_pending_tasks(self, limit: int = 5) -> List[Dict]:
+        """Get pending tasks ordered by priority."""
+        query = """
+            MATCH (t:Task {status: 'pending'})
+            RETURN t
+            ORDER BY t.priority DESC, t.created_at ASC
+            LIMIT $limit
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(query, limit=limit)
+            records = await result.data()
+            return [dict(r["t"]) for r in records]
+
+    async def get_tasks_by_status(self, status: str, limit: int = 20) -> List[Dict]:
+        """Get tasks filtered by status."""
+        query = """
+            MATCH (t:Task {status: $status})
+            RETURN t
+            ORDER BY t.created_at DESC
+            LIMIT $limit
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(query, status=status, limit=limit)
+            records = await result.data()
+            return [dict(r["t"]) for r in records]
+
+    async def get_all_tasks(self, limit: int = 50) -> List[Dict]:
+        """Get all tasks regardless of status."""
+        query = """
+            MATCH (t:Task)
+            RETURN t
+            ORDER BY t.created_at DESC
+            LIMIT $limit
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(query, limit=limit)
+            records = await result.data()
+            return [dict(r["t"]) for r in records]
+
+    async def update_task_status(self, task_id: str, status: str) -> None:
+        """Update task status."""
+        async with self.driver.session() as session:
+            if status == "in_progress":
+                await session.run("""
+                    MATCH (t:Task {id: $task_id})
+                    SET t.status = $status,
+                        t.started_at = datetime()
+                """, task_id=task_id, status=status)
+
+                # Emit start event
+                await event_bus.emit(Event(
+                    type=EventType.TASK_STARTED,
+                    data={"id": task_id}
+                ))
+            else:
+                await session.run("""
+                    MATCH (t:Task {id: $task_id})
+                    SET t.status = $status
+                """, task_id=task_id, status=status)
+
+    async def complete_task(
+        self,
+        task_id: str,
+        outcome: str,
+        learnings: List[str],
+        experience_ids: List[str]
+    ) -> None:
+        """
+        Mark task complete and link generated experiences.
+
+        The learnings and linked experiences become part of BYRD's
+        knowledge graph, enabling learning from external tasks.
+        """
+        async with self.driver.session() as session:
+            # Update task
+            await session.run("""
+                MATCH (t:Task {id: $task_id})
+                SET t.status = 'completed',
+                    t.completed_at = datetime(),
+                    t.outcome = $outcome,
+                    t.learnings = $learnings
+            """, task_id=task_id, outcome=outcome, learnings=learnings)
+
+            # Link experiences
+            if experience_ids:
+                await session.run("""
+                    MATCH (t:Task {id: $task_id})
+                    UNWIND $exp_ids as exp_id
+                    MATCH (e:Experience {id: exp_id})
+                    CREATE (t)-[:GENERATED_EXPERIENCE]->(e)
+                """, task_id=task_id, exp_ids=experience_ids)
+
+        # Emit completion event
+        await event_bus.emit(Event(
+            type=EventType.TASK_COMPLETED,
+            data={
+                "id": task_id,
+                "outcome": outcome,
+                "learnings": learnings,
+                "experience_count": len(experience_ids)
+            }
+        ))
+
+    async def fail_task(self, task_id: str, error: str) -> None:
+        """Mark task as failed."""
+        async with self.driver.session() as session:
+            await session.run("""
+                MATCH (t:Task {id: $task_id})
+                SET t.status = 'failed',
+                    t.failed_at = datetime(),
+                    t.error = $error
+            """, task_id=task_id, error=error)
+
+        await event_bus.emit(Event(
+            type=EventType.TASK_FAILED,
+            data={"id": task_id, "error": error}
+        ))
+
+    async def get_task_stats(self) -> Dict:
+        """Get task statistics."""
+        query = """
+            MATCH (t:Task)
+            WITH t.status as status, count(*) as count
+            RETURN collect({status: status, count: count}) as stats
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(query)
+            record = await result.single()
+            stats_list = record["stats"] if record else []
+
+            stats = {s["status"]: s["count"] for s in stats_list}
+            return {
+                "pending": stats.get("pending", 0),
+                "in_progress": stats.get("in_progress", 0),
+                "completed": stats.get("completed", 0),
+                "failed": stats.get("failed", 0),
+                "total": sum(stats.values())
+            }
 
     # =========================================================================
     # CAPABILITIES
