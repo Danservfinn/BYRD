@@ -1,1 +1,44 @@
+# Python
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Secrets (NEVER commit these)
+.env
+.env.local
+*.key
+*.pem
+secrets.yaml
+credentials.json
+
+# Local config overrides
+config.local.yaml
+
+# Checkpoints and data
+checkpoints/
+*.db
+*.sqlite
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Cache
+.cache/
+*.cache
