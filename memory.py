@@ -1098,3 +1098,329 @@ class Memory:
             await self._ensure_schema()
 
         print("Memory cleared: all nodes and relationships deleted - database is empty")
+
+    # =========================================================================
+    # GRAPH INTROSPECTION (Self-Awareness)
+    # =========================================================================
+
+    async def get_graph_statistics(self) -> Dict:
+        """Get comprehensive graph statistics for self-awareness."""
+        try:
+            async with self.driver.session() as session:
+                # Total nodes and relationships
+                result = await session.run("""
+                    MATCH (n)
+                    WITH count(n) as nodes
+                    MATCH ()-[r]->()
+                    RETURN nodes, count(r) as relationships
+                """)
+                record = await result.single()
+
+                # Node type counts
+                type_result = await session.run("""
+                    MATCH (n)
+                    RETURN labels(n)[0] as type, count(n) as count
+                """)
+                type_records = await type_result.data()
+                node_types = {r["type"]: r["count"] for r in type_records}
+
+                return {
+                    "total_nodes": record["nodes"] if record else 0,
+                    "total_relationships": record["relationships"] if record else 0,
+                    "node_types": node_types
+                }
+        except Exception as e:
+            print(f"Error getting graph statistics: {e}")
+            return {}
+
+    async def find_duplicate_beliefs(self, threshold: float = 0.85) -> List[Dict]:
+        """Find beliefs with similar content (potential duplicates)."""
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (b1:Belief), (b2:Belief)
+                    WHERE b1.id < b2.id
+                    AND apoc.text.sorensenDiceSimilarity(
+                        toLower(b1.content), toLower(b2.content)
+                    ) > $threshold
+                    RETURN b1.id as id1, b2.id as id2,
+                           b1.content as content1, b2.content as content2,
+                           apoc.text.sorensenDiceSimilarity(
+                               toLower(b1.content), toLower(b2.content)
+                           ) as similarity
+                    LIMIT 20
+                """, threshold=threshold)
+                return await result.data()
+        except Exception:
+            # APOC not available, use simpler check
+            return []
+
+    async def find_orphan_nodes(self, node_type: Optional[str] = None) -> List[Dict]:
+        """Find nodes with no relationships."""
+        try:
+            type_filter = f":{node_type}" if node_type else ""
+            async with self.driver.session() as session:
+                result = await session.run(f"""
+                    MATCH (n{type_filter})
+                    WHERE NOT (n)--()
+                    RETURN n.id as id, labels(n)[0] as type,
+                           n.created_at as created_at
+                    LIMIT 50
+                """)
+                return await result.data()
+        except Exception as e:
+            print(f"Error finding orphan nodes: {e}")
+            return []
+
+    async def find_stale_experiences(
+        self, older_than_hours: int = 48, max_connections: int = 0
+    ) -> List[Dict]:
+        """Find old experiences with few connections."""
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (e:Experience)
+                    WHERE e.created_at < datetime() - duration({hours: $hours})
+                    WITH e, size((e)--()) as connections
+                    WHERE connections <= $max_conn
+                    RETURN e.id as id, e.type as type, e.created_at as created_at,
+                           connections,
+                           duration.between(e.created_at, datetime()).hours as age_hours
+                    ORDER BY e.created_at ASC
+                    LIMIT 50
+                """, hours=older_than_hours, max_conn=max_connections)
+                return await result.data()
+        except Exception as e:
+            print(f"Error finding stale experiences: {e}")
+            return []
+
+    async def find_conflicting_beliefs(self) -> List[Dict]:
+        """Find beliefs that may contradict each other."""
+        # Simple heuristic: beliefs with opposite keywords
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (b1:Belief), (b2:Belief)
+                    WHERE b1.id < b2.id
+                    AND (
+                        (b1.content CONTAINS 'not' AND NOT b2.content CONTAINS 'not'
+                         AND apoc.text.sorensenDiceSimilarity(
+                             replace(toLower(b1.content), 'not ', ''),
+                             toLower(b2.content)
+                         ) > 0.7)
+                        OR
+                        (b1.content CONTAINS 'cannot' AND b2.content CONTAINS 'can'
+                         AND NOT b2.content CONTAINS 'cannot')
+                    )
+                    RETURN b1.id as id1, b2.id as id2,
+                           b1.content as belief1, b2.content as belief2
+                    LIMIT 10
+                """)
+                return await result.data()
+        except Exception:
+            return []
+
+    async def get_node_importance(self, node_id: str) -> float:
+        """Calculate importance score based on connections."""
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (n {id: $id})
+                    RETURN size((n)--()) as connections
+                """, id=node_id)
+                record = await result.single()
+                if record:
+                    connections = record["connections"]
+                    # Normalize: 10+ connections = 1.0, 0 = 0.0
+                    return min(1.0, connections / 10.0)
+                return 0.0
+        except Exception:
+            return 0.0
+
+    # =========================================================================
+    # GRAPH MUTATION (Self-Curation)
+    # =========================================================================
+
+    # Safety limits
+    CURATION_LIMITS = {
+        "max_deletions_per_day": 20,
+        "max_per_cycle": 5,
+        "min_node_age_hours": 1,
+        "max_connections_for_delete": 3,
+        "protected_types": ["Mutation"],
+    }
+
+    def __init_curation_state(self):
+        """Initialize curation tracking state."""
+        if not hasattr(self, '_deletions_today'):
+            self._deletions_today = 0
+            self._archives_today = 0
+            self._merges_today = 0
+            from datetime import datetime
+            self._last_curation_reset = datetime.now()
+
+    def reset_curation_state(self):
+        """Reset curation counters - called on hard reset."""
+        self._deletions_today = 0
+        self._archives_today = 0
+        self._merges_today = 0
+        from datetime import datetime
+        self._last_curation_reset = datetime.now()
+
+    async def archive_node(
+        self, node_id: str, node_type: str, reason: str, desire_id: Optional[str] = None
+    ) -> bool:
+        """Soft delete - mark node as archived."""
+        self.__init_curation_state()
+        try:
+            async with self.driver.session() as session:
+                # Check if protected
+                if node_type in self.CURATION_LIMITS["protected_types"]:
+                    return False
+
+                # Archive the node
+                await session.run("""
+                    MATCH (n {id: $id})
+                    SET n.archived = true, n.archived_at = datetime(),
+                        n.archive_reason = $reason
+                """, id=node_id, reason=reason)
+
+                # Log mutation
+                await self._log_mutation(session, "archive", [node_id], reason, desire_id)
+                self._archives_today += 1
+                return True
+        except Exception as e:
+            print(f"Archive error: {e}")
+            return False
+
+    async def delete_node(
+        self, node_id: str, node_type: str, reason: str, desire_id: Optional[str] = None
+    ) -> bool:
+        """Hard delete with safety checks."""
+        self.__init_curation_state()
+        try:
+            # Check daily limit
+            if self._deletions_today >= self.CURATION_LIMITS["max_deletions_per_day"]:
+                print(f"Daily deletion limit reached")
+                return False
+
+            # Check if protected type
+            if node_type in self.CURATION_LIMITS["protected_types"]:
+                print(f"Cannot delete protected type: {node_type}")
+                return False
+
+            async with self.driver.session() as session:
+                # Check node age
+                age_result = await session.run("""
+                    MATCH (n {id: $id})
+                    RETURN duration.between(n.created_at, datetime()).hours as age_hours,
+                           size((n)--()) as connections
+                """, id=node_id)
+                record = await age_result.single()
+
+                if not record:
+                    return False
+
+                if record["age_hours"] < self.CURATION_LIMITS["min_node_age_hours"]:
+                    print(f"Node too young to delete")
+                    return False
+
+                if record["connections"] > self.CURATION_LIMITS["max_connections_for_delete"]:
+                    print(f"Node has too many connections to delete")
+                    return False
+
+                # Log before deletion
+                await self._log_mutation(session, "delete", [node_id], reason, desire_id)
+
+                # Delete
+                await session.run("MATCH (n {id: $id}) DETACH DELETE n", id=node_id)
+                self._deletions_today += 1
+                return True
+        except Exception as e:
+            print(f"Delete error: {e}")
+            return False
+
+    async def merge_beliefs(
+        self, source_ids: List[str], target_id: str, reason: str,
+        desire_id: Optional[str] = None
+    ) -> bool:
+        """Merge duplicate beliefs into one."""
+        self.__init_curation_state()
+        try:
+            async with self.driver.session() as session:
+                # Transfer relationships from sources to target
+                for source_id in source_ids:
+                    if source_id == target_id:
+                        continue
+
+                    # Move incoming relationships
+                    await session.run("""
+                        MATCH (source:Belief {id: $source_id})<-[r]-(other)
+                        MATCH (target:Belief {id: $target_id})
+                        WHERE NOT (other)-[:DERIVED_FROM]->(target)
+                        MERGE (other)-[:DERIVED_FROM]->(target)
+                    """, source_id=source_id, target_id=target_id)
+
+                    # Move outgoing relationships
+                    await session.run("""
+                        MATCH (source:Belief {id: $source_id})-[r]->(other)
+                        MATCH (target:Belief {id: $target_id})
+                        WHERE NOT (target)-[:SUPPORTS]->(other)
+                        MERGE (target)-[:SUPPORTS]->(other)
+                    """, source_id=source_id, target_id=target_id)
+
+                # Log before deletion
+                await self._log_mutation(
+                    session, "merge", source_ids + [target_id], reason, desire_id
+                )
+
+                # Delete source beliefs
+                for source_id in source_ids:
+                    if source_id != target_id:
+                        await session.run(
+                            "MATCH (b:Belief {id: $id}) DETACH DELETE b",
+                            id=source_id
+                        )
+
+                self._merges_today += 1
+                return True
+        except Exception as e:
+            print(f"Merge error: {e}")
+            return False
+
+    async def _log_mutation(
+        self, session, mutation_type: str, target_ids: List[str],
+        reason: str, triggered_by: Optional[str]
+    ):
+        """Create immutable audit trail for mutations."""
+        import uuid
+        mutation_id = f"mut-{uuid.uuid4().hex[:12]}"
+
+        await session.run("""
+            CREATE (m:Mutation {
+                id: $id,
+                type: $type,
+                target_ids: $targets,
+                reason: $reason,
+                triggered_by: $triggered_by,
+                created_at: datetime()
+            })
+        """, id=mutation_id, type=mutation_type, targets=target_ids,
+            reason=reason, triggered_by=triggered_by)
+
+    async def get_mutation_history(self, limit: int = 20) -> List[Dict]:
+        """Get recent mutation audit log."""
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (m:Mutation)
+                    RETURN m.id as id, m.type as type, m.target_ids as targets,
+                           m.reason as reason, m.triggered_by as triggered_by,
+                           m.created_at as created_at
+                    ORDER BY m.created_at DESC
+                    LIMIT $limit
+                """, limit=limit)
+                return await result.data()
+        except Exception as e:
+            print(f"Error getting mutation history: {e}")
+            return []

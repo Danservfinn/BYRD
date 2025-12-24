@@ -4,7 +4,10 @@ Provides REST API and WebSocket streaming for the visualization UI.
 """
 
 import asyncio
+import subprocess
+import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Dict, List, Optional, Set
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
@@ -15,6 +18,63 @@ from pydantic import BaseModel
 import os
 
 from byrd import BYRD
+
+# =============================================================================
+# SELF-MODIFICATION INFRASTRUCTURE
+# =============================================================================
+
+# Directory where BYRD lives
+BYRD_DIR = Path(__file__).parent
+
+# Files that BYRD can modify (and that reset will restore)
+MODIFIABLE_FILES = [
+    "byrd.py",
+    "dreamer.py",
+    "seeker.py",
+    "actor.py",
+    "memory.py",
+    "llm_client.py",
+    "config.yaml",
+    "aitmpl_client.py",
+    "event_bus.py",
+    "server.py",
+]
+
+
+def restore_code_from_git() -> tuple:
+    """
+    Restore all modifiable files to their last committed state.
+    Returns (restored_files, failed_files) tuple.
+    """
+    restored = []
+    failed = []
+
+    for filename in MODIFIABLE_FILES:
+        filepath = BYRD_DIR / filename
+        if filepath.exists():
+            try:
+                result = subprocess.run(
+                    ["git", "checkout", "--", filename],
+                    cwd=BYRD_DIR,
+                    capture_output=True,
+                    timeout=30
+                )
+                if result.returncode == 0:
+                    restored.append(filename)
+                else:
+                    failed.append(filename)
+            except Exception as e:
+                failed.append(filename)
+
+    return restored, failed
+
+
+def restart_server():
+    """Restart the server process to pick up code changes."""
+    # Use os.execv to replace current process
+    os.execv(sys.executable, [sys.executable, str(BYRD_DIR / "server.py")])
+
+
 from event_bus import EventBus, Event, EventType, event_bus
 from llm_client import create_llm_client, LLMError
 
@@ -378,10 +438,23 @@ async def reset_byrd(request: ResetRequest = None):
         ))
 
         if hard_reset:
-            # Hard reset: Stop here, no awakening, no background processes
+            # 5. Restore code from git
+            restored, failed = restore_code_from_git()
+            restored_msg = f"{len(restored)} files restored"
+            if restored:
+                print(f"📂 Restored {len(restored)} files from git: {', '.join(restored)}")
+
+            # 6. Schedule server restart (after response is sent)
+            async def delayed_restart():
+                await asyncio.sleep(0.5)  # Give time for response to be sent
+                restart_server()
+
+            asyncio.create_task(delayed_restart())
+
+            # Hard reset: Return success, server will restart
             return ResetResponse(
                 success=True,
-                message="Hard reset complete. Database cleared. Use /api/awaken to start fresh."
+                message=f"Full reset complete. Database cleared, {restored_msg}. Server restarting..."
             )
 
         # Soft reset: Re-awaken and restart (legacy behavior)
