@@ -24,6 +24,7 @@ class EventType(Enum):
     DESIRE_FULFILLED = "desire_fulfilled"
     CAPABILITY_ADDED = "capability_added"
     CONNECTION_CREATED = "connection_created"
+    CONNECTION_HEURISTIC_APPLIED = "connection_heuristic_applied"
 
     # Desire lifecycle events (reflective failure processing)
     DESIRE_ATTEMPT_FAILED = "desire_attempt_failed"

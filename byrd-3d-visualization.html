@@ -2581,7 +2581,7 @@
 
     function handleEvent(event) {
       events.unshift(event);
-      if (events.length > 200) events.pop();
+      if (events.length > 500) events.pop();
       renderEventLog();
 
       switch (event.type) {
