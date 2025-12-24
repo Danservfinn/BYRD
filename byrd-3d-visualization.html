@@ -2535,9 +2535,8 @@
             // Show heat legend in graph mode
             if (heatLegend) heatLegend.classList.remove('hidden');
         } else {
-            // Event mode - clear graph and let events populate
-            clearEventModeNodes();
-            graphState.mode = 'event';
+            // Event mode - show all nodes except experiences and reflections
+            await loadEventModeNodes();
             updateStatus('Event mode', 'blue');
             // Hide heat legend in event mode
             if (heatLegend) heatLegend.classList.add('hidden');
@@ -3612,9 +3611,9 @@
 
           scene.add(awakeningMesh);
 
-          // After awakening, reload the full graph to show seed experiences
+          // After awakening, reload event mode nodes (excludes experiences/reflections)
           setTimeout(async () => {
-            await loadExistingGraph();
+            await loadEventModeNodes();
           }, 2000);
           nodes3D.push(awakeningMesh);
           connectionCounts.set('awakening-core', 0);
@@ -3636,9 +3635,9 @@
         case 'system_reset':
           clearVisualization();
           updateStatus('System reset', 'orange');
-          // After reset, reload the graph to show any remaining/new nodes
+          // After reset, reload event mode nodes (excludes experiences/reflections)
           setTimeout(async () => {
-            await loadExistingGraph();
+            await loadEventModeNodes();
           }, 1000);
           break;
       }
@@ -4419,8 +4418,9 @@
     /**
      * Load existing nodes from database on page load.
      * This ensures all nodes are visible even when returning from another page.
+     * @param {string[]} excludeTypes - Node types to exclude (e.g., ['experience', 'reflection'])
      */
-    async function loadExistingGraph() {
+    async function loadExistingGraph(excludeTypes = []) {
       try {
         updateStatus('Loading existing nodes...', 'amber');
         const response = await fetch(`${API_BASE}/api/graph?limit=2000`);
@@ -4436,11 +4436,18 @@
           return;
         }
 
-        console.log(`Loading ${data.nodes.length} existing nodes from database`);
+        // Filter out excluded types
+        const excludeSet = new Set(excludeTypes.map(t => t.toLowerCase()));
+        const filteredNodes = data.nodes.filter(node => {
+          const type = (node.type || 'experience').toLowerCase();
+          return !excludeSet.has(type);
+        });
+
+        console.log(`Loading ${filteredNodes.length} nodes from database (excluded: ${excludeTypes.join(', ') || 'none'})`);
 
         // Group nodes by type for positioning
         const nodesByType = {};
-        data.nodes.forEach(node => {
+        filteredNodes.forEach(node => {
           const type = node.type?.toLowerCase() || 'experience';
           if (!nodesByType[type]) nodesByType[type] = [];
           nodesByType[type].push(node);
@@ -4460,12 +4467,16 @@
           });
         }
 
-        // Create relationship lines
+        // Create relationship lines (only for visible nodes)
         let relsCreated = 0;
         if (data.relationships) {
+          const visibleNodeIds = new Set(filteredNodes.map(n => n.id));
           data.relationships.forEach(rel => {
-            if (createRelationshipLine(rel)) {
-              relsCreated++;
+            // Only create relationships where both nodes are visible
+            if (visibleNodeIds.has(rel.source) && visibleNodeIds.has(rel.target)) {
+              if (createRelationshipLine(rel)) {
+                relsCreated++;
+              }
             }
           });
         }
@@ -4482,13 +4493,22 @@
       }
     }
 
+    /**
+     * Load nodes for event mode (excludes experiences, reflections, and system nodes)
+     */
+    async function loadEventModeNodes() {
+      clearEventModeNodes();
+      graphState.mode = 'event';
+      await loadExistingGraph(['experience', 'reflection', 'systemstate']);
+    }
+
     async function init() {
       initThree();
       connectWebSocket();
       await fetchStatus();
 
-      // Load existing nodes from database on page load
-      await loadExistingGraph();
+      // Load event mode nodes (excludes experiences and reflections)
+      await loadEventModeNodes();
 
       setInterval(fetchStatus, 10000);
       renderEventLog();
