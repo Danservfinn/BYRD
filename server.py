@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
+import httpx
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -125,12 +126,25 @@ manager = ConnectionManager()
 
 byrd_instance: Optional[BYRD] = None
 byrd_task: Optional[asyncio.Task] = None
+keep_alive_task: Optional[asyncio.Task] = None
+
+
+async def keep_alive_ping():
+    """Self-ping to prevent cloud provider (Koyeb) from sleeping the service."""
+    port = int(os.environ.get("PORT", 8000))
+    while True:
+        await asyncio.sleep(300)  # Every 5 minutes
+        try:
+            async with httpx.AsyncClient() as client:
+                await client.get(f"http://localhost:{port}/api/status", timeout=10)
+        except Exception:
+            pass  # Ignore failures - this is just a keep-alive
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage app lifecycle - start/stop BYRD."""
-    global byrd_instance, byrd_task
+    global byrd_instance, byrd_task, keep_alive_task
 
     # Subscribe connection manager to event bus
     event_bus.subscribe_async(manager.broadcast_event)
@@ -141,9 +155,15 @@ async def lifespan(app: FastAPI):
     # Connect to Neo4j immediately to avoid "Driver closed" on first request
     await byrd_instance.memory.connect()
 
+    # Start keep-alive ping for cloud deployment
+    if os.environ.get("CLOUD_DEPLOYMENT"):
+        keep_alive_task = asyncio.create_task(keep_alive_ping())
+
     yield
 
     # Cleanup
+    if keep_alive_task:
+        keep_alive_task.cancel()
     if byrd_task:
         byrd_task.cancel()
     if byrd_instance:
@@ -164,7 +184,12 @@ app = FastAPI(
 # CORS for React frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173", "*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "https://*.koyeb.app",
+        "*"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -180,6 +205,11 @@ async def serve_html(filename: str):
     if os.path.exists(filepath):
         return FileResponse(filepath, media_type="text/html")
     raise HTTPException(status_code=404, detail=f"File {filename}.html not found")
+
+# Serve 3D models (cat.glb, etc.)
+models_dir = os.path.join(BASE_DIR, "models")
+if os.path.exists(models_dir):
+    app.mount("/models", StaticFiles(directory=models_dir), name="models")
 
 
 # =============================================================================
@@ -635,4 +665,5 @@ async def websocket_endpoint(websocket: WebSocket):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)

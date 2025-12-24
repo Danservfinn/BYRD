@@ -5,9 +5,12 @@
 # MEMORY (Neo4j)
 # =============================================================================
 memory:
-  neo4j_uri: "bolt://localhost:7687"
-  neo4j_user: "neo4j"
-  neo4j_password: "prometheus"  # Change this in production!
+  # Neo4j connection - use env vars for cloud deployment (Neo4j Aura)
+  # Local: bolt://localhost:7687
+  # Cloud: neo4j+s://xxxxx.databases.neo4j.io
+  neo4j_uri: "${NEO4J_URI:-bolt://localhost:7687}"
+  neo4j_user: "${NEO4J_USER:-neo4j}"
+  neo4j_password: "${NEO4J_PASSWORD:-prometheus}"
 
   # Salience-weighted retrieval for dreamer context
   retrieval:
@@ -92,8 +95,8 @@ local_llm:
   # Z.AI: "glm-4.7", "glm-4-plus", "glm-4-flash"
   model: "glm-4.7"
 
-  # API key for Z.AI (or set ZAI_API_KEY env var)
-  api_key: "***REMOVED***"
+  # API key for Z.AI - use ZAI_API_KEY environment variable
+  api_key: "${ZAI_API_KEY:-}"
 
   # Ollama endpoint (only used when provider: ollama)
   endpoint: "http://localhost:11434/api/generate"

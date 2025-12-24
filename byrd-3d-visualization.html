@@ -646,6 +646,7 @@
     import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
     import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
     import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
     // ==========================================================================
     // CUSTOM SHADERS (Phase 3: Post-processing Effects)
@@ -903,6 +904,13 @@
     let raycaster, mouse;
     let hoveredNode = null;
 
+    // Cat model (Byrd's ego form)
+    let catModel = null;
+    let catMixer = null;
+    let eyeMeshes = [];
+    let catBreathPhase = 0;
+    let catIdlePhase = 0;
+
     // ==========================================================================
     // DOM ELEMENTS
     // ==========================================================================
@@ -1027,6 +1035,9 @@
       createConsciousnessCore();
       // createAmbientParticles();  // Skip for cleaner light theme
 
+      // Load Byrd's cat form at the center
+      loadCatModel();
+
       // Event listeners
       window.addEventListener('resize', onWindowResize);
       window.addEventListener('keydown', onKeyDown);
@@ -1047,6 +1058,101 @@
 
       // Start render loop
       animate();
+    }
+
+    // ==========================================================================
+    // CAT MODEL (Byrd's Ego Form)
+    // ==========================================================================
+    function loadCatModel() {
+      const loader = new GLTFLoader();
+
+      loader.load(
+        'models/cat.glb',
+        (gltf) => {
+          catModel = gltf.scene;
+
+          // Apply black material with golden eyes
+          const blackMaterial = new THREE.MeshStandardMaterial({
+            color: 0x0a0a0a,
+            roughness: 0.85,
+            metalness: 0.05
+          });
+
+          const eyeMaterial = new THREE.MeshStandardMaterial({
+            color: 0xd4af37,
+            emissive: 0xd4af37,
+            emissiveIntensity: 0.8,
+            roughness: 0.2,
+            metalness: 0.3
+          });
+
+          catModel.traverse((child) => {
+            if (child.isMesh) {
+              child.castShadow = true;
+              child.receiveShadow = true;
+
+              // Check if this might be an eye mesh
+              const name = child.name.toLowerCase();
+              if (name.includes('eye') && !name.includes('lid')) {
+                child.material = eyeMaterial.clone();
+                eyeMeshes.push(child);
+              } else {
+                child.material = blackMaterial.clone();
+              }
+            }
+          });
+
+          // Scale and position at center - chonky cat
+          catModel.scale.set(3, 2.4, 2.8); // Larger scale for the mind space
+          catModel.position.set(0, -2, 0); // Slightly below center
+
+          // If the model has animations, set up the mixer
+          if (gltf.animations && gltf.animations.length > 0) {
+            catMixer = new THREE.AnimationMixer(catModel);
+            const action = catMixer.clipAction(gltf.animations[0]);
+            action.play();
+          }
+
+          scene.add(catModel);
+          console.log('Cat model loaded in mind space');
+        },
+        (progress) => {
+          console.log(`Loading cat: ${(progress.loaded / progress.total * 100).toFixed(0)}%`);
+        },
+        (error) => {
+          console.error('Error loading cat model:', error);
+        }
+      );
+    }
+
+    function animateCat(elapsed, delta) {
+      if (!catModel) return;
+
+      // Update animation mixer
+      if (catMixer) {
+        catMixer.update(delta);
+      }
+
+      // Breathing animation
+      const breathSpeed = 0.4;
+      const breathAmount = 0.03;
+      catBreathPhase = Math.sin(elapsed * breathSpeed * Math.PI * 2);
+
+      // Apply subtle breathing
+      catModel.scale.y = 2.4 + catBreathPhase * breathAmount;
+      catModel.scale.x = 3 + catBreathPhase * breathAmount * 0.3;
+
+      // Subtle idle sway
+      catIdlePhase = elapsed * 0.2;
+      catModel.rotation.y = Math.sin(catIdlePhase) * 0.03;
+
+      // Eye glow pulse
+      const glowPulse = 0.6 + Math.sin(elapsed * 0.5) * 0.3;
+      eyeMeshes.forEach(eye => {
+        if (eye.material && eye.material.emissiveIntensity !== undefined) {
+          eye.material.emissiveIntensity = glowPulse;
+        }
+      });
     }
 
     // ==========================================================================
@@ -2312,6 +2418,9 @@
 
       // Animate core
       animateCore(time);
+
+      // Animate cat ego form
+      animateCat(time, delta);
 
       // Update physics (includes spring forces, gravitational spiral positioning)
       updateNodePhysics(delta);

@@ -10,6 +10,8 @@ Usage:
 
 import asyncio
 import argparse
+import os
+import re
 import yaml
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -98,12 +100,26 @@ class BYRD:
         # State
         self._running = False
     
+    def _expand_env_vars(self, config_str: str) -> str:
+        """Expand ${VAR:-default} patterns in config string."""
+        def expand(match):
+            var_expr = match.group(1)
+            if ":-" in var_expr:
+                var_name, default = var_expr.split(":-", 1)
+            else:
+                var_name, default = var_expr, ""
+            return os.environ.get(var_name, default)
+        return re.sub(r'\$\{([^}]+)\}', expand, config_str)
+
     def _load_config(self, path: str) -> Dict:
-        """Load configuration from YAML file."""
+        """Load configuration from YAML file with environment variable expansion."""
         config_path = Path(path)
-        
+
         if config_path.exists():
-            return yaml.safe_load(config_path.read_text())
+            config_str = config_path.read_text()
+            # Expand environment variables like ${VAR:-default}
+            expanded = self._expand_env_vars(config_str)
+            return yaml.safe_load(expanded)
         
         # Default config
         return {
