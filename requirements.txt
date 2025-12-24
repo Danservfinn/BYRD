@@ -12,6 +12,12 @@ anthropic>=0.39.0
 # Config parsing
 pyyaml>=6.0
 
+# Environment variable loading
+python-dotenv>=1.0.0
+
+# SSL certificates (required for Neo4j Aura on macOS)
+certifi>=2024.0.0
+
 # FastAPI server for visualization UI
 fastapi>=0.109.0
 uvicorn[standard]>=0.27.0
