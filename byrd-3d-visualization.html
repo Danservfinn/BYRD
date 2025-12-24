@@ -4241,8 +4241,8 @@
       // Update connection line positions as nodes move
       updateConnectionPositions();
 
-      // Update relationship lines for graph mode
-      if (graphState.mode === 'graph') {
+      // Update relationship lines (both event and graph mode)
+      if (graphState.relationshipLines.length > 0) {
         updateRelationshipPositions();
       }
 
