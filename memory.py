@@ -1271,7 +1271,7 @@ class Memory:
                 result = await session.run("""
                     MATCH (e:Experience)
                     WHERE e.created_at < datetime() - duration({hours: $hours})
-                    WITH e, size((e)--()) as connections
+                    WITH e, COUNT { (e)--() } as connections
                     WHERE connections <= $max_conn
                     RETURN e.id as id, e.type as type, e.created_at as created_at,
                            connections,
@@ -1316,7 +1316,7 @@ class Memory:
             async with self.driver.session() as session:
                 result = await session.run("""
                     MATCH (n {id: $id})
-                    RETURN size((n)--()) as connections
+                    RETURN COUNT { (n)--() } as connections
                 """, id=node_id)
                 record = await result.single()
                 if record:
@@ -1404,7 +1404,7 @@ class Memory:
                 age_result = await session.run("""
                     MATCH (n {id: $id})
                     RETURN duration.between(n.created_at, datetime()).hours as age_hours,
-                           size((n)--()) as connections
+                           COUNT { (n)--() } as connections
                 """, id=node_id)
                 record = await age_result.single()
 
