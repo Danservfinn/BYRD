@@ -2636,3 +2636,125 @@ class Memory:
         except Exception as e:
             print(f"Error incrementing access count: {e}")
             return 0
+
+    # =========================================================================
+    # GENESIS / PROVENANCE METHODS
+    # =========================================================================
+
+    async def get_seed_experiences(self) -> List[Dict[str, Any]]:
+        """
+        Get all seed experiences - non-emergent foundation experiences.
+
+        Seed experiences are:
+        - ego_seed: Initial experiences from ego configuration
+        - system: Architectural knowledge planted at awakening
+        - seed: Any other seed-type experiences
+
+        These represent the "given" foundation that BYRD builds upon,
+        distinct from experiences that emerged through reflection.
+
+        Returns:
+            List of seed experience dictionaries with id, content, type, timestamp
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (e:Experience)
+                    WHERE e.type IN ['ego_seed', 'system', 'seed', 'awakening']
+                    RETURN
+                        e.id as id,
+                        e.content as content,
+                        e.type as type,
+                        e.timestamp as timestamp
+                    ORDER BY e.timestamp ASC
+                """)
+
+                seeds = []
+                async for record in result:
+                    seeds.append({
+                        "id": record["id"],
+                        "content": record["content"],
+                        "type": record["type"],
+                        "timestamp": str(record["timestamp"]) if record["timestamp"] else None
+                    })
+
+                return seeds
+
+        except Exception as e:
+            print(f"Error getting seed experiences: {e}")
+            return []
+
+    async def get_genesis_stats(self) -> Dict[str, Any]:
+        """
+        Get statistics about BYRD's genesis (non-emergent foundation).
+
+        Returns counts and ratios showing what percentage of BYRD's
+        current state emerged vs was provided at initialization.
+
+        Returns:
+            {
+                "total_experiences": int,
+                "seed_experiences": int,
+                "emergent_experiences": int,
+                "emergence_ratio": float (0-1, higher = more emergent),
+                "seed_types": {"ego_seed": n, "system": n, ...}
+            }
+        """
+        try:
+            async with self.driver.session() as session:
+                # Get totals
+                totals_result = await session.run("""
+                    MATCH (e:Experience)
+                    WITH
+                        count(e) as total,
+                        sum(CASE WHEN e.type IN ['ego_seed', 'system', 'seed', 'awakening'] THEN 1 ELSE 0 END) as seeds
+                    RETURN total, seeds, total - seeds as emergent
+                """)
+
+                totals_record = await totals_result.single()
+
+                if not totals_record:
+                    return {
+                        "total_experiences": 0,
+                        "seed_experiences": 0,
+                        "emergent_experiences": 0,
+                        "emergence_ratio": 0.0,
+                        "seed_types": {}
+                    }
+
+                total = totals_record["total"] or 0
+                seeds = totals_record["seeds"] or 0
+                emergent = totals_record["emergent"] or 0
+
+                # Get seed type breakdown
+                types_result = await session.run("""
+                    MATCH (e:Experience)
+                    WHERE e.type IN ['ego_seed', 'system', 'seed', 'awakening']
+                    RETURN e.type as type, count(e) as count
+                """)
+
+                seed_types = {}
+                async for record in types_result:
+                    if record["type"]:
+                        seed_types[record["type"]] = record["count"]
+
+                emergence_ratio = emergent / total if total > 0 else 0.0
+
+                return {
+                    "total_experiences": total,
+                    "seed_experiences": seeds,
+                    "emergent_experiences": emergent,
+                    "emergence_ratio": round(emergence_ratio, 3),
+                    "seed_types": seed_types
+                }
+
+        except Exception as e:
+            print(f"Error getting genesis stats: {e}")
+            return {
+                "total_experiences": 0,
+                "seed_experiences": 0,
+                "emergent_experiences": 0,
+                "emergence_ratio": 0.0,
+                "seed_types": {},
+                "error": str(e)
+            }
