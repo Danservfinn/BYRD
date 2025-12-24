@@ -2,6 +2,13 @@
 
 Deploy BYRD online for free using free-tier cloud services.
 
+## Live Instance
+
+**BYRD is currently deployed at:**
+- **Space**: https://huggingface.co/spaces/omoplatapus/byrd-ai
+- **Visualization**: https://omoplatapus-byrd-ai.hf.space/byrd-3d-visualization.html
+- **API**: https://omoplatapus-byrd-ai.hf.space/api/status
+
 ## Architecture Overview
 
 ```
@@ -10,18 +17,18 @@ Deploy BYRD online for free using free-tier cloud services.
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
 │  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐ │
-│  │  Neo4j Aura  │     │    Koyeb     │     │   Z.AI API   │ │
-│  │    Free      │◄───►│  Free Tier   │◄───►│  (or Groq)   │ │
+│  │  Neo4j Aura  │     │  HuggingFace │     │   Z.AI API   │ │
+│  │    Free      │◄───►│    Spaces    │◄───►│  (or Groq)   │ │
 │  │              │     │              │     │              │ │
-│  │ Graph DB     │     │ Python App   │     │ LLM Provider │ │
-│  │ 200k nodes   │     │ + WebSocket  │     │              │ │
-│  │ 400k rels    │     │ + Static UI  │     │              │ │
+│  │ Graph DB     │     │ Docker Host  │     │ LLM Provider │ │
+│  │ 200k nodes   │     │ Unlimited    │     │              │ │
+│  │ 400k rels    │     │ Free tier    │     │              │ │
 │  └──────────────┘     └──────────────┘     └──────────────┘ │
 │                              │                               │
 │                              ▼                               │
 │                       ┌──────────────┐                       │
 │                       │ Public URL   │                       │
-│                       │ byrd.koyeb.app│                       │
+│                       │ *.hf.space   │                       │
 │                       └──────────────┘                       │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -31,11 +38,13 @@ Deploy BYRD online for free using free-tier cloud services.
 | Service | Free Tier | BYRD Usage |
 |---------|-----------|------------|
 | Neo4j Aura | 200k nodes, 400k relationships | Memory graph |
-| Koyeb | 2 nano instances, 512MB RAM | Python server |
+| HuggingFace Spaces | Unlimited Docker containers | Python server |
 | Z.AI | ~1M tokens/day free | Dreamer + Seeker |
 | Groq | 6k tokens/min (backup) | Alternative LLM |
 
-## Step 1: Neo4j Aura Free (Database)
+## Quick Deploy (Recommended)
+
+### Step 1: Neo4j Aura Free (Database)
 
 1. Go to [Neo4j Aura](https://neo4j.com/cloud/aura-free/)
 2. Create a free account
@@ -45,182 +54,168 @@ Deploy BYRD online for free using free-tier cloud services.
    - Username: `neo4j`
    - Password: (generated)
 
-**Note**: Neo4j Aura Free pauses after 3 days of inactivity. BYRD's keep-alive ping prevents this.
-
-## Step 2: Z.AI API Key (LLM)
+### Step 2: Z.AI API Key (LLM)
 
 1. Go to [Z.AI/BigModel](https://open.bigmodel.cn/)
 2. Create account and get API key
 3. Free tier includes generous token allowance
-4. Model: `glm-4-flash` (fast) or `glm-4` (better)
 
 **Alternative: Groq (Free)**
 1. Go to [Groq Cloud](https://console.groq.com/)
 2. Get free API key
-3. Models: `llama-3.3-70b-versatile` or `mixtral-8x7b-32768`
 
-## Step 3: Koyeb Deployment (Server)
+### Step 3: HuggingFace Spaces Deployment
 
-### Option A: Deploy from GitHub (Recommended)
-
-1. Go to [Koyeb](https://www.koyeb.com/)
-2. Sign up (free tier: 2 nano instances)
-3. Create new App → Deploy from GitHub
-4. Connect your GitHub repo: `your-username/BYRD`
-5. Configure:
-   - **Builder**: Dockerfile
-   - **Port**: 8000
-   - **Instance**: Nano (free)
-
-### Option B: Deploy with Koyeb CLI
+#### Option A: Automated Script (Recommended)
 
 ```bash
-# Install Koyeb CLI
-curl -fsSL https://raw.githubusercontent.com/koyeb/koyeb-cli/main/install.sh | sh
+# Get HuggingFace token from: https://huggingface.co/settings/tokens
+export HF_TOKEN="hf_your_token_here"
 
-# Login
-koyeb login
+# Run deployment script
+python deploy_huggingface.py
+```
+
+The script will:
+1. Create a new Space on HuggingFace
+2. Upload all necessary files
+3. Configure the Docker container
+
+#### Option B: Manual Deployment
+
+1. Go to [HuggingFace Spaces](https://huggingface.co/spaces)
+2. Create new Space → Docker SDK
+3. Upload files from this repository
+4. Use `Dockerfile.huggingface` as the Dockerfile
+
+### Step 4: Configure Secrets
+
+In your HuggingFace Space settings, add these secrets:
+
+| Secret Name | Value |
+|-------------|-------|
+| `NEO4J_URI` | `neo4j+s://xxxxx.databases.neo4j.io` |
+| `NEO4J_USER` | `neo4j` |
+| `NEO4J_PASSWORD` | Your Neo4j password |
+| `ZAI_API_KEY` | Your Z.AI API key |
+| `CLOUD_DEPLOYMENT` | `true` |
+
+Or use the API:
+```python
+from huggingface_hub import HfApi
+api = HfApi(token="hf_your_token")
+api.add_space_secret(repo_id="username/byrd-ai", key="NEO4J_URI", value="...")
+```
+
+### Step 5: Verify Deployment
+
+```bash
+# Check status
+curl https://username-byrd-ai.hf.space/api/status
+
+# Start BYRD
+curl -X POST https://username-byrd-ai.hf.space/api/start
+
+# Awaken (if fresh database)
+curl -X POST https://username-byrd-ai.hf.space/api/awaken
+```
+
+## Files for Deployment
+
+| File | Purpose |
+|------|---------|
+| `Dockerfile.huggingface` | HuggingFace-specific Dockerfile (port 7860) |
+| `Dockerfile` | Generic Dockerfile (port 8000, for Koyeb/Render) |
+| `deploy_huggingface.py` | Automated deployment script |
+
+## Alternative Platforms
+
+### Koyeb
+
+```bash
+# Install CLI
+brew install koyeb/tap/koyeb
 
 # Deploy
-koyeb deploy github.com/your-username/BYRD \
+koyeb deploy github.com/username/BYRD \
   --name byrd \
   --instance-type nano \
   --port 8000 \
-  --env NEO4J_URI="neo4j+s://xxxxx.databases.neo4j.io" \
-  --env NEO4J_USER="neo4j" \
-  --env NEO4J_PASSWORD="your-password" \
-  --env ZAI_API_KEY="your-zai-key" \
-  --env CLOUD_DEPLOYMENT="true"
+  --env NEO4J_URI="..." \
+  --env ZAI_API_KEY="..."
 ```
 
-## Step 4: Environment Variables
+### Render
 
-Set these in Koyeb dashboard (Settings → Environment Variables):
+1. Connect GitHub repo
+2. Select Docker environment
+3. Set environment variables
+4. Deploy
 
-```
-NEO4J_URI=neo4j+s://xxxxx.databases.neo4j.io
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=your-neo4j-password
-ZAI_API_KEY=your-zai-api-key
-CLOUD_DEPLOYMENT=true
-PORT=8000
-```
+### Platform Comparison
 
-## Step 5: Create Dockerfile
-
-Create this in your repo root:
-
-```dockerfile
-FROM python:3.11-slim
-
-WORKDIR /app
-
-# Install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy application
-COPY . .
-
-# Expose port
-EXPOSE 8000
-
-# Run server
-CMD ["python", "server.py"]
-```
-
-## Step 6: Verify Deployment
-
-1. Access your Koyeb URL: `https://byrd-your-username.koyeb.app`
-2. Check visualization: `https://byrd-your-username.koyeb.app/byrd-3d-visualization.html`
-3. Verify API: `https://byrd-your-username.koyeb.app/api/status`
-
-## Configuration for Cloud
-
-Update `config.yaml` for cloud operation:
-
-```yaml
-# Memory - uses environment variables
-memory:
-  neo4j_uri: "${NEO4J_URI}"
-  neo4j_user: "${NEO4J_USER}"
-  neo4j_password: "${NEO4J_PASSWORD}"
-
-# LLM Provider
-local_llm:
-  provider: "zai"  # or "groq"
-  model: "glm-4-flash"
-
-# Dreamer - optimized for cloud
-dreamer:
-  interval_seconds: 120  # Slower to conserve tokens
-  context_window: 30
-
-# Seeker - disabled for minimal deployment
-seeker:
-  research:
-    enabled: false  # SearXNG not available in free tier
-```
-
-## SearXNG Options
-
-SearXNG requires self-hosting. Options for cloud:
-
-1. **Disable research** (simplest): Set `seeker.research.enabled: false`
-2. **Use public instance** (unreliable): `https://searx.be` or similar
-3. **Self-host on Koyeb** (uses 2nd free instance): Deploy SearXNG container
-
-## Monitoring
-
-Access BYRD endpoints:
-- Status: `/api/status`
-- Events: `/api/events` (WebSocket)
-- Visualization: `/byrd-3d-visualization.html`
+| Platform | Free Tier | WebSocket | Idle Timeout |
+|----------|-----------|-----------|--------------|
+| **HuggingFace** | Unlimited | ✅ | 48h sleep |
+| Koyeb | 2 nano instances | ✅ | None |
+| Render | 750 hrs/month | ✅ | 15 min |
+| Railway | $5 credit/month | ✅ | None |
+| Fly.io | 3 shared VMs | ✅ | None (needs CC) |
 
 ## Cost Summary
 
 | Component | Monthly Cost |
 |-----------|-------------|
 | Neo4j Aura Free | $0 |
-| Koyeb Nano | $0 |
+| HuggingFace Spaces | $0 |
 | Z.AI Free Tier | $0 |
 | **Total** | **$0** |
 
-## Limitations
+## Monitoring
 
-- Neo4j Aura pauses after 3 days idle (keep-alive ping prevents this)
-- Koyeb free tier: 512MB RAM, shared CPU
-- No SearXNG (research disabled unless self-hosted)
-- Z.AI token limits (sufficient for 60s dream intervals)
-
-## Alternative Platforms
-
-| Platform | Free Tier | Notes |
-|----------|-----------|-------|
-| Koyeb | 2 nano instances | Best for BYRD (WebSocket support) |
-| Render | 750 hrs/month | Spins down after 15 min idle |
-| Railway | $5 credit/month | Good but limited |
-| Fly.io | 3 shared VMs | Requires credit card |
+Access BYRD endpoints:
+- Status: `/api/status`
+- Start: `POST /api/start`
+- Stop: `POST /api/stop`
+- Awaken: `POST /api/awaken`
+- Events: `/ws/events` (WebSocket)
+- Visualization: `/byrd-3d-visualization.html`
 
 ## Troubleshooting
 
 **Connection refused to Neo4j**
 - Ensure using `neo4j+s://` (not `bolt://`) for Aura
-- Check credentials in environment variables
+- Check credentials in secrets/environment variables
+- On macOS, SSL certificates may need `certifi` package
 
-**WebSocket disconnects**
-- Koyeb has 60s idle timeout; keep-alive ping handles this
-- Ensure `CLOUD_DEPLOYMENT=true` is set
+**Space fails to start**
+- Check build logs in HuggingFace Space page
+- Ensure all Python files are uploaded
+- Verify secrets are configured
 
 **LLM timeouts**
 - Z.AI can be slow; increase timeout in config
 - Consider Groq for faster responses
 
-## Next Steps
+**Neo4j Aura pauses**
+- Free tier pauses after 3 days of inactivity
+- BYRD's keep-alive ping should prevent this
+- Set `CLOUD_DEPLOYMENT=true` to enable ping
 
-1. Set up Neo4j Aura Free account
-2. Get Z.AI API key
-3. Fork/push BYRD to GitHub
-4. Deploy on Koyeb
-5. Configure environment variables
-6. Awaken BYRD: `POST /api/awaken`
+## Local Development
+
+For local development with cloud Neo4j:
+
+```bash
+# Create .env file
+cp .env.example .env
+
+# Edit with your credentials
+NEO4J_URI=neo4j+s://xxxxx.databases.neo4j.io
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=your-password
+ZAI_API_KEY=your-key
+
+# Start server
+python server.py
+```
