@@ -240,6 +240,9 @@ class Dreamer:
         all_accessed_ids.extend([c.get("id") for c in capabilities if c.get("id")])
         all_accessed_ids.extend([r.get("id") for r in previous_reflections if r.get("id")])
 
+        # Track access counts for heat map visualization (Phase 4)
+        await self.memory.increment_access_count(all_accessed_ids)
+
         await event_bus.emit(Event(
             type=EventType.MEMORIES_ACCESSED,
             data={
