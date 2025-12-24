@@ -43,6 +43,7 @@ class EventType(Enum):
     REFLECTION_TEXT = "reflection_text"
     REFLECTION_CREATED = "reflection_created"  # Emergence-compliant storage
     MEMORIES_ACCESSED = "memories_accessed"  # When memories are being considered during reflection
+    INNER_VOICE = "inner_voice"  # BYRD's inner narration (last event before cycle end)
 
     # Seeker events
     SEEK_CYCLE_START = "seek_cycle_start"

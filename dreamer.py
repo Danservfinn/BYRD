@@ -301,7 +301,13 @@ class Dreamer:
         # 3. RECORD - Store reflection in BYRD's own vocabulary
         await self._record_reflection(reflection_output, recent_ids)
 
-        # Extract or generate inner voice for UI
+        # Count what BYRD produced (without forcing categories)
+        output_keys = list(reflection_output.get("output", {}).keys()) if isinstance(reflection_output.get("output"), dict) else []
+
+        # Apply connection heuristic to link orphaned experiences to beliefs
+        heuristic_result = await self._apply_connection_heuristic()
+
+        # 4. NARRATE - Generate inner voice as the LAST action before cycle end
         inner_voice = self._extract_inner_voice(reflection_output)
 
         # If no explicit inner voice, generate one from the reflection
@@ -312,11 +318,14 @@ class Dreamer:
         if inner_voice:
             self._inner_voice_queue.append(inner_voice)
 
-        # Count what BYRD produced (without forcing categories)
-        output_keys = list(reflection_output.get("output", {}).keys()) if isinstance(reflection_output.get("output"), dict) else []
-
-        # Apply connection heuristic to link orphaned experiences to beliefs
-        heuristic_result = await self._apply_connection_heuristic()
+            # Emit dedicated inner voice event for real-time UI narration
+            await event_bus.emit(Event(
+                type=EventType.INNER_VOICE,
+                data={
+                    "cycle": self._dream_count,
+                    "text": inner_voice
+                }
+            ))
 
         # Emit end event
         await event_bus.emit(Event(
