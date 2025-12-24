@@ -513,14 +513,13 @@
       </div>
     </div>
 
-    <!-- Heat Legend (shown below in graph mode) -->
-    <div id="heat-legend" class="hidden mt-2 flex items-center justify-center gap-2 px-3 py-1.5 bg-white/80 border border-slate-200 rounded-lg text-[10px] font-mono">
-      <span class="text-slate-500">Heat:</span>
-      <div class="w-2 h-2 rounded-full" style="background: #3b82f6;" title="Cold"></div>
-      <div class="w-2 h-2 rounded-full" style="background: #22c55e;"></div>
-      <div class="w-2 h-2 rounded-full" style="background: #eab308;"></div>
-      <div class="w-2 h-2 rounded-full" style="background: #f97316;"></div>
-      <div class="w-2 h-2 rounded-full" style="background: #ef4444;" title="Hot"></div>
+    <!-- Node Type Legend (shown in graph mode) -->
+    <div id="heat-legend" class="hidden mt-2 flex items-center justify-center gap-3 px-3 py-1.5 bg-white/80 border border-slate-200 rounded-lg text-[10px] font-mono">
+      <div class="flex items-center gap-1" title="Belief"><div class="w-2 h-2 rounded" style="background: #d97706;"></div><span class="text-slate-600">Belief</span></div>
+      <div class="flex items-center gap-1" title="Desire"><div class="w-2 h-2 rounded" style="background: #be123c;"></div><span class="text-slate-600">Desire</span></div>
+      <div class="flex items-center gap-1" title="Reflection"><div class="w-2 h-2 rounded" style="background: #047857;"></div><span class="text-slate-600">Reflect</span></div>
+      <div class="flex items-center gap-1" title="Experience"><div class="w-2 h-2 rounded-full" style="background: #0369a1;"></div><span class="text-slate-600">Exp</span></div>
+      <div class="flex items-center gap-1" title="Capability"><div class="w-2 h-2 rounded" style="background: #6d28d9;"></div><span class="text-slate-600">Cap</span></div>
     </div>
   </div>
 
@@ -2044,39 +2043,9 @@
       scene.add(mesh);
       nodes3D.push(mesh);
 
-      // Create connections to existing nodes
-      if (nodes3D.length > 1) {
-        const baseConnections = 2 + Math.floor(Math.random() * 2); // 2-3 connections
-        const connectCount = Math.min(nodes3D.length - 1, baseConnections);
-
-        // Prefer connecting to recent nodes and same-type nodes
-        const recentCandidates = nodes3D.slice(0, -1).slice(-12);
-        const sameTypeCandidates = nodes3D.slice(0, -1).filter(n => n.userData.type === type).slice(-5);
-        const allCandidates = [...new Set([...recentCandidates, ...sameTypeCandidates])];
-
-        for (let i = 0; i < connectCount && allCandidates.length > 0; i++) {
-          const targetIdx = Math.floor(Math.random() * allCandidates.length);
-          const target = allCandidates[targetIdx];
-          if (target) {
-            createConnection3D(mesh, target, type);
-            allCandidates.splice(targetIdx, 1);
-          }
-        }
-
-        // Occasionally connect to most-connected nodes (hub attraction)
-        if (nodes3D.length > 5 && Math.random() < 0.25) {
-          const hubCandidates = nodes3D.slice(0, -1)
-            .filter(n => (connectionCounts.get(n.userData.id) || 0) >= 3)
-            .slice(-5);
-          if (hubCandidates.length > 0) {
-            const hub = hubCandidates[Math.floor(Math.random() * hubCandidates.length)];
-            createConnection3D(mesh, hub, type);
-          }
-        }
-
-        // Physics will naturally position nodes based on connections
-        // No need to recalculate target positions
-      }
+      // NOTE: Connections are NOT created automatically here.
+      // They are only created from actual database relationships via loadExistingGraph.
+      // This ensures the visualization accurately reflects the database state.
 
       // Pulse the core
       pulseCore(type, importance);
@@ -2996,13 +2965,14 @@
                 geometry = new THREE.SphereGeometry(size, 8, 8);
         }
 
-        // Calculate heat color based on access count
-        const heatColor = calculateHeatColor(accessCount, colors.color);
+        // Use pure type color for clear visual distinction
+        // Heat is shown through size/opacity, not color blending
+        const nodeColor = new THREE.Color(colors.color);
 
         // Experiences are more transparent
         const baseOpacity = isExperience ? 0.3 : 0.85;
         const material = new THREE.MeshBasicMaterial({
-            color: heatColor,
+            color: nodeColor,
             transparent: true,
             opacity: baseOpacity + getHeatIntensity(accessCount) * 0.15
         });
