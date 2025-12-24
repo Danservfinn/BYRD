@@ -273,7 +273,7 @@
 
       // Camera
       camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-      camera.position.set(0, 1.5, 4);
+      camera.position.set(0, 3, 10); // moved back to accommodate larger cat
 
       // Renderer
       renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -373,7 +373,7 @@
             const eyeMaterial = new THREE.MeshStandardMaterial({
               color: 0xd4af37,
               emissive: 0xd4af37,
-              emissiveIntensity: 0.6,
+              emissiveIntensity: 0.8,
               roughness: 0.2,
               metalness: 0.3
             });
@@ -394,9 +394,9 @@
               }
             });
 
-            // Scale and position the cat (chonky boy)
-            cat.scale.set(1.5, 1.2, 1.4); // wider and deeper for chonkiness
-            cat.position.set(0, 0, 0);
+            // Scale and position the cat (chonky boy) - matching mind space
+            cat.scale.set(3, 2.4, 2.8); // larger scale matching mind space
+            cat.position.set(0, -2, 0); // slightly below center
 
             // If the model has animations, set up the mixer
             if (gltf.animations && gltf.animations.length > 0) {
@@ -571,9 +571,9 @@
 
       breathPhase = Math.sin(elapsed * breathSpeed * Math.PI * 2);
 
-      // Apply subtle breathing to the chonky cat (base scale 1.5, 1.2, 1.4)
-      cat.scale.y = 1.2 + breathPhase * breathAmount;
-      cat.scale.x = 1.5 + breathPhase * breathAmount * 0.3; // subtle width change
+      // Apply subtle breathing to the chonky cat (base scale 3, 2.4, 2.8)
+      cat.scale.y = 2.4 + breathPhase * breathAmount;
+      cat.scale.x = 3 + breathPhase * breathAmount * 0.3; // subtle width change
 
       // Subtle idle sway
       idlePhase = elapsed * 0.3;

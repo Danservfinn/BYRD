@@ -447,8 +447,10 @@ class Seeker:
             "code": ["code", "write", "implement", "build", "create", "program"],
             "install": ["install", "add", "get", "acquire", "capability", "tool"],
             "curate": ["optimize", "clean", "consolidate", "prune", "organize", "simplify",
-                       "remove duplicate", "merge similar", "curate", "tidy", "declutter",
-                       "reduce orphan"],
+                       "remove duplicate", "merge similar", "curate", "tidy", "declutter"],
+            "reconcile_orphans": ["orphan", "orphaned", "disconnected", "isolated", "unconnected",
+                                  "reduce orphan", "connect experience", "link experience",
+                                  "reconcile orphan", "integrate experience", "connect nodes"],
             "self_modify": ["add to myself", "implement in my", "extend my", "modify my code",
                            "add method", "enhance my capability", "add to memory.py",
                            "add to dreamer.py", "add to seeker.py", "improve my observation",
@@ -533,6 +535,11 @@ class Seeker:
             elif strategy == "curate":
                 # Use graph curation capability
                 success = await self._execute_curate_strategy(description, desire_id)
+                return ("success" if success else "failed", None)
+
+            elif strategy == "reconcile_orphans":
+                # Use orphan reconciliation to connect isolated experiences
+                success = await self._execute_orphan_reconciliation(description, desire_id)
                 return ("success" if success else "failed", None)
 
             elif strategy == "self_modify":
@@ -759,6 +766,206 @@ If no action needed, return: {{"rationale": "reason", "actions": []}}
             return json.loads(text.strip())
         except json.JSONDecodeError:
             return None
+
+    async def _execute_orphan_reconciliation(self, description: str, desire_id: str = None) -> bool:
+        """
+        Execute orphan reconciliation to connect isolated Experience nodes to Beliefs.
+
+        This strategy uses the connection heuristic in memory.py to find orphaned
+        experiences and link them to semantically similar beliefs, reducing the
+        orphan count and improving graph integration.
+
+        Flow:
+        1. Get current orphan statistics
+        2. Apply connection heuristic with appropriate threshold
+        3. If many orphans remain, use LLM to suggest additional linking strategies
+        4. Record outcomes as experiences for feedback
+        """
+        print(f"🔗 Reconciling orphans: {description[:50]}...")
+
+        try:
+            # 1. Get initial statistics
+            initial_stats = await self.memory.get_connection_statistics()
+            initial_orphans = initial_stats.get("experiences", {}).get("orphaned", 0)
+
+            if initial_orphans == 0:
+                await self.memory.record_experience(
+                    content=f"[ORPHAN_RECONCILIATION_COMPLETE] No orphaned experiences found. Graph is well-connected.",
+                    type="reconciliation_success"
+                )
+                print(f"✅ No orphans to reconcile - graph is healthy")
+                return True
+
+            print(f"🔗 Found {initial_orphans} orphaned experiences, applying connection heuristic...")
+
+            # 2. Apply connection heuristic with progressively lower thresholds
+            total_connections_made = 0
+            thresholds = [0.4, 0.3, 0.25, 0.2]  # Try progressively lower thresholds
+
+            for threshold in thresholds:
+                result = await self.memory.apply_connection_heuristic(
+                    threshold=threshold,
+                    max_connections=15,  # Process in batches
+                    dry_run=False
+                )
+
+                connections_made = result.get("connections_created", 0)
+                total_connections_made += connections_made
+
+                if connections_made > 0:
+                    print(f"🔗 Created {connections_made} connections at threshold {threshold}")
+
+                # Check remaining orphans
+                current_stats = await self.memory.get_connection_statistics()
+                remaining_orphans = current_stats.get("experiences", {}).get("orphaned", 0)
+
+                if remaining_orphans <= 5:  # Target: near-zero orphans
+                    break
+
+            # 3. Get final statistics
+            final_stats = await self.memory.get_connection_statistics()
+            final_orphans = final_stats.get("experiences", {}).get("orphaned", 0)
+            orphans_reduced = initial_orphans - final_orphans
+
+            # 4. If many orphans still remain, try additional strategies
+            if final_orphans > 10:
+                additional = await self._reconcile_orphans_via_reflection(final_orphans)
+                total_connections_made += additional
+
+            # 5. Record detailed outcome
+            final_stats = await self.memory.get_connection_statistics()
+            final_orphans = final_stats.get("experiences", {}).get("orphaned", 0)
+
+            await self.memory.record_experience(
+                content=f"[ORPHAN_RECONCILIATION_COMPLETE] Reconciled orphaned experiences.\n"
+                       f"Initial orphans: {initial_orphans}\n"
+                       f"Final orphans: {final_orphans}\n"
+                       f"Orphans reduced: {orphans_reduced}\n"
+                       f"Connections created: {total_connections_made}\n"
+                       f"Connectivity ratio: {final_stats.get('experiences', {}).get('connectivity_ratio', 0):.2%}\n"
+                       f"Triggered by desire: {desire_id or 'emergent'}",
+                type="reconciliation_success"
+            )
+
+            # Emit event for monitoring
+            if HAS_EVENT_BUS:
+                await event_bus.emit(Event(
+                    type=EventType.CONNECTION_HEURISTIC,
+                    data={
+                        "action": "orphan_reconciliation_complete",
+                        "initial_orphans": initial_orphans,
+                        "final_orphans": final_orphans,
+                        "connections_created": total_connections_made,
+                        "desire_id": desire_id
+                    }
+                ))
+
+            print(f"✅ Orphan reconciliation complete: {initial_orphans} → {final_orphans} orphans ({total_connections_made} connections)")
+            return True
+
+        except Exception as e:
+            await self.memory.record_experience(
+                content=f"[ORPHAN_RECONCILIATION_ERROR] Error during reconciliation: {str(e)}",
+                type="reconciliation_failed"
+            )
+            print(f"🔗 Orphan reconciliation error: {e}")
+            return False
+
+    async def _reconcile_orphans_via_reflection(self, orphan_count: int) -> int:
+        """
+        Use LLM to suggest additional ways to connect remaining orphans.
+
+        When standard similarity thresholds don't connect orphans, ask the LLM
+        to suggest alternative categorizations or connections.
+        """
+        try:
+            # Get a sample of remaining orphaned experiences
+            orphans = await self.memory.get_orphaned_experiences(limit=10)
+
+            if not orphans:
+                return 0
+
+            # Get existing beliefs for context
+            beliefs = await self.memory.get_beliefs(limit=20)
+            belief_summaries = [
+                f"- {b.get('content', '')[:80]}..."
+                for b in beliefs[:10]
+            ]
+
+            # Format orphan samples
+            orphan_samples = [
+                f"- [{o.get('type', 'unknown')}] {o.get('content', '')[:100]}..."
+                for o in orphans[:5]
+            ]
+
+            prompt = f"""I have {orphan_count} orphaned experiences in my memory graph that are not connected to any beliefs.
+
+SAMPLE ORPHANED EXPERIENCES:
+{chr(10).join(orphan_samples)}
+
+EXISTING BELIEFS:
+{chr(10).join(belief_summaries)}
+
+Suggest which orphaned experiences could reasonably be linked to which beliefs based on thematic or conceptual similarity, even if the exact words don't match.
+
+Return ONLY valid JSON:
+{{"connections": [{{"experience_type": "type", "belief_pattern": "pattern to match", "reason": "why they relate"}}], "new_beliefs": [{{"content": "new belief that could unify multiple orphans", "reason": "why"}}]}}
+
+If no reasonable connections, return: {{"connections": [], "new_beliefs": []}}"""
+
+            response = await self._query_local_llm(prompt, max_tokens=1000)
+
+            if not response:
+                return 0
+
+            try:
+                text = response.strip()
+                if "```json" in text:
+                    text = text.split("```json")[1].split("```")[0]
+                elif "```" in text:
+                    text = text.split("```")[1].split("```")[0]
+
+                suggestions = json.loads(text.strip())
+                connections_made = 0
+
+                # Create suggested new beliefs to help group orphans
+                for new_belief in suggestions.get("new_beliefs", [])[:3]:
+                    content = new_belief.get("content", "")
+                    if content and len(content) > 10:
+                        belief_id = await self.memory.create_belief(
+                            content=content,
+                            confidence=0.5,  # Start with moderate confidence
+                            derived_from=None
+                        )
+                        print(f"🔗 Created bridging belief: {content[:50]}...")
+
+                        # Try to connect orphans to this new belief
+                        for orphan in orphans:
+                            similarity = self.memory._compute_text_similarity(
+                                orphan.get("content", ""),
+                                content
+                            )
+                            if similarity >= 0.15:  # Lower threshold for LLM-suggested beliefs
+                                await self.memory.create_connection(
+                                    from_id=orphan["id"],
+                                    to_id=belief_id,
+                                    relationship="SEMANTICALLY_RELATED",
+                                    properties={
+                                        "similarity_score": similarity,
+                                        "auto_generated": True,
+                                        "heuristic": "llm_suggested"
+                                    }
+                                )
+                                connections_made += 1
+
+                return connections_made
+
+            except json.JSONDecodeError:
+                return 0
+
+        except Exception as e:
+            print(f"🔗 Reflection-based reconciliation error: {e}")
+            return 0
 
     async def _execute_self_modify_strategy(self, description: str, desire_id: str = None) -> bool:
         """

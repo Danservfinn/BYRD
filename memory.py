@@ -185,7 +185,8 @@ class Memory:
         content: str,
         type: str,
         embedding: Optional[List[float]] = None,
-        force: bool = False
+        force: bool = False,
+        link_on_acquisition: bool = True
     ) -> Optional[str]:
         """
         Record a new experience.
@@ -195,6 +196,7 @@ class Memory:
             type: Experience type (open string)
             embedding: Optional embedding vector
             force: If True, bypass noise filtering
+            link_on_acquisition: If True, immediately link to similar beliefs (reduces orphans)
 
         Returns:
             Experience ID, or None if filtered as noise
@@ -226,6 +228,10 @@ class Memory:
                 "type": type
             }
         ))
+
+        # Link-on-acquisition: immediately connect to similar beliefs to reduce orphans
+        if link_on_acquisition and len(content) >= self.CONNECTION_HEURISTIC_CONFIG["min_content_length"]:
+            await self._link_experience_on_acquisition(exp_id, content)
 
         return exp_id
     

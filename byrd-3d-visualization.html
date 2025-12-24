@@ -448,10 +448,17 @@
       <button id="btn-reset" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-all">
         &#128260; Reset
       </button>
-      <div id="stats" class="flex items-center gap-3 px-3 py-2 bg-white/80 border border-slate-200 rounded-lg text-xs font-mono shadow">
-        <span class="text-indigo-600">💭 <span id="dream-count">0</span></span>
-        <span class="text-cyan-600">🔍 <span id="seek-count">0</span></span>
-        <span class="text-amber-600">◆ <span id="node-count">0</span></span>
+      <div id="stats" class="flex items-center gap-2 px-3 py-2 bg-white/80 border border-slate-200 rounded-lg text-xs font-mono shadow">
+        <span class="text-indigo-600" title="Dream cycles">💭 <span id="dream-count">0</span></span>
+        <span class="text-cyan-600" title="Seek cycles">🔍 <span id="seek-count">0</span></span>
+        <span class="text-slate-400">|</span>
+        <span class="text-sky-600" title="Experiences">📝 <span id="exp-count">0</span></span>
+        <span class="text-amber-600" title="Beliefs">💡 <span id="belief-count">0</span></span>
+        <span class="text-purple-600" title="Reflections">🪞 <span id="reflection-count">0</span></span>
+        <span class="text-rose-600" title="Desires">🔥 <span id="desire-count">0</span></span>
+        <span class="text-emerald-600" title="Mutations">🧬 <span id="mutation-count">0</span></span>
+        <span class="text-slate-400">|</span>
+        <span class="text-slate-500" title="Visual nodes">◆ <span id="node-count">0</span></span>
       </div>
     </div>
   </div>
@@ -929,6 +936,11 @@
     const dreamCountEl = document.getElementById('dream-count');
     const seekCountEl = document.getElementById('seek-count');
     const nodeCountEl = document.getElementById('node-count');
+    const expCountEl = document.getElementById('exp-count');
+    const beliefCountEl = document.getElementById('belief-count');
+    const reflectionCountEl = document.getElementById('reflection-count');
+    const desireCountEl = document.getElementById('desire-count');
+    const mutationCountEl = document.getElementById('mutation-count');
     const tooltip = document.getElementById('node-tooltip');
     const tooltipType = document.getElementById('tooltip-type');
     const tooltipContent = document.getElementById('tooltip-content');
@@ -2498,6 +2510,14 @@
         seekCount = data.seek_count || 0;
         dreamCountEl.textContent = dreamCount;
         seekCountEl.textContent = seekCount;
+
+        // Update memory stats
+        const stats = data.memory_stats || {};
+        expCountEl.textContent = stats.Experience || 0;
+        beliefCountEl.textContent = stats.Belief || 0;
+        reflectionCountEl.textContent = stats.Reflection || 0;
+        desireCountEl.textContent = stats.Desire || 0;
+        mutationCountEl.textContent = stats.Mutation || 0;
 
         // Update LLM model display
         const llmModelText = document.getElementById('llm-model-text');
