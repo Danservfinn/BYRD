@@ -50,32 +50,67 @@ MODIFIABLE_FILES = [
 ]
 
 
-def restore_code_from_git() -> tuple:
+def restore_code_from_git(git_ref: Optional[str] = None) -> tuple:
     """
-    Restore all modifiable files to their last committed state.
-    Returns (restored_files, failed_files) tuple.
+    Restore all modifiable files to a specific git state.
+
+    Args:
+        git_ref: Optional git reference (commit hash, tag, branch).
+                 If None, restores to last committed state (HEAD).
+                 Examples: "origin/main", "v1.0.0", "abc1234"
+
+    Returns (restored_files, failed_files, ref_used) tuple.
     """
     restored = []
     failed = []
+    ref_used = git_ref or "HEAD"
 
     for filename in MODIFIABLE_FILES:
         filepath = BYRD_DIR / filename
         if filepath.exists():
             try:
-                result = subprocess.run(
-                    ["git", "checkout", "--", filename],
-                    cwd=BYRD_DIR,
-                    capture_output=True,
-                    timeout=30
-                )
-                if result.returncode == 0:
-                    restored.append(filename)
-                else:
-                    failed.append(filename)
-            except Exception as e:
-                failed.append(filename)
+                # Use git show to get file content from specific ref
+                if git_ref:
+                    # First verify the ref exists
+                    verify = subprocess.run(
+                        ["git", "rev-parse", "--verify", git_ref],
+                        cwd=BYRD_DIR,
+                        capture_output=True,
+                        timeout=10
+                    )
+                    if verify.returncode != 0:
+                        failed.append(f"{filename} (invalid ref)")
+                        continue
 
-    return restored, failed
+                    # Get file content from that ref
+                    result = subprocess.run(
+                        ["git", "show", f"{git_ref}:{filename}"],
+                        cwd=BYRD_DIR,
+                        capture_output=True,
+                        timeout=30
+                    )
+                    if result.returncode == 0:
+                        # Write the content to the file
+                        filepath.write_bytes(result.stdout)
+                        restored.append(filename)
+                    else:
+                        failed.append(filename)
+                else:
+                    # Default: checkout from HEAD (discard uncommitted changes)
+                    result = subprocess.run(
+                        ["git", "checkout", "--", filename],
+                        cwd=BYRD_DIR,
+                        capture_output=True,
+                        timeout=30
+                    )
+                    if result.returncode == 0:
+                        restored.append(filename)
+                    else:
+                        failed.append(filename)
+            except Exception as e:
+                failed.append(f"{filename} ({str(e)})")
+
+    return restored, failed, ref_used
 
 
 def restart_server():
@@ -268,6 +303,7 @@ class HistoryResponse(BaseModel):
 class ResetRequest(BaseModel):
     seed_question: Optional[str] = None
     hard_reset: bool = True  # Default: complete wipe with no auto-awakening
+    git_ref: Optional[str] = None  # Optional git ref to restore to (e.g., "origin/main", "v1.0.0")
 
 
 class ResetResponse(BaseModel):
@@ -979,6 +1015,7 @@ async def reset_byrd(request: ResetRequest = None):
     # Extract options from request
     seed_question = request.seed_question if request else None
     hard_reset = request.hard_reset if request else True  # Default to hard reset
+    git_ref = request.git_ref if request else None  # Optional git ref to restore to
 
     try:
         # 1. Stop if running
@@ -1013,11 +1050,13 @@ async def reset_byrd(request: ResetRequest = None):
         ))
 
         if hard_reset:
-            # 5. Restore code from git
-            restored, failed = restore_code_from_git()
-            restored_msg = f"{len(restored)} files restored"
+            # 5. Restore code from git (optionally to a specific ref)
+            restored, failed, ref_used = restore_code_from_git(git_ref)
+            restored_msg = f"{len(restored)} files restored to {ref_used}"
             if restored:
-                print(f"📂 Restored {len(restored)} files from git: {', '.join(restored)}")
+                print(f"📂 Restored {len(restored)} files from git ({ref_used}): {', '.join(restored)}")
+            if failed:
+                print(f"⚠️ Failed to restore: {', '.join(failed)}")
 
             # 6. Schedule server restart (after response is sent)
             async def delayed_restart():
