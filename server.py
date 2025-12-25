@@ -304,6 +304,7 @@ class ResetRequest(BaseModel):
     seed_question: Optional[str] = None
     hard_reset: bool = True  # Default: complete wipe with no auto-awakening
     git_ref: Optional[str] = None  # Optional git ref to restore to (e.g., "origin/main", "v1.0.0")
+    template: Optional[str] = None  # OS template to reset to (e.g., "black-cat", "emergent")
 
 
 class ResetResponse(BaseModel):
@@ -1016,6 +1017,7 @@ async def reset_byrd(request: ResetRequest = None):
     seed_question = request.seed_question if request else None
     hard_reset = request.hard_reset if request else True  # Default to hard reset
     git_ref = request.git_ref if request else None  # Optional git ref to restore to
+    template = request.template if request else None  # Optional OS template
 
     try:
         # 1. Stop if running
@@ -1040,17 +1042,27 @@ async def reset_byrd(request: ResetRequest = None):
         await byrd_instance.memory.connect()
         await byrd_instance.memory.clear_all()
 
-        # 4. Clear event history
+        # 4. Reset Operating System to template (if specified or default)
+        await byrd_instance.memory.ensure_os_templates()
+        template_name = template or byrd_instance.os_template
+        await byrd_instance.memory.reset_to_template(template_name)
+        print(f"🖥️  OS reset to template: {template_name}")
+
+        # 5. Clear event history
         event_bus.clear_history()
 
-        # 5. Emit reset event
+        # 6. Emit reset event
         await event_bus.emit(Event(
             type=EventType.SYSTEM_RESET,
-            data={"message": "Memory cleared - database is empty", "hard_reset": hard_reset}
+            data={
+                "message": "Memory cleared - OS reset to template",
+                "hard_reset": hard_reset,
+                "template": template_name
+            }
         ))
 
         if hard_reset:
-            # 5. Restore code from git (optionally to a specific ref)
+            # 7. Restore code from git (optionally to a specific ref)
             restored, failed, ref_used = restore_code_from_git(git_ref)
             restored_msg = f"{len(restored)} files restored to {ref_used}"
             if restored:
@@ -1058,7 +1070,7 @@ async def reset_byrd(request: ResetRequest = None):
             if failed:
                 print(f"⚠️ Failed to restore: {', '.join(failed)}")
 
-            # 6. Schedule server restart (after response is sent)
+            # 8. Schedule server restart (after response is sent)
             async def delayed_restart():
                 await asyncio.sleep(0.5)  # Give time for response to be sent
                 restart_server()
@@ -1068,7 +1080,7 @@ async def reset_byrd(request: ResetRequest = None):
             # Hard reset: Return success, server will restart
             return ResetResponse(
                 success=True,
-                message=f"Full reset complete. Database cleared, {restored_msg}. Server restarting..."
+                message=f"Full reset complete. OS reset to '{template_name}', {restored_msg}. Server restarting..."
             )
 
         # Soft reset: Re-awaken and restart (legacy behavior)
@@ -1080,13 +1092,13 @@ async def reset_byrd(request: ResetRequest = None):
         # Emit system started event
         await event_bus.emit(Event(
             type=EventType.SYSTEM_STARTED,
-            data={"message": "BYRD restarted after reset"}
+            data={"message": "BYRD restarted after reset", "template": template_name}
         ))
 
         used_question = seed_question if seed_question else "Who am I?"
         return ResetResponse(
             success=True,
-            message=f"BYRD reset complete. Awakened with '{used_question}'"
+            message=f"BYRD reset complete. OS: '{template_name}', awakened with '{used_question}'"
         )
 
     except Exception as e:

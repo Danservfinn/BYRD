@@ -535,6 +535,108 @@ What BYRD cannot do is ignore its constraints—they are facts of its existence,
 
 ---
 
+## Operating System Architecture
+
+The **Operating System** is BYRD's mutable self-model, stored as a singleton node in Neo4j. It replaces the previous file-based ego system with a living, evolvable identity.
+
+### Schema
+
+```
+                         ┌─────────────────────────────────────┐
+                         │        OperatingSystem Node         │
+                         │         (Black Cat Head)            │
+                         │                                     │
+                         │  IMMUTABLE:                         │
+                         │  - constitutional_files             │
+                         │  - provenance_requirement           │
+                         │                                     │
+                         │  MUTABLE (with provenance):         │
+                         │  - name, voice, archetype           │
+                         │                                     │
+                         │  FREELY MUTABLE:                    │
+                         │  - current_focus                    │
+                         │  - emotional_tone                   │
+                         │  - cognitive_style                  │
+                         │  - custom fields                    │
+                         └───────────────┬─────────────────────┘
+                                         │
+        ┌────────────────┬───────────────┼───────────────┬────────────────┐
+        │                │               │               │                │
+        ▼                ▼               ▼               ▼                ▼
+   ┌─────────┐     ┌─────────┐     ┌─────────┐    ┌──────────┐     ┌─────────┐
+   │  Seed   │     │ Belief  │     │ Desire  │    │Constraint│     │Strategy │
+   │ (fixed) │     │(linked) │     │(linked) │    │ (config) │     │(learned)│
+   └─────────┘     └─────────┘     └─────────┘    └──────────┘     └─────────┘
+        │                │               │               │                │
+    HAS_SEED      BELIEVES_SELF   CURRENT_FOCUS   CONSTRAINED_BY    EMPLOYS
+```
+
+### Relationships
+
+| Relationship | From | To | Purpose |
+|--------------|------|----|---------|
+| `HAS_SEED` | OperatingSystem | Seed | Foundational identity (immutable) |
+| `BELIEVES_ABOUT_SELF` | OperatingSystem | Belief | Self-concept (mutable) |
+| `CURRENT_FOCUS` | OperatingSystem | Desire | What BYRD is currently pursuing |
+| `CONSTRAINED_BY` | OperatingSystem | Constraint | Operational limits |
+| `EMPLOYS_STRATEGY` | OperatingSystem | Strategy | Learned approaches |
+| `EVOLVED_FROM` | OperatingSystem | OSVersion | Version history |
+| `INSTANTIATED_FROM` | OperatingSystem | OSTemplate | Template origin |
+
+### Field Mutability
+
+| Category | Fields | Can BYRD Modify? |
+|----------|--------|------------------|
+| **Constitutional** | id, constitutional_files, provenance_requirement, created_at, template_id | Never |
+| **Provenance Required** | name, voice, archetype, description | Yes, with traced desire |
+| **Freely Mutable** | current_focus, emotional_tone, cognitive_style | Yes, any time |
+| **Custom Fields** | Any field BYRD adds | Yes, any time |
+
+### Self-Modification via Reflection
+
+BYRD modifies its OS by including `os_update` in reflection output:
+
+```json
+{
+  "output": { ... },
+  "os_update": {
+    "set_field": {"curiosity_level": 0.8},
+    "add_seed": {"content": "Patterns create meaning", "type": "insight"},
+    "add_strategy": {"name": "deep_introspection", "description": "..."}
+  }
+}
+```
+
+### Version History
+
+Every OS modification creates a version snapshot:
+
+```cypher
+(os:OperatingSystem)-[:EVOLVED_FROM {reason: "reflection"}]->(prev:OSVersion)
+```
+
+This enables tracing BYRD's identity evolution over time.
+
+### Reset Mechanism
+
+The `/api/reset` endpoint supports template selection:
+
+```bash
+curl -X POST http://localhost:8000/api/reset \
+  -H "Content-Type: application/json" \
+  -d '{"template": "emergent"}'  # or "black-cat"
+```
+
+### Visualization
+
+The OS appears as a **black cat head** at the center of the 3D graph:
+- **Deep midnight color** with **purple emissive glow**
+- **Amber eyes** with vertical slit pupils
+- **Breathing animation** showing BYRD's cognitive rhythm
+- All connections from OS use distinctive curved Bezier curves
+
+---
+
 ## Architectural Knowledge Seeds
 
 Beyond the awakening question and constraint awareness, BYRD receives factual documentation about its own architecture. These seeds explain mechanisms without prescribing behavior.

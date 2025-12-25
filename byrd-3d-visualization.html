@@ -1097,7 +1097,7 @@
     const NODE_COLORS = {
       belief: { color: 0xd97706, emissive: 0xfbbf24, label: 'Belief' },       // Amber - convictions (matches legend)
       desire: { color: 0xbe123c, emissive: 0xf43f5e, label: 'Desire' },       // Dark rose (matches legend)
-      ego: { color: 0xec4899, emissive: 0xf472b6, label: 'Ego' },             // Pink (living identity)
+      ego: { color: 0xec4899, emissive: 0xf472b6, label: 'Ego' },             // Pink (living identity) - DEPRECATED
       experience: { color: 0x0369a1, emissive: 0x0ea5e9, label: 'Experience' }, // Sky blue (matches legend)
       capability: { color: 0x6d28d9, emissive: 0xa855f7, label: 'Capability' }, // Dark violet (matches legend)
       reflection: { color: 0x047857, emissive: 0x34d399, label: 'Reflection' }, // Dark emerald (matches legend)
@@ -1106,13 +1106,20 @@
       prediction: { color: 0xeab308, emissive: 0xfde047, label: 'Prediction' }, // Yellow - testable hypothesis
       task: { color: 0x6366f1, emissive: 0xa5b4fc, label: 'Task' },            // Indigo - external goal
       // Crystal memory system
-      crystal: { color: 0x8b5cf6, emissive: 0xc4b5fd, label: 'Crystal' }       // Purple - crystallized memories
+      crystal: { color: 0x8b5cf6, emissive: 0xc4b5fd, label: 'Crystal' },      // Purple - crystallized memories
+      // Operating System - BYRD's self-model (black cat head)
+      operatingsystem: { color: 0x1a1a2e, emissive: 0x9333ea, label: 'Operating System' }, // Deep midnight with purple glow
+      ostemplate: { color: 0x374151, emissive: 0x6366f1, label: 'OS Template' },  // Slate with indigo glow
+      seed: { color: 0x166534, emissive: 0x22c55e, label: 'Seed' },             // Deep green - foundation
+      constraint: { color: 0x7c2d12, emissive: 0xf97316, label: 'Constraint' }, // Dark orange - limits
+      strategy: { color: 0x0e7490, emissive: 0x06b6d4, label: 'Strategy' }     // Cyan - learned approach
     };
 
     // System node types (cannot be created by BYRD, have fixed colors)
     const SYSTEM_NODE_TYPES = new Set([
       'Experience', 'Belief', 'Desire', 'Reflection', 'Capability', 'Mutation',
-      'Ego', 'QuantumMoment', 'SystemState', 'Prediction', 'Task', 'Crystal'
+      'Ego', 'QuantumMoment', 'SystemState', 'Prediction', 'Task', 'Crystal',
+      'OperatingSystem', 'OSTemplate', 'Seed', 'Constraint', 'Strategy'
     ]);
 
     // Custom node type colors - generated dynamically with distinct hues
@@ -1475,6 +1482,92 @@
 
       return innerGlow;
     }
+
+    /**
+     * Create cat head geometry for Operating System node
+     * The OS is visualized as a black cat head - BYRD's avatar and self-model
+     */
+    function createCatHeadGeometry(size = 2) {
+      const group = new THREE.Group();
+
+      // Main head (squashed sphere)
+      const headGeom = new THREE.SphereGeometry(size, 32, 32);
+      headGeom.scale(1, 0.9, 0.85);
+      const headMat = new THREE.MeshPhysicalMaterial({
+        color: 0x1a1a2e,      // Deep midnight
+        emissive: 0x4c1d95,   // Purple glow
+        emissiveIntensity: 0.3,
+        metalness: 0.1,
+        roughness: 0.7,
+        transparent: true,
+        opacity: 0.95
+      });
+      const head = new THREE.Mesh(headGeom, headMat);
+      group.add(head);
+
+      // Left ear (cone, slightly rotated)
+      const earGeom = new THREE.ConeGeometry(size * 0.35, size * 0.7, 4);
+      const leftEar = new THREE.Mesh(earGeom, headMat.clone());
+      leftEar.position.set(-size * 0.5, size * 0.75, 0);
+      leftEar.rotation.z = 0.2;
+      leftEar.rotation.x = 0.1;
+      group.add(leftEar);
+
+      // Right ear
+      const rightEar = new THREE.Mesh(earGeom.clone(), headMat.clone());
+      rightEar.position.set(size * 0.5, size * 0.75, 0);
+      rightEar.rotation.z = -0.2;
+      rightEar.rotation.x = 0.1;
+      group.add(rightEar);
+
+      // Glowing amber eyes
+      const eyeGeom = new THREE.SphereGeometry(size * 0.18, 16, 16);
+      const eyeMat = new THREE.MeshBasicMaterial({
+        color: 0xfbbf24,
+        transparent: true,
+        opacity: 0.95
+      });
+
+      const leftEye = new THREE.Mesh(eyeGeom, eyeMat);
+      leftEye.position.set(-size * 0.28, size * 0.08, size * 0.72);
+      group.add(leftEye);
+
+      const rightEye = new THREE.Mesh(eyeGeom.clone(), eyeMat.clone());
+      rightEye.position.set(size * 0.28, size * 0.08, size * 0.72);
+      group.add(rightEye);
+
+      // Vertical slit pupils
+      const pupilGeom = new THREE.PlaneGeometry(size * 0.04, size * 0.15);
+      const pupilMat = new THREE.MeshBasicMaterial({
+        color: 0x000000,
+        side: THREE.DoubleSide
+      });
+
+      const leftPupil = new THREE.Mesh(pupilGeom, pupilMat);
+      leftPupil.position.set(-size * 0.28, size * 0.08, size * 0.88);
+      group.add(leftPupil);
+
+      const rightPupil = new THREE.Mesh(pupilGeom.clone(), pupilMat.clone());
+      rightPupil.position.set(size * 0.28, size * 0.08, size * 0.88);
+      group.add(rightPupil);
+
+      // Small nose
+      const noseGeom = new THREE.SphereGeometry(size * 0.08, 8, 8);
+      const noseMat = new THREE.MeshBasicMaterial({ color: 0xff69b4 }); // Pink
+      const nose = new THREE.Mesh(noseGeom, noseMat);
+      nose.position.set(0, -size * 0.12, size * 0.78);
+      group.add(nose);
+
+      // Store reference for breathing animation
+      group.userData.isOSNode = true;
+      group.userData.headMesh = head;
+      group.userData.eyes = [leftEye, rightEye];
+
+      return group;
+    }
+
+    // Track OS node for special animation
+    let osNodeGroup = null;
 
     /**
      * Create a crystal node for beliefs, desires, or seeks
@@ -2121,6 +2214,40 @@
           // Size scales with node_count (stored in importance)
           const crystalSize = size * 1.5;
           geometry = new THREE.IcosahedronGeometry(crystalSize, 1);
+          break;
+        case 'operatingsystem':
+          // Operating System uses cat head geometry - BYRD's self-model at center
+          const catHead = createCatHeadGeometry(3.5);
+          catHead.position.set(0, 0, 0); // Always at center
+          catHead.userData = {
+            id: nodeId,
+            type,
+            content,
+            importance: 1.0,
+            nodeIndex,
+            baseScale: 1,
+            createdAt: Date.now(),
+            targetScale: new THREE.Vector3(1, 1, 1),
+            velocity: new THREE.Vector3(0, 0, 0), // OS doesn't drift
+            force: new THREE.Vector3(0, 0, 0),
+            isOSNode: true
+          };
+          scene.add(catHead);
+          nodes3D.push(catHead);
+          osNodeGroup = catHead; // Store reference for animation
+          connectionCounts.set(nodeId, 0);
+          return catHead; // Return early - OS node handled specially
+        case 'seed':
+          // Seeds are small polyhedra - foundational, stable
+          geometry = new THREE.DodecahedronGeometry(size * 0.6, 0);
+          break;
+        case 'constraint':
+          // Constraints are octahedra - pointed, defining limits
+          geometry = new THREE.OctahedronGeometry(size * 0.6, 0);
+          break;
+        case 'strategy':
+          // Strategies are tetrahedra - directional, pointing the way
+          geometry = new THREE.TetrahedronGeometry(size * 0.7, 0);
           break;
         default: // experience
           geometry = new THREE.SphereGeometry(size * 0.8, 16, 16);
@@ -4477,8 +4604,46 @@
       // Animate crystal nodes (gentle rotation)
       animateCrystals(delta, time);
 
+      // Animate OS cat head (breathing)
+      animateOSNode(time);
+
       // Render
       composer.render();
+    }
+
+    /**
+     * Animate the Operating System node (cat head)
+     * Breathing animation and eye glow pulsing
+     */
+    function animateOSNode(time) {
+      if (!osNodeGroup || !osNodeGroup.userData.isOSNode) return;
+
+      // Gentle breathing - scale oscillation
+      const breathSpeed = 0.6;
+      const breathAmount = 0.025;
+      const breath = 1 + Math.sin(time * breathSpeed) * breathAmount;
+      osNodeGroup.scale.setScalar(breath);
+
+      // Slow, contemplative rotation
+      osNodeGroup.rotation.y = Math.sin(time * 0.2) * 0.15;
+
+      // Eye glow pulsing
+      if (osNodeGroup.userData.eyes) {
+        const eyeGlow = 0.85 + Math.sin(time * 1.5) * 0.15;
+        osNodeGroup.userData.eyes.forEach(eye => {
+          if (eye.material) {
+            eye.material.opacity = eyeGlow;
+          }
+        });
+      }
+
+      // Head emissive intensity pulsing (subtle purple glow)
+      if (osNodeGroup.userData.headMesh) {
+        const headMat = osNodeGroup.userData.headMesh.material;
+        if (headMat) {
+          headMat.emissiveIntensity = 0.2 + Math.sin(time * 0.8) * 0.1;
+        }
+      }
     }
 
     /**

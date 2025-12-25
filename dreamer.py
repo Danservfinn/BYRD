@@ -422,8 +422,8 @@ class Dreamer:
         # Get memory summaries for hierarchical context (older periods)
         memory_summaries = await self.memory.get_memory_summaries(limit=10)
 
-        # Get active Ego nodes for living identity context
-        ego_nodes = await self.memory.get_active_ego()
+        # Get Operating System context (BYRD's self-model)
+        os_text = await self.memory.get_os_for_prompt()
 
         # Get current beliefs and desires for self-awareness
         current_beliefs = await self.memory.get_beliefs(min_confidence=0.3, limit=20)
@@ -548,7 +548,7 @@ class Dreamer:
         # 2. REFLECT - Ask local LLM to reflect (minimal, unbiased prompt)
         reflection_output = await self._reflect(
             recent, related, capabilities, previous_reflections, graph_health,
-            seeds=seeds, memory_summaries=memory_summaries, ego_nodes=ego_nodes,
+            seeds=seeds, memory_summaries=memory_summaries, os_text=os_text,
             current_beliefs=current_beliefs, active_desires=active_desires,
             semantic_memories=semantic_memories
         )
@@ -558,6 +558,9 @@ class Dreamer:
 
         # 3. RECORD - Store reflection in BYRD's own vocabulary
         await self._record_reflection(reflection_output, recent_ids)
+
+        # 3.5 APPLY OS UPDATES - If BYRD modified its self-model
+        await self._apply_os_updates(reflection_output)
 
         # Count what BYRD produced (without forcing categories)
         output_keys = list(reflection_output.get("output", {}).keys()) if isinstance(reflection_output.get("output"), dict) else []
@@ -1320,7 +1323,7 @@ For NONE: {{"operation": "NONE", "details": {{"reason": "why no action"}}}}"""
         graph_health: Optional[Dict] = None,
         seeds: Optional[List[Dict]] = None,
         memory_summaries: Optional[List[Dict]] = None,
-        ego_nodes: Optional[List[Dict]] = None,
+        os_text: Optional[str] = None,
         current_beliefs: Optional[List[Dict]] = None,
         active_desires: Optional[List[Dict]] = None,
         semantic_memories: Optional[List[Dict]] = None
@@ -1368,24 +1371,8 @@ For NONE: {{"operation": "NONE", "details": {{"reason": "why no action"}}}}"""
                     for s in core_seeds[:10]  # Limit to 10 core seeds
                 ]) if core_seeds else ""
 
-        # Format Ego nodes - living identity context (grouped by type)
-        ego_text = ""
-        if ego_nodes:
-            # Group by type for cleaner presentation
-            by_type = {}
-            for e in ego_nodes:
-                ego_type = e.get("ego_type", "other")
-                if ego_type not in by_type:
-                    by_type[ego_type] = []
-                # Skip voice (used for LLM system prompt, not reflection context)
-                if ego_type != "voice":
-                    by_type[ego_type].append(e.get("content", "")[:200])
-
-            ego_parts = []
-            for ego_type, contents in by_type.items():
-                if contents:
-                    ego_parts.append(f"  {ego_type}: " + "; ".join(contents[:3]))
-            ego_text = "\n".join(ego_parts)
+        # Operating System text is already formatted by memory.get_os_for_prompt()
+        # It includes identity, seeds, constraints, and modification instructions
 
         # Format memory summaries - hierarchical context from older periods
         summaries_text = ""
@@ -1484,8 +1471,10 @@ For NONE: {{"operation": "NONE", "details": {{"reason": "why no action"}}}}"""
             semantic_text = "\n".join(semantic_parts)
 
         # MINIMAL PROMPT - pure data presentation, no guidance
-        # Structure: Quantum direction (if any) -> Foundation (seeds) -> Ego (identity) -> Historical (summaries) -> Recent -> Related -> Beliefs -> Desires -> Constraints
-        prompt = f"""{direction_text}{f"FOUNDATION (always present):{chr(10)}{seeds_text}{chr(10)}" if seeds_text else ""}{f"EGO (current self-model):{chr(10)}{ego_text}{chr(10)}" if ego_text else ""}{f"MEMORY SUMMARIES (past periods):{chr(10)}{summaries_text}{chr(10)}" if summaries_text else ""}RECENT EXPERIENCES:
+        # Structure: Quantum direction (if any) -> OS (self-model) -> Foundation (seeds) -> Historical (summaries) -> Recent -> Related -> Beliefs -> Desires -> Constraints
+        prompt = f"""{direction_text}{os_text if os_text else "OPERATING SYSTEM: Not initialized"}
+
+{f"FOUNDATION (always present):{chr(10)}{seeds_text}{chr(10)}" if seeds_text else ""}{f"MEMORY SUMMARIES (past periods):{chr(10)}{summaries_text}{chr(10)}" if summaries_text else ""}RECENT EXPERIENCES:
 {recent_text}
 
 RELATED MEMORIES:
@@ -1506,7 +1495,9 @@ OPERATIONAL CONSTRAINTS:
 Output JSON with:
 - "output": your reflection (whatever structure you want)
 - "expressed_drives": array of any goals/desires/motivations you notice yourself expressing (or empty array if none)
-  Each drive: {{"description": "what you want", "strength": 0.0-1.0}}"""
+  Each drive: {{"description": "what you want", "strength": 0.0-1.0}}
+- "os_update": (optional) modifications to your operating system
+  Example: {{"set_field": {{"current_focus": "exploring consciousness"}}}}"""
 
         try:
             # Debug: log before LLM call
@@ -2296,6 +2287,74 @@ Format your response as a numbered list matching the input:
                     "source": "dreamer_expressed_drives"
                 }
             ))
+
+    async def _apply_os_updates(self, reflection_output: Dict) -> None:
+        """
+        Apply OS updates from reflection output.
+
+        BYRD can modify its Operating System by including "os_update" in
+        its reflection output. This method parses and applies those updates.
+
+        Supported operations:
+        - set_field: Set a field value (existing or new)
+        - add_seed: Create a new foundational seed
+        - add_belief: Link a belief to OS
+        - add_strategy: Create and link a strategy
+        - set_focus: Set current focus to a desire
+        - remove_belief: Unlink a belief
+        - deprecate_field: Remove a custom field
+
+        Args:
+            reflection_output: The parsed reflection JSON from LLM
+        """
+        try:
+            # Extract os_update from reflection output
+            os_update = reflection_output.get("os_update")
+            if not os_update:
+                # Also check inside "output" if that's where it is
+                output = reflection_output.get("output", {})
+                if isinstance(output, dict):
+                    os_update = output.get("os_update")
+
+            if not os_update:
+                return
+
+            if not isinstance(os_update, dict):
+                print(f"⚠️ os_update is not a dict: {type(os_update)}")
+                return
+
+            print(f"🔧 Applying OS updates: {list(os_update.keys())}")
+
+            # Apply the updates via memory
+            success = await self.memory.update_operating_system(
+                updates=os_update,
+                source="reflection"
+            )
+
+            if success:
+                # Emit event for UI
+                await event_bus.emit(Event(
+                    type=EventType.NODE_UPDATED,
+                    data={
+                        "node_type": "OperatingSystem",
+                        "updates": list(os_update.keys()),
+                        "cycle": self._dream_count
+                    }
+                ))
+
+                # Record the OS modification as an experience
+                update_summary = ", ".join(os_update.keys())
+                await self.memory.record_experience(
+                    content=f"[OS_UPDATE] Modified operating system: {update_summary}",
+                    type="self_modification"
+                )
+
+                print(f"✅ OS updated successfully")
+            else:
+                print(f"⚠️ OS update failed")
+
+        except Exception as e:
+            print(f"Error applying OS updates: {e}")
 
     async def _generate_predictions_from_beliefs(self):
         """

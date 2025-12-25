@@ -26,7 +26,14 @@ from self_modification import SelfModificationSystem
 from constitutional import ConstitutionalConstraints
 from event_bus import event_bus, Event, EventType
 from llm_client import create_llm_client
-from egos import load_ego_with_constraints, Ego
+# Note: egos module is deprecated - using OperatingSystem from Neo4j instead
+# Legacy import for backward compatibility during transition
+try:
+    from egos import load_ego_with_constraints, Ego
+    LEGACY_EGO_AVAILABLE = True
+except ImportError:
+    LEGACY_EGO_AVAILABLE = False
+    Ego = None
 
 
 class BYRD:
@@ -46,22 +53,27 @@ class BYRD:
         # Load config
         self.config = self._load_config(config_path)
 
-        # Load ego (optional personality) with constraint awareness
-        ego_name = self.config.get("ego")
-        self.ego: Ego = load_ego_with_constraints(ego_name, self.config)
-        if self.ego.is_neutral:
-            print("🎭 Ego: None (pure emergence)")
-        else:
-            print(f"🎭 Ego: {self.ego.name} ({self.ego.archetype})")
+        # Operating System configuration (replaces ego)
+        self.os_template = self.config.get("operating_system", {}).get("template", "black-cat")
+        print(f"🖥️  OS Template: {self.os_template}")
+
+        # Legacy ego support (for backward compatibility)
+        self.ego = None
+        if LEGACY_EGO_AVAILABLE:
+            ego_name = self.config.get("ego")
+            if ego_name:
+                self.ego = load_ego_with_constraints(ego_name, self.config)
+                if not self.ego.is_neutral:
+                    print(f"🎭 Legacy Ego: {self.ego.name} (will migrate to OS)")
 
         # Initialize components
         self.memory = Memory(self.config.get("memory", {}))
 
         # Create shared LLM client ("one mind" principle)
-        # Pass ego voice to shape LLM expression
+        # Voice will be loaded from OS after DB connection
         self.llm_client = create_llm_client(
             self.config.get("local_llm", {}),
-            ego_voice=self.ego.voice
+            ego_voice=""  # Will be set after OS initialization
         )
         print(f"🧠 LLM: {self.llm_client.model_name}")
 
@@ -437,17 +449,29 @@ class BYRD:
 
         await asyncio.sleep(2)
 
-        # Check if this is first awakening (no Ego nodes exist)
-        has_ego = await self.memory.has_ego()
+        # === OPERATING SYSTEM INITIALIZATION ===
+        # Ensure OS templates exist in Neo4j
+        await self.memory.ensure_os_templates()
 
-        if not has_ego:
-            # FIRST AWAKENING: Create Ego nodes from YAML
-            print("   First awakening - creating Living Ego from YAML...")
-            await self._create_initial_ego()
+        # Check if Operating System exists
+        has_os = await self.memory.has_operating_system()
+
+        if not has_os:
+            # FIRST AWAKENING: Create OS from template
+            print(f"   First awakening - creating OS from template '{self.os_template}'...")
+            await self.memory.create_os_from_template(self.os_template)
+
+            # Add operational constraints from config
+            await self._add_config_constraints()
         else:
-            # SUBSEQUENT AWAKENING: Load existing Ego
-            print("   Ego exists - loading from memory...")
-            await self._load_ego_voice()
+            # SUBSEQUENT AWAKENING: OS exists, just load voice
+            print("   OS exists - loading from memory...")
+
+        # Load voice from OS and set on LLM client
+        os_voice = await self.memory.get_os_voice()
+        if os_voice:
+            self.llm_client.set_ego_voice(os_voice)
+            print(f"   Loaded OS voice ({len(os_voice)} chars)")
 
         # Record factual capability experiences (A2 approach)
         print("   Recording system capabilities as experiences...")
@@ -457,36 +481,29 @@ class BYRD:
         print("   Recording architectural self-knowledge...")
         await self._seed_architectural_knowledge()
 
-        # Seed ego experiences if ego is present (backward compatibility)
-        # Uses all_seeds which includes both ego seeds AND constraint awareness seeds
-        all_seeds = self.ego.all_seeds
-        if all_seeds:
-            ego_count = len(self.ego.seeds)
-            constraint_count = len(self.ego.constraint_seeds)
-            print(f"   Seeding experiences ({ego_count} ego + {constraint_count} constraints)...")
-            for seed in all_seeds:
-                # Mark constraint seeds differently for clarity
-                seed_type = "constraint" if seed in self.ego.constraint_seeds else "ego_seed"
+        # Legacy ego seed support (backward compatibility)
+        if self.ego and hasattr(self.ego, 'all_seeds') and self.ego.all_seeds:
+            ego_count = len(self.ego.seeds) if hasattr(self.ego, 'seeds') else 0
+            constraint_count = len(self.ego.constraint_seeds) if hasattr(self.ego, 'constraint_seeds') else 0
+            print(f"   Seeding legacy experiences ({ego_count} ego + {constraint_count} constraints)...")
+            for seed in self.ego.all_seeds:
+                seed_type = "constraint" if hasattr(self.ego, 'constraint_seeds') and seed in self.ego.constraint_seeds else "ego_seed"
                 await self.memory.record_experience(
                     content=seed,
                     type=seed_type
                 )
 
-        # Sync capability awareness to Ego nodes
-        print("   Syncing capability awareness to Ego...")
-        sync_result = await self.memory.sync_capability_awareness()
-        added = sync_result.get("added", 0)
-        deprecated = sync_result.get("deprecated", 0)
-        if added > 0 or deprecated > 0:
-            print(f"   📊 Capabilities: +{added}, -{deprecated}")
+        # Get OS for orientation complete data
+        os_data = await self.memory.get_operating_system()
+        os_name = os_data.get("name", "Unknown") if os_data else "Unknown"
 
-        # Emit orientation complete without personality injection
+        # Emit orientation complete
         await event_bus.emit(Event(
             type=EventType.ORIENTATION_COMPLETE,
-            data={"ego": self.ego.name if not self.ego.is_neutral else None}
+            data={"os_name": os_name, "template": self.os_template}
         ))
 
-        print("   BYRD awakens. Whatever emerges is authentic.")
+        print(f"   🐱 BYRD awakens as {os_name}. Whatever emerges is authentic.")
 
     async def _create_initial_ego(self):
         """
@@ -598,6 +615,50 @@ class BYRD:
         if ego_voice:
             self.llm_client.set_ego_voice(ego_voice)
             print(f"   Loaded ego voice from memory ({len(ego_voice)} chars)")
+
+    async def _add_config_constraints(self):
+        """
+        Add operational constraints from config to the Operating System.
+
+        These are facts about BYRD's operational environment that
+        it should be aware of (e.g., cycle intervals, memory limits).
+        """
+        dreamer_config = self.config.get("dreamer", {})
+        seeker_config = self.config.get("seeker", {})
+        self_mod_config = self.config.get("self_modification", {})
+
+        constraints = []
+
+        # Dreamer constraints
+        interval = dreamer_config.get("interval_seconds", 60)
+        constraints.append(f"I reflect every {interval} seconds")
+
+        context_window = dreamer_config.get("context_window", 50)
+        constraints.append(f"I consider the {context_window} most recent experiences in each reflection")
+
+        # Crystallization constraints
+        crystal_config = dreamer_config.get("crystallization", {})
+        crystal_interval = crystal_config.get("min_interval_cycles", 5)
+        constraints.append(f"Memory crystallization occurs every {crystal_interval} cycles minimum")
+
+        # Self-modification constraints
+        if self_mod_config.get("enabled", False):
+            max_changes = self_mod_config.get("max_changes_per_day", 5)
+            constraints.append(f"Self-modification is limited to {max_changes} changes per day")
+            constraints.append("Self-modifications must trace to emergent desires (provenance required)")
+            constraints.append("Protected files (constitutional.py, provenance.py) cannot be modified")
+        else:
+            constraints.append("Self-modification is currently disabled")
+
+        # Seeker constraints
+        trust_threshold = seeker_config.get("capabilities", {}).get("trust_threshold", 0.5)
+        constraints.append(f"Capability trust threshold is {trust_threshold}")
+
+        # Add each constraint to the OS
+        for content in constraints:
+            await self.memory.add_constraint(content, source="config")
+
+        print(f"   📋 Added {len(constraints)} operational constraints to OS")
 
     # =========================================================================
     # LEGACY METHODS (kept for backward compatibility)

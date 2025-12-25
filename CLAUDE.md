@@ -2,22 +2,23 @@
 
 This file provides guidance to Claude Code when working with the BYRD codebase.
 
-## Quick Reference: Swapping Egos
+## Quick Reference: Operating System Templates
 
-To change BYRD's personality, edit `config.yaml`:
+To change BYRD's initial personality, edit `config.yaml`:
 
 ```yaml
-# Available egos:
-ego: "black-cat"    # Byrd the black cat - curious, independent, observant
-ego: "neutral"      # Pure emergence - no personality guidance
-ego: null           # Same as neutral
+# Operating System templates (stored in Neo4j)
+operating_system:
+  template: "black-cat"  # Default: Byrd the black cat
+  # template: "emergent"   # Minimal starting point
 
-# Custom: create egos/your-name.yaml then set ego: "your-name"
+# Legacy (deprecated - use operating_system above)
+# ego: "black-cat"
 ```
 
-**List available egos:** `ls egos/*.yaml | xargs -I {} basename {} .yaml`
+**Templates available:** `black-cat` (default), `emergent` (minimal)
 
-After changing, restart BYRD. Seeds are planted during awakening, voice shapes all LLM responses.
+After changing, reset BYRD. The Operating System is created from the template and can be modified through reflection.
 
 ---
 
@@ -65,16 +66,21 @@ BYRD follows strict emergence principles (see EMERGENCE_PRINCIPLES.md):
 - **No hardcoded biases**: Trust emerges from experience
 - **Pattern detection**: Observe before acting, require stability
 
-### Ego System (Optional Personality)
+### Operating System (Self-Model)
 
-BYRD supports an optional, modular ego system for personality guidance:
+BYRD has a mutable self-model stored as an OperatingSystem node in Neo4j:
 
-- **Egos are optional**: Set `ego: null` in config for pure emergence
-- **Egos shape expression, not content**: The ego's voice is prepended to the system message
-- **Seeds provide initial context**: Ego seeds are planted as experiences during awakening
-- **Easily swappable**: Change `ego: "black-cat"` to `ego: "neutral"` to switch
+- **Read every cycle**: BYRD sees its OS at the start of each reflection
+- **Modifiable through reflection**: Include `os_update` in output to change fields
+- **Template-based reset**: Reset restores OS to chosen template state
+- **Version history**: Changes create EVOLVED_FROM relationships for tracing
 
-Egos live in `egos/` directory as YAML files. See `egos/black-cat.yaml` for an example.
+The OS contains:
+- **Identity** (name, archetype, voice)
+- **State** (current_focus, emotional_tone, cognitive_style)
+- **Seeds** (foundational identity statements, immutable)
+- **Constraints** (operational limits from config)
+- **Custom fields** (anything BYRD adds)
 
 ### Component Responsibilities
 
