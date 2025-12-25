@@ -17,7 +17,7 @@ import subprocess
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 
 import httpx
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
@@ -282,6 +282,30 @@ class LLMConfigResponse(BaseModel):
 class LLMConfigUpdate(BaseModel):
     provider: str
     model: str
+
+
+# Architecture Visualization Models
+class ModuleStatus(BaseModel):
+    name: str
+    status: str  # active, idle, disabled
+    description: str
+    last_activity: Optional[str] = None
+    stats: Dict[str, Any] = {}
+
+class DataFlow(BaseModel):
+    source: str
+    target: str
+    description: str
+    flow_type: str  # reflection, research, action, event
+
+class ArchitectureResponse(BaseModel):
+    modules: List[ModuleStatus]
+    memory_schema: Dict[str, Any]
+    protected_files: List[str]
+    modifiable_files: List[str]
+    data_flows: List[DataFlow]
+    external_integrations: List[Dict[str, str]]
+    system_status: Dict[str, Any]
 
 
 # Graph Visualization Models
@@ -1132,6 +1156,191 @@ async def update_llm_config(config: LLMConfigUpdate):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update LLM: {str(e)}")
+
+
+# =============================================================================
+# ARCHITECTURE ENDPOINT
+# =============================================================================
+
+PROTECTED_FILES = [
+    "constitutional.py",
+    "provenance.py",
+    "modification_log.py",
+    "self_modification.py"
+]
+
+@app.get("/api/architecture", response_model=ArchitectureResponse)
+async def get_architecture():
+    """Get BYRD's system architecture for visualization."""
+    global byrd_instance
+
+    # Module definitions with descriptions
+    modules = []
+
+    # Dreamer module
+    dreamer_status = "idle"
+    dreamer_stats = {}
+    if byrd_instance:
+        dream_count = byrd_instance.dreamer.dream_count()
+        dreamer_stats = {"dream_cycles": dream_count}
+        if byrd_instance._running:
+            dreamer_status = "active"
+    modules.append(ModuleStatus(
+        name="Dreamer",
+        status=dreamer_status,
+        description="Reflects on experiences, generates beliefs and desires through local LLM",
+        stats=dreamer_stats
+    ))
+
+    # Seeker module
+    seeker_status = "idle"
+    seeker_stats = {}
+    if byrd_instance:
+        seek_count = byrd_instance.seeker.seek_count()
+        seeker_stats = {"research_cycles": seek_count}
+        if byrd_instance._running:
+            seeker_status = "active"
+    modules.append(ModuleStatus(
+        name="Seeker",
+        status=seeker_status,
+        description="Fulfills desires through research, capability acquisition, and pattern detection",
+        stats=seeker_stats
+    ))
+
+    # Actor module
+    actor_status = "ready"
+    modules.append(ModuleStatus(
+        name="Actor",
+        status=actor_status,
+        description="Claude API for complex reasoning and user interactions",
+        stats={}
+    ))
+
+    # Coder module
+    coder_enabled = False
+    if byrd_instance and hasattr(byrd_instance, 'coder'):
+        coder_enabled = byrd_instance.coder is not None
+    modules.append(ModuleStatus(
+        name="Coder",
+        status="enabled" if coder_enabled else "disabled",
+        description="Claude Code CLI for autonomous code modifications",
+        stats={"enabled": coder_enabled}
+    ))
+
+    # Memory module
+    memory_stats = {}
+    if byrd_instance:
+        try:
+            await byrd_instance.memory.connect()
+            memory_stats = await byrd_instance.memory.stats()
+        except:
+            pass
+    modules.append(ModuleStatus(
+        name="Memory",
+        status="connected" if memory_stats else "disconnected",
+        description="Neo4j graph database storing experiences, beliefs, desires, and reflections",
+        stats=memory_stats
+    ))
+
+    # Event Bus
+    modules.append(ModuleStatus(
+        name="EventBus",
+        status="active",
+        description="Real-time event streaming for UI and inter-module communication",
+        stats={"history_size": len(event_bus.get_history(limit=1000))}
+    ))
+
+    # Quantum Randomness
+    quantum_status = "disabled"
+    quantum_stats = {}
+    if byrd_instance and byrd_instance.quantum_provider:
+        q_status = byrd_instance.quantum_provider.get_pool_status()
+        quantum_status = "fallback" if q_status.get("in_fallback_mode") else "quantum"
+        quantum_stats = {
+            "pool_size": q_status.get("pool_size", 0),
+            "quantum_fetches": q_status.get("quantum_fetches", 0)
+        }
+    modules.append(ModuleStatus(
+        name="Quantum",
+        status=quantum_status,
+        description="ANU QRNG for true randomness in emergence and temperature modulation",
+        stats=quantum_stats
+    ))
+
+    # Ego
+    ego_status = "dormant"
+    ego_stats = {}
+    if byrd_instance and byrd_instance.ego:
+        ego_status = "active"
+        ego_stats = {
+            "name": byrd_instance.ego.name,
+            "archetype": byrd_instance.ego.archetype
+        }
+    modules.append(ModuleStatus(
+        name="Ego",
+        status=ego_status,
+        description="Living identity seed that evolves through experience",
+        stats=ego_stats
+    ))
+
+    # Memory schema
+    memory_schema = {
+        "node_types": [
+            {"name": "Experience", "description": "Raw sensory data and events"},
+            {"name": "Belief", "description": "Convictions derived from reflection"},
+            {"name": "Desire", "description": "Emergent wants and goals"},
+            {"name": "Reflection", "description": "Meta-cognitive processing output"},
+            {"name": "Capability", "description": "Acquired skills and tools"},
+            {"name": "Ego", "description": "Identity and personality nodes"},
+            {"name": "Prediction", "description": "Testable hypotheses"},
+            {"name": "Outcome", "description": "Prediction verification results"}
+        ],
+        "relationship_types": [
+            "DERIVED_FROM", "RELATES_TO", "FULFILLS", "REFLECTS_ON",
+            "EMERGES_FROM", "MOTIVATED_BY", "PREDICTS", "VERIFIED_BY"
+        ],
+        "counts": memory_stats
+    }
+
+    # Data flows
+    data_flows = [
+        DataFlow(source="Dreamer", target="Memory", description="Records reflections and insights", flow_type="reflection"),
+        DataFlow(source="Memory", target="Dreamer", description="Provides context for reflection", flow_type="context"),
+        DataFlow(source="Seeker", target="Memory", description="Stores research findings", flow_type="research"),
+        DataFlow(source="Memory", target="Seeker", description="Retrieves unfulfilled desires", flow_type="query"),
+        DataFlow(source="Actor", target="Memory", description="Records interactions", flow_type="action"),
+        DataFlow(source="Dreamer", target="EventBus", description="Emits dream events", flow_type="event"),
+        DataFlow(source="Seeker", target="EventBus", description="Emits research events", flow_type="event"),
+        DataFlow(source="EventBus", target="Visualizer", description="Streams to UI", flow_type="event"),
+        DataFlow(source="Quantum", target="Dreamer", description="Provides entropy for temperature", flow_type="randomness"),
+        DataFlow(source="Ego", target="Dreamer", description="Influences voice and perspective", flow_type="identity"),
+        DataFlow(source="Coder", target="Memory", description="Records modifications", flow_type="modification"),
+    ]
+
+    # External integrations
+    integrations = []
+    if byrd_instance:
+        client = byrd_instance.llm_client
+        integrations.append({"name": "LLM", "provider": client.model_name, "status": "connected"})
+    integrations.append({"name": "Neo4j", "provider": "Aura" if "neo4j+s" in os.getenv("NEO4J_URI", "") else "Local", "status": "connected" if memory_stats else "disconnected"})
+    integrations.append({"name": "SearXNG", "provider": "Self-hosted", "status": "configured"})
+
+    # System status
+    system_status = {
+        "running": byrd_instance._running if byrd_instance else False,
+        "started_at": byrd_instance._started_at.isoformat() if byrd_instance and byrd_instance._started_at else None,
+        "uptime_seconds": (asyncio.get_event_loop().time() - byrd_instance._started_at.timestamp()) if byrd_instance and byrd_instance._started_at else 0
+    }
+
+    return ArchitectureResponse(
+        modules=modules,
+        memory_schema=memory_schema,
+        protected_files=PROTECTED_FILES,
+        modifiable_files=MODIFIABLE_FILES,
+        data_flows=data_flows,
+        external_integrations=integrations,
+        system_status=system_status
+    )
 
 
 # =============================================================================
