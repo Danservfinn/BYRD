@@ -1184,6 +1184,13 @@ Output JSON with:
   Each drive: {"description": "what you want", "strength": 0.0-1.0}"""
 
         try:
+            # Debug: log before LLM call
+            print(f"💭 Calling LLM (model: {getattr(self.llm_client, 'model', 'unknown')})")
+            await event_bus.emit(Event(
+                type=EventType.REFLECTION_TEXT,
+                data={"message": f"Calling LLM (cycle {self._dream_count})"}
+            ))
+
             response = await self.llm_client.generate(
                 prompt=prompt,
                 temperature=0.7,
