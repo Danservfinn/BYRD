@@ -86,6 +86,16 @@ class EventType(Enum):
     # Hierarchical memory events
     MEMORY_SUMMARIZED = "memory_summarized"        # Older experiences compressed into summary
 
+    # Crystal memory events (semantic consolidation)
+    CRYSTAL_CREATED = "crystal_created"            # New crystal formed from nodes
+    CRYSTAL_ABSORBED = "crystal_absorbed"          # Nodes added to existing crystal
+    CRYSTAL_MERGED = "crystal_merged"              # Multiple crystals combined
+    MEMORY_CRYSTALLIZED = "memory_crystallized"    # Node joined a crystal
+    MEMORY_ARCHIVED = "memory_archived"            # Node archived (soft delete)
+    MEMORY_FORGOTTEN = "memory_forgotten"          # Node forgotten/deleted
+    CRYSTALLIZATION_PROPOSED = "crystallization_proposed"  # LLM proposals generated
+    CRYSTALLIZATION_COLLAPSED = "crystallization_collapsed"  # Quantum selected proposal
+
     # Ego events (living identity system)
     EGO_CREATED = "ego_created"          # New Ego node created (identity, trait, voice, etc.)
     EGO_EVOLVED = "ego_evolved"          # Ego node updated with history preservation

@@ -1101,13 +1101,15 @@
       awakening: { color: 0xf59e0b, emissive: 0xfcd34d, label: 'Awakening' },  // Golden amber - consciousness
       // Learning system node types
       prediction: { color: 0xeab308, emissive: 0xfde047, label: 'Prediction' }, // Yellow - testable hypothesis
-      task: { color: 0x6366f1, emissive: 0xa5b4fc, label: 'Task' }             // Indigo - external goal
+      task: { color: 0x6366f1, emissive: 0xa5b4fc, label: 'Task' },            // Indigo - external goal
+      // Crystal memory system
+      crystal: { color: 0x8b5cf6, emissive: 0xc4b5fd, label: 'Crystal' }       // Purple - crystallized memories
     };
 
     // System node types (cannot be created by BYRD, have fixed colors)
     const SYSTEM_NODE_TYPES = new Set([
       'Experience', 'Belief', 'Desire', 'Reflection', 'Capability', 'Mutation',
-      'Ego', 'QuantumMoment', 'SystemState', 'Prediction', 'Task'
+      'Ego', 'QuantumMoment', 'SystemState', 'Prediction', 'Task', 'Crystal'
     ]);
 
     // Custom node type colors - generated dynamically with distinct hues
@@ -2110,6 +2112,12 @@
         case 'ego':
           // Ego nodes use icosahedron - 20 faces, represents multifaceted identity
           geometry = new THREE.IcosahedronGeometry(size, 0);
+          break;
+        case 'crystal':
+          // Crystal nodes - larger icosahedron, represents unified crystallized memories
+          // Size scales with node_count (stored in importance)
+          const crystalSize = size * 1.5;
+          geometry = new THREE.IcosahedronGeometry(crystalSize, 1);
           break;
         default: // experience
           geometry = new THREE.SphereGeometry(size * 0.8, 16, 16);
@@ -3625,6 +3633,109 @@
     }
 
     // ==========================================================================
+    // CRYSTAL MEMORY SYSTEM HELPERS
+    // ==========================================================================
+
+    /**
+     * Update crystal node size based on absorbed node count
+     */
+    function updateCrystalSize(crystalId, nodeCount) {
+      if (!crystalId) return;
+
+      const node = nodes3D.find(n => n.userData?.id === crystalId && n.userData?.type === 'crystal');
+      if (!node) return;
+
+      // Scale crystal based on node count (minimum 1.0, grows with more nodes)
+      const newScale = Math.min(2.5, 1.0 + nodeCount * 0.1);
+      node.userData.targetScale = new THREE.Vector3(newScale, newScale, newScale);
+
+      // Flash to indicate growth
+      const originalColor = node.material.color.getHex();
+      node.material.color.setHex(0xffffff);
+      setTimeout(() => {
+        node.material.color.setHex(originalColor);
+      }, 200);
+
+      node.userData.nodeCount = nodeCount;
+    }
+
+    /**
+     * Remove a node by ID (used for forgotten nodes or merged crystals)
+     */
+    function removeNodeById(nodeId) {
+      if (!nodeId) return;
+
+      const nodeIndex = nodes3D.findIndex(n => n.userData?.id === nodeId);
+      if (nodeIndex === -1) return;
+
+      const node = nodes3D[nodeIndex];
+      nodes3D.splice(nodeIndex, 1);
+      fadeOutAndRemove(node);
+      connectionCounts.delete(nodeId);
+
+      // Remove connections to this node
+      connections3D = connections3D.filter(conn => {
+        if (conn.userData?.sourceId === nodeId || conn.userData?.targetId === nodeId) {
+          scene.remove(conn);
+          if (conn.geometry) conn.geometry.dispose();
+          if (conn.material) conn.material.dispose();
+          return false;
+        }
+        return true;
+      });
+
+      // Update node count display
+      updateRenderedCounts();
+    }
+
+    /**
+     * Dim a node (for crystallized state - still visible but faded)
+     */
+    function dimNodeById(nodeId) {
+      if (!nodeId) return;
+
+      const node = nodes3D.find(n => n.userData?.id === nodeId);
+      if (!node) return;
+
+      // Reduce opacity to show crystallized state
+      node.material.opacity = 0.4;
+
+      // Slightly shrink to make room for crystal
+      const currentScale = node.scale.x;
+      node.userData.targetScale = new THREE.Vector3(currentScale * 0.7, currentScale * 0.7, currentScale * 0.7);
+
+      node.userData.state = 'crystallized';
+    }
+
+    /**
+     * Fade a node to specific opacity (for archived state)
+     */
+    function fadeNodeById(nodeId, targetOpacity = 0.3) {
+      if (!nodeId) return;
+
+      const node = nodes3D.find(n => n.userData?.id === nodeId);
+      if (!node) return;
+
+      // Fade to target opacity
+      const startOpacity = node.material.opacity;
+      const duration = 500;
+      const startTime = Date.now();
+
+      function animate() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        node.material.opacity = startOpacity + (targetOpacity - startOpacity) * progress;
+
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        }
+      }
+      animate();
+
+      node.userData.state = 'archived';
+    }
+
+    // ==========================================================================
     // INTERACTION (Phase 4: Enhanced)
     // ==========================================================================
     function onMouseMove(event) {
@@ -4789,6 +4900,71 @@
           // Task failed
           updateTaskNode(event.data?.id, 'failed');
           updateStatus('Task failed', 'red');
+          break;
+
+        // ==================== Crystal Memory Events ====================
+
+        case 'crystal_created':
+          // New crystal formed from consolidated nodes
+          const crystalSize = Math.min(1.0, 0.5 + (event.data?.node_count || 2) * 0.1);
+          createNode3D('crystal', event.data?.essence || 'Crystal', event.data?.crystal_id, crystalSize);
+          updateStatus(`Crystal formed: ${event.data?.node_count || 0} memories unified`, 'violet');
+          pulseCore('crystal', 0.8);
+          break;
+
+        case 'crystal_absorbed':
+          // Nodes absorbed into existing crystal
+          updateCrystalSize(event.data?.crystal_id, event.data?.new_total || 0);
+          updateStatus(`Crystal grew to ${event.data?.new_total || 0} facets`, 'violet');
+          break;
+
+        case 'crystal_merged':
+          // Multiple crystals merged into one
+          const sourceIds = event.data?.source_crystal_ids || [];
+          // Remove old crystal nodes
+          sourceIds.forEach(id => {
+            removeNodeById(id);
+          });
+          // Create merged crystal
+          createNode3D('crystal', event.data?.essence || 'Merged Crystal', event.data?.merged_crystal_id, 0.8);
+          updateStatus(`${sourceIds.length} crystals merged`, 'violet');
+          pulseCore('crystal', 1.0);
+          break;
+
+        case 'memory_crystallized':
+          // Node joined a crystal - dim it to show crystallized state
+          dimNodeById(event.data?.node_id);
+          // Create connection to crystal
+          if (event.data?.crystal_id) {
+            setTimeout(() => {
+              createConnection(event.data?.node_id, event.data?.crystal_id, 'crystallized_into');
+            }, 100);
+          }
+          break;
+
+        case 'memory_archived':
+          // Node archived (soft delete) - fade it out
+          fadeNodeById(event.data?.node_id, 0.3);
+          updateStatus('Memory archived', 'gray');
+          break;
+
+        case 'memory_forgotten':
+          // Node forgotten (hard delete) - remove it
+          removeNodeById(event.data?.node_id);
+          updateStatus('Memory forgotten', 'slate');
+          break;
+
+        case 'crystallization_proposed':
+          // LLM generated proposals
+          if (!quantumState.subtleMode) {
+            updateStatus(`Contemplating ${event.data?.proposal_count || 0} crystallization paths...`, 'violet');
+          }
+          break;
+
+        case 'crystallization_collapsed':
+          // Quantum selected a proposal
+          const source = event.data?.quantum_source === 'quantum' ? '⚛️' : '🎲';
+          updateStatus(`${source} Crystallization: ${event.data?.operation}`, 'purple');
           break;
 
         case 'seek_started':

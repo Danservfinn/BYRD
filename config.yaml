@@ -138,6 +138,27 @@ dreamer:
     batch_size: 20            # Max experiences to process per cycle
     interval_cycles: 10       # Run summarization every N dream cycles
 
+  # ---------------------------------------------------------------------------
+  # MEMORY CRYSTALLIZATION (Semantic Consolidation)
+  # ---------------------------------------------------------------------------
+  # LLM-driven memory consolidation where related concepts form Crystal nodes.
+  # Uses quantum multi-stream proposals: generate N parallel proposals,
+  # quantum observation collapses to one reality.
+  crystallization:
+    enabled: true
+    interval_cycles: 5        # Run crystallization every N dream cycles
+    min_nodes_for_crystal: 2  # Minimum nodes required to form a crystal
+    max_operations_per_cycle: 3  # Max crystal operations per cycle
+    min_node_age_hours: 0.5   # Only consider nodes older than this
+
+    # Quantum multi-stream settings
+    proposal_streams: 3       # Generate N parallel crystallization proposals
+    quantum_collapse: true    # Use quantum to select which proposal manifests
+
+    # Node state management
+    archive_on_crystallize: true  # Archive source nodes after crystallization
+    forget_threshold_days: 7      # Archived nodes older than this may be forgotten
+
 # =============================================================================
 # SEEKER (Desire Fulfillment)
 # =============================================================================

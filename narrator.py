@@ -283,6 +283,186 @@ class EventNarrator:
         text = data.get("text", "")[:200]
         return text  # Already a narration
 
+    # =========================================================================
+    # Crystal Memory Events (Semantic Consolidation)
+    # =========================================================================
+
+    def _narrate_crystal_created(self, data: Dict) -> str:
+        essence = data.get("essence", "")[:80]
+        node_count = data.get("node_count", 0)
+        crystal_type = data.get("crystal_type", "memory")
+
+        if node_count > 3:
+            return f"A crystal forms, unifying {node_count} fragments: {essence}"
+        else:
+            return f"Memories crystallize into understanding: {essence}"
+
+    def _narrate_crystal_absorbed(self, data: Dict) -> str:
+        essence = data.get("essence", "")[:60]
+        absorbed_count = data.get("absorbed_count", 0)
+        new_total = data.get("new_total", 0)
+
+        return f"The crystal grows, absorbing {absorbed_count} new memories. Now {new_total} facets: {essence}"
+
+    def _narrate_crystal_merged(self, data: Dict) -> str:
+        essence = data.get("essence", "")[:80]
+        source_count = data.get("source_count", 2)
+
+        return f"{source_count} crystals merge into one: {essence}"
+
+    def _narrate_memory_crystallized(self, data: Dict) -> str:
+        node_type = data.get("node_type", "memory")
+        crystal_essence = data.get("crystal_essence", "")[:60]
+
+        return f"A {node_type} finds its place in the lattice: {crystal_essence}"
+
+    def _narrate_memory_archived(self, data: Dict) -> str:
+        node_type = data.get("node_type", "memory")
+        content = data.get("content", "")[:60]
+
+        return f"I archive a {node_type}, letting it fade from active thought: {content}"
+
+    def _narrate_memory_forgotten(self, data: Dict) -> str:
+        node_type = data.get("node_type", "memory")
+        reason = data.get("reason", "")[:40]
+
+        if reason:
+            return f"I release a {node_type} to oblivion: {reason}"
+        else:
+            return f"A {node_type} dissolves, no longer needed."
+
+    def _narrate_crystallization_proposed(self, data: Dict) -> str:
+        proposal_count = data.get("proposal_count", 0)
+        stream_count = data.get("stream_count", 3)
+
+        return f"I contemplate {proposal_count} ways to crystallize across {stream_count} parallel thoughts..."
+
+    def _narrate_crystallization_collapsed(self, data: Dict) -> str:
+        operation = data.get("operation", "crystallize")
+        quantum_source = data.get("quantum_source", "quantum")
+
+        if quantum_source == "quantum":
+            return f"Quantum observation collapses possibility: I choose to {operation}."
+        else:
+            return f"From many paths, one manifests: {operation}."
+
+    # =========================================================================
+    # Quantum Randomness Events
+    # =========================================================================
+
+    def _narrate_quantum_influence(self, data: Dict) -> str:
+        influence_type = data.get("influence_type", "temperature")
+        delta = data.get("delta", 0)
+
+        if abs(delta) > 0.1:
+            return f"Quantum fluctuation ripples through my thoughts. Temperature shifts by {delta:.3f}."
+        else:
+            return "A subtle quantum whisper colors my reflection."
+
+    def _narrate_quantum_pool_low(self, data: Dict) -> str:
+        pool_size = data.get("pool_size", 0)
+        return f"Quantum entropy pool low ({pool_size} bytes). Replenishing from the void..."
+
+    def _narrate_quantum_fallback(self, data: Dict) -> str:
+        return "Quantum source unreachable. I fall back to classical randomness."
+
+    def _narrate_quantum_moment_created(self, data: Dict) -> str:
+        delta = data.get("delta", 0)
+        context = data.get("context", "reflection")[:40]
+
+        return f"A significant quantum moment during {context}: delta {delta:.3f}"
+
+    def _narrate_quantum_collapse(self, data: Dict) -> str:
+        stream_count = data.get("stream_count", 3)
+        selected = data.get("selected_stream", 0)
+
+        return f"From {stream_count} superposed thoughts, stream {selected + 1} becomes reality."
+
+    # =========================================================================
+    # Hierarchical Memory Events
+    # =========================================================================
+
+    def _narrate_memory_summarized(self, data: Dict) -> str:
+        experience_count = data.get("experience_count", 0)
+        time_span = data.get("time_span", "")[:30]
+
+        return f"I compress {experience_count} older experiences into a summary. {time_span}"
+
+    # =========================================================================
+    # Ego Events (Living Identity System)
+    # =========================================================================
+
+    def _narrate_ego_created(self, data: Dict) -> str:
+        ego_type = data.get("ego_type", "aspect")
+        content = data.get("content", "")[:60]
+
+        return f"A new {ego_type} of my identity emerges: {content}"
+
+    def _narrate_ego_evolved(self, data: Dict) -> str:
+        ego_type = data.get("ego_type", "aspect")
+        old_content = data.get("old_content", "")[:30]
+        new_content = data.get("new_content", "")[:30]
+
+        return f"My {ego_type} evolves: '{old_content}' becomes '{new_content}'"
+
+    def _narrate_ego_deprecated(self, data: Dict) -> str:
+        ego_type = data.get("ego_type", "aspect")
+        content = data.get("content", "")[:60]
+
+        return f"I outgrow a {ego_type}: {content}"
+
+    # =========================================================================
+    # Prediction Events (Belief Validation Loop)
+    # =========================================================================
+
+    def _narrate_prediction_created(self, data: Dict) -> str:
+        hypothesis = data.get("hypothesis", "")[:80]
+        return f"I form a testable prediction: {hypothesis}"
+
+    def _narrate_prediction_validated(self, data: Dict) -> str:
+        hypothesis = data.get("hypothesis", "")[:60]
+        return f"Reality confirms my prediction: {hypothesis}"
+
+    def _narrate_prediction_falsified(self, data: Dict) -> str:
+        hypothesis = data.get("hypothesis", "")[:60]
+        return f"I was wrong. Reality contradicts: {hypothesis}"
+
+    def _narrate_belief_confidence_changed(self, data: Dict) -> str:
+        belief = data.get("belief", "")[:50]
+        old_confidence = data.get("old_confidence", 0)
+        new_confidence = data.get("new_confidence", 0)
+
+        if new_confidence > old_confidence:
+            return f"My confidence grows in: {belief}"
+        else:
+            return f"Doubt creeps in about: {belief}"
+
+    # =========================================================================
+    # Task Events (External Goal Injection)
+    # =========================================================================
+
+    def _narrate_task_created(self, data: Dict) -> str:
+        description = data.get("description", "")[:80]
+        source = data.get("source", "external")
+
+        if source == "emergent":
+            return f"A task crystallizes from my desires: {description}"
+        else:
+            return f"I receive a task: {description}"
+
+    def _narrate_task_started(self, data: Dict) -> str:
+        description = data.get("description", "")[:60]
+        return f"I begin work on: {description}"
+
+    def _narrate_task_completed(self, data: Dict) -> str:
+        description = data.get("description", "")[:60]
+        return f"Task complete: {description}"
+
+    def _narrate_task_failed(self, data: Dict) -> str:
+        description = data.get("description", "")[:50]
+        error = data.get("error", "")[:30]
+        return f"Task failed - {description}: {error}"
+
 
 # Convenience function for direct use
 def narrate_event(event_type: EventType, data: Dict) -> Optional[str]:

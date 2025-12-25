@@ -628,6 +628,90 @@ async def get_predictions(status: str = None, limit: int = 50):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==============================================================================
+# CRYSTAL MEMORY SYSTEM ENDPOINTS
+# ==============================================================================
+
+@app.get("/api/crystals")
+async def get_crystals(limit: int = 50):
+    """
+    Get all active crystals with their metadata.
+
+    Returns crystals ordered by creation date (newest first).
+    Each crystal includes: id, essence, crystal_type, facets, node_count,
+    confidence, quantum metadata, and timestamps.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+        crystals = await byrd_instance.memory.get_all_crystals(limit=limit)
+        stats = await byrd_instance.memory.get_crystal_stats()
+
+        return {
+            "crystals": crystals,
+            "stats": stats
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/crystals/{crystal_id}")
+async def get_crystal(crystal_id: str):
+    """
+    Get a specific crystal with all its source nodes.
+
+    Returns the crystal metadata plus all nodes that have been
+    crystallized into it (CRYSTALLIZED_INTO relationships).
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+        crystal = await byrd_instance.memory.get_crystal_with_sources(crystal_id)
+
+        if not crystal:
+            raise HTTPException(status_code=404, detail="Crystal not found")
+
+        return crystal
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/crystals/stats")
+async def get_crystal_stats():
+    """
+    Get crystallization statistics.
+
+    Returns counts of: total crystals, total crystallized nodes,
+    node state distribution, and crystallization activity.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+        stats = await byrd_instance.memory.get_crystal_stats()
+        state_counts = await byrd_instance.memory.count_by_state()
+
+        return {
+            "crystal_stats": stats,
+            "node_states": state_counts
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/genesis")
 async def get_genesis():
     """
