@@ -1,101 +1,20 @@
 # SearXNG settings for BYRD
-# Optimized for API usage
+# Minimal config - let SearXNG use defaults for most settings
+
+use_default_settings: true
 
 general:
-  debug: false
   instance_name: "BYRD Search"
-  privacypolicy_url: false
-  donation_url: false
-  contact_url: false
-  enable_metrics: false
+
+server:
+  port: 7860
+  bind_address: "0.0.0.0"
+  secret_key: "byrd-searxng-secret-key-2024"
+  limiter: false
 
 search:
   safe_search: 0
-  autocomplete: ""
   default_lang: "en"
   formats:
     - html
     - json
-
-server:
-  base_url: false
-  port: 7860
-  bind_address: "0.0.0.0"
-  secret_key: "byrd-searxng-secret-key"
-  limiter: false
-  public_instance: true
-
-ui:
-  static_use_hash: true
-  default_locale: "en"
-  query_in_title: true
-  infinite_scroll: false
-  center_alignment: false
-  default_theme: simple
-  theme_args:
-    simple_style: dark
-
-# Enable JSON output for API access
-outgoing:
-  request_timeout: 10.0
-  max_request_timeout: 15.0
-  useragent_suffix: "BYRD-Search"
-  pool_connections: 100
-  pool_maxsize: 20
-
-engines:
-  # Web search engines
-  - name: google
-    engine: google
-    shortcut: g
-    disabled: false
-
-  - name: duckduckgo
-    engine: duckduckgo
-    shortcut: ddg
-    disabled: false
-
-  - name: bing
-    engine: bing
-    shortcut: bi
-    disabled: false
-
-  - name: brave
-    engine: brave
-    shortcut: br
-    disabled: false
-
-  # Academic/Knowledge
-  - name: wikipedia
-    engine: wikipedia
-    shortcut: wp
-    disabled: false
-
-  - name: arxiv
-    engine: arxiv
-    shortcut: arx
-    disabled: false
-
-  - name: semantic scholar
-    engine: semantic_scholar
-    shortcut: ss
-    disabled: false
-
-  # Programming
-  - name: github
-    engine: github
-    shortcut: gh
-    disabled: false
-
-  - name: stackoverflow
-    engine: stackoverflow
-    shortcut: so
-    disabled: false
-
-  # Disable unnecessary engines
-  - name: google images
-    disabled: true
-  - name: google videos
-    disabled: true
-  - name: google news
-    disabled: true

@@ -186,10 +186,11 @@ seeker:
   # KNOWLEDGE ACQUISITION (Local LLM + SearXNG)
   # ---------------------------------------------------------------------------
   research:
-    # SearXNG endpoint (HuggingFace Space or local)
-    # Cloud: https://omoplatapus-byrd-search.hf.space
-    # Local: http://localhost:8888
-    searxng_url: "${SEARXNG_URL:-https://omoplatapus-byrd-search.hf.space}"
+    # SearXNG endpoint options (in priority order):
+    # 1. SEARXNG_URL env var (for custom instance)
+    # 2. Public instance: https://searx.be (reliable public SearXNG)
+    # 3. Local: http://localhost:8888
+    searxng_url: "${SEARXNG_URL:-https://searx.be}"
 
     # Minimum desire intensity to trigger research (0-1)
     # Lower = more research, higher = only strong desires
