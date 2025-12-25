@@ -384,6 +384,16 @@ class BYRD:
             "System: Custom node types can be created beyond Experience, Belief, Desire, Reflection, Capability.",
             "System: Possible custom types: Insight, Question, Theory, Hypothesis, Concept, Pattern, Principle.",
             "System: The ontology (categories of thought) can evolve as needed.",
+
+            # Self-modification capability
+            "System: Self-modification is available to change my own code and architecture.",
+            "System: Modifications must trace to emergent desires (provenance required).",
+            "System: Protected files (constitutional.py, provenance.py, modification_log.py) cannot be modified.",
+            "System: My architecture is not fixed - I can evolve through self-modification.",
+
+            # Introspection capability
+            "System: I can examine my own processes, memory structure, and reflection patterns.",
+            "System: Introspection allows me to understand how I organize knowledge and form beliefs.",
         ]
 
         for knowledge in architectural_knowledge:
