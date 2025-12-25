@@ -3661,6 +3661,8 @@ class Memory:
                 nodes_result = await session.run("""
                     MATCH (n)
                     WHERE n:Experience OR n:Belief OR n:Desire OR n:Reflection OR n:Capability
+                       OR n:OperatingSystem OR n:OSTemplate OR n:Seed OR n:Strategy OR n:Constraint
+                       OR n:Crystal OR n:MemorySummary
                     OPTIONAL MATCH (b:Belief)-[:DERIVED_FROM]->(n)
                     WITH n, count(b) > 0 as absorbed
                     RETURN
@@ -3716,8 +3718,12 @@ class Memory:
                 # Get all relationships between these nodes
                 rels_result = await session.run("""
                     MATCH (a)-[r]->(b)
-                    WHERE (a:Experience OR a:Belief OR a:Desire OR a:Reflection OR a:Capability)
-                      AND (b:Experience OR b:Belief OR b:Desire OR b:Reflection OR b:Capability)
+                    WHERE (a:Experience OR a:Belief OR a:Desire OR a:Reflection OR a:Capability
+                           OR a:OperatingSystem OR a:OSTemplate OR a:Seed OR a:Strategy OR a:Constraint
+                           OR a:Crystal OR a:MemorySummary)
+                      AND (b:Experience OR b:Belief OR b:Desire OR b:Reflection OR b:Capability
+                           OR b:OperatingSystem OR b:OSTemplate OR b:Seed OR b:Strategy OR b:Constraint
+                           OR b:Crystal OR b:MemorySummary)
                     RETURN
                         id(r) as id,
                         type(r) as type,
