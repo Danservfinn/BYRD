@@ -50,6 +50,7 @@ Real-time event emission for UI streaming and debugging.
 - `SEEK_CYCLE_END`
 - `RESEARCH_START`
 - `RESEARCH_COMPLETE`
+- `INTROSPECTION_COMPLETE` - Self-observation strategy completed
 
 ### Self-Modification Events
 - `MODIFICATION_PROPOSED`

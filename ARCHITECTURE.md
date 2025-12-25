@@ -726,6 +726,75 @@ When the desire type is "capability":
 
 ---
 
+## Internal Action Strategies
+
+Not all desires can be fulfilled through web search. BYRD has internal strategies for introspective and self-directed desires.
+
+### Strategy Routing
+
+The Seeker detects strategy hints in desire descriptions and routes to appropriate handlers:
+
+| Strategy | Trigger Hints | Purpose |
+|----------|---------------|---------|
+| **search** | "search", "look up", "find", "research" | External knowledge acquisition |
+| **code** | "code", "write", "implement", "build" | Code generation via Coder |
+| **install** | "install", "add", "acquire", "capability" | Capability installation |
+| **curate** | "optimize", "clean", "consolidate", "resolve inconsistency" | Graph curation and maintenance |
+| **reconcile_orphans** | "orphan", "integrate", "fragmentation", "unify" | Connect isolated experiences |
+| **self_modify** | "add to myself", "extend my", "re-enable", "activate" | Self-modification of code |
+| **introspect** | "analyze myself", "examine my", "verify", "audit my" | Pure self-observation |
+
+### Introspection Strategy
+
+The introspect strategy enables BYRD to fulfill desires for self-understanding without modifying the graph:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   INTROSPECTION FLOW                            │
+│                                                                 │
+│   Desire: "Analyze my graph health"                            │
+│          ↓                                                      │
+│   ┌─────────────┐                                               │
+│   │ GATHER      │  - Graph statistics                          │
+│   │ internal    │  - Orphan node count                         │
+│   │ state       │  - Duplicate beliefs                          │
+│   │             │  - Active desires/beliefs                     │
+│   └──────┬──────┘                                               │
+│          ↓                                                      │
+│   ┌─────────────┐                                               │
+│   │ BUILD       │  Comprehensive report                        │
+│   │ report      │  (graph overview, health indicators,          │
+│   │             │   active mind state)                          │
+│   └──────┬──────┘                                               │
+│          ↓                                                      │
+│   ┌─────────────┐                                               │
+│   │ RECORD as   │  Experience type: "introspection"            │
+│   │ experience  │  Becomes input to next reflection            │
+│   └──────┬──────┘                                               │
+│          ↓                                                      │
+│   ┌─────────────┐                                               │
+│   │ EMIT        │  INTROSPECTION_COMPLETE event                │
+│   │ event       │  For visualization                            │
+│   └─────────────┘                                               │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Why Internal Strategies Matter
+
+Before internal strategies, desires like "integrate my orphaned nodes" would fail because they were routed to web search, which returned no results. Now:
+
+| Desire | Before | After |
+|--------|--------|-------|
+| "Integrate orphaned nodes" | `search` → fails | `reconcile_orphans` → succeeds |
+| "Resolve graph inconsistency" | `search` → fails | `curate` → succeeds |
+| "Re-enable self-modification" | `search` → fails | `self_modify` → succeeds |
+| "Analyze my memory state" | `search` → fails | `introspect` → succeeds |
+
+This enables BYRD to fulfill introspective desires through action on its own systems rather than futile external searches.
+
+---
+
 ## The Self-Modification System
 
 BYRD can modify its own core code. This is the logical consequence of authentic emergence: if desires are genuine, BYRD must have the power to act on them—including desires to change itself.
