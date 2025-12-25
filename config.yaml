@@ -387,3 +387,44 @@ quantum:
   # This implements many-worlds interpretation for BYRD's inner monologue.
   inner_voice_streams: 3         # Number of parallel thought branches
   inner_voice_collapse: true     # Enable quantum selection of which manifests
+
+# =============================================================================
+# GRAPH ALGORITHMS (Advanced Memory Analysis)
+# =============================================================================
+# Custom graph algorithm implementations for enhanced memory utilization.
+# All algorithms are pure Python for Neo4j Aura compatibility.
+graph_algorithms:
+  # PageRank for importance scoring
+  pagerank:
+    enabled: true
+    damping: 0.85               # Damping factor (standard is 0.85)
+    iterations: 20              # Max iterations for convergence
+    tolerance: 0.000001         # Convergence threshold
+    use_for_retrieval: true     # Use PageRank scores in memory retrieval
+
+  # Spreading activation for associative memory
+  spreading_activation:
+    enabled: true
+    decay: 0.6                  # Activation decay per hop
+    threshold: 0.1              # Minimum activation to keep
+    max_nodes: 50               # Maximum nodes to return
+
+  # Causal relationship tracking
+  causal_relationships:
+    enabled: true
+    detection_in_reflection: true  # Detect causal links during dreaming
+    min_strength: 0.3           # Minimum strength to record
+
+  # Contradiction detection between beliefs
+  contradiction_detection:
+    enabled: true
+    check_interval_cycles: 5    # Check every N dream cycles
+    semantic_check: true        # Use LLM for semantic contradiction check
+    similarity_threshold: 0.7   # Keyword similarity to flag for check
+
+  # Dream walks (quantum-influenced graph traversal)
+  dream_walks:
+    enabled: true
+    steps: 10                   # Steps per walk
+    walks_per_cycle: 3          # Number of walks per dream cycle
+    quantum_influence: true     # Use quantum randomness for perturbation

@@ -20,6 +20,7 @@ from memory import Memory
 from event_bus import event_bus, Event, EventType
 from llm_client import LLMClient
 from quantum_randomness import get_quantum_provider, EntropySource
+from graph_algorithms import MemoryGraphAlgorithms
 
 
 class Dreamer:
@@ -101,6 +102,34 @@ class Dreamer:
         self.crystallization_archive_on_crystal = crystallization_config.get("archive_on_crystallize", True)
         self.crystallization_forget_days = crystallization_config.get("forget_threshold_days", 7)
         self._cycles_since_crystallization = 0
+
+        # Graph algorithms configuration (advanced memory analysis)
+        graph_algo_config = config.get("graph_algorithms", {})
+        self.graph_algorithms_enabled = any([
+            graph_algo_config.get("pagerank", {}).get("enabled", False),
+            graph_algo_config.get("spreading_activation", {}).get("enabled", False),
+            graph_algo_config.get("dream_walks", {}).get("enabled", False),
+            graph_algo_config.get("contradiction_detection", {}).get("enabled", False)
+        ])
+        if self.graph_algorithms_enabled:
+            self.graph_algorithms = MemoryGraphAlgorithms(graph_algo_config)
+        else:
+            self.graph_algorithms = None
+
+        # Dream walk configuration
+        self.dream_walks_enabled = graph_algo_config.get("dream_walks", {}).get("enabled", False)
+        self.dream_walks_per_cycle = graph_algo_config.get("dream_walks", {}).get("walks_per_cycle", 3)
+        self.dream_walk_steps = graph_algo_config.get("dream_walks", {}).get("steps", 10)
+
+        # Contradiction detection configuration
+        self.contradiction_detection_enabled = graph_algo_config.get("contradiction_detection", {}).get("enabled", False)
+        self.contradiction_check_interval = graph_algo_config.get("contradiction_detection", {}).get("check_interval_cycles", 5)
+        self.contradiction_semantic_check = graph_algo_config.get("contradiction_detection", {}).get("semantic_check", True)
+        self._cycles_since_contradiction_check = 0
+
+        # PageRank configuration
+        self.pagerank_enabled = graph_algo_config.get("pagerank", {}).get("enabled", False)
+        self.pagerank_use_for_retrieval = graph_algo_config.get("pagerank", {}).get("use_for_retrieval", True)
 
         # Activity tracking for adaptive intervals
         self._recent_beliefs: deque = deque(maxlen=50)  # (timestamp, content)
@@ -412,6 +441,73 @@ class Dreamer:
                 )
                 print(f"💭 Semantic search found {len(semantic_memories)} relevant memories")
 
+        # DREAM WALKS - Quantum-influenced graph traversal for associative memory
+        dream_walk_context = []
+        if self.dream_walks_enabled and self.graph_algorithms and recent:
+            try:
+                # Get quantum delta for walk perturbation
+                quantum_delta = None
+                if self.quantum_enabled and self.quantum_provider:
+                    from quantum_randomness import get_quantum_float
+                    quantum_delta = get_quantum_float() * 0.3  # Scale to reasonable perturbation
+
+                # Perform dream walks from recent experiences
+                start_nodes = [e["id"] for e in recent[:3] if e.get("id")]
+                for start_id in start_nodes[:self.dream_walks_per_cycle]:
+                    walk_result = await self.graph_algorithms.perform_dream_walk(
+                        self.memory,
+                        start_id,
+                        steps=self.dream_walk_steps,
+                        quantum_delta=quantum_delta
+                    )
+                    if len(walk_result.path) > 1:
+                        dream_walk_context.append({
+                            "path": walk_result.path,
+                            "types": walk_result.node_types,
+                            "weight": walk_result.total_weight,
+                            "quantum": walk_result.quantum_influenced
+                        })
+
+                        # Emit event for visualization
+                        await event_bus.emit(Event(
+                            type=EventType.DREAM_WALK_COMPLETED,
+                            data={
+                                "cycle": self._dream_count,
+                                "path": walk_result.path,
+                                "node_types": walk_result.node_types,
+                                "quantum_influenced": walk_result.quantum_influenced
+                            }
+                        ))
+
+                if dream_walk_context:
+                    print(f"💭 Dream walks explored {sum(len(w['path']) for w in dream_walk_context)} nodes")
+            except Exception as e:
+                print(f"⚠️ Dream walk error: {e}")
+
+        # PAGERANK - Get importance-weighted memories
+        important_memories = []
+        if self.pagerank_enabled and self.pagerank_use_for_retrieval and self.graph_algorithms:
+            try:
+                # Get most important nodes by PageRank
+                important = await self.graph_algorithms.get_important_memories(
+                    self.memory,
+                    limit=10,
+                    personalization={e["id"]: 1.0 for e in recent[:5] if e.get("id")}
+                )
+                important_memories = [{"id": node_id, "importance": score} for node_id, score in important]
+
+                if important_memories:
+                    await event_bus.emit(Event(
+                        type=EventType.PAGERANK_COMPUTED,
+                        data={
+                            "cycle": self._dream_count,
+                            "top_nodes": important_memories[:5]
+                        }
+                    ))
+                    print(f"💭 PageRank identified {len(important_memories)} important memories")
+            except Exception as e:
+                print(f"⚠️ PageRank error: {e}")
+
         # Emit event for memories being accessed (for visualization highlighting)
         all_accessed_ids = recent_ids.copy()
         all_accessed_ids.extend([r.get("id") for r in related if r.get("id")])
@@ -420,6 +516,13 @@ class Dreamer:
         all_accessed_ids.extend([d.get("id") for d in active_desires if d.get("id")])
         all_accessed_ids.extend([r.get("id") for r in previous_reflections if r.get("id")])
         all_accessed_ids.extend([s.get("id") for s in semantic_memories if s.get("id")])
+
+        # Add dream walk nodes to accessed IDs
+        for walk in dream_walk_context:
+            all_accessed_ids.extend(walk.get("path", []))
+
+        # Add importance-ranked nodes to accessed IDs
+        all_accessed_ids.extend([m.get("id") for m in important_memories if m.get("id")])
 
         # Track access counts for heat map visualization (Phase 4)
         await self.memory.increment_access_count(all_accessed_ids)
@@ -503,6 +606,13 @@ class Dreamer:
             self._cycles_since_crystallization >= self.crystallization_interval_cycles):
             await self._maybe_crystallize()
             self._cycles_since_crystallization = 0
+
+        # Periodically check for belief contradictions
+        self._cycles_since_contradiction_check += 1
+        if (self.contradiction_detection_enabled and
+            self._cycles_since_contradiction_check >= self.contradiction_check_interval):
+            await self._check_contradictions()
+            self._cycles_since_contradiction_check = 0
 
         print(f"💭 Dream #{self._dream_count}: keys={output_keys}")
 
@@ -685,6 +795,128 @@ SUMMARY:"""
             print(f"Error in crystallization cycle: {e}")
             import traceback
             traceback.print_exc()
+
+    async def _check_contradictions(self):
+        """
+        Check for contradictions between beliefs using graph algorithms.
+
+        Detects both structural contradictions (explicit CONTRADICTS relationships)
+        and semantic contradictions (similar content with conflicting assertions).
+        """
+        try:
+            print("🔍 Checking for belief contradictions...")
+
+            if not self.graph_algorithms:
+                return
+
+            # Get structural contradictions from existing relationships
+            structural = await self.graph_algorithms.detect_belief_contradictions(
+                self.memory
+            )
+
+            # Get candidates for semantic contradiction checking
+            semantic_candidates = []
+            if self.contradiction_semantic_check:
+                semantic_candidates = await self.graph_algorithms.get_semantic_contradiction_candidates(
+                    self.memory,
+                    similarity_threshold=0.7
+                )
+
+            total_found = len(structural) + len(semantic_candidates)
+
+            if total_found == 0:
+                print("🔍 No contradictions detected")
+                return
+
+            print(f"🔍 Found {len(structural)} structural, {len(semantic_candidates)} semantic candidates")
+
+            # Process structural contradictions
+            for contradiction in structural:
+                await event_bus.emit(Event(
+                    type=EventType.CONTRADICTION_DETECTED,
+                    data={
+                        "belief1_id": contradiction.node1_id,
+                        "belief2_id": contradiction.node2_id,
+                        "belief1_content": contradiction.node1_content[:100],
+                        "belief2_content": contradiction.node2_content[:100],
+                        "confidence": contradiction.confidence,
+                        "method": "structural"
+                    }
+                ))
+
+            # For semantic candidates, use LLM to verify contradiction
+            verified_count = 0
+            for belief1_id, belief2_id, similarity in semantic_candidates[:5]:  # Limit LLM calls
+                is_contradiction = await self._verify_contradiction_with_llm(
+                    belief1_id, belief2_id
+                )
+                if is_contradiction:
+                    verified_count += 1
+                    # Mark in database
+                    await self.memory.mark_contradiction(
+                        belief1_id, belief2_id,
+                        detection_method="semantic",
+                        confidence=similarity
+                    )
+
+                    await event_bus.emit(Event(
+                        type=EventType.CONTRADICTION_DETECTED,
+                        data={
+                            "belief1_id": belief1_id,
+                            "belief2_id": belief2_id,
+                            "similarity": similarity,
+                            "method": "semantic"
+                        }
+                    ))
+
+            if verified_count > 0:
+                print(f"🔍 Verified {verified_count} semantic contradictions")
+
+        except Exception as e:
+            print(f"Error in contradiction check: {e}")
+
+    async def _verify_contradiction_with_llm(
+        self,
+        belief1_id: str,
+        belief2_id: str
+    ) -> bool:
+        """
+        Use LLM to verify if two beliefs contradict each other.
+
+        Returns True if they contradict, False otherwise.
+        """
+        try:
+            # Get belief content
+            async with self.memory.driver.session() as session:
+                result = await session.run("""
+                    MATCH (b1:Belief {id: $id1}), (b2:Belief {id: $id2})
+                    RETURN b1.content as content1, b2.content as content2
+                """, id1=belief1_id, id2=belief2_id)
+                record = await result.single()
+
+            if not record:
+                return False
+
+            content1 = record["content1"]
+            content2 = record["content2"]
+
+            # Ask LLM to determine if they contradict
+            prompt = f"""Analyze these two beliefs for logical contradiction:
+
+Belief 1: {content1}
+
+Belief 2: {content2}
+
+Do these beliefs logically contradict each other? A contradiction means they cannot both be true at the same time.
+
+Respond with only "YES" if they contradict, or "NO" if they do not contradict."""
+
+            response = await self.llm_client.generate(prompt, max_tokens=10)
+            return "YES" in response.upper()
+
+        except Exception as e:
+            print(f"Error verifying contradiction: {e}")
+            return False
 
     async def _generate_crystallization_proposals(
         self,
