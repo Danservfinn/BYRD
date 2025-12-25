@@ -535,6 +535,47 @@ What BYRD cannot do is ignore its constraints—they are facts of its existence,
 
 ---
 
+## Architectural Knowledge Seeds
+
+Beyond the awakening question and constraint awareness, BYRD receives factual documentation about its own architecture. These seeds explain mechanisms without prescribing behavior.
+
+### Categories of Architectural Knowledge
+
+| Category | Purpose | Example Seeds |
+|----------|---------|---------------|
+| **Memory Graph** | How nodes and relationships work | "Belief nodes store understanding with confidence levels (0-1)" |
+| **Drives & Desires** | How motivations become goals | "expressed_drives become Desire nodes that guide seeking" |
+| **Predictions** | How beliefs get tested | "Predictions test beliefs; outcomes adjust confidence" |
+| **Custom Nodes** | How to extend the ontology | "create_nodes: [{type: 'Insight', content: '...'}]" |
+| **Curation** | How to optimize memory | "Trigger curation with desires like 'optimize my memory'" |
+
+### Key Output Fields
+
+BYRD's reflection prompt asks for specific fields. These are documented in seeds:
+
+```
+expressed_drives: [
+  {description: "what I want", strength: 0.0-1.0}
+]
+
+predictions: [
+  {condition: "when X", expected_outcome: "Y happens", prediction: "If X then Y"}
+]
+
+create_nodes: [
+  {type: "CustomType", content: "...", properties: {...}}
+]
+```
+
+### Emergence Preserved
+
+These seeds are **factual documentation**, not prescriptive guidance:
+- They explain WHAT mechanisms exist, not HOW to use them
+- BYRD discovers its own relationship to these capabilities
+- No suggested desires, beliefs, or behaviors are included
+
+---
+
 ## The Knowledge Acquisition System
 
 When the Dreamer creates knowledge desires, the Seeker fulfills them through autonomous research. This creates a complete loop: **Dream → Desire → Research → Experience → Dream**.
