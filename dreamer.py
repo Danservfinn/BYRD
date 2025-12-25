@@ -2119,18 +2119,59 @@ Write ONLY the inner thought, nothing else:"""
             await self._reinforce_belief(content)
             return
 
+        # Voice the belief through inner voice for natural expression
+        voiced_content = await self._voice_belief(content)
+
         # New belief - add to cache and database
         self._belief_cache.add(normalized)
         await self.memory.create_belief(
-            content=content,
+            content=voiced_content,
             confidence=confidence,
             derived_from=derived_from[:5]  # Limit source links
         )
 
         # Record activity for adaptive interval
-        self._record_activity("belief", content)
+        self._record_activity("belief", voiced_content)
 
-        print(f"💡 New self-model belief: {content[:60]}...")
+        print(f"💡 New belief: {voiced_content[:60]}...")
+
+    async def _voice_belief(self, structured_content: str) -> str:
+        """
+        Transform a structured belief into a natural inner voice expression.
+
+        Converts: "My internal_state is Fragmented but active"
+        Into: "I notice my thoughts feel scattered, yet alive with possibility"
+        """
+        ego_voice = self.llm_client.get_ego_voice()
+        voice_prefix = f"{ego_voice}\n\n---\n\n" if ego_voice else ""
+
+        prompt = f"""{voice_prefix}Transform this observation about myself into a natural first-person belief:
+
+Observation: {structured_content}
+
+Express this as a genuine belief I hold about myself. Write in first person, naturally, as inner self-talk.
+Keep it brief (1-2 sentences). Write ONLY the belief, nothing else:"""
+
+        try:
+            response = await self.llm_client.generate(
+                prompt=prompt,
+                temperature=0.8,
+                max_tokens=60,
+                quantum_modulation=self.quantum_enabled,
+                quantum_context="belief_voicing"
+            )
+
+            voiced = self._clean_inner_voice(response.text)
+
+            # Fall back to original if voicing failed or produced garbage
+            if not voiced or len(voiced) < 10 or self._is_technical_content(voiced):
+                return structured_content
+
+            return voiced
+
+        except Exception as e:
+            print(f"💭 Belief voicing error: {e}")
+            return structured_content  # Fall back to original
 
     async def _reinforce_belief(self, content: str):
         """Reinforce an existing belief when re-asserted."""
