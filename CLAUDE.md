@@ -90,6 +90,22 @@ Egos live in `egos/` directory as YAML files. See `egos/black-cat.yaml` for an e
 | **Server** | `server.py` | - | WebSocket + REST API for clients |
 | **Quantum** | `quantum_randomness.py` | - | True quantum entropy from ANU QRNG |
 
+### Seeker Strategy Routing
+
+The Seeker routes desires to appropriate strategies based on keyword matching:
+
+| Strategy | Keywords | Action |
+|----------|----------|--------|
+| `reconcile_orphans` | orphan, integrate, fragmentation, unify | Connect orphaned nodes |
+| `curate` | optimize, clean, consolidate, graph health | Curate memory graph |
+| `self_modify` | add to myself, extend my, modify my code | Self-modification |
+| `introspect` | analyze myself, nature of, self-awareness | Internal reflection |
+| `code` | code, write, implement, build | Generate code |
+| `install` | install, add capability, tool | Install capabilities |
+| `search` | (default fallback) | Web research |
+
+**Order matters**: Internal strategies are checked first. The Dreamer's `expressed_drives` output must be recognized via `want_keys` containing "drives".
+
 ## Constitutional Constraints (CRITICAL)
 
 BYRD has a two-tier file system that **MUST** be respected:

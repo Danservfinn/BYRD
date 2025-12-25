@@ -126,6 +126,14 @@ class EventType(Enum):
     CONTRADICTION_RESOLVED = "contradiction_resolved"    # Contradiction addressed
     DREAM_WALK_COMPLETED = "dream_walk_completed"        # Quantum dream walk finished
 
+    # Renormalization Group events (identity transformation tracking)
+    RG_SCALE_CREATED = "rg_scale_created"                # New scale level created
+    RG_FLOW_COMPUTED = "rg_flow_computed"                # Beta function / flow computed
+    RG_FIXED_POINT_DETECTED = "rg_fixed_point_detected"  # Identity fixed point found
+    RG_COUPLING_MEASURED = "rg_coupling_measured"        # Scale coupling constants updated
+    RG_TRANSFORMATION_APPLIED = "rg_transformation_applied"  # Coarse-graining applied
+    RG_MATRIX_ELEMENT_COMPUTED = "rg_matrix_element_computed"  # Transformation amplitude calculated
+
 
 @dataclass
 class Event:
