@@ -209,7 +209,19 @@ class Dreamer:
             try:
                 await self._dream_cycle()
             except Exception as e:
-                print(f"💭 Dream error: {e}")
+                import traceback
+                error_msg = f"{type(e).__name__}: {e}"
+                print(f"💭 Dream error: {error_msg}")
+                traceback.print_exc()
+                # Emit error event for debugging visibility
+                await event_bus.emit(Event(
+                    type=EventType.REFLECTION_ERROR,
+                    data={
+                        "error": error_msg,
+                        "cycle": self._dream_count,
+                        "traceback": traceback.format_exc()[:500]
+                    }
+                ))
 
             # Calculate next interval (adaptive or fixed)
             if self.adaptive_interval:
