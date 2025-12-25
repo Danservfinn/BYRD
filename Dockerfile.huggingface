@@ -15,7 +15,10 @@ WORKDIR $HOME/app
 COPY --chown=user requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
-# Copy application code
+# Cache bust (updated on each deploy)
+ARG CACHEBUST=1
+
+# Copy application code (rebuilt when CACHEBUST changes)
 COPY --chown=user . .
 
 # HuggingFace uses port 7860
