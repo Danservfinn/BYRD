@@ -233,6 +233,14 @@ class Seeker:
                             "desire_id": desire.get("id")
                         })
                         print(f"🔍 Using unfulfilled desire ({strategy}): {description[:50]}")
+                        # Debug: record strategy decision
+                        try:
+                            await self.memory.record_experience(
+                                content=f"[DEBUG_STRATEGY] {strategy}: {description[:60]}",
+                                type="system"
+                            )
+                        except:
+                            pass
 
         if not action_patterns:
             # Still nothing - keep observing
