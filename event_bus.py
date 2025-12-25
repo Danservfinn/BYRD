@@ -50,6 +50,7 @@ class EventType(Enum):
     SEEK_CYCLE_END = "seek_cycle_end"
     RESEARCH_START = "research_start"
     RESEARCH_COMPLETE = "research_complete"
+    INTROSPECTION_COMPLETE = "introspection_complete"  # Self-observation strategy completed
 
     # Self-modification events
     MODIFICATION_PROPOSED = "modification_proposed"
