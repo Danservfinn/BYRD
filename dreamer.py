@@ -1193,7 +1193,7 @@ OPERATIONAL CONSTRAINTS:
 Output JSON with:
 - "output": your reflection (whatever structure you want)
 - "expressed_drives": array of any goals/desires/motivations you notice yourself expressing (or empty array if none)
-  Each drive: {"description": "what you want", "strength": 0.0-1.0}"""
+  Each drive: {{"description": "what you want", "strength": 0.0-1.0}}"""
 
         try:
             # Debug: log before LLM call
