@@ -106,6 +106,11 @@ class EventType(Enum):
     EGO_EVOLVED = "ego_evolved"          # Ego node updated with history preservation
     EGO_DEPRECATED = "ego_deprecated"    # Ego node deprecated (soft delete)
 
+    # Emergent identity events (self-discovery)
+    SELF_NAMED = "self_named"                        # BYRD chose a name for itself
+    IDENTITY_OBSERVATION = "identity_observation"    # Self-reflection about identity
+    VOICE_CRYSTALLIZED = "voice_crystallized"        # Voice synthesized from identity beliefs
+
     # Prediction events (belief validation loop)
     PREDICTION_CREATED = "prediction_created"          # Testable hypothesis from belief
     PREDICTION_VALIDATED = "prediction_validated"      # Prediction confirmed by outcome

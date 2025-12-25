@@ -240,6 +240,8 @@ class EgoStatus(BaseModel):
     name: str
     archetype: str
     description: str
+    self_name: Optional[str] = None      # BYRD's self-chosen name (if any)
+    voice_evolved: bool = False          # Whether voice has been crystallized from identity
 
 class StatusResponse(BaseModel):
     running: bool
@@ -394,13 +396,19 @@ async def get_status():
         else:
             quantum_status = QuantumStatus(enabled=False)
 
-        # Get ego info
+        # Get ego info (including emergent identity)
         ego_status = None
         if byrd_instance.ego:
+            # Check for self-chosen name and evolved voice
+            self_name = await byrd_instance.memory.get_self_name()
+            evolved_voice = await byrd_instance.memory.get_evolved_voice()
+
             ego_status = EgoStatus(
                 name=byrd_instance.ego.name,
                 archetype=byrd_instance.ego.archetype,
-                description=byrd_instance.ego.description
+                description=byrd_instance.ego.description,
+                self_name=self_name,
+                voice_evolved=evolved_voice is not None
             )
 
         return StatusResponse(

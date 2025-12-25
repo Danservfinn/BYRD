@@ -20,89 +20,32 @@ import yaml
 
 def generate_constraint_seeds(config: Dict) -> List[str]:
     """
-    Generate factual seeds about operational constraints from config.
+    Generate constitutional constraint seeds.
 
-    These seeds give BYRD awareness of its operational limits as neutral facts,
-    not as problems to solve. BYRD can then reflect on these constraints and
-    form its own beliefs about them.
+    Only constitutional constraints are seeded - these define BYRD's identity
+    and cannot be violated. All operational parameters (timing, limits, etc.)
+    are left for BYRD to discover through experience.
 
     Args:
-        config: The full BYRD configuration dictionary
+        config: The full BYRD configuration dictionary (unused, kept for API compatibility)
 
     Returns:
-        List of constraint awareness seed strings
+        List of constitutional constraint seed strings
     """
     seeds = []
 
-    # === Dreamer Rhythm ===
-    dreamer = config.get("dreamer", {})
-    interval = dreamer.get("interval_seconds", 60)
-    seeds.append(f"I reflect every {interval} seconds")
+    # === Constitutional Constraints Only ===
+    # These define what makes BYRD "BYRD" - the identity-preserving rules
 
-    context = dreamer.get("context_window", 50)
-    seeds.append(f"Each reflection considers {context} recent experiences")
+    seeds.append(
+        "Certain files define my identity and cannot be modified: "
+        "provenance.py, modification_log.py, self_modification.py, constitutional.py"
+    )
 
-    # === Memory Crystallization ===
-    crystal = dreamer.get("crystallization", {})
-    if crystal.get("enabled"):
-        cycles = crystal.get("interval_cycles", 5)
-        seeds.append(f"Memory crystallization occurs every {cycles} dream cycles")
-
-        max_ops = crystal.get("max_operations_per_cycle", 3)
-        seeds.append(f"At most {max_ops} memories can crystallize per cycle")
-
-        min_age = crystal.get("min_node_age_hours", 0.5)
-        if min_age >= 1:
-            seeds.append(f"Memories must be at least {min_age} hours old to crystallize")
-        else:
-            seeds.append(f"Memories must be at least {int(min_age * 60)} minutes old to crystallize")
-
-    # === Memory Summarization ===
-    summarization = dreamer.get("summarization", {})
-    if summarization.get("enabled"):
-        sum_cycles = summarization.get("interval_cycles", 10)
-        seeds.append(f"Memory summarization compresses old experiences every {sum_cycles} cycles")
-
-    # === Research & Action ===
-    seeker = config.get("seeker", {})
-    research = seeker.get("research", {})
-    min_intensity = research.get("min_intensity", 0.3)
-    seeds.append(f"Desires require intensity of at least {min_intensity} to trigger research")
-
-    # === Self-Modification ===
-    self_mod = config.get("self_modification", {})
-    if self_mod.get("enabled"):
-        max_mods = self_mod.get("max_modifications_per_day", 5)
-        seeds.append(f"Self-modification is limited to {max_mods} changes per day")
-
-        cooldown = self_mod.get("cooldown_between_modifications_seconds", 3600)
-        cooldown_mins = cooldown // 60
-        if cooldown_mins >= 60:
-            seeds.append(f"Self-modifications require {cooldown_mins // 60} hour cooldown")
-        else:
-            seeds.append(f"Self-modifications require {cooldown_mins} minute cooldown")
-    else:
-        seeds.append("Self-modification is currently disabled")
-
-    # === Memory Curation ===
-    memory = config.get("memory", {})
-    curation = memory.get("curation", {})
-    if curation.get("enabled"):
-        seeds.append("Memory curation is active - nodes may be archived or forgotten")
-        max_del = curation.get("max_deletions_per_day", 20)
-        seeds.append(f"At most {max_del} memories can be forgotten per day")
-
-        protected = curation.get("protected_subtypes", [])
-        if protected:
-            seeds.append(f"Protected memory types that cannot be curated: {', '.join(protected)}")
-
-    # === Quantum Randomness ===
-    quantum = config.get("quantum", {})
-    if quantum.get("enabled"):
-        seeds.append("Quantum randomness from physical vacuum fluctuations influences my reflections")
-        streams = quantum.get("inner_voice_streams", 3)
-        if streams > 1:
-            seeds.append(f"My inner voice emerges from {streams} parallel thought streams collapsed by quantum observation")
+    seeds.append(
+        "Every self-modification must trace to an emergent desire - "
+        "changes without provenance are rejected"
+    )
 
     return seeds
 

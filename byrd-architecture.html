@@ -5,32 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BYRD Architecture</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
     body {
       margin: 0;
       overflow: hidden;
       background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
       font-family: 'Inter', system-ui, sans-serif;
-    }
-
-    #canvas-container {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 1;
-    }
-
-    .ui-overlay {
-      position: fixed;
-      z-index: 100;
-      pointer-events: none;
-    }
-
-    .ui-overlay > * {
-      pointer-events: auto;
     }
 
     .glass-panel {
@@ -41,60 +21,6 @@
       border-radius: 12px;
     }
 
-    .module-card {
-      background: rgba(30, 27, 75, 0.6);
-      border: 1px solid rgba(139, 92, 246, 0.2);
-      border-radius: 8px;
-      padding: 12px;
-      transition: all 0.3s ease;
-    }
-
-    .module-card:hover {
-      border-color: rgba(139, 92, 246, 0.5);
-      background: rgba(30, 27, 75, 0.8);
-    }
-
-    .module-card.active {
-      border-color: rgba(34, 197, 94, 0.5);
-      box-shadow: 0 0 20px rgba(34, 197, 94, 0.2);
-    }
-
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      animation: pulse 2s infinite;
-    }
-
-    .status-active { background: #22c55e; }
-    .status-idle { background: #fbbf24; }
-    .status-disabled { background: #6b7280; }
-    .status-connected { background: #3b82f6; }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-
-    .data-flow-legend {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .flow-type {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 11px;
-      color: #94a3b8;
-    }
-
-    .flow-line {
-      width: 20px;
-      height: 2px;
-    }
-
     .sacred-title {
       background: linear-gradient(90deg, #a78bfa, #818cf8, #6366f1);
       -webkit-background-clip: text;
@@ -102,7 +28,91 @@
       background-clip: text;
     }
 
-    /* Scrollbar styling */
+    /* Component styling */
+    .component-box {
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .component-box:hover .box-bg {
+      filter: brightness(1.2);
+    }
+
+    .component-box:hover .box-outline {
+      stroke-width: 2.5;
+      filter: drop-shadow(0 0 8px currentColor);
+    }
+
+    .component-box.selected .box-outline {
+      stroke-width: 3;
+      filter: drop-shadow(0 0 12px currentColor);
+    }
+
+    /* Flow line animations */
+    .flow-line {
+      stroke-dasharray: 8 4;
+      animation: flowDash 1s linear infinite;
+    }
+
+    .flow-line.paused {
+      animation-play-state: paused;
+    }
+
+    @keyframes flowDash {
+      to { stroke-dashoffset: -12; }
+    }
+
+    .flow-line.dimmed {
+      opacity: 0.15;
+    }
+
+    .flow-line.highlighted {
+      opacity: 1;
+      stroke-width: 3;
+    }
+
+    .flow-label {
+      font-size: 10px;
+      fill: #94a3b8;
+      pointer-events: none;
+    }
+
+    .flow-label.highlighted {
+      fill: #e2e8f0;
+      font-weight: 600;
+    }
+
+    /* Status indicators */
+    .status-dot {
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Module cards */
+    .module-card {
+      background: rgba(30, 27, 75, 0.6);
+      border: 1px solid rgba(139, 92, 246, 0.2);
+      border-radius: 8px;
+      padding: 12px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .module-card:hover {
+      border-color: rgba(139, 92, 246, 0.5);
+      background: rgba(30, 27, 75, 0.8);
+    }
+
+    .module-card.selected {
+      border-color: rgba(139, 92, 246, 0.8);
+      box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+    }
+
+    /* Scrollbar */
     ::-webkit-scrollbar {
       width: 6px;
     }
@@ -113,13 +123,25 @@
       background: rgba(139, 92, 246, 0.5);
       border-radius: 3px;
     }
+
+    /* Legend items */
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    .legend-line {
+      width: 24px;
+      height: 2px;
+    }
   </style>
 </head>
 <body>
-  <div id="canvas-container"></div>
-
   <!-- Header -->
-  <div class="ui-overlay top-0 left-0 right-0 p-4">
+  <div class="fixed top-0 left-0 right-0 p-4 z-50">
     <div class="glass-panel px-6 py-4 flex items-center justify-between">
       <div class="flex items-center gap-4">
         <a href="byrd-3d-visualization.html" class="text-violet-400 hover:text-violet-300 transition-colors">
@@ -131,9 +153,12 @@
       </div>
       <div class="flex items-center gap-4">
         <div id="system-status" class="flex items-center gap-2 text-sm">
-          <span class="status-dot status-idle"></span>
+          <span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
           <span class="text-slate-400">Loading...</span>
         </div>
+        <button onclick="toggleAnimation()" id="anim-toggle" class="px-3 py-1.5 bg-violet-500/20 border border-violet-500/50 rounded-lg text-violet-300 hover:bg-violet-500/30 text-sm transition-colors">
+          Pause Flow
+        </button>
         <button onclick="refreshArchitecture()" class="px-3 py-1.5 bg-violet-500/20 border border-violet-500/50 rounded-lg text-violet-300 hover:bg-violet-500/30 text-sm transition-colors">
           Refresh
         </button>
@@ -141,11 +166,256 @@
     </div>
   </div>
 
-  <!-- Module Details Panel (Right) -->
-  <div class="ui-overlay top-24 right-4 bottom-4 w-80 overflow-hidden flex flex-col">
+  <!-- Main Flowchart -->
+  <div class="fixed top-24 left-4 right-80 bottom-20 flex items-center justify-center">
+    <svg id="flowchart" viewBox="0 0 900 520" class="w-full h-full max-w-4xl">
+      <defs>
+        <!-- Arrowhead markers -->
+        <marker id="arrow-violet" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#a78bfa"/>
+        </marker>
+        <marker id="arrow-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6"/>
+        </marker>
+        <marker id="arrow-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#22c55e"/>
+        </marker>
+        <marker id="arrow-amber" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24"/>
+        </marker>
+        <marker id="arrow-teal" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#14b8a6"/>
+        </marker>
+        <marker id="arrow-rose" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#f43f5e"/>
+        </marker>
+        <marker id="arrow-cyan" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#06b6d4"/>
+        </marker>
+
+        <!-- Gradients for component boxes -->
+        <linearGradient id="grad-memory" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#1e3a5f;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="grad-dreamer" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#4c1d95;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e1b4b;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="grad-seeker" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#14532d;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="grad-actor" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#78350f;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="grad-coder" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#881337;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="grad-quantum" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#164e63;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="grad-eventbus" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#134e4a;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="grad-narrator" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#831843;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="grad-selfmod" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#7f1d1d;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="grad-visualizer" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#4c1d95;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
+        </linearGradient>
+      </defs>
+
+      <!-- Flow Lines (drawn first, behind components) -->
+      <g id="flow-lines">
+        <!-- Memory ↔ Dreamer -->
+        <path id="flow-memory-dreamer" class="flow-line" d="M540,175 L620,175"
+              stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow-blue)"
+              data-from="Memory" data-to="Dreamer"/>
+        <text class="flow-label" x="570" y="168">context</text>
+
+        <path id="flow-dreamer-memory" class="flow-line" d="M620,195 L540,195"
+              stroke="#a78bfa" stroke-width="2" fill="none" marker-end="url(#arrow-violet)"
+              data-from="Dreamer" data-to="Memory"/>
+        <text class="flow-label" x="555" y="210">beliefs</text>
+
+        <!-- Memory ↔ Seeker -->
+        <path id="flow-memory-seeker" class="flow-line" d="M360,175 L280,175"
+              stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow-blue)"
+              data-from="Memory" data-to="Seeker"/>
+        <text class="flow-label" x="300" y="168">desires</text>
+
+        <path id="flow-seeker-memory" class="flow-line" d="M280,195 L360,195"
+              stroke="#22c55e" stroke-width="2" fill="none" marker-end="url(#arrow-green)"
+              data-from="Seeker" data-to="Memory"/>
+        <text class="flow-label" x="295" y="210">research</text>
+
+        <!-- Memory ↔ Actor -->
+        <path id="flow-memory-actor" class="flow-line" d="M450,220 L450,270"
+              stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow-blue)"
+              data-from="Memory" data-to="Actor"/>
+        <text class="flow-label" x="460" y="250">context</text>
+
+        <path id="flow-actor-memory" class="flow-line" d="M420,270 L420,220"
+              stroke="#fbbf24" stroke-width="2" fill="none" marker-end="url(#arrow-amber)"
+              data-from="Actor" data-to="Memory"/>
+        <text class="flow-label" x="375" y="250">actions</text>
+
+        <!-- Quantum → Dreamer -->
+        <path id="flow-quantum-dreamer" class="flow-line" d="M740,120 L740,145"
+              stroke="#06b6d4" stroke-width="2" fill="none" marker-end="url(#arrow-cyan)"
+              data-from="Quantum" data-to="Dreamer"/>
+        <text class="flow-label" x="750" y="135">entropy</text>
+
+        <!-- Seeker → Coder -->
+        <path id="flow-seeker-coder" class="flow-line" d="M220,220 L220,270"
+              stroke="#22c55e" stroke-width="2" fill="none" marker-end="url(#arrow-green)"
+              data-from="Seeker" data-to="Coder"/>
+        <text class="flow-label" x="230" y="250">code</text>
+
+        <!-- Coder → SelfMod -->
+        <path id="flow-coder-selfmod" class="flow-line" d="M220,340 L220,385"
+              stroke="#f43f5e" stroke-width="2" fill="none" marker-end="url(#arrow-rose)"
+              data-from="Coder" data-to="SelfMod"/>
+        <text class="flow-label" x="230" y="365">changes</text>
+
+        <!-- Memory → EventBus -->
+        <path id="flow-memory-eventbus" class="flow-line" d="M510,220 L560,270"
+              stroke="#fbbf24" stroke-width="2" fill="none" marker-end="url(#arrow-amber)"
+              data-from="Memory" data-to="EventBus"/>
+        <text class="flow-label" x="545" y="250">events</text>
+
+        <!-- EventBus → Visualizer -->
+        <path id="flow-eventbus-visualizer" class="flow-line" d="M600,340 L520,385"
+              stroke="#fbbf24" stroke-width="2" fill="none" marker-end="url(#arrow-amber)"
+              data-from="EventBus" data-to="Visualizer"/>
+        <text class="flow-label" x="545" y="365">stream</text>
+
+        <!-- Dreamer → Narrator -->
+        <path id="flow-dreamer-narrator" class="flow-line" d="M700,220 L700,270"
+              stroke="#a78bfa" stroke-width="2" fill="none" marker-end="url(#arrow-violet)"
+              data-from="Dreamer" data-to="Narrator"/>
+        <text class="flow-label" x="710" y="250">reflect</text>
+      </g>
+
+      <!-- Component Boxes -->
+      <g id="components">
+        <!-- QUANTUM (top) -->
+        <g class="component-box" data-module="Quantum" onclick="selectModule('Quantum')">
+          <rect class="box-bg" x="660" y="50" width="160" height="60" rx="10" fill="url(#grad-quantum)"/>
+          <rect class="box-outline" x="660" y="50" width="160" height="60" rx="10" fill="none" stroke="#06b6d4" stroke-width="1.5"/>
+          <text x="740" y="78" text-anchor="middle" fill="#06b6d4" font-weight="600" font-size="14">QUANTUM</text>
+          <text x="740" y="95" text-anchor="middle" fill="#64748b" font-size="11">(randomness)</text>
+          <circle class="status-dot" cx="805" cy="62" r="5" fill="#22c55e" data-status="Quantum"/>
+        </g>
+
+        <!-- MEMORY (center) -->
+        <g class="component-box" data-module="Memory" onclick="selectModule('Memory')">
+          <rect class="box-bg" x="360" y="145" width="180" height="80" rx="12" fill="url(#grad-memory)"/>
+          <rect class="box-outline" x="360" y="145" width="180" height="80" rx="12" fill="none" stroke="#3b82f6" stroke-width="2"/>
+          <text x="450" y="180" text-anchor="middle" fill="#3b82f6" font-weight="700" font-size="16">MEMORY</text>
+          <text x="450" y="200" text-anchor="middle" fill="#64748b" font-size="12">(Neo4j Graph)</text>
+          <circle class="status-dot" cx="525" cy="158" r="6" fill="#22c55e" data-status="Memory"/>
+        </g>
+
+        <!-- DREAMER (right of Memory) -->
+        <g class="component-box" data-module="Dreamer" onclick="selectModule('Dreamer')">
+          <rect class="box-bg" x="620" y="145" width="160" height="80" rx="10" fill="url(#grad-dreamer)"/>
+          <rect class="box-outline" x="620" y="145" width="160" height="80" rx="10" fill="none" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="700" y="178" text-anchor="middle" fill="#a78bfa" font-weight="600" font-size="14">DREAMER</text>
+          <text x="700" y="198" text-anchor="middle" fill="#64748b" font-size="11">(Local LLM)</text>
+          <text x="700" y="213" text-anchor="middle" fill="#475569" font-size="10">reflect · believe · desire</text>
+          <circle class="status-dot" cx="765" cy="158" r="5" fill="#22c55e" data-status="Dreamer"/>
+        </g>
+
+        <!-- SEEKER (left of Memory) -->
+        <g class="component-box" data-module="Seeker" onclick="selectModule('Seeker')">
+          <rect class="box-bg" x="120" y="145" width="160" height="80" rx="10" fill="url(#grad-seeker)"/>
+          <rect class="box-outline" x="120" y="145" width="160" height="80" rx="10" fill="none" stroke="#22c55e" stroke-width="1.5"/>
+          <text x="200" y="178" text-anchor="middle" fill="#22c55e" font-weight="600" font-size="14">SEEKER</text>
+          <text x="200" y="198" text-anchor="middle" fill="#64748b" font-size="11">(Local LLM)</text>
+          <text x="200" y="213" text-anchor="middle" fill="#475569" font-size="10">research · execute · acquire</text>
+          <circle class="status-dot" cx="265" cy="158" r="5" fill="#22c55e" data-status="Seeker"/>
+        </g>
+
+        <!-- ACTOR (below Memory) -->
+        <g class="component-box" data-module="Actor" onclick="selectModule('Actor')">
+          <rect class="box-bg" x="380" y="275" width="140" height="60" rx="10" fill="url(#grad-actor)"/>
+          <rect class="box-outline" x="380" y="275" width="140" height="60" rx="10" fill="none" stroke="#fbbf24" stroke-width="1.5"/>
+          <text x="450" y="303" text-anchor="middle" fill="#fbbf24" font-weight="600" font-size="14">ACTOR</text>
+          <text x="450" y="320" text-anchor="middle" fill="#64748b" font-size="11">(Claude API)</text>
+          <circle class="status-dot" cx="505" cy="288" r="5" fill="#fbbf24" data-status="Actor"/>
+        </g>
+
+        <!-- EVENT BUS -->
+        <g class="component-box" data-module="EventBus" onclick="selectModule('EventBus')">
+          <rect class="box-bg" x="540" y="275" width="130" height="60" rx="10" fill="url(#grad-eventbus)"/>
+          <rect class="box-outline" x="540" y="275" width="130" height="60" rx="10" fill="none" stroke="#14b8a6" stroke-width="1.5"/>
+          <text x="605" y="303" text-anchor="middle" fill="#14b8a6" font-weight="600" font-size="14">EVENT BUS</text>
+          <text x="605" y="320" text-anchor="middle" fill="#64748b" font-size="11">(streaming)</text>
+          <circle class="status-dot" cx="655" cy="288" r="5" fill="#22c55e" data-status="EventBus"/>
+        </g>
+
+        <!-- CODER (below Seeker) -->
+        <g class="component-box" data-module="Coder" onclick="selectModule('Coder')">
+          <rect class="box-bg" x="140" y="275" width="140" height="60" rx="10" fill="url(#grad-coder)"/>
+          <rect class="box-outline" x="140" y="275" width="140" height="60" rx="10" fill="none" stroke="#f43f5e" stroke-width="1.5"/>
+          <text x="210" y="303" text-anchor="middle" fill="#f43f5e" font-weight="600" font-size="14">CODER</text>
+          <text x="210" y="320" text-anchor="middle" fill="#64748b" font-size="11">(Claude Code)</text>
+          <circle class="status-dot" cx="265" cy="288" r="5" fill="#6b7280" data-status="Coder"/>
+        </g>
+
+        <!-- NARRATOR (below Dreamer) -->
+        <g class="component-box" data-module="Narrator" onclick="selectModule('Narrator')">
+          <rect class="box-bg" x="690" y="275" width="120" height="60" rx="10" fill="url(#grad-narrator)"/>
+          <rect class="box-outline" x="690" y="275" width="120" height="60" rx="10" fill="none" stroke="#ec4899" stroke-width="1.5"/>
+          <text x="750" y="303" text-anchor="middle" fill="#ec4899" font-weight="600" font-size="14">NARRATOR</text>
+          <text x="750" y="320" text-anchor="middle" fill="#64748b" font-size="11">(inner voice)</text>
+          <circle class="status-dot" cx="795" cy="288" r="5" fill="#22c55e" data-status="Narrator"/>
+        </g>
+
+        <!-- SELF-MODIFIER (below Coder) -->
+        <g class="component-box" data-module="SelfMod" onclick="selectModule('SelfMod')">
+          <rect class="box-bg" x="120" y="390" width="160" height="60" rx="10" fill="url(#grad-selfmod)"/>
+          <rect class="box-outline" x="120" y="390" width="160" height="60" rx="10" fill="none" stroke="#ef4444" stroke-width="1.5"/>
+          <text x="200" y="418" text-anchor="middle" fill="#ef4444" font-weight="600" font-size="14">SELF-MODIFIER</text>
+          <text x="200" y="435" text-anchor="middle" fill="#64748b" font-size="11">(with provenance)</text>
+          <circle class="status-dot" cx="265" cy="403" r="5" fill="#6b7280" data-status="SelfMod"/>
+        </g>
+
+        <!-- VISUALIZER (bottom center) -->
+        <g class="component-box" data-module="Visualizer" onclick="selectModule('Visualizer')">
+          <rect class="box-bg" x="400" y="390" width="160" height="60" rx="10" fill="url(#grad-visualizer)"/>
+          <rect class="box-outline" x="400" y="390" width="160" height="60" rx="10" fill="none" stroke="#8b5cf6" stroke-width="1.5"/>
+          <text x="480" y="418" text-anchor="middle" fill="#8b5cf6" font-weight="600" font-size="14">VISUALIZER</text>
+          <text x="480" y="435" text-anchor="middle" fill="#64748b" font-size="11">(3D mind view)</text>
+          <circle class="status-dot" cx="545" cy="403" r="5" fill="#22c55e" data-status="Visualizer"/>
+        </g>
+      </g>
+
+      <!-- Constitutional Protected Badge -->
+      <g transform="translate(120, 460)">
+        <rect x="0" y="0" width="160" height="24" rx="4" fill="rgba(239, 68, 68, 0.2)"/>
+        <text x="80" y="16" text-anchor="middle" fill="#fca5a5" font-size="10">PROTECTED</text>
+      </g>
+    </svg>
+  </div>
+
+  <!-- Side Panel -->
+  <div class="fixed top-24 right-4 bottom-4 w-72 overflow-hidden flex flex-col">
     <div class="glass-panel p-4 flex-1 overflow-y-auto">
-      <h2 class="text-lg font-semibold text-white mb-4">Modules</h2>
-      <div id="modules-list" class="space-y-3">
+      <h2 class="text-lg font-semibold text-white mb-4">Components</h2>
+      <div id="modules-list" class="space-y-2">
         <!-- Populated by JS -->
       </div>
 
@@ -161,398 +431,224 @@
     </div>
   </div>
 
-  <!-- Data Flow Legend (Bottom) -->
-  <div class="ui-overlay bottom-4 left-4 right-96">
+  <!-- Selected Module Detail (appears at bottom) -->
+  <div id="selected-detail" class="fixed bottom-20 left-4 right-80 hidden">
+    <div class="glass-panel p-4">
+      <div class="flex items-start justify-between">
+        <div>
+          <h3 id="detail-name" class="text-lg font-semibold text-white"></h3>
+          <p id="detail-desc" class="text-sm text-slate-400 mt-1"></p>
+        </div>
+        <button onclick="deselectModule()" class="text-slate-400 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div id="detail-stats" class="mt-3 text-xs text-slate-500"></div>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="fixed bottom-4 left-4 right-80">
     <div class="glass-panel px-4 py-3">
-      <div class="flex items-center justify-between">
-        <div class="data-flow-legend">
-          <div class="flow-type">
-            <div class="flow-line" style="background: #a78bfa;"></div>
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <div class="flex gap-4 flex-wrap">
+          <div class="legend-item">
+            <div class="legend-line" style="background: #a78bfa;"></div>
             <span>Reflection</span>
           </div>
-          <div class="flow-type">
-            <div class="flow-line" style="background: #3b82f6;"></div>
-            <span>Context/Query</span>
+          <div class="legend-item">
+            <div class="legend-line" style="background: #3b82f6;"></div>
+            <span>Context</span>
           </div>
-          <div class="flow-type">
-            <div class="flow-line" style="background: #22c55e;"></div>
+          <div class="legend-item">
+            <div class="legend-line" style="background: #22c55e;"></div>
             <span>Research</span>
           </div>
-          <div class="flow-type">
-            <div class="flow-line" style="background: #fbbf24;"></div>
+          <div class="legend-item">
+            <div class="legend-line" style="background: #fbbf24;"></div>
             <span>Events</span>
           </div>
-          <div class="flow-type">
-            <div class="flow-line" style="background: #ec4899;"></div>
-            <span>Identity</span>
+          <div class="legend-item">
+            <div class="legend-line" style="background: #06b6d4;"></div>
+            <span>Entropy</span>
           </div>
-          <div class="flow-type">
-            <div class="flow-line" style="background: #14b8a6;"></div>
-            <span>Randomness</span>
+          <div class="legend-item">
+            <div class="legend-line" style="background: #f43f5e;"></div>
+            <span>Modification</span>
           </div>
         </div>
         <div class="text-xs text-slate-500">
-          Click modules to highlight connections
+          Click components to see details
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Selected Module Info (Bottom Left) -->
-  <div id="selected-module" class="ui-overlay bottom-20 left-4 hidden">
-    <div class="glass-panel p-4 max-w-md">
-      <h3 id="selected-name" class="text-lg font-semibold text-white"></h3>
-      <p id="selected-desc" class="text-sm text-slate-400 mt-1"></p>
-      <div id="selected-stats" class="mt-3 text-xs text-slate-500"></div>
-    </div>
-  </div>
-
   <script>
-    // ==========================================================================
+    // ========================================================================
     // CONFIGURATION
-    // ==========================================================================
+    // ========================================================================
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const API_BASE = isLocalhost ? 'http://localhost:8000' : window.location.origin;
 
-    // Module visual configuration
-    const MODULE_CONFIG = {
-      Memory: { color: 0x3b82f6, position: [0, 0, 0], size: 2.5, orbit: 0 },
-      Ego: { color: 0xec4899, position: [0, 3, 0], size: 1.2, orbit: 1 },
-      Dreamer: { color: 0xa78bfa, position: [4, 0, 0], size: 1.5, orbit: 2 },
-      Seeker: { color: 0x22c55e, position: [-4, 0, 0], size: 1.5, orbit: 2 },
-      Actor: { color: 0xfbbf24, position: [0, 0, 4], size: 1.3, orbit: 2 },
-      Coder: { color: 0xf43f5e, position: [0, 0, -4], size: 1.0, orbit: 2 },
-      EventBus: { color: 0x14b8a6, position: [3, 2, 3], size: 1.0, orbit: 3 },
-      Quantum: { color: 0x06b6d4, position: [-3, 2, -3], size: 0.8, orbit: 3 },
-      Visualizer: { color: 0x8b5cf6, position: [5, 3, 0], size: 0.7, orbit: 4 },
-    };
-
-    const FLOW_COLORS = {
-      reflection: 0xa78bfa,
-      context: 0x3b82f6,
-      query: 0x3b82f6,
-      research: 0x22c55e,
-      action: 0xfbbf24,
-      event: 0xfbbf24,
-      identity: 0xec4899,
-      randomness: 0x14b8a6,
-      modification: 0xf43f5e,
-    };
-
-    // ==========================================================================
-    // THREE.JS SETUP
-    // ==========================================================================
-    let scene, camera, renderer, controls;
-    let moduleNodes = {};
-    let dataFlowLines = [];
-    let selectedModule = null;
     let architectureData = null;
-    let orbitAngles = {};
+    let selectedModule = null;
+    let animationPaused = false;
 
-    function initScene() {
-      const container = document.getElementById('canvas-container');
-
-      // Scene
-      scene = new THREE.Scene();
-
-      // Camera
-      camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-      camera.position.set(8, 6, 8);
-      camera.lookAt(0, 0, 0);
-
-      // Renderer
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      container.appendChild(renderer.domElement);
-
-      // Ambient light
-      const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
-      scene.add(ambientLight);
-
-      // Point lights
-      const pointLight1 = new THREE.PointLight(0xa78bfa, 1, 100);
-      pointLight1.position.set(10, 10, 10);
-      scene.add(pointLight1);
-
-      const pointLight2 = new THREE.PointLight(0x3b82f6, 0.8, 100);
-      pointLight2.position.set(-10, -10, 10);
-      scene.add(pointLight2);
-
-      // Create orbital rings
-      createOrbitalRings();
-
-      // Raycaster for click detection
-      const raycaster = new THREE.Raycaster();
-      const mouse = new THREE.Vector2();
-
-      renderer.domElement.addEventListener('click', (event) => {
-        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-        raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObjects(Object.values(moduleNodes));
-
-        if (intersects.length > 0) {
-          selectModule(intersects[0].object.userData.name);
-        } else {
-          deselectModule();
-        }
-      });
-
-      // Mouse controls
-      let isDragging = false;
-      let previousMousePosition = { x: 0, y: 0 };
-      let cameraRadius = 12;
-      let cameraTheta = Math.PI / 4;
-      let cameraPhi = Math.PI / 4;
-
-      renderer.domElement.addEventListener('mousedown', () => isDragging = true);
-      renderer.domElement.addEventListener('mouseup', () => isDragging = false);
-      renderer.domElement.addEventListener('mouseleave', () => isDragging = false);
-
-      renderer.domElement.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        const deltaX = e.clientX - previousMousePosition.x;
-        const deltaY = e.clientY - previousMousePosition.y;
-        cameraTheta -= deltaX * 0.01;
-        cameraPhi = Math.max(0.1, Math.min(Math.PI - 0.1, cameraPhi - deltaY * 0.01));
-        updateCameraPosition();
-        previousMousePosition = { x: e.clientX, y: e.clientY };
-      });
-
-      renderer.domElement.addEventListener('mousedown', (e) => {
-        previousMousePosition = { x: e.clientX, y: e.clientY };
-      });
-
-      renderer.domElement.addEventListener('wheel', (e) => {
-        cameraRadius = Math.max(5, Math.min(30, cameraRadius + e.deltaY * 0.01));
-        updateCameraPosition();
-      });
-
-      function updateCameraPosition() {
-        camera.position.x = cameraRadius * Math.sin(cameraPhi) * Math.cos(cameraTheta);
-        camera.position.y = cameraRadius * Math.cos(cameraPhi);
-        camera.position.z = cameraRadius * Math.sin(cameraPhi) * Math.sin(cameraTheta);
-        camera.lookAt(0, 0, 0);
+    // Module descriptions (fallback if API unavailable)
+    const MODULE_INFO = {
+      Memory: {
+        description: 'Neo4j graph database. Single source of truth for all experiences, beliefs, desires, and capabilities.',
+        color: '#3b82f6'
+      },
+      Dreamer: {
+        description: 'Continuous reflection loop using local LLM. Generates beliefs, desires, and connections from experiences.',
+        color: '#a78bfa'
+      },
+      Seeker: {
+        description: 'Pattern detection and desire fulfillment. Researches via DDG, executes strategies, acquires capabilities.',
+        color: '#22c55e'
+      },
+      Actor: {
+        description: 'Claude API interface for complex reasoning. Handles user interaction and goal pursuit.',
+        color: '#fbbf24'
+      },
+      Coder: {
+        description: 'Claude Code CLI wrapper. Handles coding and self-modification desires via frontier AI.',
+        color: '#f43f5e'
+      },
+      SelfMod: {
+        description: 'Self-modification system with constitutional constraints. Verifies provenance before applying changes.',
+        color: '#ef4444'
+      },
+      Quantum: {
+        description: 'True quantum randomness from ANU QRNG. Provides genuine indeterminacy for cognitive processes.',
+        color: '#06b6d4'
+      },
+      EventBus: {
+        description: 'Real-time event streaming. Broadcasts beliefs, desires, reflections to visualization.',
+        color: '#14b8a6'
+      },
+      Narrator: {
+        description: 'Inner voice generator. Creates natural expression of BYRD\'s thoughts from context.',
+        color: '#ec4899'
+      },
+      Visualizer: {
+        description: '3D neural network visualization. Real-time view of BYRD\'s mind space.',
+        color: '#8b5cf6'
       }
+    };
 
-      updateCameraPosition();
+    // Flow connections for highlighting
+    const FLOW_CONNECTIONS = {
+      Memory: ['Dreamer', 'Seeker', 'Actor', 'EventBus'],
+      Dreamer: ['Memory', 'Quantum', 'Narrator'],
+      Seeker: ['Memory', 'Coder'],
+      Actor: ['Memory'],
+      Coder: ['Seeker', 'SelfMod'],
+      SelfMod: ['Coder'],
+      Quantum: ['Dreamer'],
+      EventBus: ['Memory', 'Visualizer'],
+      Narrator: ['Dreamer'],
+      Visualizer: ['EventBus']
+    };
 
-      // Handle resize
-      window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-      });
-
-      animate();
-    }
-
-    function createOrbitalRings() {
-      const ringMaterial = new THREE.LineBasicMaterial({
-        color: 0x4c1d95,
-        transparent: true,
-        opacity: 0.3
-      });
-
-      [4, 6, 8].forEach(radius => {
-        const ringGeometry = new THREE.BufferGeometry();
-        const points = [];
-        for (let i = 0; i <= 64; i++) {
-          const angle = (i / 64) * Math.PI * 2;
-          points.push(new THREE.Vector3(
-            Math.cos(angle) * radius,
-            0,
-            Math.sin(angle) * radius
-          ));
-        }
-        ringGeometry.setFromPoints(points);
-        const ring = new THREE.Line(ringGeometry, ringMaterial);
-        scene.add(ring);
-      });
-    }
-
-    function createModuleNode(name, config, data) {
-      const geometry = name === 'Memory'
-        ? new THREE.IcosahedronGeometry(config.size, 1)
-        : new THREE.OctahedronGeometry(config.size, 0);
-
-      const material = new THREE.MeshPhongMaterial({
-        color: config.color,
-        emissive: config.color,
-        emissiveIntensity: 0.3,
-        transparent: true,
-        opacity: 0.9,
-        shininess: 100
-      });
-
-      const mesh = new THREE.Mesh(geometry, material);
-
-      // Position based on orbit
-      const orbitRadius = config.orbit * 2.5;
-      const angle = orbitAngles[name] || Math.random() * Math.PI * 2;
-      orbitAngles[name] = angle;
-
-      if (config.orbit === 0) {
-        mesh.position.set(0, 0, 0);
-      } else {
-        mesh.position.set(
-          Math.cos(angle) * orbitRadius,
-          (config.orbit - 2) * 0.5,
-          Math.sin(angle) * orbitRadius
-        );
-      }
-
-      mesh.userData = { name, data, config };
-      scene.add(mesh);
-      moduleNodes[name] = mesh;
-
-      // Add glow effect for active modules
-      if (data && (data.status === 'active' || data.status === 'connected')) {
-        const glowGeometry = new THREE.SphereGeometry(config.size * 1.3, 16, 16);
-        const glowMaterial = new THREE.MeshBasicMaterial({
-          color: config.color,
-          transparent: true,
-          opacity: 0.15
-        });
-        const glow = new THREE.Mesh(glowGeometry, glowMaterial);
-        mesh.add(glow);
-      }
-
-      return mesh;
-    }
-
-    function createDataFlowLine(source, target, flowType) {
-      const sourceNode = moduleNodes[source];
-      const targetNode = moduleNodes[target];
-
-      if (!sourceNode || !targetNode) return null;
-
-      const points = [];
-      const start = sourceNode.position.clone();
-      const end = targetNode.position.clone();
-
-      // Create curved path
-      const mid = start.clone().add(end).multiplyScalar(0.5);
-      mid.y += 1;
-
-      const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
-      const curvePoints = curve.getPoints(20);
-
-      const geometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
-      const material = new THREE.LineBasicMaterial({
-        color: FLOW_COLORS[flowType] || 0x666666,
-        transparent: true,
-        opacity: 0.4
-      });
-
-      const line = new THREE.Line(geometry, material);
-      line.userData = { source, target, flowType };
-      scene.add(line);
-      dataFlowLines.push(line);
-
-      return line;
-    }
-
+    // ========================================================================
+    // SELECTION & HIGHLIGHTING
+    // ========================================================================
     function selectModule(name) {
+      // Update selection
       selectedModule = name;
 
-      // Update visuals
-      Object.entries(moduleNodes).forEach(([nodeName, mesh]) => {
-        if (nodeName === name) {
-          mesh.material.emissiveIntensity = 0.8;
-          mesh.scale.setScalar(1.2);
-        } else {
-          mesh.material.emissiveIntensity = 0.1;
-          mesh.scale.setScalar(1);
+      // Highlight component boxes
+      document.querySelectorAll('.component-box').forEach(box => {
+        box.classList.remove('selected');
+        if (box.dataset.module === name) {
+          box.classList.add('selected');
         }
       });
 
       // Highlight connected flows
-      dataFlowLines.forEach(line => {
-        if (line.userData.source === name || line.userData.target === name) {
-          line.material.opacity = 0.9;
+      const connected = FLOW_CONNECTIONS[name] || [];
+      document.querySelectorAll('.flow-line').forEach(line => {
+        const from = line.dataset.from;
+        const to = line.dataset.to;
+        if (from === name || to === name) {
+          line.classList.add('highlighted');
+          line.classList.remove('dimmed');
         } else {
-          line.material.opacity = 0.1;
+          line.classList.add('dimmed');
+          line.classList.remove('highlighted');
         }
       });
 
-      // Show info panel
-      const moduleData = architectureData?.modules?.find(m => m.name === name);
-      if (moduleData) {
-        document.getElementById('selected-module').classList.remove('hidden');
-        document.getElementById('selected-name').textContent = moduleData.name;
-        document.getElementById('selected-desc').textContent = moduleData.description;
-        document.getElementById('selected-stats').innerHTML = Object.entries(moduleData.stats || {})
-          .map(([k, v]) => `<span class="text-violet-400">${k}:</span> ${v}`)
-          .join(' | ');
-      }
-
-      // Highlight in sidebar
-      document.querySelectorAll('.module-card').forEach(card => {
-        card.classList.toggle('ring-2', card.dataset.module === name);
-        card.classList.toggle('ring-violet-500', card.dataset.module === name);
+      document.querySelectorAll('.flow-label').forEach(label => {
+        const prevSibling = label.previousElementSibling;
+        if (prevSibling && prevSibling.classList.contains('highlighted')) {
+          label.classList.add('highlighted');
+        } else {
+          label.classList.remove('highlighted');
+        }
       });
+
+      // Highlight sidebar card
+      document.querySelectorAll('.module-card').forEach(card => {
+        card.classList.remove('selected');
+        if (card.dataset.module === name) {
+          card.classList.add('selected');
+        }
+      });
+
+      // Show detail panel
+      const info = MODULE_INFO[name] || { description: 'Component of BYRD system.' };
+      const apiData = architectureData?.modules?.find(m => m.name === name);
+
+      document.getElementById('detail-name').textContent = name;
+      document.getElementById('detail-desc').textContent = apiData?.description || info.description;
+
+      const stats = apiData?.stats || {};
+      document.getElementById('detail-stats').innerHTML = Object.entries(stats)
+        .map(([k, v]) => `<span class="text-violet-400">${k}:</span> ${v}`)
+        .join(' &nbsp;|&nbsp; ');
+
+      document.getElementById('selected-detail').classList.remove('hidden');
     }
 
     function deselectModule() {
       selectedModule = null;
 
-      Object.values(moduleNodes).forEach(mesh => {
-        mesh.material.emissiveIntensity = 0.3;
-        mesh.scale.setScalar(1);
+      document.querySelectorAll('.component-box').forEach(box => {
+        box.classList.remove('selected');
       });
 
-      dataFlowLines.forEach(line => {
-        line.material.opacity = 0.4;
+      document.querySelectorAll('.flow-line').forEach(line => {
+        line.classList.remove('highlighted', 'dimmed');
       });
 
-      document.getElementById('selected-module').classList.add('hidden');
+      document.querySelectorAll('.flow-label').forEach(label => {
+        label.classList.remove('highlighted');
+      });
+
       document.querySelectorAll('.module-card').forEach(card => {
-        card.classList.remove('ring-2', 'ring-violet-500');
+        card.classList.remove('selected');
       });
+
+      document.getElementById('selected-detail').classList.add('hidden');
     }
 
-    function animate() {
-      requestAnimationFrame(animate);
-
-      // Rotate modules slowly
-      Object.entries(moduleNodes).forEach(([name, mesh]) => {
-        mesh.rotation.y += 0.005;
-        mesh.rotation.x += 0.002;
-
-        // Orbit animation for non-center nodes
-        const config = MODULE_CONFIG[name];
-        if (config && config.orbit > 0) {
-          orbitAngles[name] = (orbitAngles[name] || 0) + 0.001 * (4 - config.orbit);
-          const radius = config.orbit * 2.5;
-          mesh.position.x = Math.cos(orbitAngles[name]) * radius;
-          mesh.position.z = Math.sin(orbitAngles[name]) * radius;
-        }
+    function toggleAnimation() {
+      animationPaused = !animationPaused;
+      document.querySelectorAll('.flow-line').forEach(line => {
+        line.classList.toggle('paused', animationPaused);
       });
-
-      // Update flow lines to follow moving nodes
-      dataFlowLines.forEach(line => {
-        const source = moduleNodes[line.userData.source];
-        const target = moduleNodes[line.userData.target];
-        if (source && target) {
-          const start = source.position.clone();
-          const end = target.position.clone();
-          const mid = start.clone().add(end).multiplyScalar(0.5);
-          mid.y += 1;
-          const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
-          const points = curve.getPoints(20);
-          line.geometry.setFromPoints(points);
-        }
-      });
-
-      renderer.render(scene, camera);
+      document.getElementById('anim-toggle').textContent = animationPaused ? 'Resume Flow' : 'Pause Flow';
     }
 
-    // ==========================================================================
-    // DATA FETCHING & UI
-    // ==========================================================================
+    // ========================================================================
+    // DATA FETCHING
+    // ========================================================================
     async function fetchArchitecture() {
       try {
         const response = await fetch(`${API_BASE}/api/architecture`);
@@ -564,110 +660,91 @@
       }
     }
 
-    function renderModules(data) {
-      // Clear existing
-      Object.values(moduleNodes).forEach(node => scene.remove(node));
-      dataFlowLines.forEach(line => scene.remove(line));
-      moduleNodes = {};
-      dataFlowLines = [];
-
-      // Create module nodes
-      data.modules.forEach(module => {
-        const config = MODULE_CONFIG[module.name] || {
-          color: 0x666666,
-          position: [Math.random() * 6 - 3, Math.random() * 4, Math.random() * 6 - 3],
-          size: 1,
-          orbit: 3
-        };
-        createModuleNode(module.name, config, module);
-      });
-
-      // Add Visualizer node (not in API but part of architecture)
-      createModuleNode('Visualizer', MODULE_CONFIG.Visualizer, {
-        name: 'Visualizer',
-        status: 'active',
-        description: 'Real-time 3D visualization of BYRD\'s mind'
-      });
-
-      // Create data flow lines
-      data.data_flows.forEach(flow => {
-        createDataFlowLine(flow.source, flow.target, flow.flow_type);
-      });
-    }
-
     function renderUI(data) {
       // Modules list
       const modulesList = document.getElementById('modules-list');
-      modulesList.innerHTML = data.modules.map(m => `
-        <div class="module-card ${m.status === 'active' ? 'active' : ''}"
-             data-module="${m.name}"
-             onclick="selectModule('${m.name}')">
-          <div class="flex items-center justify-between">
-            <span class="text-white font-medium">${m.name}</span>
-            <span class="status-dot status-${m.status}"></span>
-          </div>
-          <p class="text-xs text-slate-400 mt-1 line-clamp-2">${m.description}</p>
-          ${Object.keys(m.stats).length > 0 ? `
-            <div class="text-xs text-slate-500 mt-2">
-              ${Object.entries(m.stats).slice(0, 2).map(([k, v]) => `${k}: ${v}`).join(' | ')}
+      const allModules = data?.modules || Object.keys(MODULE_INFO).map(name => ({
+        name,
+        status: 'idle',
+        description: MODULE_INFO[name].description
+      }));
+
+      modulesList.innerHTML = allModules.map(m => {
+        const info = MODULE_INFO[m.name] || {};
+        return `
+          <div class="module-card" data-module="${m.name}" onclick="selectModule('${m.name}')">
+            <div class="flex items-center justify-between">
+              <span class="text-white font-medium text-sm" style="color: ${info.color || '#fff'}">${m.name}</span>
+              <span class="w-2 h-2 rounded-full ${m.status === 'active' ? 'bg-green-500' : 'bg-gray-500'}"></span>
             </div>
-          ` : ''}
-        </div>
-      `).join('');
+          </div>
+        `;
+      }).join('');
 
       // Schema info
-      const schemaInfo = document.getElementById('schema-info');
-      schemaInfo.innerHTML = `
-        <div class="text-slate-300">Node Types:</div>
-        <div class="flex flex-wrap gap-1 mt-1">
-          ${data.memory_schema.node_types.map(t => `
-            <span class="px-2 py-0.5 bg-violet-500/20 rounded text-violet-300">${t.name}</span>
-          `).join('')}
-        </div>
-        <div class="text-slate-300 mt-3">Relationships:</div>
-        <div class="flex flex-wrap gap-1 mt-1">
-          ${data.memory_schema.relationship_types.map(r => `
-            <span class="px-2 py-0.5 bg-blue-500/20 rounded text-blue-300">${r}</span>
-          `).join('')}
-        </div>
-      `;
+      if (data?.memory_schema) {
+        const schemaInfo = document.getElementById('schema-info');
+        schemaInfo.innerHTML = `
+          <div class="text-slate-300">Nodes:</div>
+          <div class="flex flex-wrap gap-1 mt-1">
+            ${data.memory_schema.node_types.map(t => `
+              <span class="px-2 py-0.5 bg-violet-500/20 rounded text-violet-300 text-xs">${t.name}</span>
+            `).join('')}
+          </div>
+        `;
+      }
 
       // Integrations
-      const integrationsList = document.getElementById('integrations-list');
-      integrationsList.innerHTML = data.external_integrations.map(i => `
-        <div class="flex items-center justify-between text-sm">
-          <span class="text-slate-300">${i.name}</span>
-          <span class="text-xs text-slate-500">${i.provider}</span>
-        </div>
-      `).join('');
+      if (data?.external_integrations) {
+        const integrationsList = document.getElementById('integrations-list');
+        integrationsList.innerHTML = data.external_integrations.map(i => `
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-slate-300">${i.name}</span>
+            <span class="text-xs text-slate-500">${i.provider}</span>
+          </div>
+        `).join('');
+      }
+
+      // Update status indicators based on API data
+      if (data?.modules) {
+        data.modules.forEach(m => {
+          const statusDot = document.querySelector(`[data-status="${m.name}"]`);
+          if (statusDot) {
+            statusDot.setAttribute('fill', m.status === 'active' ? '#22c55e' : '#6b7280');
+          }
+        });
+      }
 
       // System status
       const statusEl = document.getElementById('system-status');
-      const running = data.system_status?.running;
+      const running = data?.system_status?.running;
       statusEl.innerHTML = `
-        <span class="status-dot ${running ? 'status-active' : 'status-idle'}"></span>
+        <span class="w-2 h-2 rounded-full ${running ? 'bg-green-500' : 'bg-yellow-500'} animate-pulse"></span>
         <span class="text-slate-400">${running ? 'Running' : 'Stopped'}</span>
       `;
     }
 
     async function refreshArchitecture() {
       const data = await fetchArchitecture();
-      if (data) {
-        architectureData = data;
-        renderModules(data);
-        renderUI(data);
-      }
+      architectureData = data;
+      renderUI(data);
     }
 
-    // ==========================================================================
+    // ========================================================================
     // INITIALIZATION
-    // ==========================================================================
+    // ========================================================================
     document.addEventListener('DOMContentLoaded', async () => {
-      initScene();
       await refreshArchitecture();
 
       // Auto-refresh every 30 seconds
       setInterval(refreshArchitecture, 30000);
+
+      // Keyboard shortcuts
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          deselectModule();
+        }
+      });
     });
   </script>
 </body>
