@@ -224,8 +224,8 @@ class Seeker:
                 for desire in unfulfilled[:self.max_concurrent_desires]:
                     if desire.get("intensity", 0) >= self.min_research_intensity:
                         description = desire.get("description", "")
-                        # Determine strategy from description hints (not hardcoded!)
-                        strategy = self._determine_strategy_from_description(description)
+                        # Determine strategy from description hints, with LLM fallback
+                        strategy = await self._determine_strategy_from_description(description)
                         action_patterns.append({
                             "description": description,
                             "strategy": strategy,
@@ -494,20 +494,66 @@ If no clear drives emerge, return {{"drives": []}}"""
         # Sort by count (most stable first)
         stable_patterns.sort(key=lambda p: p.get("count", 0), reverse=True)
 
-        # Assign strategy based on description hints (not hardcoded search!)
+        # Assign strategy based on description hints, with LLM fallback
         for pattern in stable_patterns:
             if not pattern.get("strategy"):
                 description = pattern.get("description", "")
-                pattern["strategy"] = self._determine_strategy_from_description(description)
+                pattern["strategy"] = await self._determine_strategy_from_description(description)
 
         return stable_patterns
 
-    def _determine_strategy_from_description(self, description: str) -> str:
+    async def _classify_strategy_with_llm(self, description: str) -> str:
+        """
+        Use LLM to classify whether a desire is internal or external.
+
+        Internal desires (about BYRD itself) should use internal strategies.
+        External desires (about the outside world) should use search.
+        """
+        prompt = f"""Classify this desire into ONE category. Reply with ONLY the category name.
+
+DESIRE: "{description}"
+
+CATEGORIES:
+- introspect: Questions about my own state, nature, existence, identity, or internal processes
+- reconcile_orphans: Connecting isolated nodes, linking experiences, reducing fragmentation
+- curate: Optimizing, cleaning, organizing my memory or graph structure
+- self_modify: Changing my own code, adding capabilities to myself
+- search: Learning about external topics, researching the outside world
+
+If the desire is about understanding MYSELF (my graph, my state, my nature, my processes), choose an internal category.
+If the desire is about understanding something EXTERNAL (concepts, topics, the world), choose "search".
+
+Reply with ONLY one word: introspect, reconcile_orphans, curate, self_modify, or search"""
+
+        try:
+            response = await self.llm_client.generate(
+                prompt=prompt,
+                max_tokens=20,
+                temperature=0.1  # Low temperature for consistent classification
+            )
+
+            strategy = response.strip().lower().replace('"', '').replace("'", "")
+
+            # Validate response
+            valid_strategies = ["introspect", "reconcile_orphans", "curate", "self_modify", "search"]
+            if strategy in valid_strategies:
+                print(f"🧠 LLM classified '{description[:40]}...' as: {strategy}")
+                return strategy
+
+            # If LLM returned something unexpected, default to search
+            print(f"🧠 LLM returned unexpected: '{strategy}', defaulting to search")
+            return "search"
+
+        except Exception as e:
+            print(f"🧠 LLM classification failed: {e}, defaulting to search")
+            return "search"
+
+    async def _determine_strategy_from_description(self, description: str) -> str:
         """
         Determine the appropriate strategy for a desire based on its description.
 
-        Uses the same strategy hints as pattern extraction to ensure consistent
-        routing for both patterns (from reflections) and direct desires.
+        First tries keyword matching for speed, then falls back to LLM classification
+        for ambiguous desires that don't match any keywords.
 
         ORDER MATTERS: Internal/specific strategies are checked first,
         external/general strategies are checked last (search is fallback).
@@ -546,8 +592,9 @@ If no clear drives emerge, return {{"drives": []}}"""
             if any(hint in desc_lower for hint in hints):
                 return strategy
 
-        # Default fallback
-        return "search"
+        # No keyword match - use LLM to classify
+        # This catches internal desires that don't use expected keywords
+        return await self._classify_strategy_with_llm(description)
 
     async def _extract_patterns_from_output(self, output: Dict, patterns: Dict[str, Dict]):
         """
