@@ -487,18 +487,31 @@ If no clear drives emerge, return {{"drives": []}}"""
 
         # Strategy hint patterns
         strategy_hints = {
+            # External strategies
             "search": ["search", "look up", "find", "research", "learn about", "understand"],
             "code": ["code", "write", "implement", "build", "create", "program"],
             "install": ["install", "add", "get", "acquire", "capability", "tool"],
+
+            # Internal strategies - expanded for better matching
             "curate": ["optimize", "clean", "consolidate", "prune", "organize", "simplify",
-                       "remove duplicate", "merge similar", "curate", "tidy", "declutter"],
+                       "remove duplicate", "merge similar", "curate", "tidy", "declutter",
+                       "resolve inconsistency", "fix graph", "data inconsistency",
+                       "verify ground truth", "graph health"],
             "reconcile_orphans": ["orphan", "orphaned", "disconnected", "isolated", "unconnected",
                                   "reduce orphan", "connect experience", "link experience",
-                                  "reconcile orphan", "integrate experience", "connect nodes"],
+                                  "reconcile orphan", "integrate experience", "connect nodes",
+                                  "integrate", "fragmentation", "strengthen self-model", "unify"],
             "self_modify": ["add to myself", "implement in my", "extend my", "modify my code",
                            "add method", "enhance my capability", "add to memory.py",
                            "add to dreamer.py", "add to seeker.py", "improve my observation",
-                           "extend graph health", "add introspection"],
+                           "extend graph health", "add introspection", "re-enable",
+                           "enable self", "disable self", "activate", "unlock"],
+
+            # Introspection - pure self-observation without modification
+            "introspect": ["introspect", "analyze myself", "examine my", "self-awareness",
+                          "understand my state", "meta-analysis", "self-knowledge",
+                          "observe my", "inspect my", "status of my", "state of my",
+                          "verify", "check my", "audit my", "assess my"],
         }
 
         for key, value in output.items():
@@ -589,6 +602,11 @@ If no clear drives emerge, return {{"drives": []}}"""
             elif strategy == "self_modify":
                 # Use self-modification capability
                 success = await self._execute_self_modify_strategy(description, desire_id)
+                return ("success" if success else "failed", None)
+
+            elif strategy == "introspect":
+                # Pure self-observation - gather and report internal state
+                success = await self._execute_introspect_strategy(description, desire_id)
                 return ("success" if success else "failed", None)
 
             else:
@@ -1662,6 +1680,116 @@ Please implement these changes carefully:
 
 Summary: {mod_plan.get('summary', description)}
 """
+
+    async def _execute_introspect_strategy(self, description: str, desire_id: str = None) -> bool:
+        """
+        Execute introspection - gather and report internal state.
+
+        Unlike curate/reconcile/self_modify, this does NOT modify the graph.
+        It observes and records findings as experiences for BYRD to reflect on.
+
+        This enables BYRD to fulfill desires like:
+        - "Understand my current state"
+        - "Analyze my graph health"
+        - "Examine my memory structure"
+        - "Verify my beliefs"
+        """
+        print(f"🔍 Introspecting: {description[:50]}...")
+
+        try:
+            # 1. Gather comprehensive internal state
+            stats = await self.memory.get_graph_statistics()
+            orphans = await self.memory.find_orphan_nodes()
+            duplicates = await self.memory.find_duplicate_beliefs()
+            patterns = await self.memory.get_reflection_patterns()
+
+            # Get active desires and beliefs for context
+            active_desires = await self.memory.get_unfulfilled_desires(limit=10)
+            beliefs = await self.memory.get_beliefs(min_confidence=0.3, limit=10)
+
+            # 2. Build introspection report
+            node_types = stats.get('node_types', {})
+            total_nodes = stats.get('total_nodes', 0)
+            total_rels = stats.get('total_relationships', 0)
+
+            report_lines = [
+                f"=== Introspection Report ===",
+                f"",
+                f"Graph Overview:",
+                f"  Total nodes: {total_nodes}",
+                f"  Total relationships: {total_rels}",
+                f"  Node types: {node_types}",
+                f"",
+                f"Health Indicators:",
+                f"  Orphaned nodes: {len(orphans)}",
+                f"  Duplicate beliefs: {len(duplicates)}",
+                f"",
+                f"Active Mind State:",
+                f"  Active desires: {len(active_desires)}",
+                f"  Current beliefs: {len(beliefs)}",
+                f"  Vocabulary keys: {list(patterns.keys())[:15]}",
+            ]
+
+            # Add specific details if requested
+            if "orphan" in description.lower() and orphans:
+                report_lines.append(f"")
+                report_lines.append(f"Orphan Details (first 5):")
+                for orphan in orphans[:5]:
+                    report_lines.append(f"  - {orphan.get('type', 'Unknown')}: {str(orphan.get('content', ''))[:60]}")
+
+            if "belief" in description.lower() and beliefs:
+                report_lines.append(f"")
+                report_lines.append(f"Active Beliefs:")
+                for belief in beliefs[:5]:
+                    conf = belief.get('confidence', 0)
+                    report_lines.append(f"  - [{conf:.2f}] {belief.get('content', '')[:60]}")
+
+            if "desire" in description.lower() and active_desires:
+                report_lines.append(f"")
+                report_lines.append(f"Active Desires:")
+                for desire in active_desires[:5]:
+                    intensity = desire.get('intensity', 0)
+                    report_lines.append(f"  - [{intensity:.2f}] {desire.get('description', '')[:60]}")
+
+            report = "\n".join(report_lines)
+
+            # 3. Record as experience for reflection
+            exp_id = await self.memory.record_experience(
+                content=f"[INTROSPECTION] {report}",
+                type="introspection"
+            )
+
+            # 4. Emit event for visualization
+            await event_bus.emit(Event(
+                type=EventType.INTROSPECTION_COMPLETE,
+                data={
+                    "report": report,
+                    "desire_id": desire_id,
+                    "stats": {
+                        "total_nodes": total_nodes,
+                        "total_relationships": total_rels,
+                        "orphans": len(orphans),
+                        "duplicates": len(duplicates),
+                        "active_desires": len(active_desires),
+                        "beliefs": len(beliefs)
+                    }
+                }
+            ))
+
+            # 5. Mark desire fulfilled if provided
+            if desire_id:
+                await self.memory.fulfill_desire(desire_id, fulfilled_by=exp_id)
+
+            print(f"✅ Introspection complete: {total_nodes} nodes, {len(orphans)} orphans")
+            return True
+
+        except Exception as e:
+            await self.memory.record_experience(
+                content=f"[INTROSPECTION_FAILED] Error during introspection: {str(e)}",
+                type="error"
+            )
+            print(f"🔍 Introspection error: {e}")
+            return False
 
     # =========================================================================
     # LEGACY TYPE-BASED ROUTING (kept for backward compatibility)
