@@ -362,6 +362,20 @@ class Memory:
                 CREATE INDEX IF NOT EXISTS FOR (c:Crystal) ON (c.crystal_type)
             """)
             # Uniqueness constraint for Operating System (also creates index)
+            # First, drop any orphaned index that would conflict with constraint
+            try:
+                result = await session.run("""
+                    SHOW INDEXES WHERE labelsOrTypes = ['OperatingSystem'] AND properties = ['id']
+                """)
+                records = await result.data()
+                for record in records:
+                    if record.get('type') == 'RANGE':  # Regular index, not constraint-backed
+                        index_name = record.get('name')
+                        if index_name:
+                            await session.run(f"DROP INDEX {index_name}")
+            except Exception:
+                pass  # Index check not critical
+
             await session.run("""
                 CREATE CONSTRAINT IF NOT EXISTS FOR (os:OperatingSystem) REQUIRE os.id IS UNIQUE
             """)
