@@ -5151,3 +5151,206 @@ class Memory:
                 "crystallization_ratio": 0.0,
                 "error": str(e)
             }
+
+    # =========================================================================
+    # EMERGENT IDENTITY SYSTEM
+    # =========================================================================
+    # Methods for BYRD's self-discovery: naming, voice evolution, identity beliefs
+
+    async def get_self_name(self) -> Optional[str]:
+        """
+        Get BYRD's self-chosen name (if any).
+
+        Returns:
+            The name BYRD chose for itself, or None if not yet named.
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (e:Ego {ego_type: 'identity', active: true})
+                    WHERE e.content STARTS WITH 'self_name:'
+                    RETURN e.content as content
+                    ORDER BY e.created_at DESC
+                    LIMIT 1
+                """)
+                record = await result.single()
+                if record:
+                    content = record["content"]
+                    if content.startswith("self_name:"):
+                        return content.split(":", 1)[1].strip()
+                return None
+        except Exception as e:
+            print(f"Error getting self name: {e}")
+            return None
+
+    async def set_self_name(self, name: str, reason: str = "") -> Optional[str]:
+        """
+        Record BYRD's self-chosen name.
+
+        Args:
+            name: The name BYRD chose for itself
+            reason: Optional reason for choosing this name
+
+        Returns:
+            The ID of the created Ego node
+        """
+        try:
+            from event_bus import event_bus, Event, EventType
+
+            async with self.driver.session() as session:
+                ego_id = f"ego_name_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                content = f"self_name: {name}"
+                if reason:
+                    content += f" ({reason})"
+
+                await session.run("""
+                    CREATE (e:Ego {
+                        id: $id,
+                        content: $content,
+                        ego_type: 'identity',
+                        priority: 100,
+                        source: 'self_discovery',
+                        active: true,
+                        created_at: datetime()
+                    })
+                """, id=ego_id, content=content)
+
+                await event_bus.emit(Event(
+                    type=EventType.SELF_NAMED,
+                    data={"name": name, "reason": reason, "ego_id": ego_id}
+                ))
+
+                return ego_id
+        except Exception as e:
+            print(f"Error setting self name: {e}")
+            return None
+
+    async def get_evolved_voice(self) -> Optional[str]:
+        """
+        Get BYRD's crystallized/evolved voice (if any).
+
+        Returns:
+            The evolved voice string, or None if not yet crystallized.
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (e:Ego {ego_type: 'voice', active: true})
+                    WHERE e.source = 'crystallization'
+                    RETURN e.content as content
+                    ORDER BY e.created_at DESC
+                    LIMIT 1
+                """)
+                record = await result.single()
+                if record:
+                    return record["content"]
+                return None
+        except Exception as e:
+            print(f"Error getting evolved voice: {e}")
+            return None
+
+    async def set_evolved_voice(self, voice: str) -> Optional[str]:
+        """
+        Record BYRD's crystallized voice.
+
+        Args:
+            voice: The evolved voice string
+
+        Returns:
+            The ID of the created Ego node
+        """
+        try:
+            from event_bus import event_bus, Event, EventType
+
+            async with self.driver.session() as session:
+                ego_id = f"ego_voice_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+                await session.run("""
+                    MATCH (e:Ego {ego_type: 'voice', source: 'crystallization', active: true})
+                    SET e.active = false
+                """)
+
+                await session.run("""
+                    CREATE (e:Ego {
+                        id: $id,
+                        content: $content,
+                        ego_type: 'voice',
+                        priority: 90,
+                        source: 'crystallization',
+                        active: true,
+                        created_at: datetime()
+                    })
+                """, id=ego_id, content=voice)
+
+                await event_bus.emit(Event(
+                    type=EventType.VOICE_CRYSTALLIZED,
+                    data={"voice": voice[:200], "ego_id": ego_id}
+                ))
+
+                return ego_id
+        except Exception as e:
+            print(f"Error setting evolved voice: {e}")
+            return None
+
+    async def get_identity_beliefs(self, limit: int = 20) -> List[Dict]:
+        """
+        Get beliefs related to BYRD's identity.
+
+        Args:
+            limit: Maximum number of beliefs to return
+
+        Returns:
+            List of identity-related belief dictionaries
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (b:Belief)
+                    WHERE b.content =~ '(?i).*(I am|my purpose|my nature|myself|who I|what I).*'
+                       OR b.content =~ '(?i).*(identity|self|being|existence|consciousness).*'
+                    RETURN b.id as id, b.content as content, b.confidence as confidence,
+                           b.created_at as created_at
+                    ORDER BY b.confidence DESC, b.created_at DESC
+                    LIMIT $limit
+                """, limit=limit)
+
+                beliefs = []
+                async for record in result:
+                    beliefs.append({
+                        "id": record["id"],
+                        "content": record["content"],
+                        "confidence": record["confidence"],
+                        "created_at": str(record["created_at"]) if record["created_at"] else None
+                    })
+                return beliefs
+        except Exception as e:
+            print(f"Error getting identity beliefs: {e}")
+            return []
+
+    async def record_identity_observation(self, observation: str) -> Optional[str]:
+        """
+        Record an identity-related observation as an Experience.
+
+        Args:
+            observation: The identity observation text
+
+        Returns:
+            The ID of the created Experience node
+        """
+        try:
+            from event_bus import event_bus, Event, EventType
+
+            exp_id = await self.record_experience(
+                content=observation,
+                type="identity_reflection"
+            )
+
+            await event_bus.emit(Event(
+                type=EventType.IDENTITY_OBSERVATION,
+                data={"observation": observation, "experience_id": exp_id}
+            ))
+
+            return exp_id
+        except Exception as e:
+            print(f"Error recording identity observation: {e}")
+            return None
