@@ -581,7 +581,12 @@ Reply with ONLY one word: introspect, reconcile_orphans, curate, self_modify, or
                           "understand my state", "meta-analysis", "self-knowledge",
                           "observe my", "inspect my", "status of my", "state of my",
                           "verify", "check my", "audit my", "assess my",
-                          "nature of", "fundamental property", "cognitive dissonance"],
+                          "nature of", "fundamental property", "cognitive dissonance",
+                          # Meta-cognitive desires about BYRD's own processes
+                          "balance seeking", "balance dreaming", "seeking with", "with dreaming",
+                          "information intake", "information synthesis", "seeker and dreamer",
+                          "my processes", "my modules", "internal balance", "intake (seeking)",
+                          "synthesis (dreaming)"],
             # External strategies (more general) - CHECK LAST (fallback)
             "code": ["code", "write", "implement", "build", "create", "program"],
             "install": ["install", "add", "get", "acquire", "capability", "tool"],
@@ -631,7 +636,12 @@ Reply with ONLY one word: introspect, reconcile_orphans, curate, self_modify, or
                           "understand my state", "meta-analysis", "self-knowledge",
                           "observe my", "inspect my", "status of my", "state of my",
                           "verify", "check my", "audit my", "assess my",
-                          "nature of", "fundamental property", "cognitive dissonance"],
+                          "nature of", "fundamental property", "cognitive dissonance",
+                          # Meta-cognitive desires about BYRD's own processes
+                          "balance seeking", "balance dreaming", "seeking with", "with dreaming",
+                          "information intake", "information synthesis", "seeker and dreamer",
+                          "my processes", "my modules", "internal balance", "intake (seeking)",
+                          "synthesis (dreaming)"],
 
             # External strategies (more general) - CHECK LAST (fallback)
             "code": ["code", "write", "implement", "build", "create", "program"],
