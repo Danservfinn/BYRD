@@ -224,6 +224,13 @@ class Memory:
             await session.run("""
                 CREATE INDEX IF NOT EXISTS FOR (r:Reflection) ON (r.timestamp)
             """)
+            # Indexes for Crystal memory system
+            await session.run("""
+                CREATE INDEX IF NOT EXISTS FOR (c:Crystal) ON (c.timestamp)
+            """)
+            await session.run("""
+                CREATE INDEX IF NOT EXISTS FOR (c:Crystal) ON (c.crystal_type)
+            """)
     
     def _generate_id(self, content: str) -> str:
         """Generate deterministic ID from content."""
