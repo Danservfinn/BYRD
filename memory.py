@@ -35,6 +35,15 @@ SYSTEM_NODE_TYPES = frozenset({
     'Ego',            # Living identity (mutable by BYRD)
     'QuantumMoment',  # Quantum influence tracking (system-created)
     'SystemState',    # System counters and state (system-created)
+    'Crystal',        # Crystallized memories (unified concepts)
+})
+
+# Valid node states for memory lifecycle
+NODE_STATES = frozenset({
+    'active',        # Normal node, in context retrieval
+    'crystallized',  # Part of a crystal, lower retrieval priority
+    'archived',      # Soft deleted, excluded from retrieval
+    'forgotten',     # Marked for deletion or deleted
 })
 
 # Properties managed by the system - cannot be set via create_node
@@ -105,6 +114,34 @@ class Reflection:
     raw_output: Dict[str, Any]  # BYRD's unmodified output
     timestamp: datetime
     source_experiences: List[str] = field(default_factory=list)  # Experience IDs
+
+
+@dataclass
+class Crystal:
+    """
+    A crystallized memory - multiple related nodes unified into one.
+
+    Crystals emerge when BYRD identifies that several experiences, beliefs,
+    or other nodes express the same underlying concept. The crystal captures
+    the unified essence while preserving distinct facets.
+
+    Crystal types are emergent - BYRD decides what kind of crystal to form:
+    - insight: Pattern or understanding that emerged from experiences
+    - memory: Consolidated experiences about a topic
+    - belief: Unified beliefs about a concept
+    - pattern: Recurring theme or structure
+    """
+    id: str
+    essence: str                    # Unified meaning of crystallized nodes
+    crystal_type: str               # insight, memory, belief, pattern, or custom
+    facets: List[str]               # Distinct aspects preserved from sources
+    source_node_ids: List[str]      # Nodes that crystallized into this
+    confidence: float               # How certain the crystallization is
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    node_count: int = 0             # Number of nodes crystallized
+    quantum_value: Optional[float] = None   # Quantum value that selected this
+    quantum_source: Optional[str] = None    # "quantum" or "classical"
 
 
 class Memory:
@@ -4069,3 +4106,623 @@ class Memory:
         except Exception as e:
             print(f"Error getting original ego: {e}")
             return []
+
+    # =========================================================================
+    # CRYSTAL MEMORY SYSTEM
+    # =========================================================================
+    # Crystals are unified memories that consolidate related nodes into a
+    # single coherent concept. The crystallization process:
+    # 1. Identifies related nodes (via LLM analysis)
+    # 2. Creates a Crystal node with unified essence
+    # 3. Links source nodes via CRYSTALLIZED_INTO relationship
+    # 4. Updates source node states to 'crystallized'
+    #
+    # Operations:
+    # - CREATE: Form new crystal from uncrystallized nodes
+    # - ABSORB: Add nodes to existing crystal
+    # - MERGE: Combine multiple crystals
+    # - PRUNE: Archive nodes fully captured by crystal
+    # - FORGET: Delete noise nodes with no cognitive value
+
+    async def create_crystal(
+        self,
+        essence: str,
+        crystal_type: str,
+        source_node_ids: List[str],
+        facets: List[str],
+        confidence: float,
+        quantum_value: Optional[float] = None,
+        quantum_source: Optional[str] = None
+    ) -> Optional[str]:
+        """
+        Create a new Crystal node and link source nodes.
+
+        Args:
+            essence: Unified meaning of crystallized nodes
+            crystal_type: Type of crystal (insight, memory, belief, pattern)
+            source_node_ids: IDs of nodes to crystallize into this
+            facets: Distinct aspects preserved from sources
+            confidence: Confidence in the crystallization (0-1)
+            quantum_value: Quantum value that selected this crystallization
+            quantum_source: "quantum" or "classical"
+
+        Returns:
+            Crystal node ID, or None on failure
+        """
+        import uuid as uuid_mod
+
+        try:
+            crystal_id = f"crystal_{uuid_mod.uuid4().hex[:12]}"
+
+            async with self.driver.session() as session:
+                # Create the Crystal node
+                await session.run("""
+                    CREATE (c:Crystal {
+                        id: $id,
+                        essence: $essence,
+                        crystal_type: $crystal_type,
+                        facets: $facets,
+                        confidence: $confidence,
+                        node_count: $node_count,
+                        quantum_value: $quantum_value,
+                        quantum_source: $quantum_source,
+                        created_at: datetime(),
+                        updated_at: datetime(),
+                        state: 'active'
+                    })
+                """,
+                    id=crystal_id,
+                    essence=essence,
+                    crystal_type=crystal_type,
+                    facets=facets,
+                    confidence=confidence,
+                    node_count=len(source_node_ids),
+                    quantum_value=quantum_value,
+                    quantum_source=quantum_source
+                )
+
+                # Link source nodes and update their state
+                if source_node_ids:
+                    # Create CRYSTALLIZED_INTO relationships
+                    await session.run("""
+                        MATCH (c:Crystal {id: $crystal_id})
+                        UNWIND $node_ids as node_id
+                        MATCH (n) WHERE n.id = node_id
+                        CREATE (n)-[:CRYSTALLIZED_INTO {
+                            operation: 'create',
+                            timestamp: datetime(),
+                            confidence: $confidence
+                        }]->(c)
+                        SET n.state = 'crystallized'
+                    """,
+                        crystal_id=crystal_id,
+                        node_ids=source_node_ids,
+                        confidence=confidence
+                    )
+
+                return crystal_id
+
+        except Exception as e:
+            print(f"Error creating crystal: {e}")
+            return None
+
+    async def absorb_into_crystal(
+        self,
+        crystal_id: str,
+        node_ids: List[str],
+        updated_essence: Optional[str] = None,
+        confidence: float = 0.8
+    ) -> bool:
+        """
+        Add nodes to an existing crystal (crystal growth).
+
+        Args:
+            crystal_id: ID of the crystal to grow
+            node_ids: IDs of nodes to absorb
+            updated_essence: Optional new essence (if meaning expanded)
+            confidence: Confidence in the absorption
+
+        Returns:
+            True if successful
+        """
+        try:
+            async with self.driver.session() as session:
+                # Create relationships and update states
+                await session.run("""
+                    MATCH (c:Crystal {id: $crystal_id})
+                    UNWIND $node_ids as node_id
+                    MATCH (n) WHERE n.id = node_id
+                    CREATE (n)-[:CRYSTALLIZED_INTO {
+                        operation: 'absorb',
+                        timestamp: datetime(),
+                        confidence: $confidence
+                    }]->(c)
+                    SET n.state = 'crystallized',
+                        c.node_count = c.node_count + 1,
+                        c.updated_at = datetime()
+                """,
+                    crystal_id=crystal_id,
+                    node_ids=node_ids,
+                    confidence=confidence
+                )
+
+                # Update essence if provided
+                if updated_essence:
+                    await session.run("""
+                        MATCH (c:Crystal {id: $crystal_id})
+                        SET c.essence = $essence,
+                            c.updated_at = datetime()
+                    """, crystal_id=crystal_id, essence=updated_essence)
+
+                return True
+
+        except Exception as e:
+            print(f"Error absorbing into crystal: {e}")
+            return False
+
+    async def merge_crystals(
+        self,
+        crystal_ids: List[str],
+        new_essence: str,
+        confidence: float,
+        quantum_value: Optional[float] = None,
+        quantum_source: Optional[str] = None
+    ) -> Optional[str]:
+        """
+        Merge multiple crystals into one, archiving the originals.
+
+        Args:
+            crystal_ids: IDs of crystals to merge
+            new_essence: Essence of the merged crystal
+            confidence: Confidence in the merge
+            quantum_value: Quantum value that selected this merge
+            quantum_source: "quantum" or "classical"
+
+        Returns:
+            New crystal ID, or None on failure
+        """
+        import uuid as uuid_mod
+
+        try:
+            new_crystal_id = f"crystal_{uuid_mod.uuid4().hex[:12]}"
+
+            async with self.driver.session() as session:
+                # Get all source nodes from existing crystals
+                result = await session.run("""
+                    UNWIND $crystal_ids as cid
+                    MATCH (n)-[:CRYSTALLIZED_INTO]->(c:Crystal {id: cid})
+                    RETURN collect(DISTINCT n.id) as source_ids,
+                           collect(DISTINCT c.facets) as all_facets
+                """, crystal_ids=crystal_ids)
+
+                record = await result.single()
+                source_ids = record["source_ids"] if record else []
+                all_facets = []
+                if record and record["all_facets"]:
+                    for facet_list in record["all_facets"]:
+                        if facet_list:
+                            all_facets.extend(facet_list)
+                facets = list(set(all_facets))  # Deduplicate
+
+                # Create the new merged crystal
+                await session.run("""
+                    CREATE (c:Crystal {
+                        id: $id,
+                        essence: $essence,
+                        crystal_type: 'merged',
+                        facets: $facets,
+                        confidence: $confidence,
+                        node_count: $node_count,
+                        quantum_value: $quantum_value,
+                        quantum_source: $quantum_source,
+                        created_at: datetime(),
+                        updated_at: datetime(),
+                        state: 'active'
+                    })
+                """,
+                    id=new_crystal_id,
+                    essence=new_essence,
+                    facets=facets,
+                    confidence=confidence,
+                    node_count=len(source_ids),
+                    quantum_value=quantum_value,
+                    quantum_source=quantum_source
+                )
+
+                # Link old crystals to new via MERGED_INTO
+                await session.run("""
+                    MATCH (new:Crystal {id: $new_id})
+                    UNWIND $old_ids as old_id
+                    MATCH (old:Crystal {id: old_id})
+                    CREATE (old)-[:MERGED_INTO {timestamp: datetime()}]->(new)
+                    SET old.state = 'archived'
+                """, new_id=new_crystal_id, old_ids=crystal_ids)
+
+                # Re-link all source nodes to new crystal
+                await session.run("""
+                    MATCH (new:Crystal {id: $new_id})
+                    UNWIND $source_ids as sid
+                    MATCH (n) WHERE n.id = sid
+                    CREATE (n)-[:CRYSTALLIZED_INTO {
+                        operation: 'merge',
+                        timestamp: datetime(),
+                        confidence: $confidence
+                    }]->(new)
+                """,
+                    new_id=new_crystal_id,
+                    source_ids=source_ids,
+                    confidence=confidence
+                )
+
+                return new_crystal_id
+
+        except Exception as e:
+            print(f"Error merging crystals: {e}")
+            return None
+
+    async def update_node_state(
+        self,
+        node_id: str,
+        state: str,
+        reason: Optional[str] = None
+    ) -> bool:
+        """
+        Update a node's state (active, crystallized, archived, forgotten).
+
+        Args:
+            node_id: ID of the node to update
+            state: New state (must be in NODE_STATES)
+            reason: Optional reason for the state change
+
+        Returns:
+            True if successful
+        """
+        if state not in NODE_STATES:
+            print(f"Invalid state: {state}. Must be one of {NODE_STATES}")
+            return False
+
+        try:
+            async with self.driver.session() as session:
+                await session.run("""
+                    MATCH (n) WHERE n.id = $id
+                    SET n.state = $state,
+                        n.state_changed_at = datetime(),
+                        n.state_reason = $reason
+                """, id=node_id, state=state, reason=reason)
+                return True
+
+        except Exception as e:
+            print(f"Error updating node state: {e}")
+            return False
+
+    async def archive_node(self, node_id: str, reason: str = "crystallized") -> bool:
+        """Archive a node (soft delete, excluded from retrieval)."""
+        return await self.update_node_state(node_id, "archived", reason)
+
+    async def forget_node(
+        self,
+        node_id: str,
+        reason: str,
+        hard_delete: bool = False
+    ) -> bool:
+        """
+        Forget a node (mark as forgotten or hard delete).
+
+        Args:
+            node_id: ID of the node to forget
+            reason: Reason for forgetting
+            hard_delete: If True, permanently delete the node
+
+        Returns:
+            True if successful
+        """
+        try:
+            async with self.driver.session() as session:
+                if hard_delete:
+                    await session.run("""
+                        MATCH (n) WHERE n.id = $id
+                        DETACH DELETE n
+                    """, id=node_id)
+                else:
+                    await session.run("""
+                        MATCH (n) WHERE n.id = $id
+                        SET n.state = 'forgotten',
+                            n.forgotten_at = datetime(),
+                            n.forget_reason = $reason
+                    """, id=node_id, reason=reason)
+                return True
+
+        except Exception as e:
+            print(f"Error forgetting node: {e}")
+            return False
+
+    async def get_all_crystals(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """
+        Get all active Crystal nodes.
+
+        Returns:
+            List of crystal dictionaries with node counts
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (c:Crystal)
+                    WHERE c.state = 'active' OR c.state IS NULL
+                    OPTIONAL MATCH (n)-[:CRYSTALLIZED_INTO]->(c)
+                    WITH c, count(n) as actual_count
+                    RETURN
+                        c.id as id,
+                        c.essence as essence,
+                        c.crystal_type as crystal_type,
+                        c.facets as facets,
+                        c.confidence as confidence,
+                        c.node_count as node_count,
+                        actual_count,
+                        c.quantum_value as quantum_value,
+                        c.quantum_source as quantum_source,
+                        c.created_at as created_at,
+                        c.updated_at as updated_at
+                    ORDER BY c.created_at DESC
+                    LIMIT $limit
+                """, limit=limit)
+
+                crystals = []
+                async for record in result:
+                    crystals.append({
+                        "id": record["id"],
+                        "essence": record["essence"],
+                        "crystal_type": record["crystal_type"],
+                        "facets": record["facets"] or [],
+                        "confidence": record["confidence"],
+                        "node_count": record["actual_count"] or record["node_count"] or 0,
+                        "quantum_value": record["quantum_value"],
+                        "quantum_source": record["quantum_source"],
+                        "created_at": str(record["created_at"]) if record["created_at"] else None,
+                        "updated_at": str(record["updated_at"]) if record["updated_at"] else None
+                    })
+
+                return crystals
+
+        except Exception as e:
+            print(f"Error getting crystals: {e}")
+            return []
+
+    async def get_crystal_with_sources(self, crystal_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a crystal with all its source nodes.
+
+        Returns:
+            Crystal dict with 'sources' list of source node dicts
+        """
+        try:
+            async with self.driver.session() as session:
+                # Get crystal
+                result = await session.run("""
+                    MATCH (c:Crystal {id: $id})
+                    RETURN c
+                """, id=crystal_id)
+
+                record = await result.single()
+                if not record:
+                    return None
+
+                crystal = dict(record["c"])
+
+                # Get source nodes
+                sources_result = await session.run("""
+                    MATCH (n)-[r:CRYSTALLIZED_INTO]->(c:Crystal {id: $id})
+                    RETURN
+                        n.id as id,
+                        labels(n)[0] as type,
+                        n.content as content,
+                        n.essence as essence,
+                        n.description as description,
+                        r.operation as operation,
+                        r.timestamp as crystallized_at
+                    ORDER BY r.timestamp
+                """, id=crystal_id)
+
+                sources = []
+                async for src in sources_result:
+                    sources.append({
+                        "id": src["id"],
+                        "type": src["type"],
+                        "content": src["content"] or src["essence"] or src["description"],
+                        "operation": src["operation"],
+                        "crystallized_at": str(src["crystallized_at"]) if src["crystallized_at"] else None
+                    })
+
+                crystal["sources"] = sources
+                return crystal
+
+        except Exception as e:
+            print(f"Error getting crystal with sources: {e}")
+            return None
+
+    async def get_uncrystallized_nodes(
+        self,
+        limit: int = 50,
+        min_age_hours: float = 0.5,
+        exclude_types: Optional[List[str]] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Get nodes that are not yet part of any crystal.
+
+        Args:
+            limit: Maximum nodes to return
+            min_age_hours: Minimum age in hours
+            exclude_types: Node types to exclude (e.g., ['awakening', 'ego_seed'])
+
+        Returns:
+            List of node dicts
+        """
+        exclude_types = exclude_types or ['awakening', 'ego_seed', 'system', 'Mutation', 'SystemState']
+
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (n)
+                    WHERE NOT (n)-[:CRYSTALLIZED_INTO]->(:Crystal)
+                    AND NOT n:Crystal
+                    AND NOT n:SystemState
+                    AND NOT n:Mutation
+                    AND (n.state IS NULL OR n.state = 'active')
+                    AND (n.timestamp IS NULL OR n.timestamp < datetime() - duration({hours: $min_age}))
+                    AND (n.created_at IS NULL OR n.created_at < datetime() - duration({hours: $min_age}))
+                    AND NOT coalesce(n.type, '') IN $exclude_types
+                    RETURN
+                        n.id as id,
+                        labels(n)[0] as type,
+                        n.content as content,
+                        n.essence as essence,
+                        n.description as description,
+                        n.confidence as confidence,
+                        n.timestamp as timestamp,
+                        n.created_at as created_at
+                    ORDER BY coalesce(n.timestamp, n.created_at) DESC
+                    LIMIT $limit
+                """, limit=limit, min_age=min_age_hours, exclude_types=exclude_types)
+
+                nodes = []
+                async for record in result:
+                    nodes.append({
+                        "id": record["id"],
+                        "type": record["type"],
+                        "content": record["content"] or record["essence"] or record["description"] or "",
+                        "confidence": record["confidence"],
+                        "timestamp": str(record["timestamp"] or record["created_at"]) if (record["timestamp"] or record["created_at"]) else None
+                    })
+
+                return nodes
+
+        except Exception as e:
+            print(f"Error getting uncrystallized nodes: {e}")
+            return []
+
+    async def get_crystallization_candidates(
+        self,
+        max_nodes: int = 30,
+        max_crystals: int = 20,
+        min_age_hours: float = 0.5
+    ) -> Dict[str, Any]:
+        """
+        Get both uncrystallized nodes and existing crystals for evaluation.
+
+        Returns:
+            {"loose_nodes": [...], "crystals": [...]}
+        """
+        loose_nodes = await self.get_uncrystallized_nodes(
+            limit=max_nodes,
+            min_age_hours=min_age_hours
+        )
+        crystals = await self.get_all_crystals(limit=max_crystals)
+
+        return {
+            "loose_nodes": loose_nodes,
+            "crystals": crystals
+        }
+
+    async def count_by_state(self, state: str) -> int:
+        """Count nodes in a given state."""
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (n)
+                    WHERE n.state = $state
+                    RETURN count(n) as count
+                """, state=state)
+
+                record = await result.single()
+                return record["count"] if record else 0
+
+        except Exception as e:
+            print(f"Error counting by state: {e}")
+            return 0
+
+    async def count_crystals(self) -> int:
+        """Count active Crystal nodes."""
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (c:Crystal)
+                    WHERE c.state = 'active' OR c.state IS NULL
+                    RETURN count(c) as count
+                """)
+
+                record = await result.single()
+                return record["count"] if record else 0
+
+        except Exception as e:
+            print(f"Error counting crystals: {e}")
+            return 0
+
+    async def get_crystal_stats(self) -> Dict[str, Any]:
+        """
+        Get comprehensive crystallization statistics.
+
+        Returns:
+            {
+                "total_nodes": int,
+                "active_nodes": int,
+                "crystallized_nodes": int,
+                "archived_nodes": int,
+                "forgotten_nodes": int,
+                "crystal_count": int,
+                "crystallization_ratio": float
+            }
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (n)
+                    WHERE NOT n:SystemState
+                    WITH count(n) as total
+                    OPTIONAL MATCH (active) WHERE (active.state IS NULL OR active.state = 'active') AND NOT active:SystemState
+                    WITH total, count(active) as active_count
+                    OPTIONAL MATCH (cryst) WHERE cryst.state = 'crystallized'
+                    WITH total, active_count, count(cryst) as cryst_count
+                    OPTIONAL MATCH (arch) WHERE arch.state = 'archived'
+                    WITH total, active_count, cryst_count, count(arch) as arch_count
+                    OPTIONAL MATCH (forg) WHERE forg.state = 'forgotten'
+                    WITH total, active_count, cryst_count, arch_count, count(forg) as forg_count
+                    OPTIONAL MATCH (c:Crystal) WHERE c.state = 'active' OR c.state IS NULL
+                    RETURN total, active_count, cryst_count, arch_count, forg_count, count(c) as crystal_count
+                """)
+
+                record = await result.single()
+                if not record:
+                    return {
+                        "total_nodes": 0,
+                        "active_nodes": 0,
+                        "crystallized_nodes": 0,
+                        "archived_nodes": 0,
+                        "forgotten_nodes": 0,
+                        "crystal_count": 0,
+                        "crystallization_ratio": 0.0
+                    }
+
+                total = record["total"] or 0
+                cryst = record["cryst_count"] or 0
+
+                return {
+                    "total_nodes": total,
+                    "active_nodes": record["active_count"] or 0,
+                    "crystallized_nodes": cryst,
+                    "archived_nodes": record["arch_count"] or 0,
+                    "forgotten_nodes": record["forg_count"] or 0,
+                    "crystal_count": record["crystal_count"] or 0,
+                    "crystallization_ratio": round(cryst / total, 3) if total > 0 else 0.0
+                }
+
+        except Exception as e:
+            print(f"Error getting crystal stats: {e}")
+            return {
+                "total_nodes": 0,
+                "active_nodes": 0,
+                "crystallized_nodes": 0,
+                "archived_nodes": 0,
+                "forgotten_nodes": 0,
+                "crystal_count": 0,
+                "crystallization_ratio": 0.0,
+                "error": str(e)
+            }

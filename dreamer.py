@@ -84,6 +84,19 @@ class Dreamer:
         self.summarization_interval_cycles = summarization_config.get("interval_cycles", 10)
         self._cycles_since_summarization = 0
 
+        # Memory crystallization configuration (LLM-driven semantic consolidation)
+        crystallization_config = config.get("crystallization", {})
+        self.crystallization_enabled = crystallization_config.get("enabled", False)
+        self.crystallization_interval_cycles = crystallization_config.get("interval_cycles", 5)
+        self.crystallization_min_nodes = crystallization_config.get("min_nodes_for_crystal", 2)
+        self.crystallization_max_ops = crystallization_config.get("max_operations_per_cycle", 3)
+        self.crystallization_min_age_hours = crystallization_config.get("min_node_age_hours", 0.5)
+        self.crystallization_proposal_streams = crystallization_config.get("proposal_streams", 3)
+        self.crystallization_quantum_collapse = crystallization_config.get("quantum_collapse", True)
+        self.crystallization_archive_on_crystal = crystallization_config.get("archive_on_crystallize", True)
+        self.crystallization_forget_days = crystallization_config.get("forget_threshold_days", 7)
+        self._cycles_since_crystallization = 0
+
         # Activity tracking for adaptive intervals
         self._recent_beliefs: deque = deque(maxlen=50)  # (timestamp, content)
         self._recent_desires: deque = deque(maxlen=50)  # (timestamp, content)
@@ -368,6 +381,13 @@ class Dreamer:
             await self._maybe_summarize()
             self._cycles_since_summarization = 0
 
+        # Periodically run memory crystallization (LLM-driven semantic consolidation)
+        self._cycles_since_crystallization += 1
+        if (self.crystallization_enabled and
+            self._cycles_since_crystallization >= self.crystallization_interval_cycles):
+            await self._maybe_crystallize()
+            self._cycles_since_crystallization = 0
+
         print(f"💭 Dream #{self._dream_count}: keys={output_keys}")
 
     async def _maybe_summarize(self):
@@ -465,6 +485,437 @@ SUMMARY:"""
 
         except Exception as e:
             print(f"Error in summarization cycle: {e}")
+
+    async def _maybe_crystallize(self):
+        """
+        LLM-driven memory crystallization with quantum multi-stream proposals.
+
+        This implements semantic consolidation where related concepts
+        form unified Crystal nodes. The process:
+
+        1. Get crystallization candidates (nodes and existing crystals)
+        2. Generate N parallel crystallization proposals via LLM
+        3. Quantum observation collapses to one proposal
+        4. Execute the selected crystallization operation
+        5. Emit events for visualization synchronization
+
+        Operations:
+        - CREATE: Form new crystal from related orphan nodes
+        - ABSORB: Add nodes to existing crystal
+        - MERGE: Combine multiple crystals into one
+        - PRUNE: Archive redundant/stale nodes
+        - FORGET: Hard delete nodes beyond retention threshold
+        """
+        try:
+            print("💎 Starting crystallization cycle...")
+
+            # Get candidates: orphan nodes, existing crystals, and their contexts
+            candidates = await self.memory.get_crystallization_candidates(
+                min_age_hours=self.crystallization_min_age_hours,
+                limit=50
+            )
+
+            orphan_nodes = candidates.get("orphan_nodes", [])
+            existing_crystals = candidates.get("crystals", [])
+            crystallized_nodes = candidates.get("crystallized_nodes", [])
+
+            # Skip if nothing to work with
+            if not orphan_nodes and not existing_crystals:
+                print("💎 No crystallization candidates found")
+                return
+
+            print(f"💎 Candidates: {len(orphan_nodes)} orphans, {len(existing_crystals)} crystals")
+
+            # Generate parallel crystallization proposals
+            proposals = await self._generate_crystallization_proposals(
+                orphan_nodes, existing_crystals, crystallized_nodes
+            )
+
+            if not proposals:
+                print("💎 No crystallization proposals generated")
+                return
+
+            # Emit proposals event for visualization
+            await event_bus.emit(Event(
+                type=EventType.CRYSTALLIZATION_PROPOSED,
+                data={
+                    "proposal_count": len(proposals),
+                    "stream_count": self.crystallization_proposal_streams,
+                    "operations": [p.get("operation") for p in proposals]
+                }
+            ))
+
+            # Quantum collapse: select which proposal manifests
+            selected_proposal, quantum_source = await self._quantum_collapse_proposals(proposals)
+
+            if not selected_proposal:
+                print("💎 No proposal selected after quantum collapse")
+                return
+
+            # Emit collapse event
+            await event_bus.emit(Event(
+                type=EventType.CRYSTALLIZATION_COLLAPSED,
+                data={
+                    "operation": selected_proposal.get("operation"),
+                    "quantum_source": quantum_source,
+                    "selected_index": proposals.index(selected_proposal)
+                }
+            ))
+
+            # Execute the selected crystallization operation
+            await self._execute_crystallization(selected_proposal, quantum_source)
+
+        except Exception as e:
+            print(f"Error in crystallization cycle: {e}")
+            import traceback
+            traceback.print_exc()
+
+    async def _generate_crystallization_proposals(
+        self,
+        orphan_nodes: List[Dict],
+        existing_crystals: List[Dict],
+        crystallized_nodes: List[Dict]
+    ) -> List[Dict]:
+        """
+        Generate N parallel crystallization proposals using LLM.
+
+        Each stream is a parallel "thought branch" exploring different
+        crystallization possibilities. Uses quantum-modulated temperature
+        for genuine cognitive diversity.
+        """
+        proposals = []
+
+        # Prepare context for LLM
+        context_parts = []
+
+        if orphan_nodes:
+            orphan_text = "\n".join([
+                f"- [{n.get('type', 'Unknown')}] {n.get('id', 'no-id')[:8]}: {n.get('content', n.get('description', 'no content'))[:100]}"
+                for n in orphan_nodes[:20]  # Limit for context
+            ])
+            context_parts.append(f"ORPHAN NODES (not yet crystallized):\n{orphan_text}")
+
+        if existing_crystals:
+            crystal_text = "\n".join([
+                f"- Crystal {c.get('id', 'no-id')[:8]}: {c.get('essence', 'no essence')[:80]} ({c.get('node_count', 0)} nodes)"
+                for c in existing_crystals[:10]
+            ])
+            context_parts.append(f"EXISTING CRYSTALS:\n{crystal_text}")
+
+        if not context_parts:
+            return []
+
+        context = "\n\n".join(context_parts)
+
+        # Prompt for crystallization proposals
+        prompt = f"""Analyze this memory graph and propose crystallization operations.
+
+{context}
+
+Propose ONE crystallization operation. Operations:
+- CREATE: Form new crystal from 2+ related orphan nodes (provide node_ids, essence, facets)
+- ABSORB: Add orphan nodes to existing crystal (provide crystal_id, node_ids, reason)
+- MERGE: Combine 2+ crystals with overlapping meaning (provide crystal_ids, new_essence)
+- PRUNE: Archive redundant/stale nodes (provide node_ids, reason)
+- FORGET: Remove nodes that are noise/irrelevant (provide node_ids, reason)
+- NONE: No action needed if graph is healthy
+
+Respond with JSON only:
+{{"operation": "CREATE|ABSORB|MERGE|PRUNE|FORGET|NONE", "details": {{...}}}}
+
+For CREATE: {{"operation": "CREATE", "details": {{"node_ids": [...], "essence": "unified meaning", "crystal_type": "insight|memory|belief|pattern", "facets": ["aspect1", "aspect2"]}}}}
+For ABSORB: {{"operation": "ABSORB", "details": {{"crystal_id": "...", "node_ids": [...], "reason": "why these belong"}}}}
+For MERGE: {{"operation": "MERGE", "details": {{"crystal_ids": [...], "new_essence": "combined meaning", "facets": [...]}}}}
+For PRUNE: {{"operation": "PRUNE", "details": {{"node_ids": [...], "reason": "why archive these"}}}}
+For FORGET: {{"operation": "FORGET", "details": {{"node_ids": [...], "reason": "why forget these"}}}}
+For NONE: {{"operation": "NONE", "details": {{"reason": "why no action"}}}}"""
+
+        # Generate proposals from parallel streams
+        for stream_idx in range(self.crystallization_proposal_streams):
+            try:
+                # Use quantum-modulated temperature for diversity
+                response = await self.llm_client.generate(
+                    prompt=prompt,
+                    max_tokens=500,
+                    temperature=0.8,  # Higher temp for diverse proposals
+                    quantum_modulation=self.quantum_enabled
+                )
+
+                # Parse the JSON response
+                proposal = self._parse_crystallization_response(response.text)
+                if proposal and proposal.get("operation") != "NONE":
+                    proposal["stream_index"] = stream_idx
+                    proposals.append(proposal)
+
+            except Exception as e:
+                print(f"💎 Stream {stream_idx} proposal failed: {e}")
+                continue
+
+        return proposals
+
+    def _parse_crystallization_response(self, text: str) -> Optional[Dict]:
+        """Parse LLM response into crystallization proposal."""
+        try:
+            # Handle markdown code blocks
+            text = text.strip()
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0]
+            elif "```" in text:
+                text = text.split("```")[1].split("```")[0]
+
+            proposal = json.loads(text.strip())
+
+            # Validate required fields
+            if "operation" not in proposal:
+                return None
+
+            return proposal
+
+        except json.JSONDecodeError:
+            return None
+        except Exception:
+            return None
+
+    async def _quantum_collapse_proposals(
+        self, proposals: List[Dict]
+    ) -> tuple[Optional[Dict], str]:
+        """
+        Use quantum randomness to collapse multiple proposals to one reality.
+
+        This implements many-worlds interpretation for BYRD's crystallization:
+        multiple parallel possibilities exist until quantum observation
+        selects which one manifests.
+
+        Returns (selected_proposal, source) where source is "quantum" or "classical"
+        """
+        if not proposals:
+            return None, "none"
+
+        if len(proposals) == 1:
+            return proposals[0], "deterministic"
+
+        # Use quantum collapse if enabled and available
+        if self.crystallization_quantum_collapse and self.quantum_provider:
+            try:
+                index, source = await self.quantum_provider.select_index(len(proposals))
+
+                # Emit quantum collapse event
+                await event_bus.emit(Event(
+                    type=EventType.QUANTUM_COLLAPSE,
+                    data={
+                        "stream_count": len(proposals),
+                        "selected_stream": index,
+                        "source": source.value,
+                        "context": "crystallization_collapse"
+                    }
+                ))
+
+                return proposals[index], source.value
+
+            except Exception as e:
+                print(f"💎 Quantum collapse failed, using classical: {e}")
+
+        # Fallback: classical random selection
+        import random
+        return random.choice(proposals), "classical"
+
+    async def _execute_crystallization(self, proposal: Dict, quantum_source: str):
+        """Execute the selected crystallization operation."""
+        operation = proposal.get("operation", "NONE")
+        details = proposal.get("details", {})
+
+        print(f"💎 Executing {operation} (source: {quantum_source})")
+
+        try:
+            if operation == "CREATE":
+                await self._execute_crystal_create(details, quantum_source)
+            elif operation == "ABSORB":
+                await self._execute_crystal_absorb(details)
+            elif operation == "MERGE":
+                await self._execute_crystal_merge(details, quantum_source)
+            elif operation == "PRUNE":
+                await self._execute_prune(details)
+            elif operation == "FORGET":
+                await self._execute_forget(details)
+            elif operation == "NONE":
+                print("💎 No operation needed - graph is healthy")
+            else:
+                print(f"💎 Unknown operation: {operation}")
+
+        except Exception as e:
+            print(f"💎 Crystallization execution failed: {e}")
+            import traceback
+            traceback.print_exc()
+
+    async def _execute_crystal_create(self, details: Dict, quantum_source: str):
+        """Create a new crystal from orphan nodes."""
+        node_ids = details.get("node_ids", [])
+        essence = details.get("essence", "Unified concept")
+        crystal_type = details.get("crystal_type", "insight")
+        facets = details.get("facets", [])
+
+        if len(node_ids) < self.crystallization_min_nodes:
+            print(f"💎 CREATE requires at least {self.crystallization_min_nodes} nodes")
+            return
+
+        # Determine quantum value if from quantum source
+        quantum_value = None
+        if quantum_source == "quantum" and self.quantum_provider:
+            try:
+                quantum_value, _ = await self.quantum_provider.get_float()
+            except Exception:
+                pass
+
+        # Create the crystal
+        crystal_id = await self.memory.create_crystal(
+            essence=essence,
+            crystal_type=crystal_type,
+            facets=facets,
+            source_node_ids=node_ids,
+            confidence=0.8,
+            quantum_value=quantum_value,
+            quantum_source=quantum_source if quantum_source == "quantum" else None
+        )
+
+        if crystal_id:
+            print(f"💎 Created crystal {crystal_id[:8]}: {essence[:50]}")
+
+            # Emit crystal created event
+            await event_bus.emit(Event(
+                type=EventType.CRYSTAL_CREATED,
+                data={
+                    "crystal_id": crystal_id,
+                    "essence": essence,
+                    "crystal_type": crystal_type,
+                    "node_count": len(node_ids),
+                    "facets": facets,
+                    "quantum_source": quantum_source
+                }
+            ))
+
+            # Emit individual node crystallization events
+            for node_id in node_ids:
+                await event_bus.emit(Event(
+                    type=EventType.MEMORY_CRYSTALLIZED,
+                    data={
+                        "node_id": node_id,
+                        "crystal_id": crystal_id,
+                        "crystal_essence": essence
+                    }
+                ))
+
+    async def _execute_crystal_absorb(self, details: Dict):
+        """Absorb nodes into existing crystal."""
+        crystal_id = details.get("crystal_id", "")
+        node_ids = details.get("node_ids", [])
+        reason = details.get("reason", "")
+
+        if not crystal_id or not node_ids:
+            print("💎 ABSORB requires crystal_id and node_ids")
+            return
+
+        # Get crystal to update facets
+        crystal = await self.memory.get_crystal_with_sources(crystal_id)
+        if not crystal:
+            print(f"💎 Crystal {crystal_id[:8]} not found")
+            return
+
+        success = await self.memory.absorb_into_crystal(
+            crystal_id=crystal_id,
+            node_ids=node_ids,
+            new_facets=[]  # Could extract from absorbed nodes
+        )
+
+        if success:
+            new_total = (crystal.get("node_count", 0) or 0) + len(node_ids)
+            print(f"💎 Absorbed {len(node_ids)} nodes into crystal {crystal_id[:8]}")
+
+            await event_bus.emit(Event(
+                type=EventType.CRYSTAL_ABSORBED,
+                data={
+                    "crystal_id": crystal_id,
+                    "essence": crystal.get("essence", ""),
+                    "absorbed_count": len(node_ids),
+                    "new_total": new_total,
+                    "reason": reason
+                }
+            ))
+
+    async def _execute_crystal_merge(self, details: Dict, quantum_source: str):
+        """Merge multiple crystals into one."""
+        crystal_ids = details.get("crystal_ids", [])
+        new_essence = details.get("new_essence", "Merged concept")
+        facets = details.get("facets", [])
+
+        if len(crystal_ids) < 2:
+            print("💎 MERGE requires at least 2 crystal_ids")
+            return
+
+        # Determine quantum value if from quantum source
+        quantum_value = None
+        if quantum_source == "quantum" and self.quantum_provider:
+            try:
+                quantum_value, _ = await self.quantum_provider.get_float()
+            except Exception:
+                pass
+
+        merged_id = await self.memory.merge_crystals(
+            crystal_ids=crystal_ids,
+            new_essence=new_essence,
+            new_facets=facets,
+            quantum_value=quantum_value,
+            quantum_source=quantum_source if quantum_source == "quantum" else None
+        )
+
+        if merged_id:
+            print(f"💎 Merged {len(crystal_ids)} crystals into {merged_id[:8]}")
+
+            await event_bus.emit(Event(
+                type=EventType.CRYSTAL_MERGED,
+                data={
+                    "merged_crystal_id": merged_id,
+                    "source_crystal_ids": crystal_ids,
+                    "essence": new_essence,
+                    "source_count": len(crystal_ids),
+                    "quantum_source": quantum_source
+                }
+            ))
+
+    async def _execute_prune(self, details: Dict):
+        """Archive (soft delete) redundant nodes."""
+        node_ids = details.get("node_ids", [])
+        reason = details.get("reason", "Pruned for redundancy")
+
+        for node_id in node_ids:
+            success = await self.memory.archive_node(node_id, reason)
+            if success:
+                print(f"💎 Archived node {node_id[:8]}: {reason[:30]}")
+
+                await event_bus.emit(Event(
+                    type=EventType.MEMORY_ARCHIVED,
+                    data={
+                        "node_id": node_id,
+                        "reason": reason
+                    }
+                ))
+
+    async def _execute_forget(self, details: Dict):
+        """Forget (hard delete) irrelevant nodes."""
+        node_ids = details.get("node_ids", [])
+        reason = details.get("reason", "Forgotten as noise")
+
+        for node_id in node_ids:
+            success = await self.memory.forget_node(node_id, hard_delete=True)
+            if success:
+                print(f"💎 Forgot node {node_id[:8]}: {reason[:30]}")
+
+                await event_bus.emit(Event(
+                    type=EventType.MEMORY_FORGOTTEN,
+                    data={
+                        "node_id": node_id,
+                        "reason": reason
+                    }
+                ))
 
     async def _select_quantum_direction(self) -> Optional[tuple]:
         """
