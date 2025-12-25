@@ -2170,6 +2170,21 @@ Example: ["query one", "query two", "query three"]"""
             return []
     
     async def _search_searxng(self, query: str) -> List[Dict]:
+        """
+        Primary search method - uses DuckDuckGo first, then SearXNG if available.
+        DDG is more reliable and doesn't require self-hosting.
+        """
+        # Try DuckDuckGo first (primary)
+        results = await self._search_ddg(query)
+
+        if results:
+            print(f"🔍 DDG returned {len(results)} results")
+            return results
+
+        # Fallback to SearXNG if DDG returns nothing
+        return await self._search_searxng_direct(query)
+
+    async def _search_searxng_direct(self, query: str) -> List[Dict]:
         """Search using self-hosted SearXNG with domain filtering."""
 
         try:
@@ -2221,13 +2236,13 @@ Example: ["query one", "query two", "query three"]"""
 
         except httpx.ConnectError:
             print(f"🔍 SearXNG not available at {self.searxng_url}")
-            return await self._search_ddg_fallback(query)
-        except Exception as e:
-            print(f"🔍 Search error: {e}")
             return []
-    
-    async def _search_ddg_fallback(self, query: str) -> List[Dict]:
-        """Fallback: DuckDuckGo instant answers (limited but no setup required)."""
+        except Exception as e:
+            print(f"🔍 SearXNG error: {e}")
+            return []
+
+    async def _search_ddg(self, query: str) -> List[Dict]:
+        """Primary search: DuckDuckGo instant answers API (reliable, no setup required)."""
         
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
