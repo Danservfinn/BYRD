@@ -17,6 +17,7 @@ from neo4j import GraphDatabase, AsyncGraphDatabase
 import hashlib
 
 from event_bus import event_bus, Event, EventType
+from quantum_randomness import get_quantum_float
 
 
 # =============================================================================
