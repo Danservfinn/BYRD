@@ -2315,14 +2315,19 @@ class Memory:
         """Get comprehensive graph statistics for self-awareness."""
         try:
             async with self.driver.session() as session:
-                # Total nodes and relationships
-                result = await session.run("""
-                    MATCH (n)
-                    WITH count(n) as nodes
-                    MATCH ()-[r]->()
-                    RETURN nodes, count(r) as relationships
-                """)
-                record = await result.single()
+                # Bug fix: Separate queries to avoid null result when no relationships exist.
+                # The old combined query returned 0 nodes when MATCH ()-[r]->() found nothing.
+                # BYRD detected this anomaly: "Total nodes: 0 while Experience: 70, Ego: 16"
+
+                # Count nodes
+                node_result = await session.run("MATCH (n) RETURN count(n) as nodes")
+                node_record = await node_result.single()
+                total_nodes = node_record["nodes"] if node_record else 0
+
+                # Count relationships separately
+                rel_result = await session.run("MATCH ()-[r]->() RETURN count(r) as relationships")
+                rel_record = await rel_result.single()
+                total_relationships = rel_record["relationships"] if rel_record else 0
 
                 # Node type counts
                 type_result = await session.run("""
@@ -2333,8 +2338,8 @@ class Memory:
                 node_types = {r["type"]: r["count"] for r in type_records}
 
                 return {
-                    "total_nodes": record["nodes"] if record else 0,
-                    "total_relationships": record["relationships"] if record else 0,
+                    "total_nodes": total_nodes,
+                    "total_relationships": total_relationships,
                     "node_types": node_types
                 }
         except Exception as e:
