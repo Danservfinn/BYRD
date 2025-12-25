@@ -2961,7 +2961,8 @@
     async function fetchFullGraph() {
         try {
             updateStatus('Loading graph...', 'amber');
-            const response = await fetch('/api/graph?limit=1000');
+            console.log('Fetching graph from:', `${API_BASE}/api/graph?limit=1000`);
+            const response = await fetch(`${API_BASE}/api/graph?limit=1000`);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
             const data = await response.json();
@@ -3161,12 +3162,17 @@
      * Render the full graph from Neo4j
      */
     async function renderFullGraph() {
-        console.log('Rendering full graph...');
+        console.log('🔄 renderFullGraph() called');
         updateStatus('Rendering graph...', 'amber');
 
         // Fetch graph data
         const data = await fetchFullGraph();
-        if (!data) return;
+        if (!data) {
+            console.error('❌ fetchFullGraph returned null - setting mode anyway');
+            graphState.mode = 'graph';  // Still set mode so toggle works
+            return;
+        }
+        console.log(`📊 Got ${data.nodes?.length || 0} nodes, ${data.relationships?.length || 0} relationships`);
 
         // Clear existing event-mode nodes (but keep cat and core)
         clearEventModeNodes();
@@ -3308,18 +3314,23 @@
      * Switch between event mode and graph mode
      */
     async function setVisualizationMode(mode) {
+        console.log(`🔄 setVisualizationMode(${mode}) - current mode: ${graphState.mode}`);
+
         // Clear any type highlighting when switching modes
         clearTypeHighlight();
 
         const heatLegend = document.getElementById('heat-legend');
 
         if (mode === 'graph') {
+            console.log('📊 Entering graph mode...');
             await renderFullGraph();
             // Show heat legend in graph mode
             if (heatLegend) heatLegend.classList.remove('hidden');
             // Hide cat model in graph mode
             if (catModel) catModel.visible = false;
+            console.log(`✅ Graph mode complete - nodes3D.length: ${nodes3D.length}`);
         } else {
+            console.log('🎬 Entering event mode...');
             // Event mode - show all nodes except experiences and reflections
             await loadEventModeNodes();
             updateStatus('Event mode', 'blue');
@@ -3327,6 +3338,7 @@
             if (heatLegend) heatLegend.classList.add('hidden');
             // Show cat model in event mode
             if (catModel) catModel.visible = true;
+            console.log(`✅ Event mode complete - nodes3D.length: ${nodes3D.length}`);
         }
     }
 
@@ -6393,19 +6405,38 @@
     btnGraphMode.addEventListener('click', async () => {
       const currentMode = graphState.mode;
       const newMode = currentMode === 'graph' ? 'event' : 'graph';
+      console.log(`🔘 Graph Mode button clicked: ${currentMode} → ${newMode}`);
+
+      // Disable button during mode switch to prevent double-clicks
+      btnGraphMode.disabled = true;
+      btnGraphMode.style.opacity = '0.5';
 
       // Update button appearance
       if (newMode === 'graph') {
         btnGraphMode.classList.remove('bg-purple-100', 'text-purple-700', 'border-purple-300');
         btnGraphMode.classList.add('bg-purple-600', 'text-white', 'border-purple-600');
-        btnGraphMode.innerHTML = '🧬 Graph Mode <span class="text-xs opacity-75">(Active)</span>';
+        btnGraphMode.innerHTML = '🧬 Graph Mode <span class="text-xs opacity-75">(Loading...)</span>';
       } else {
         btnGraphMode.classList.remove('bg-purple-600', 'text-white', 'border-purple-600');
         btnGraphMode.classList.add('bg-purple-100', 'text-purple-700', 'border-purple-300');
         btnGraphMode.textContent = '🧬 Graph Mode';
       }
 
-      await setVisualizationMode(newMode);
+      try {
+        await setVisualizationMode(newMode);
+        console.log(`✅ Mode switch complete: now in ${graphState.mode} mode`);
+
+        // Update button text to show active state
+        if (graphState.mode === 'graph') {
+          btnGraphMode.innerHTML = '🧬 Graph Mode <span class="text-xs opacity-75">(Active)</span>';
+        }
+      } catch (error) {
+        console.error('❌ Mode switch failed:', error);
+      } finally {
+        // Re-enable button
+        btnGraphMode.disabled = false;
+        btnGraphMode.style.opacity = '1';
+      }
     });
 
     // ==========================================================================
