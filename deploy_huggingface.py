@@ -59,7 +59,7 @@ def main():
         "llm_client.py", "event_bus.py", "server.py", "narrator.py",
         "constitutional.py", "provenance.py", "modification_log.py",
         "self_modification.py", "quantum_randomness.py", "ego.py",
-        "aitmpl_client.py", "coder.py",
+        "aitmpl_client.py", "coder.py", "graph_algorithms.py",
         "config.yaml", "requirements.txt",
         "byrd-3d-visualization.html",
         "byrd-architecture.html",
