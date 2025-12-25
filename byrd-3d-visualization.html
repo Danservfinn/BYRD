@@ -2715,6 +2715,9 @@
 
       // 5. Integrate forces into velocity and position
       for (const node of nodes3D) {
+        // OS node is anchored at center - skip physics
+        if (node.userData.isOSNode) continue;
+
         // F = ma, assume m=1, so a = F
         // Scale force by delta for frame-rate independence
         _forceVec.copy(node.userData.force).multiplyScalar(dt * 60);
@@ -6538,6 +6541,9 @@
 
         // Integrate forces into velocities and positions
         for (const node of nodes3D) {
+          // OS node is anchored at center - skip physics integration
+          if (node.userData.isOSNode) continue;
+
           node.userData.velocity.add(node.userData.force);
           node.userData.velocity.multiplyScalar(physics.damping);
           node.userData.velocity.clampLength(0, physics.maxVelocity);
