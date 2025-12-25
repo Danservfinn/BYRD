@@ -1084,8 +1084,12 @@
     // ==========================================================================
     // CONFIGURATION
     // ==========================================================================
-    const API_BASE = 'http://localhost:8000';
-    const WS_URL = 'ws://localhost:8000/ws/events';
+    // Dynamic URL detection - works for both local dev and cloud deployment
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const API_BASE = isLocalhost ? 'http://localhost:8000' : window.location.origin;
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsHost = isLocalhost ? 'localhost:8000' : window.location.host;
+    const WS_URL = `${wsProtocol}//${wsHost}/ws/events`;
 
     const NODE_COLORS = {
       belief: { color: 0xd97706, emissive: 0xfbbf24, label: 'Belief' },       // Amber - convictions (matches legend)
