@@ -191,7 +191,7 @@ seeker:
   # DESIRE CRYSTALLIZATION
   # ---------------------------------------------------------------------------
   desire_crystallization:
-    min_occurrences: 2          # Occurrences before crystallizing
+    min_occurrences: 1          # Occurrences before crystallizing
     intensity_per_occurrence: 0.2  # Each repeat boosts intensity
     max_intensity: 1.0
     decay_rate: 0.05            # Intensity decay per cycle if not reinforced
