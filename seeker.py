@@ -467,11 +467,21 @@ If no clear drives emerge, return {{"drives": []}}"""
             if p.get("count", 0) >= self._pattern_threshold
         ]
 
-        # Debug: log extracted patterns and their strategies
-        for p in stable_patterns:
-            desc = p.get("description", "")[:50]
-            strat = p.get("strategy", "None")
-            print(f"📊 Pattern: strategy={strat} | {desc}")
+        # Debug: log extracted patterns and their strategies to experience
+        if stable_patterns:
+            debug_lines = []
+            for p in stable_patterns[:3]:  # Limit to 3
+                desc = p.get("description", "")[:40]
+                strat = p.get("strategy", "None")
+                debug_lines.append(f"{strat}:{desc}")
+                print(f"📊 Pattern: strategy={strat} | {desc}")
+            try:
+                await self.memory.record_experience(
+                    content=f"[DEBUG_PATTERNS] {' | '.join(debug_lines)}",
+                    type="system"
+                )
+            except:
+                pass  # Don't fail on debug
 
         # Sort by count (most stable first)
         stable_patterns.sort(key=lambda p: p.get("count", 0), reverse=True)
