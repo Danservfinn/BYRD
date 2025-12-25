@@ -361,10 +361,7 @@ class Memory:
             await session.run("""
                 CREATE INDEX IF NOT EXISTS FOR (c:Crystal) ON (c.crystal_type)
             """)
-            # Indexes for Operating System
-            await session.run("""
-                CREATE INDEX IF NOT EXISTS FOR (os:OperatingSystem) ON (os.id)
-            """)
+            # Uniqueness constraint for Operating System (also creates index)
             await session.run("""
                 CREATE CONSTRAINT IF NOT EXISTS FOR (os:OperatingSystem) REQUIRE os.id IS UNIQUE
             """)
@@ -6168,8 +6165,8 @@ class Memory:
         """
         try:
             os = await self.get_operating_system()
-            if os and os.voice:
-                return os.voice
+            if os and os.get("voice"):
+                return os.get("voice")
             return ""
         except Exception as e:
             print(f"Error getting OS voice: {e}")

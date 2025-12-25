@@ -50,19 +50,34 @@ def header(msg):
     print("=" * len(msg))
 
 
+def expand_env_vars(config_str: str) -> str:
+    """Expand environment variables like ${VAR:-default}."""
+    import re
+    def expand(match):
+        var_expr = match.group(1)
+        if ":-" in var_expr:
+            var_name, default = var_expr.split(":-", 1)
+        else:
+            var_name, default = var_expr, ""
+        return os.environ.get(var_name, default)
+    return re.sub(r'\$\{([^}]+)\}', expand, config_str)
+
+
 async def run_verification():
     """Run all verification checks."""
 
-    # Load config
+    # Load config with env var expansion
     config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config.yaml")
     with open(config_path) as f:
-        config = yaml.safe_load(f)
+        config_str = f.read()
+    expanded = expand_env_vars(config_str)
+    config = yaml.safe_load(expanded)
 
     header("1. MEMORY CONNECTION")
 
     try:
         from memory import Memory
-        memory = Memory(config)
+        memory = Memory(config.get("memory", {}))
         await memory.connect()
         success("Connected to Neo4j")
     except Exception as e:
@@ -79,16 +94,16 @@ async def run_verification():
         # Get black-cat template
         black_cat = await memory.get_os_template("black-cat")
         if black_cat:
-            success(f"Retrieved black-cat template: {black_cat.name}")
-            info(f"  Archetype: {black_cat.archetype}")
-            info(f"  Seeds: {len(black_cat.seeds)}")
+            success(f"Retrieved black-cat template: {black_cat.get('name', 'unknown')}")
+            info(f"  Archetype: {black_cat.get('archetype', 'unknown')}")
+            info(f"  Seeds: {len(black_cat.get('seeds', []))}")
         else:
             failure("Could not retrieve black-cat template")
 
         # Get emergent template
         emergent = await memory.get_os_template("emergent")
         if emergent:
-            success(f"Retrieved emergent template: {emergent.name}")
+            success(f"Retrieved emergent template: {emergent.get('name', 'unknown')}")
         else:
             failure("Could not retrieve emergent template")
 
@@ -108,11 +123,11 @@ async def run_verification():
             # Get existing OS
             os_node = await memory.get_operating_system()
             if os_node:
-                success(f"Retrieved OS: {os_node.name} v{os_node.version}")
-                info(f"  Archetype: {os_node.archetype}")
-                info(f"  Template: {os_node.template_id}")
-                info(f"  Current Focus: {os_node.current_focus}")
-                info(f"  Emotional Tone: {os_node.emotional_tone}")
+                success(f"Retrieved OS: {os_node.get('name', 'unknown')} v{os_node.get('version', 0)}")
+                info(f"  Archetype: {os_node.get('archetype', 'unknown')}")
+                info(f"  Template: {os_node.get('template_id', 'unknown')}")
+                info(f"  Current Focus: {os_node.get('current_focus')}")
+                info(f"  Emotional Tone: {os_node.get('emotional_tone')}")
         else:
             # Create OS from template
             info("Creating OS from black-cat template...")
@@ -121,7 +136,7 @@ async def run_verification():
 
             os_node = await memory.get_operating_system()
             if os_node:
-                success(f"Verified OS: {os_node.name} v{os_node.version}")
+                success(f"Verified OS: {os_node.get('name', 'unknown')} v{os_node.get('version', 0)}")
 
     except Exception as e:
         failure(f"OS lifecycle test failed: {e}")
@@ -140,7 +155,7 @@ async def run_verification():
 
         # Verify update
         os_node = await memory.get_operating_system()
-        if os_node and os_node.current_focus == "verification testing":
+        if os_node and os_node.get("current_focus") == "verification testing":
             success("Verified current_focus update")
         else:
             failure("current_focus not updated correctly")
@@ -154,7 +169,7 @@ async def run_verification():
 
         # Verify custom field
         os_node = await memory.get_operating_system()
-        if os_node and os_node.custom_fields.get("test_metric") == 42:
+        if os_node and os_node.get("test_metric") == 42:
             success("Verified custom field")
         else:
             warning("Custom field may not have persisted correctly")
