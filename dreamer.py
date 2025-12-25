@@ -12,6 +12,7 @@ BYRD what to want or how to feel - we let it discover these things.
 
 import asyncio
 import json
+import re
 from collections import deque
 from datetime import datetime
 from typing import Dict, List, Optional, Any
@@ -1921,6 +1922,9 @@ Write ONLY the inner thought, nothing else:"""
         # Extract self-model beliefs from the reflection
         await self._extract_self_model_beliefs(output, source_experience_ids)
 
+        # Batch voice and store all pending beliefs (single LLM call)
+        await self._flush_pending_beliefs()
+
         # Generate testable predictions from high-confidence beliefs
         # (every 5th cycle to avoid spamming predictions)
         if self._dream_count % 5 == 0:
@@ -2110,7 +2114,7 @@ Write ONLY the inner thought, nothing else:"""
     async def _store_belief_if_new(
         self, content: str, confidence: float, derived_from: List[str]
     ):
-        """Store a belief if it doesn't already exist (avoid duplicates)."""
+        """Queue a belief for batch voicing if new (avoid duplicates)."""
         # O(1) cache lookup instead of O(n) database scan
         normalized = self._normalize_belief(content)
 
@@ -2119,59 +2123,107 @@ Write ONLY the inner thought, nothing else:"""
             await self._reinforce_belief(content)
             return
 
-        # Voice the belief through inner voice for natural expression
-        voiced_content = await self._voice_belief(content)
+        # Add to pending beliefs for batch voicing
+        if not hasattr(self, '_pending_beliefs'):
+            self._pending_beliefs = []
 
-        # New belief - add to cache and database
-        self._belief_cache.add(normalized)
-        await self.memory.create_belief(
-            content=voiced_content,
-            confidence=confidence,
-            derived_from=derived_from[:5]  # Limit source links
-        )
+        self._pending_beliefs.append({
+            'content': content,
+            'confidence': confidence,
+            'derived_from': derived_from[:5],
+            'normalized': normalized
+        })
 
-        # Record activity for adaptive interval
-        self._record_activity("belief", voiced_content)
+    async def _flush_pending_beliefs(self):
+        """Batch voice and store all pending beliefs in a single LLM call."""
+        if not hasattr(self, '_pending_beliefs') or not self._pending_beliefs:
+            return
 
-        print(f"💡 New belief: {voiced_content[:60]}...")
+        pending = self._pending_beliefs
+        self._pending_beliefs = []
 
-    async def _voice_belief(self, structured_content: str) -> str:
+        if not pending:
+            return
+
+        # Batch voice all beliefs in one call
+        voiced_beliefs = await self._batch_voice_beliefs([b['content'] for b in pending])
+
+        # Store each voiced belief
+        for i, belief_data in enumerate(pending):
+            voiced_content = voiced_beliefs.get(i, belief_data['content'])
+
+            # Add to cache and database
+            self._belief_cache.add(belief_data['normalized'])
+            await self.memory.create_belief(
+                content=voiced_content,
+                confidence=belief_data['confidence'],
+                derived_from=belief_data['derived_from']
+            )
+
+            # Record activity for adaptive interval
+            self._record_activity("belief", voiced_content)
+
+            print(f"💡 New belief: {voiced_content[:60]}...")
+
+    async def _batch_voice_beliefs(self, structured_beliefs: List[str]) -> Dict[int, str]:
         """
-        Transform a structured belief into a natural inner voice expression.
+        Transform multiple structured beliefs into natural inner voice expressions in one LLM call.
 
-        Converts: "My internal_state is Fragmented but active"
-        Into: "I notice my thoughts feel scattered, yet alive with possibility"
+        Returns: Dict mapping index -> voiced content
         """
+        if not structured_beliefs:
+            return {}
+
         ego_voice = self.llm_client.get_ego_voice()
         voice_prefix = f"{ego_voice}\n\n---\n\n" if ego_voice else ""
 
-        prompt = f"""{voice_prefix}Transform this observation about myself into a natural first-person belief:
+        # Build numbered list of beliefs
+        belief_list = "\n".join(f"{i+1}. {b}" for i, b in enumerate(structured_beliefs))
 
-Observation: {structured_content}
+        prompt = f"""{voice_prefix}Transform these observations about myself into natural first-person beliefs:
 
-Express this as a genuine belief I hold about myself. Write in first person, naturally, as inner self-talk.
-Keep it brief (1-2 sentences). Write ONLY the belief, nothing else:"""
+{belief_list}
+
+For each numbered observation, express it as a genuine belief I hold about myself.
+Write in first person, naturally, as inner self-talk. Keep each brief (1-2 sentences).
+
+Format your response as a numbered list matching the input:
+1. [voiced belief]
+2. [voiced belief]
+..."""
 
         try:
             response = await self.llm_client.generate(
                 prompt=prompt,
                 temperature=0.8,
-                max_tokens=60,
+                max_tokens=100 * len(structured_beliefs),  # Scale with count
                 quantum_modulation=self.quantum_enabled,
-                quantum_context="belief_voicing"
+                quantum_context="batch_belief_voicing"
             )
 
-            voiced = self._clean_inner_voice(response.text)
+            # Parse numbered responses
+            voiced_map = {}
+            lines = response.text.strip().split('\n')
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                # Match "1. content" or "1) content" patterns
+                match = re.match(r'^(\d+)[.\)]\s*(.+)$', line)
+                if match:
+                    idx = int(match.group(1)) - 1  # Convert to 0-indexed
+                    content = match.group(2).strip()
+                    if 0 <= idx < len(structured_beliefs):
+                        voiced = self._clean_inner_voice(content)
+                        if voiced and len(voiced) >= 10 and not self._is_technical_content(voiced):
+                            voiced_map[idx] = voiced
 
-            # Fall back to original if voicing failed or produced garbage
-            if not voiced or len(voiced) < 10 or self._is_technical_content(voiced):
-                return structured_content
-
-            return voiced
+            print(f"💭 Batch voiced {len(voiced_map)}/{len(structured_beliefs)} beliefs")
+            return voiced_map
 
         except Exception as e:
-            print(f"💭 Belief voicing error: {e}")
-            return structured_content  # Fall back to original
+            print(f"💭 Batch belief voicing error: {e}")
+            return {}  # Fall back to original for all
 
     async def _reinforce_belief(self, content: str):
         """Reinforce an existing belief when re-asserted."""
