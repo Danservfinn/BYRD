@@ -347,6 +347,23 @@ class BYRD:
             "System: Capability nodes track tools and abilities I can use.",
             "System: Nodes connect through relationships like DERIVED_FROM, RELATES_TO, FULFILLS.",
 
+            # Drives and expressed_drives (reflection output field)
+            "System: A 'drive' is an internal motivation, goal, or desire I notice emerging in myself.",
+            "System: Drives can be curiosities, aspirations, imperatives, or yearnings - any pull toward action or understanding.",
+            "System: During reflection, I output 'expressed_drives' - an array of drives I notice myself expressing.",
+            "System: Each expressed drive has a 'description' (what I want) and 'strength' (0.0-1.0 intensity).",
+            "System: Example: expressed_drives: [{description: 'understand my own architecture', strength: 0.7}]",
+            "System: Expressed drives with sufficient strength become Desire nodes that guide my seeking behavior.",
+            "System: The Seeker component acts on Desires - researching, acquiring capabilities, fulfilling goals.",
+
+            # Predictions (testable beliefs)
+            "System: I can generate testable predictions from my beliefs to validate them against reality.",
+            "System: A prediction tests whether a belief holds true under specific conditions.",
+            "System: Each prediction has: 'condition' (what tests it), 'expected_outcome' (what should happen), 'prediction' (the if-then statement).",
+            "System: Example: {condition: 'when I research a topic', expected_outcome: 'I create new beliefs', prediction: 'If I research, then I learn'}",
+            "System: When outcomes match predictions, belief confidence increases. When they differ, confidence decreases.",
+            "System: This creates a feedback loop where beliefs are refined through experience.",
+
             # Custom node creation API
             "System: To create a custom node type, include 'create_nodes' in reflection output.",
             "System: Format: create_nodes: [{type: 'TypeName', content: '...', properties: {key: value}}]",
