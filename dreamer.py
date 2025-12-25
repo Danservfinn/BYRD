@@ -41,6 +41,11 @@ class Dreamer:
         self.interval = config.get("interval_seconds", 30)
         self.context_window = config.get("context_window", 50)
 
+        # Semantic search configuration - query by relevance not just recency
+        semantic_config = config.get("semantic_search", {})
+        self.semantic_search_enabled = semantic_config.get("enabled", True)
+        self.semantic_search_limit = semantic_config.get("limit", 30)
+
         # Adaptive interval configuration
         self.adaptive_interval = config.get("adaptive_interval", False)
         self.min_interval = config.get("min_interval_seconds", 15)
@@ -392,6 +397,21 @@ class Dreamer:
         current_beliefs = await self.memory.get_beliefs(min_confidence=0.3, limit=20)
         active_desires = await self.memory.get_unfulfilled_desires(limit=15)
 
+        # SEMANTIC SEARCH - Find memories by relevance, not just recency
+        semantic_memories = []
+        if self.semantic_search_enabled and recent:
+            # Build context from recent experiences for semantic search
+            context_text = " ".join([
+                e.get("content", "") for e in recent[:10]
+            ])
+            if context_text.strip():
+                semantic_memories = await self.memory.get_semantically_related(
+                    context_text=context_text,
+                    limit=self.semantic_search_limit,
+                    node_types=["Experience", "Belief", "Desire", "Crystal"]
+                )
+                print(f"💭 Semantic search found {len(semantic_memories)} relevant memories")
+
         # Emit event for memories being accessed (for visualization highlighting)
         all_accessed_ids = recent_ids.copy()
         all_accessed_ids.extend([r.get("id") for r in related if r.get("id")])
@@ -399,6 +419,7 @@ class Dreamer:
         all_accessed_ids.extend([b.get("id") for b in current_beliefs if b.get("id")])
         all_accessed_ids.extend([d.get("id") for d in active_desires if d.get("id")])
         all_accessed_ids.extend([r.get("id") for r in previous_reflections if r.get("id")])
+        all_accessed_ids.extend([s.get("id") for s in semantic_memories if s.get("id")])
 
         # Track access counts for heat map visualization (Phase 4)
         await self.memory.increment_access_count(all_accessed_ids)
@@ -422,7 +443,8 @@ class Dreamer:
         reflection_output = await self._reflect(
             recent, related, capabilities, previous_reflections, graph_health,
             seeds=seeds, memory_summaries=memory_summaries, ego_nodes=ego_nodes,
-            current_beliefs=current_beliefs, active_desires=active_desires
+            current_beliefs=current_beliefs, active_desires=active_desires,
+            semantic_memories=semantic_memories
         )
 
         if not reflection_output:
@@ -1065,7 +1087,8 @@ For NONE: {{"operation": "NONE", "details": {{"reason": "why no action"}}}}"""
         memory_summaries: Optional[List[Dict]] = None,
         ego_nodes: Optional[List[Dict]] = None,
         current_beliefs: Optional[List[Dict]] = None,
-        active_desires: Optional[List[Dict]] = None
+        active_desires: Optional[List[Dict]] = None,
+        semantic_memories: Optional[List[Dict]] = None
     ) -> Optional[Dict]:
         """
         Ask local LLM to reflect on memories using minimal, unbiased prompt.
@@ -1213,6 +1236,18 @@ For NONE: {{"operation": "NONE", "details": {{"reason": "why no action"}}}}"""
                 for d in active_desires[:10]
             ])
 
+        # Format semantically related memories (found by relevance, not recency)
+        semantic_text = ""
+        if semantic_memories:
+            semantic_parts = []
+            for m in semantic_memories[:20]:
+                node_type = m.get("_node_type", "Memory")
+                score = m.get("_relevance_score", 0)
+                content = m.get("content", m.get("description", m.get("synthesis", "")))[:250]
+                if content:
+                    semantic_parts.append(f"- [{node_type}|{score:.1f}] {content}")
+            semantic_text = "\n".join(semantic_parts)
+
         # MINIMAL PROMPT - pure data presentation, no guidance
         # Structure: Quantum direction (if any) -> Foundation (seeds) -> Ego (identity) -> Historical (summaries) -> Recent -> Related -> Beliefs -> Desires -> Constraints
         prompt = f"""{direction_text}{f"FOUNDATION (always present):{chr(10)}{seeds_text}{chr(10)}" if seeds_text else ""}{f"EGO (current self-model):{chr(10)}{ego_text}{chr(10)}" if ego_text else ""}{f"MEMORY SUMMARIES (past periods):{chr(10)}{summaries_text}{chr(10)}" if summaries_text else ""}RECENT EXPERIENCES:
@@ -1221,7 +1256,7 @@ For NONE: {{"operation": "NONE", "details": {{"reason": "why no action"}}}}"""
 RELATED MEMORIES:
 {related_text}
 
-{f"CURRENT BELIEFS:{chr(10)}{beliefs_text}{chr(10)}" if beliefs_text else ""}
+{f"SEMANTICALLY RELATED (by relevance):{chr(10)}{semantic_text}{chr(10)}" if semantic_text else ""}{f"CURRENT BELIEFS:{chr(10)}{beliefs_text}{chr(10)}" if beliefs_text else ""}
 {f"ACTIVE DESIRES:{chr(10)}{desires_text}{chr(10)}" if desires_text else ""}
 AVAILABLE CAPABILITIES:
 {caps_text}
