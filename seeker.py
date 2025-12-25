@@ -223,13 +223,16 @@ class Seeker:
                 # Convert unfulfilled desires to action patterns (up to max_concurrent)
                 for desire in unfulfilled[:self.max_concurrent_desires]:
                     if desire.get("intensity", 0) >= self.min_research_intensity:
+                        description = desire.get("description", "")
+                        # Determine strategy from description hints (not hardcoded!)
+                        strategy = self._determine_strategy_from_description(description)
                         action_patterns.append({
-                            "description": desire.get("description", ""),
-                            "strategy": "search",  # Default to research
+                            "description": description,
+                            "strategy": strategy,
                             "count": 1,
                             "desire_id": desire.get("id")
                         })
-                        print(f"🔍 Using unfulfilled desire: {desire.get('description', '')[:50]}")
+                        print(f"🔍 Using unfulfilled desire ({strategy}): {description[:50]}")
 
         if not action_patterns:
             # Still nothing - keep observing
@@ -473,6 +476,53 @@ If no clear drives emerge, return {{"drives": []}}"""
                 pattern["strategy"] = "search"
 
         return stable_patterns
+
+    def _determine_strategy_from_description(self, description: str) -> str:
+        """
+        Determine the appropriate strategy for a desire based on its description.
+
+        Uses the same strategy hints as pattern extraction to ensure consistent
+        routing for both patterns (from reflections) and direct desires.
+
+        ORDER MATTERS: Internal/specific strategies are checked first,
+        external/general strategies are checked last (search is fallback).
+        """
+        desc_lower = description.lower()
+
+        # Strategy hints - same order as _extract_patterns_from_output
+        # Internal strategies (more specific) - CHECK FIRST
+        strategy_hints = {
+            "reconcile_orphans": ["orphan", "orphaned", "disconnected", "isolated", "unconnected",
+                                  "reduce orphan", "connect experience", "link experience",
+                                  "reconcile orphan", "integrate experience", "connect nodes",
+                                  "integrate", "fragmentation", "strengthen self-model", "unify"],
+            "curate": ["optimize", "clean", "consolidate", "prune", "organize", "simplify",
+                       "remove duplicate", "merge similar", "curate", "tidy", "declutter",
+                       "resolve inconsistency", "fix graph", "data inconsistency",
+                       "verify ground truth", "graph health"],
+            "self_modify": ["add to myself", "implement in my", "extend my", "modify my code",
+                           "add method", "enhance my capability", "add to memory.py",
+                           "add to dreamer.py", "add to seeker.py", "improve my observation",
+                           "extend graph health", "add introspection", "re-enable",
+                           "enable self", "disable self", "activate", "unlock",
+                           "self-modification"],
+            "introspect": ["introspect", "analyze myself", "examine my", "self-awareness",
+                          "understand my state", "meta-analysis", "self-knowledge",
+                          "observe my", "inspect my", "status of my", "state of my",
+                          "verify", "check my", "audit my", "assess my",
+                          "nature of", "fundamental property", "cognitive dissonance"],
+            # External strategies (more general) - CHECK LAST (fallback)
+            "code": ["code", "write", "implement", "build", "create", "program"],
+            "install": ["install", "add", "get", "acquire", "capability", "tool"],
+            "search": ["search", "look up", "find", "research", "learn about", "understand"],
+        }
+
+        for strategy, hints in strategy_hints.items():
+            if any(hint in desc_lower for hint in hints):
+                return strategy
+
+        # Default fallback
+        return "search"
 
     async def _extract_patterns_from_output(self, output: Dict, patterns: Dict[str, Dict]):
         """
