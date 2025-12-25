@@ -4381,10 +4381,14 @@
       tooltipType.style.color = `#${colors.color.toString(16).padStart(6, '0')}`;
       tooltipContent.textContent = data.content || 'No content';
 
-      // Enhanced meta with connection count
-      const connCount = connections3D.filter(c =>
+      // Enhanced meta with connection count (from both real-time and loaded relationships)
+      const realtimeConns = connections3D.filter(c =>
         c.userData.nodeA === data.id || c.userData.nodeB === data.id
       ).length;
+      const graphConns = graphState.relationshipLines.filter(line =>
+        line.userData?.sourceId === data.id || line.userData?.targetId === data.id
+      ).length;
+      const connCount = realtimeConns + graphConns;
       tooltipMeta.textContent = `Importance: ${Math.round(data.importance * 100)}% · ${connCount} connections`;
 
       tooltip.style.borderColor = `#${colors.color.toString(16).padStart(6, '0')}`;
