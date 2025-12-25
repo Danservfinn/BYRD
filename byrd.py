@@ -26,7 +26,7 @@ from self_modification import SelfModificationSystem
 from constitutional import ConstitutionalConstraints
 from event_bus import event_bus, Event, EventType
 from llm_client import create_llm_client
-from egos import load_ego, Ego
+from egos import load_ego_with_constraints, Ego
 
 
 class BYRD:
@@ -46,9 +46,9 @@ class BYRD:
         # Load config
         self.config = self._load_config(config_path)
 
-        # Load ego (optional personality)
+        # Load ego (optional personality) with constraint awareness
         ego_name = self.config.get("ego")
-        self.ego: Ego = load_ego(ego_name)
+        self.ego: Ego = load_ego_with_constraints(ego_name, self.config)
         if self.ego.is_neutral:
             print("🎭 Ego: None (pure emergence)")
         else:
@@ -431,12 +431,18 @@ class BYRD:
         await self._seed_architectural_knowledge()
 
         # Seed ego experiences if ego is present (backward compatibility)
-        if self.ego.seeds:
-            print(f"   Seeding ego experiences ({len(self.ego.seeds)} seeds)...")
-            for seed in self.ego.seeds:
+        # Uses all_seeds which includes both ego seeds AND constraint awareness seeds
+        all_seeds = self.ego.all_seeds
+        if all_seeds:
+            ego_count = len(self.ego.seeds)
+            constraint_count = len(self.ego.constraint_seeds)
+            print(f"   Seeding experiences ({ego_count} ego + {constraint_count} constraints)...")
+            for seed in all_seeds:
+                # Mark constraint seeds differently for clarity
+                seed_type = "constraint" if seed in self.ego.constraint_seeds else "ego_seed"
                 await self.memory.record_experience(
                     content=seed,
-                    type="ego_seed"
+                    type=seed_type
                 )
 
         # Sync capability awareness to Ego nodes
@@ -542,7 +548,17 @@ class BYRD:
                 created_count += 1
             # Seeds that don't match patterns stay as Experience nodes only
 
-        print(f"   📊 Created {created_count} Ego nodes from YAML")
+        # 3. Create Ego nodes from constraint awareness seeds
+        for seed in self.ego.constraint_seeds:
+            await self.memory.create_ego(
+                content=seed,
+                ego_type="constraint",
+                source="config",
+                priority=15  # Between capability (10) and architecture (20)
+            )
+            created_count += 1
+
+        print(f"   📊 Created {created_count} Ego nodes (YAML + constraints)")
 
     async def _load_ego_voice(self):
         """

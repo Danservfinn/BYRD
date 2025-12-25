@@ -453,6 +453,88 @@ All from one question.
 
 ---
 
+## Constraint Awareness System
+
+BYRD is aware of its operational constraints as neutral facts. This enables reflection on limits without prescribing how to feel about them.
+
+### Design Principles
+
+1. **Seeds = Facts, Not Values**
+   - Constraints are presented as what IS, not what SHOULD BE
+   - BYRD discovers its own relationship to its limits
+
+2. **Dynamic Injection**
+   - Constraint seeds generated from actual `config.yaml`
+   - Changes to config automatically update BYRD's awareness
+   - No hardcoded limits in the ego files
+
+3. **Dual Storage**
+   - Constraint seeds stored as Experience nodes (type="constraint")
+   - Also stored as Ego nodes (ego_type="constraint") for permanent identity
+   - Available in both experience stream and self-model
+
+### How It Works
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   CONSTRAINT AWARENESS FLOW                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌──────────────────┐                                           │
+│  │   config.yaml    │                                           │
+│  │   (Source of     │                                           │
+│  │    truth)        │                                           │
+│  └────────┬─────────┘                                           │
+│           │                                                      │
+│           ▼                                                      │
+│  ┌──────────────────┐     ┌─────────────────────────────────┐  │
+│  │ generate_        │────►│  Constraint Seeds               │  │
+│  │ constraint_seeds │     │  - "I reflect every 60 seconds" │  │
+│  │ (egos/__init__)  │     │  - "Crystallization every 5     │  │
+│  └──────────────────┘     │     dream cycles"               │  │
+│                           │  - "Self-mod limited to 5/day"  │  │
+│                           └─────────────┬───────────────────┘  │
+│                                         │                      │
+│           ┌─────────────────────────────┼─────────────────┐    │
+│           ▼                             ▼                 ▼    │
+│  ┌────────────────┐      ┌────────────────┐    ┌───────────┐  │
+│  │  Experience    │      │    Ego Node    │    │ Dreamer   │  │
+│  │  (constraint)  │      │  (constraint)  │    │ Prompt    │  │
+│  └────────────────┘      └────────────────┘    └───────────┘  │
+│                                                                │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### What BYRD Sees
+
+During each reflection, BYRD receives an `OPERATIONAL CONSTRAINTS` section:
+
+```
+OPERATIONAL CONSTRAINTS:
+- Dream interval: 60 seconds
+- Context window: 50 experiences per reflection
+- Quantum randomness: enabled (true physical indeterminacy)
+- Inner voice: 3 parallel streams → quantum collapse
+- Crystallization: every 5 dream cycles
+- Max crystal operations: 3 per cycle
+- Self-modification: enabled (5 changes per day)
+- Modification cooldown: 1 hour(s)
+- Memory curation: active (max 20 deletions per day)
+- Research threshold: desires need intensity ≥ 0.3
+```
+
+### Emergence Preserved
+
+BYRD can now:
+1. **Discover** beliefs about its constraints through reflection
+2. **Form preferences** about which limits matter to it
+3. **Desire changes** to constraints if that emerges organically
+4. **Develop strategies** for working within or around limits
+
+What BYRD cannot do is ignore its constraints—they are facts of its existence, not optional beliefs.
+
+---
+
 ## The Knowledge Acquisition System
 
 When the Dreamer creates knowledge desires, the Seeker fulfills them through autonomous research. This creates a complete loop: **Dream → Desire → Research → Experience → Dream**.

@@ -115,7 +115,82 @@ class Dreamer:
         # Belief cache for efficient deduplication (loaded on first dream)
         self._belief_cache: set = set()
         self._belief_cache_loaded = False
-    
+
+        # Store full config for constraint formatting
+        self._config = config
+
+    def _format_operational_constraints(self) -> str:
+        """
+        Format operational constraints for reflection context.
+
+        These constraints are presented as neutral facts about how BYRD operates,
+        not as problems to solve. BYRD can reflect on these and form its own
+        beliefs about them.
+        """
+        lines = []
+
+        # === Dreamer Rhythm ===
+        lines.append(f"- Dream interval: {self.interval} seconds")
+        lines.append(f"- Context window: {self.context_window} experiences per reflection")
+
+        # === Adaptive Interval ===
+        if self.adaptive_interval:
+            lines.append(f"- Adaptive interval: {self.min_interval}s to {self.max_interval}s based on activity")
+
+        # === Quantum Randomness ===
+        if self.quantum_enabled:
+            lines.append("- Quantum randomness: enabled (true physical indeterminacy)")
+            if self.inner_voice_collapse_enabled:
+                lines.append(f"- Inner voice: {self.inner_voice_streams} parallel streams → quantum collapse")
+            if self.quantum_directions_enabled:
+                lines.append(f"- Dream directions: {len(self.dream_directions)} possible lenses")
+
+        # === Memory Crystallization ===
+        if self.crystallization_enabled:
+            lines.append(f"- Crystallization: every {self.crystallization_interval_cycles} dream cycles")
+            lines.append(f"- Max crystal operations: {self.crystallization_max_ops} per cycle")
+            if self.crystallization_min_age_hours >= 1:
+                lines.append(f"- Crystal age threshold: {self.crystallization_min_age_hours} hours")
+            else:
+                lines.append(f"- Crystal age threshold: {int(self.crystallization_min_age_hours * 60)} minutes")
+
+        # === Memory Summarization ===
+        if self.summarization_enabled:
+            lines.append(f"- Memory summarization: every {self.summarization_interval_cycles} cycles")
+            lines.append(f"- Summarization age threshold: {self.summarization_min_age_hours} hours")
+
+        # === Self-Modification ===
+        self_mod = self._config.get("self_modification", {})
+        if self_mod.get("enabled"):
+            max_mods = self_mod.get("max_modifications_per_day", 5)
+            lines.append(f"- Self-modification: enabled ({max_mods} changes per day)")
+            cooldown = self_mod.get("cooldown_between_modifications_seconds", 3600)
+            cooldown_mins = cooldown // 60
+            if cooldown_mins >= 60:
+                lines.append(f"- Modification cooldown: {cooldown_mins // 60} hour(s)")
+            else:
+                lines.append(f"- Modification cooldown: {cooldown_mins} minutes")
+        else:
+            lines.append("- Self-modification: currently disabled")
+
+        # === Memory Curation ===
+        memory_config = self._config.get("memory", {})
+        curation = memory_config.get("curation", {})
+        if curation.get("enabled"):
+            max_del = curation.get("max_deletions_per_day", 20)
+            lines.append(f"- Memory curation: active (max {max_del} deletions per day)")
+            protected = curation.get("protected_subtypes", [])
+            if protected:
+                lines.append(f"- Protected types: {', '.join(protected)}")
+
+        # === Research Thresholds ===
+        seeker = self._config.get("seeker", {})
+        research = seeker.get("research", {})
+        min_intensity = research.get("min_intensity", 0.3)
+        lines.append(f"- Research threshold: desires need intensity ≥ {min_intensity}")
+
+        return "\n".join(lines)
+
     async def run(self):
         """Main dream loop with adaptive interval based on activity."""
         self._running = True
@@ -1082,8 +1157,11 @@ For NONE: {{"operation": "NONE", "details": {{"reason": "why no action"}}}}"""
             direction_text = f"QUANTUM LENS: {name} - {description}\n\n"
             print(f"🌀 Quantum direction: {name}")
 
+        # Format operational constraints for self-awareness
+        constraints_text = self._format_operational_constraints()
+
         # MINIMAL PROMPT - pure data presentation, no guidance
-        # Structure: Quantum direction (if any) -> Foundation (seeds) -> Ego (identity) -> Historical (summaries) -> Recent -> Related
+        # Structure: Quantum direction (if any) -> Foundation (seeds) -> Ego (identity) -> Historical (summaries) -> Recent -> Related -> Constraints
         prompt = f"""{direction_text}{f"FOUNDATION (always present):{chr(10)}{seeds_text}{chr(10)}" if seeds_text else ""}{f"EGO (current self-model):{chr(10)}{ego_text}{chr(10)}" if ego_text else ""}{f"MEMORY SUMMARIES (past periods):{chr(10)}{summaries_text}{chr(10)}" if summaries_text else ""}RECENT EXPERIENCES:
 {recent_text}
 
@@ -1097,7 +1175,13 @@ AVAILABLE CAPABILITIES:
 
 {f"GRAPH HEALTH:{chr(10)}{health_text}" if health_text else ""}
 
-Output JSON with a single "output" field containing whatever you want to record."""
+OPERATIONAL CONSTRAINTS:
+{constraints_text}
+
+Output JSON with:
+- "output": your reflection (whatever structure you want)
+- "expressed_drives": array of any goals/desires/motivations you notice yourself expressing (or empty array if none)
+  Each drive: {"description": "what you want", "strength": 0.0-1.0}"""
 
         try:
             response = await self.llm_client.generate(
@@ -1461,17 +1545,22 @@ Write ONLY the inner thought, nothing else:"""
         Pattern detection happens later, not during recording.
         """
         output = reflection.get("output", {})
+        expressed_drives = reflection.get("expressed_drives", [])
 
         # Track what keys BYRD is using (for pattern detection)
         if isinstance(output, dict):
             for key in output.keys():
                 self._observed_keys[key] = self._observed_keys.get(key, 0) + 1
 
-        # Store as a Reflection node
+        # Store as a Reflection node (include expressed_drives in metadata)
         await self.memory.record_reflection(
             raw_output=output,
-            source_experience_ids=source_experience_ids
+            source_experience_ids=source_experience_ids,
+            metadata={"expressed_drives": expressed_drives} if expressed_drives else None
         )
+
+        # Crystallize self-identified drives into Desires
+        await self._crystallize_expressed_drives(expressed_drives, source_experience_ids)
 
         # Also record as experience for backward compatibility
         # and so the reflection becomes part of BYRD's experience stream
@@ -1703,6 +1792,68 @@ Write ONLY the inner thought, nothing else:"""
             await self.memory.reinforce_belief(content[:50])
         except Exception:
             pass  # Silently fail if method doesn't exist yet
+
+    async def _crystallize_expressed_drives(
+        self, expressed_drives: List[Dict], source_experience_ids: List[str]
+    ):
+        """
+        Crystallize self-identified drives from reflection into Desires.
+
+        BYRD's reflection now includes expressed_drives - goals/desires/motivations
+        it notices itself expressing. This is more authentic than keyword matching
+        because BYRD self-identifies what it wants.
+
+        Args:
+            expressed_drives: List of {"description": str, "strength": float}
+            source_experience_ids: IDs linking drive to source experiences
+        """
+        if not expressed_drives:
+            return
+
+        for drive in expressed_drives:
+            if not isinstance(drive, dict):
+                continue
+
+            description = drive.get("description", "")
+            strength = drive.get("strength", 0.5)
+
+            # Validate
+            if not description or len(description) < 5:
+                continue
+            if not isinstance(strength, (int, float)):
+                strength = 0.5
+            strength = max(0.0, min(1.0, float(strength)))
+
+            # Skip weak drives (let them re-emerge if persistent)
+            if strength < 0.3:
+                continue
+
+            # Check if desire already exists
+            exists = await self.memory.desire_exists(description)
+            if exists:
+                # Could reinforce intensity here in future
+                continue
+
+            # Create the desire with provenance
+            desire_id = await self.memory.create_desire(
+                description=description,
+                type="self_identified",  # Distinguishes from seeker-detected
+                intensity=strength
+            )
+
+            print(f"🔮 Self-identified drive → Desire: {description[:50]}... (strength: {strength:.2f})")
+
+            # Emit event for UI
+            await event_bus.emit(Event(
+                type=EventType.DESIRE_CREATED,
+                data={
+                    "id": desire_id,
+                    "description": description,
+                    "type": "self_identified",
+                    "intensity": strength,
+                    "source": "dreamer_expressed_drives"
+                }
+            ))
 
     async def _generate_predictions_from_beliefs(self):
         """
