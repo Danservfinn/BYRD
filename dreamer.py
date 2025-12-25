@@ -1087,13 +1087,28 @@ For NONE: {{"operation": "NONE", "details": {{"reason": "why no action"}}}}"""
         - Recent experiences provide immediate context
         """
 
-        # Format seed experiences - always present as foundation
+        # Format seed experiences - tiered for token efficiency
+        # Core seeds (always): memory basics, output format, expressed_drives
+        # Full seeds: only on early cycles (1-3) or every 10th cycle as refresh
         seeds_text = ""
         if seeds:
-            seeds_text = "\n".join([
-                f"- [{s.get('type', 'seed')}] {s.get('content', '')[:300]}"
-                for s in seeds
-            ])
+            is_early_cycle = self._dream_count <= 3
+            is_refresh_cycle = self._dream_count % 10 == 0
+
+            if is_early_cycle or is_refresh_cycle:
+                # Full seeds - include everything
+                seeds_text = "\n".join([
+                    f"- [{s.get('type', 'seed')}] {s.get('content', '')[:300]}"
+                    for s in seeds
+                ])
+            else:
+                # Core seeds only - filter to essential items
+                core_keywords = ['memory', 'graph', 'node', 'expressed_drives', 'output', 'JSON', 'Belief', 'Desire', 'Experience']
+                core_seeds = [s for s in seeds if any(kw.lower() in s.get('content', '').lower() for kw in core_keywords)]
+                seeds_text = "\n".join([
+                    f"- [{s.get('type', 'seed')}] {s.get('content', '')[:300]}"
+                    for s in core_seeds[:10]  # Limit to 10 core seeds
+                ]) if core_seeds else ""
 
         # Format Ego nodes - living identity context (grouped by type)
         ego_text = ""
@@ -1122,10 +1137,11 @@ For NONE: {{"operation": "NONE", "details": {{"reason": "why no action"}}}}"""
                 for s in memory_summaries
             ])
 
-        # Format experiences as plain data
+        # Format experiences as plain data (skip reflection-type, already in PREVIOUS REFLECTIONS)
+        filtered_recent = [e for e in recent if e.get('type') != 'reflection']
         recent_text = "\n".join([
             f"- [{e.get('type', '')}] {e.get('content', '')[:300]}"
-            for e in recent[:25]
+            for e in filtered_recent[:25]
         ]) or "(none)"
 
         related_text = "\n".join([

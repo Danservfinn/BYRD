@@ -123,8 +123,8 @@ dreamer:
   # Lower = more active mind, higher token usage
   interval_seconds: 60  # Fixed 60-second narration interval
 
-  # How many recent experiences to consider
-  context_window: 50
+  # How many recent experiences to consider (reduced from 50 for token efficiency)
+  context_window: 30
 
   # Adaptive interval settings
   adaptive_interval: false     # Disabled for consistent 60s narration
