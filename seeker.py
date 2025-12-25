@@ -470,10 +470,11 @@ If no clear drives emerge, return {{"drives": []}}"""
         # Sort by count (most stable first)
         stable_patterns.sort(key=lambda p: p.get("count", 0), reverse=True)
 
-        # Assign default strategy (search/research) to patterns without one
+        # Assign strategy based on description hints (not hardcoded search!)
         for pattern in stable_patterns:
             if not pattern.get("strategy"):
-                pattern["strategy"] = "search"
+                description = pattern.get("description", "")
+                pattern["strategy"] = self._determine_strategy_from_description(description)
 
         return stable_patterns
 
