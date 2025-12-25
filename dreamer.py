@@ -1691,7 +1691,7 @@ Write ONLY the inner thought, nothing else:"""
 
         # Generate testable predictions from high-confidence beliefs
         # (every 5th cycle to avoid spamming predictions)
-        if self.dream_count % 5 == 0:
+        if self._dream_count % 5 == 0:
             await self._generate_predictions_from_beliefs()
 
         # Process custom node creation requests
