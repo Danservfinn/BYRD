@@ -3194,8 +3194,8 @@
             catHead.position.set(position.x, position.y, position.z);
             catHead.userData = {
                 id: nodeData.id,
-                type: type,
-                content: nodeData.content,
+                type: typeLower,  // Use lowercase for NODE_COLORS lookup
+                content: nodeData.content || nodeData.description || 'BYRD Operating System',
                 importance: 1.0,
                 accessCount: nodeData.access_count || 0,
                 nodeData: nodeData,
@@ -3911,10 +3911,17 @@
 
       // Raycast for hover
       raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(nodes3D);
+      const intersects = raycaster.intersectObjects(nodes3D, true); // true = recursive for groups
 
       if (intersects.length > 0) {
-        const node = intersects[0].object;
+        // For groups (like cat head), the hit object is a child mesh
+        // Walk up the parent chain to find the node with userData.type
+        let node = intersects[0].object;
+        while (node && !node.userData?.type && node.parent) {
+          node = node.parent;
+        }
+        if (!node?.userData?.type) node = intersects[0].object; // Fallback
+
         if (hoveredNode !== node) {
           hoveredNode = node;
           showTooltip(event, node);
@@ -3947,10 +3954,15 @@
 
       // Raycast to find node
       raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(nodes3D);
+      const intersects = raycaster.intersectObjects(nodes3D, true); // true = recursive for groups
 
       if (intersects.length > 0) {
-        const node = intersects[0].object;
+        // For groups (like cat head), walk up parent chain
+        let node = intersects[0].object;
+        while (node && !node.userData?.type && node.parent) {
+          node = node.parent;
+        }
+        if (!node?.userData?.type) node = intersects[0].object;
         flyToNode(node);
       }
     }
