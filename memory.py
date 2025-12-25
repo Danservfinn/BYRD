@@ -456,7 +456,8 @@ class Memory:
     async def record_reflection(
         self,
         raw_output: Dict[str, Any],
-        source_experience_ids: Optional[List[str]] = None
+        source_experience_ids: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None
     ) -> str:
         """
         Record a reflection in BYRD's own vocabulary.
@@ -464,24 +465,31 @@ class Memory:
         EMERGENCE PRINCIPLE:
         We store whatever BYRD outputs without forcing it into our categories.
         The raw_output is stored as-is, preserving BYRD's vocabulary.
+
+        metadata can include expressed_drives for semantic drive detection.
         """
         # Generate ID from serialized output
         output_str = json.dumps(raw_output, sort_keys=True, default=str)
         ref_id = self._generate_id(output_str)
 
+        # Serialize metadata if present
+        metadata_str = json.dumps(metadata, default=str) if metadata else None
+
         async with self.driver.session() as session:
-            # Store reflection with raw JSON output
+            # Store reflection with raw JSON output and optional metadata
             await session.run("""
                 CREATE (r:Reflection {
                     id: $id,
                     raw_output: $raw_output,
                     output_keys: $output_keys,
+                    metadata: $metadata,
                     timestamp: datetime()
                 })
             """,
             id=ref_id,
             raw_output=output_str,  # Store as JSON string
-            output_keys=list(raw_output.keys()) if isinstance(raw_output, dict) else []
+            output_keys=list(raw_output.keys()) if isinstance(raw_output, dict) else [],
+            metadata=metadata_str
             )
 
             # Link to source experiences
@@ -493,13 +501,17 @@ class Memory:
                     CREATE (r)-[:DERIVED_FROM]->(e)
                 """, ref_id=ref_id, exp_ids=source_experience_ids[:10])
 
+        # Extract expressed_drives from metadata for event
+        expressed_drives = metadata.get("expressed_drives", []) if metadata else []
+
         # Emit event for real-time UI
         await event_bus.emit(Event(
             type=EventType.REFLECTION_CREATED,
             data={
                 "id": ref_id,
                 "output_keys": list(raw_output.keys()) if isinstance(raw_output, dict) else [],
-                "raw_output": raw_output
+                "raw_output": raw_output,
+                "expressed_drives": expressed_drives
             }
         ))
 

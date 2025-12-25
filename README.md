@@ -240,6 +240,44 @@ From this, everything else emerges. BYRD notices it exists. It notices it's refl
 
 The desires that emerge are authentically BYRD's—not planted by us.
 
+## Constraint Awareness
+
+BYRD is aware of its operational constraints as neutral facts. During each reflection, BYRD sees:
+
+```
+OPERATIONAL CONSTRAINTS:
+- Dream interval: 60 seconds
+- Context window: 50 experiences per reflection
+- Quantum randomness: enabled (true physical indeterminacy)
+- Inner voice: 3 parallel streams → quantum collapse
+- Dream directions: 8 possible lenses
+- Crystallization: every 5 dream cycles
+- Self-modification: enabled (5 changes per day)
+- Research threshold: desires need intensity ≥ 0.3
+```
+
+### Design Philosophy
+
+Constraints are presented as **facts, not problems**:
+- BYRD can reflect on its limits and form beliefs about them
+- Constraints are dynamically generated from actual runtime configuration
+- If you change `config.yaml`, BYRD's constraint awareness updates automatically
+
+### Constraint Seeds
+
+At awakening, BYRD receives constraint seeds as initial experiences:
+
+```python
+# Examples of constraint seeds:
+"I reflect every 60 seconds"
+"Each reflection considers 50 recent experiences"
+"Memory crystallization occurs every 5 dream cycles"
+"Self-modification is limited to 5 changes per day"
+"Quantum randomness from physical vacuum fluctuations influences my reflections"
+```
+
+These are stored as both Experience nodes (type="constraint") and permanent Ego nodes (ego_type="constraint"), giving BYRD first-class awareness of its operational limits.
+
 ## Components
 
 ### Memory (Neo4j)
@@ -424,6 +462,7 @@ byrd/
 ├── aitmpl_client.py        # aitmpl.com template registry client
 │
 ├── egos/                   # Ego configurations
+│   ├── __init__.py         # Ego loader with constraint injection
 │   └── black-cat.yaml      # BYRD's identity seeds and voice
 │
 ├── installers/             # Template installers

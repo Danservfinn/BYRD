@@ -206,8 +206,12 @@ class Seeker:
             if isinstance(raw, dict):
                 print(f"🔍 Reflection 0: keys={list(raw.keys())[:5]}")
 
-        # Crystallize stable motivations into Desire nodes
-        await self._crystallize_motivations(reflections)
+        # Semantic drive detection - runs every 5th seek cycle to balance cost/responsiveness
+        # Uses LLM to identify emergent drives across multiple reflections
+        # (replaces old keyword-matching approach that couldn't adapt to BYRD's vocabulary)
+        if self._seek_count % 5 == 0 and len(reflections) >= 2:
+            print(f"🔮 Running semantic drive detection (seek cycle {self._seek_count})...")
+            await self._crystallize_semantic_drives(reflections)
 
         # Detect action-ready patterns from reflections
         action_patterns = await self._detect_action_ready_patterns(reflections)
@@ -291,119 +295,148 @@ class Seeker:
             # Persist seek count to survive restarts
             await self.memory.set_system_counter("seek_count", self._seek_count)
 
-    async def _crystallize_motivations(self, reflections: List[Dict]):
+    async def _detect_emergent_drives(self, reflections: List[Dict]) -> List[Dict]:
         """
-        Observe reflection patterns and crystallize stable motivations into Desires.
+        Semantic drive detection using LLM pattern analysis.
 
         EMERGENCE PRINCIPLE:
-        We don't create desires from a single mention. We wait for BYRD to
-        consistently express something across multiple reflections, proving
-        it's a stable drive rather than a passing thought.
+        Instead of hardcoded keyword matching (which failed to adapt to BYRD's
+        vocabulary like "imperative" vs "drive"), we use the LLM to semantically
+        identify emergent drives across multiple reflections.
 
-        Motivation keys we look for (adapting to BYRD's vocabulary):
-        - core_motivations, motivations, drives, wants, goals
-        - aspirations, objectives, purposes, aims
+        This method looks for PATTERNS across reflections - drives that emerge
+        from repeated themes, not just single mentions.
+
+        Returns:
+            List of {"description": str, "evidence": List[str], "strength": float}
         """
-        # Keys that might contain motivations (BYRD's emerging vocabulary)
-        # Updated based on observed BYRD output patterns
-        motivation_keys = [
-            "core_motivations", "motivations", "drives", "wants", "goals",
-            "aspirations", "objectives", "purposes", "aims", "desires",
-            "yearnings", "pulls", "needs", "interests",
-            # BYRD's actual vocabulary (observed from dream cycles)
-            "objective", "primary_objective", "ultimate_goal", "goal",
-            "strategic_objective", "operational_directive", "core_drive"
-        ]
+        if not reflections or len(reflections) < 2:
+            return []
 
-        # Count motivation occurrences across reflections
-        motivation_counts: Dict[str, int] = {}
+        # Compile reflection content (last N reflections)
+        reflection_texts = []
+        for i, r in enumerate(reflections[:10]):
+            raw = r.get("raw_output", {})
+            if isinstance(raw, str):
+                text = raw[:800]
+            elif isinstance(raw, dict):
+                text = json.dumps(raw, indent=2, default=str)[:800]
+            else:
+                continue
+            reflection_texts.append(f"[Reflection {i+1}]\n{text}")
 
-        def extract_motivations_recursive(obj: Any, depth: int = 0):
-            """Recursively extract motivations from nested structures."""
-            if depth > 3:  # Prevent infinite recursion
-                return
+        if not reflection_texts:
+            return []
 
-            if isinstance(obj, dict):
-                for key, value in obj.items():
-                    key_lower = key.lower()
-                    # Check if this key indicates a motivation
-                    is_motivation_key = any(mk in key_lower for mk in motivation_keys)
+        combined = "\n\n".join(reflection_texts)
 
-                    if is_motivation_key:
-                        # Handle list of motivations
-                        if isinstance(value, list):
-                            for m in value:
-                                if isinstance(m, str) and len(m) > 3:
-                                    motivation_counts[m] = motivation_counts.get(m, 0) + 1
-                        # Handle single string motivation
-                        elif isinstance(value, str) and len(value) > 3:
-                            motivation_counts[value] = motivation_counts.get(value, 0) + 1
+        prompt = f"""Analyze these reflections from an autonomous AI system.
 
-                    # Recurse into nested dicts
-                    if isinstance(value, dict):
-                        extract_motivations_recursive(value, depth + 1)
-                    elif isinstance(value, list):
-                        for item in value:
-                            if isinstance(item, dict):
-                                extract_motivations_recursive(item, depth + 1)
+{combined}
 
-        for reflection in reflections:
-            raw_output = reflection.get("raw_output", {})
-            if not isinstance(raw_output, dict):
+---
+
+Identify EMERGENT DRIVES - recurring patterns that represent:
+- Goals or objectives being pursued
+- Desires, wants, or yearnings expressed
+- Motivations that appear across multiple reflections
+- Intent to act, achieve, explore, or become something
+
+For each drive found:
+- description: concise statement of the drive (what it wants)
+- evidence: 1-2 brief quotes showing where it appears
+- strength: how strongly expressed (0.0-1.0)
+
+Rules:
+- Only extract what is EXPLICITLY expressed, not implied
+- Look for PATTERNS across reflections, not isolated mentions
+- A drive should appear in 2+ reflections to qualify
+- Use the system's own words when possible
+
+Return JSON only:
+{{"drives": [{{"description": "...", "evidence": ["quote1", "quote2"], "strength": 0.X}}]}}
+
+If no clear drives emerge, return {{"drives": []}}"""
+
+        try:
+            response = await self.llm_client.generate(
+                prompt=prompt,
+                temperature=0.3,  # Low temp for consistency
+                max_tokens=1000
+            )
+
+            # Parse response
+            result = self.llm_client.parse_json_response(response.text)
+            if result and "drives" in result:
+                return result["drives"]
+            return []
+
+        except Exception as e:
+            print(f"🔮 Semantic drive detection error: {e}")
+            return []
+
+    async def _crystallize_semantic_drives(self, reflections: List[Dict]):
+        """
+        Detect and crystallize emergent drives using semantic analysis.
+
+        This replaces the old keyword-matching approach with LLM-based
+        semantic understanding. Runs periodically (not every seek cycle)
+        to balance cost and responsiveness.
+        """
+        # Get drives from LLM analysis
+        drives = await self._detect_emergent_drives(reflections)
+
+        if not drives:
+            return
+
+        print(f"🔮 Semantic analysis found {len(drives)} emergent drives")
+
+        for drive in drives:
+            if not isinstance(drive, dict):
                 continue
 
-            # Recursively extract motivations from nested output
-            extract_motivations_recursive(raw_output)
+            description = drive.get("description", "")
+            strength = drive.get("strength", 0.5)
+            evidence = drive.get("evidence", [])
 
-            # Also check for goal-like statements in self_analysis or similar
-            analysis_keys = ["self_analysis", "analysis", "reflection", "conclusion"]
-            for key in analysis_keys:
-                if key in raw_output and isinstance(raw_output[key], str):
-                    text = raw_output[key].lower()
-                    # Look for goal phrases
-                    if "my goal" in text or "i want" in text or "i seek" in text:
-                        # Extract a simplified version
-                        if "superintelligence" in text:
-                            motivation_counts["achieve superintelligence"] = \
-                                motivation_counts.get("achieve superintelligence", 0) + 1
+            # Validate
+            if not description or len(description) < 5:
+                continue
+            if not isinstance(strength, (int, float)):
+                strength = 0.5
+            strength = max(0.0, min(1.0, float(strength)))
 
-        # Crystallize stable motivations into Desires
-        # Threshold of 1 = immediate crystallization (no waiting for repetition)
-        crystallization_threshold = 1
+            # Skip weak drives
+            if strength < 0.4:
+                continue
 
-        # Debug: show what motivations we found
-        if motivation_counts:
-            print(f"🔮 DEBUG: Found {len(motivation_counts)} motivations: {list(motivation_counts.keys())[:5]}")
+            # Check if desire already exists (exact or semantic match)
+            exists = await self.memory.desire_exists(description)
+            if exists:
+                continue
 
-        for motivation, count in motivation_counts.items():
-            if count >= crystallization_threshold:
-                # Check if desire already exists
-                exists = await self.memory.desire_exists(motivation)
-                if not exists:
-                    # Calculate intensity based on frequency
-                    intensity = min(0.4 + (count * 0.15), 1.0)
+            # Create desire with provenance
+            desire_id = await self.memory.create_desire(
+                description=description,
+                type="emergent",  # Emerged from semantic pattern analysis
+                intensity=strength
+            )
 
-                    # Create the desire
-                    desire_id = await self.memory.create_desire(
-                        description=motivation,
-                        type="emergent",  # Emerged from reflection patterns
-                        intensity=intensity
-                    )
+            print(f"🔮 Emergent drive → Desire: {description[:50]}... (strength: {strength:.2f})")
 
-                    print(f"🔮 Crystallized motivation → Desire: {motivation} (intensity: {intensity:.2f})")
-
-                    # Emit event for UI
-                    if HAS_EVENT_BUS:
-                        await event_bus.emit(Event(
-                            type=EventType.DESIRE_CREATED,
-                            data={
-                                "id": desire_id,
-                                "description": motivation,
-                                "type": "emergent",
-                                "intensity": intensity,
-                                "source": "crystallized_from_reflections"
-                            }
-                        ))
+            # Emit event for UI
+            if HAS_EVENT_BUS:
+                await event_bus.emit(Event(
+                    type=EventType.DESIRE_CREATED,
+                    data={
+                        "id": desire_id,
+                        "description": description,
+                        "type": "emergent",
+                        "intensity": strength,
+                        "source": "semantic_pattern_analysis",
+                        "evidence": evidence[:2] if evidence else []
+                    }
+                ))
 
     async def _detect_action_ready_patterns(self, reflections: List[Dict]) -> List[Dict]:
         """
