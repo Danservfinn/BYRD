@@ -73,11 +73,17 @@ memory:
     orphan_min_age_hours: 6       # Orphan must be at least this old
 
 # =============================================================================
-# EGO (Optional Personality)
+# OPERATING SYSTEM (BYRD's Self-Model)
 # =============================================================================
-# Egos provide optional personality guidance that shapes how BYRD expresses.
-# Set to null for pure emergence (original behavior).
-# Available egos: "black-cat", "neutral" (or create your own in egos/)
+# The Operating System is BYRD's mutable self-model stored in Neo4j.
+# It's read every dream cycle and can be modified through reflection.
+# Templates define the initial state when BYRD awakens for the first time.
+# Available templates: "black-cat" (default), "emergent" (minimal)
+operating_system:
+  template: "black-cat"
+
+# Legacy ego setting (DEPRECATED - use operating_system above)
+# Kept for backward compatibility during transition
 ego: "black-cat"
 
 # =============================================================================
