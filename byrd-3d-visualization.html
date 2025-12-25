@@ -4491,7 +4491,17 @@
     }
 
     function connectWebSocket() {
-      ws = new WebSocket(WS_URL);
+      console.log('Connecting to WebSocket:', WS_URL);
+      updateStatus(`Connecting to ${WS_URL}...`, 'amber');
+
+      try {
+        ws = new WebSocket(WS_URL);
+      } catch (e) {
+        console.error('WebSocket creation failed:', e);
+        updateStatus(`WebSocket error: ${e.message}`, 'red');
+        setTimeout(connectWebSocket, 5000);
+        return;
+      }
 
       ws.onopen = () => {
         connected = true;
@@ -4555,6 +4565,11 @@
 
         // Reconnect after delay
         setTimeout(connectWebSocket, 3000);
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        updateStatus('WebSocket error - check console', 'red');
       };
 
       ws.onmessage = (event) => {
