@@ -20,13 +20,21 @@ SPACE_SDK = "docker"
 
 def main():
     token = os.environ.get("HF_TOKEN")
-    if not token:
-        print("❌ HF_TOKEN not set!")
-        print("   Get your token at: https://huggingface.co/settings/tokens")
-        print("   Then run: export HF_TOKEN='your-token'")
-        return
 
-    api = HfApi(token=token)
+    # Use cached credentials if HF_TOKEN not set
+    if token:
+        api = HfApi(token=token)
+    else:
+        api = HfApi()  # Uses cached login from huggingface-cli
+        try:
+            api.whoami()
+        except Exception:
+            print("❌ Not logged in to HuggingFace!")
+            print("   Option 1: export HF_TOKEN='your-token'")
+            print("   Option 2: huggingface-cli login")
+            return
+        token = None  # Will use cached credentials
+
     username = api.whoami()["name"]
     repo_id = f"{username}/{SPACE_NAME}"
 

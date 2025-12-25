@@ -431,3 +431,21 @@ graph_algorithms:
     steps: 10                   # Steps per walk
     walks_per_cycle: 3          # Number of walks per dream cycle
     quantum_influence: true     # Use quantum randomness for perturbation
+
+# =============================================================================
+# EMERGENT IDENTITY (Self-Discovery)
+# =============================================================================
+# Controls how BYRD discovers and evolves its own identity.
+# When enabled, BYRD can name itself and develop its own voice through reflection.
+identity:
+  # Allow BYRD to name itself through reflection
+  self_naming: true
+
+  # Allow voice evolution through identity crystallization
+  voice_evolution: true
+
+  # Run identity crystallization every N dream cycles
+  crystallization_interval: 20
+
+  # Minimum identity-related beliefs required before crystallization
+  min_beliefs_for_crystallization: 5
