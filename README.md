@@ -43,7 +43,7 @@ The system dreams continuously using a local LLM. From dreams come whatever BYRD
 - **Continuous Dreaming**: Local LLM (gemma2:27b) runs 24/7 without API costs
 - **Quantum Randomness**: True quantum entropy from ANU QRNG modulates cognitive temperature
 - **Hierarchical Memory**: Seeds always present, older experiences compressed into summaries
-- **Autonomous Research**: SearXNG + Local LLM for self-directed learning
+- **Autonomous Research**: DuckDuckGo (primary) + SearXNG (fallback) + Local LLM for self-directed learning
 - **Capability Acquisition**: Discovers and installs tools from GitHub and aitmpl.com
 - **Autonomous Coding**: Claude Code CLI as BYRD's "coding limb" for implementing features
 - **Self-Modification**: Can modify its own architecture with provenance verification
@@ -303,13 +303,28 @@ BYRD can extend its own ontology by including `create_nodes` in reflection outpu
 {"create_nodes": [{"type": "Insight", "content": "...", "importance": 0.9}]}
 ```
 
-### Seeker (Local LLM + SearXNG)
+### Seeker (Local LLM + DuckDuckGo/SearXNG)
 
-Observes and executes patterns:
+Observes and executes patterns with intelligent strategy routing:
 - **Pattern detection**: Track themes across reflections
 - **Stability check**: Require N occurrences before acting
-- **Strategy execution**: Run BYRD's own reasoning about how to fulfill
+- **LLM Strategy Classification**: When keywords don't match, LLM classifies desires as internal/external
+- **Strategy execution**: Route to appropriate strategy (see table below)
 - **Outcome recording**: Store results as experiences for next reflection
+
+#### Strategy Routing
+
+| Strategy | Keywords | Action |
+|----------|----------|--------|
+| `reconcile_orphans` | orphan, integrate, fragmentation, unify | Connect orphaned memory nodes |
+| `curate` | optimize, clean, consolidate, graph health | Curate memory graph |
+| `self_modify` | add to myself, extend my, modify my code | Self-modification |
+| `introspect` | analyze myself, nature of, self-awareness | Internal reflection |
+| `code` | code, write, implement, build | Generate code |
+| `install` | install, add capability, tool | Install capabilities |
+| `search` | (default for external questions) | Web research |
+
+**LLM Fallback**: When no keywords match, the LLM classifies whether the desire is about BYRD itself (internal → introspect) or about the external world (external → search).
 
 ### Actor (Claude API)
 
@@ -561,12 +576,14 @@ curl http://localhost:11434/api/tags
 ollama serve
 ```
 
-### SearXNG Search Failing
+### Web Search Issues
 ```bash
-# Check SearXNG
-curl "http://localhost:8888/search?q=test&format=json"
+# BYRD uses DuckDuckGo as primary search (no setup required)
+# Test DDG Instant Answers API:
+curl "https://api.duckduckgo.com/?q=test&format=json"
 
-# Falls back to DuckDuckGo instant answers if unavailable
+# SearXNG is optional fallback (requires local setup):
+curl "http://localhost:8888/search?q=test&format=json"
 ```
 
 ## License
