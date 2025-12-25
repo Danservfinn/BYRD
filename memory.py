@@ -3649,7 +3649,7 @@ class Memory:
             async with self.driver.session() as session:
                 result = await session.run("""
                     MATCH (e:Experience)
-                    WHERE e.type IN ['ego_seed', 'system', 'seed', 'awakening']
+                    WHERE e.type IN ['ego_seed', 'system', 'seed', 'awakening', 'constraint', 'self_architecture']
                     RETURN
                         e.id as id,
                         e.content as content,
@@ -3696,7 +3696,7 @@ class Memory:
                     MATCH (e:Experience)
                     WITH
                         count(e) as total,
-                        sum(CASE WHEN e.type IN ['ego_seed', 'system', 'seed', 'awakening'] THEN 1 ELSE 0 END) as seeds
+                        sum(CASE WHEN e.type IN ['ego_seed', 'system', 'seed', 'awakening', 'constraint', 'self_architecture'] THEN 1 ELSE 0 END) as seeds
                     RETURN total, seeds, total - seeds as emergent
                 """)
 
@@ -3718,7 +3718,7 @@ class Memory:
                 # Get seed type breakdown
                 types_result = await session.run("""
                     MATCH (e:Experience)
-                    WHERE e.type IN ['ego_seed', 'system', 'seed', 'awakening']
+                    WHERE e.type IN ['ego_seed', 'system', 'seed', 'awakening', 'constraint', 'self_architecture']
                     RETURN e.type as type, count(e) as count
                 """)
 
