@@ -156,6 +156,10 @@ class Seeker:
         self._seek_count = 0
         self._installs_today = 0
         self._last_reset = datetime.now()
+        self._last_reflection_count = 0
+        self._last_reflection_ids.clear()
+        self._observed_themes.clear()  # Clear pattern detection state
+        self._source_trust.clear()  # Clear learned trust scores
         # Note: Database counter is reset in memory.clear_all()
 
     async def _seek_cycle(self):

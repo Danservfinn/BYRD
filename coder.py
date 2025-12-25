@@ -103,6 +103,13 @@ class Coder:
             self._daily_cost = 0.0
             self._last_cost_reset = now
 
+    def reset(self):
+        """Reset coder state for fresh start."""
+        self._daily_cost = 0.0
+        self._last_cost_reset = datetime.now()
+        self._invocation_count = 0
+        self._total_cost = 0.0
+
     def _build_command(self, prompt: str) -> List[str]:
         """
         Build the Claude Code CLI command.

@@ -399,9 +399,13 @@ async def get_status():
         # Get ego info (including emergent identity)
         ego_status = None
         if byrd_instance.ego:
-            # Check for self-chosen name and evolved voice
-            self_name = await byrd_instance.memory.get_self_name()
-            evolved_voice = await byrd_instance.memory.get_evolved_voice()
+            # Check for self-chosen name and evolved voice (if methods exist)
+            self_name = None
+            evolved_voice = None
+            if hasattr(byrd_instance.memory, 'get_self_name'):
+                self_name = await byrd_instance.memory.get_self_name()
+            if hasattr(byrd_instance.memory, 'get_evolved_voice'):
+                evolved_voice = await byrd_instance.memory.get_evolved_voice()
 
             ego_status = EgoStatus(
                 name=byrd_instance.ego.name,
@@ -990,6 +994,10 @@ async def reset_byrd(request: ResetRequest = None):
         # 2. Reset component state (counters, etc.)
         byrd_instance.dreamer.reset()
         byrd_instance.seeker.reset()
+        byrd_instance.coder.reset()
+        byrd_instance.llm_client.reset()
+        if byrd_instance.quantum_provider:
+            byrd_instance.quantum_provider.reset()
 
         # 3. Clear memory (Neo4j database) - complete wipe
         await byrd_instance.memory.connect()

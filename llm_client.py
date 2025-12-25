@@ -51,6 +51,10 @@ class LLMClient(ABC):
         """Get the current ego voice."""
         return self._ego_voice or ""
 
+    def reset(self):
+        """Reset LLM client state for fresh start."""
+        self._ego_voice = ""
+
     @abstractmethod
     async def generate(
         self,

@@ -383,6 +383,8 @@ class Dreamer:
         self._dream_count = 0
         self._observed_keys = {}
         self._inner_voice_queue.clear()  # Clear narrator queue
+        self._belief_cache.clear()  # Clear belief deduplication cache
+        self._belief_cache_loaded = False  # Force reload on next start
         # Note: Database counter is reset in memory.clear_all()
 
     async def _dream_cycle(self):
