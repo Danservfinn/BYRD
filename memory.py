@@ -1548,7 +1548,234 @@ class Memory:
         
         async with self.driver.session() as session:
             await session.run(query, from_id=from_id, to_id=to_id, props=props)
-    
+
+    # =========================================================================
+    # CAUSAL RELATIONSHIPS
+    # =========================================================================
+
+    async def create_causal_link(
+        self,
+        source_id: str,
+        target_id: str,
+        causal_type: str = "CAUSED",
+        strength: float = 1.0,
+        evidence: Optional[str] = None
+    ) -> bool:
+        """
+        Create a causal relationship between nodes.
+
+        Causal types:
+        - CAUSED: Direct causation (A led to B)
+        - ENABLED: Made possible (A enabled B)
+        - PREVENTED: Blocked outcome (A prevented B)
+        - PREDICTED: Anticipatory (A predicted B would happen)
+
+        Args:
+            source_id: ID of the cause node
+            target_id: ID of the effect node
+            causal_type: Type of causal relationship
+            strength: Causal strength (0-1)
+            evidence: Optional description of causal evidence
+
+        Returns:
+            True if link was created successfully
+        """
+        valid_types = {"CAUSED", "ENABLED", "PREVENTED", "PREDICTED"}
+        if causal_type not in valid_types:
+            causal_type = "CAUSED"
+
+        props = {
+            "strength": min(max(strength, 0.0), 1.0),
+            "created_at": datetime.now().isoformat(),
+        }
+        if evidence:
+            props["evidence"] = evidence
+
+        query = f"""
+            MATCH (a), (b)
+            WHERE a.id = $source_id AND b.id = $target_id
+            CREATE (a)-[r:{causal_type}]->(b)
+            SET r += $props
+            RETURN a.id as source
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(
+                query,
+                source_id=source_id,
+                target_id=target_id,
+                props=props
+            )
+            record = await result.single()
+            return record is not None
+
+    async def get_causal_chain(
+        self,
+        node_id: str,
+        direction: str = "forward",
+        max_depth: int = 10
+    ) -> List[Dict]:
+        """
+        Trace causal relationships from a node.
+
+        Args:
+            node_id: Starting node ID
+            direction: "forward" (effects) or "backward" (causes)
+            max_depth: Maximum chain length
+
+        Returns:
+            List of dicts with source, relationship, target, strength
+        """
+        if direction == "forward":
+            query = """
+                MATCH path = (start)-[r:CAUSED|ENABLED|PREVENTED|PREDICTED*1..]->(end)
+                WHERE start.id = $node_id
+                WITH relationships(path) as rels, nodes(path) as nodes
+                UNWIND range(0, size(rels)-1) as i
+                RETURN nodes[i].id as source,
+                       type(rels[i]) as relationship,
+                       nodes[i+1].id as target,
+                       rels[i].strength as strength
+                LIMIT $max_depth
+            """
+        else:
+            query = """
+                MATCH path = (start)<-[r:CAUSED|ENABLED|PREVENTED|PREDICTED*1..]-(end)
+                WHERE start.id = $node_id
+                WITH relationships(path) as rels, nodes(path) as nodes
+                UNWIND range(0, size(rels)-1) as i
+                RETURN nodes[i+1].id as source,
+                       type(rels[i]) as relationship,
+                       nodes[i].id as target,
+                       rels[i].strength as strength
+                LIMIT $max_depth
+            """
+
+        async with self.driver.session() as session:
+            result = await session.run(
+                query,
+                node_id=node_id,
+                max_depth=max_depth
+            )
+            records = await result.data()
+
+        return [
+            {
+                "source": r["source"],
+                "relationship": r["relationship"],
+                "target": r["target"],
+                "strength": r.get("strength", 1.0)
+            }
+            for r in records
+        ]
+
+    async def find_causal_patterns(
+        self,
+        min_occurrences: int = 2
+    ) -> List[Dict]:
+        """
+        Find recurring causal patterns in the graph.
+
+        Returns patterns where the same type of cause leads to
+        similar effects multiple times.
+
+        Args:
+            min_occurrences: Minimum times pattern must occur
+
+        Returns:
+            List of pattern dicts with cause_type, effect_type, count
+        """
+        query = """
+            MATCH (a)-[r:CAUSED|ENABLED]->(b)
+            WITH labels(a)[0] as cause_type,
+                 type(r) as rel_type,
+                 labels(b)[0] as effect_type,
+                 count(*) as occurrences
+            WHERE occurrences >= $min_occurrences
+            RETURN cause_type, rel_type, effect_type, occurrences
+            ORDER BY occurrences DESC
+            LIMIT 20
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(query, min_occurrences=min_occurrences)
+            records = await result.data()
+
+        return records
+
+    async def mark_contradiction(
+        self,
+        belief1_id: str,
+        belief2_id: str,
+        detection_method: str = "semantic",
+        confidence: float = 0.8
+    ) -> bool:
+        """
+        Mark two beliefs as contradicting each other.
+
+        Args:
+            belief1_id: First belief ID
+            belief2_id: Second belief ID
+            detection_method: How contradiction was detected
+            confidence: Confidence in the contradiction
+
+        Returns:
+            True if contradiction was marked
+        """
+        query = """
+            MATCH (b1:Belief {id: $belief1_id})
+            MATCH (b2:Belief {id: $belief2_id})
+            MERGE (b1)-[r:CONTRADICTS]-(b2)
+            SET r.detected_at = $timestamp,
+                r.detection_method = $method,
+                r.confidence = $confidence
+            RETURN b1.id as id
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(
+                query,
+                belief1_id=belief1_id,
+                belief2_id=belief2_id,
+                timestamp=datetime.now().isoformat(),
+                method=detection_method,
+                confidence=confidence
+            )
+            record = await result.single()
+            return record is not None
+
+    async def get_contradictions(
+        self,
+        min_confidence: float = 0.5
+    ) -> List[Dict]:
+        """
+        Get all belief contradictions above confidence threshold.
+
+        Args:
+            min_confidence: Minimum contradiction confidence
+
+        Returns:
+            List of dicts with belief1, belief2, confidence, detected_at
+        """
+        query = """
+            MATCH (b1:Belief)-[r:CONTRADICTS]-(b2:Belief)
+            WHERE r.confidence >= $min_confidence
+            RETURN b1.id as belief1_id,
+                   b1.content as belief1_content,
+                   b2.id as belief2_id,
+                   b2.content as belief2_content,
+                   r.confidence as confidence,
+                   r.detected_at as detected_at,
+                   r.detection_method as method
+            ORDER BY r.detected_at DESC
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(query, min_confidence=min_confidence)
+            records = await result.data()
+
+        return records
+
     # =========================================================================
     # CONTEXT RETRIEVAL
     # =========================================================================

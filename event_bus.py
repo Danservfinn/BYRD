@@ -117,6 +117,14 @@ class EventType(Enum):
     TASK_COMPLETED = "task_completed"    # Task finished successfully
     TASK_FAILED = "task_failed"          # Task failed with error
 
+    # Graph algorithm events (advanced memory analysis)
+    PAGERANK_COMPUTED = "pagerank_computed"              # PageRank scores updated
+    ACTIVATION_SPREAD = "activation_spread"              # Spreading activation completed
+    CAUSAL_LINK_CREATED = "causal_link_created"          # New causal relationship
+    CONTRADICTION_DETECTED = "contradiction_detected"    # Belief contradiction found
+    CONTRADICTION_RESOLVED = "contradiction_resolved"    # Contradiction addressed
+    DREAM_WALK_COMPLETED = "dream_walk_completed"        # Quantum dream walk finished
+
 
 @dataclass
 class Event:
