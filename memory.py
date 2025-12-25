@@ -6168,8 +6168,8 @@ class Memory:
         """
         try:
             os = await self.get_operating_system()
-            if os and "voice" in os:
-                return os["voice"]
+            if os and os.voice:
+                return os.voice
             return ""
         except Exception as e:
             print(f"Error getting OS voice: {e}")
