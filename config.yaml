@@ -121,7 +121,7 @@ local_llm:
 dreamer:
   # How often to dream (seconds)
   # Lower = more active mind, higher token usage
-  interval_seconds: 60  # Fixed 60-second narration interval
+  interval_seconds: 120  # Fixed 2-minute narration interval
 
   # How many recent experiences to consider (reduced from 50 for token efficiency)
   context_window: 30
@@ -136,9 +136,9 @@ dreamer:
     limit: 30                   # Max semantically related memories to include
 
   # Adaptive interval settings
-  adaptive_interval: false     # Disabled for consistent 60s narration
-  min_interval_seconds: 60    # Fixed at 60s
-  max_interval_seconds: 60    # Fixed at 60s
+  adaptive_interval: false     # Disabled for consistent 2-min narration
+  min_interval_seconds: 120   # Fixed at 120s
+  max_interval_seconds: 120   # Fixed at 120s
   activity_window_seconds: 300  # 5-minute activity window
   activity_threshold: 3        # New beliefs/desires to trigger fast mode
 
