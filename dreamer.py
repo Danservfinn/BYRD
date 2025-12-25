@@ -1247,18 +1247,14 @@ Output JSON with:
             error_msg = f"{type(e).__name__}: {e}"
             print(f"💭 Reflection error: {error_msg}")
             traceback.print_exc()
-            # Emit error event for debugging
-            try:
-                import asyncio
-                asyncio.create_task(event_bus.emit(Event(
-                    type=EventType.REFLECTION_ERROR,
-                    data={
-                        "error": error_msg,
-                        "cycle": self._dream_count
-                    }
-                )))
-            except Exception:
-                pass  # Best effort
+            # Emit error event for debugging - use await since we're in async context
+            await event_bus.emit(Event(
+                type=EventType.REFLECTION_ERROR,
+                data={
+                    "error": error_msg,
+                    "cycle": self._dream_count
+                }
+            ))
             return None
 
     def _extract_inner_voice(self, reflection: Dict) -> str:
