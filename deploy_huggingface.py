@@ -62,6 +62,7 @@ def main():
         "aitmpl_client.py", "coder.py",
         "config.yaml", "requirements.txt",
         "byrd-3d-visualization.html",
+        "byrd-architecture.html",
     ]
 
     # Copy directories
