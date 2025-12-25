@@ -485,33 +485,34 @@ If no clear drives emerge, return {{"drives": []}}"""
         want_keys = ["wants", "pulls", "desires", "needs", "yearning", "seeking",
                      "wish", "hoping", "wanting", "unfulfilled", "missing", "gaps"]
 
-        # Strategy hint patterns
+        # Strategy hint patterns - ORDER MATTERS! Internal/specific strategies first,
+        # then external/general strategies. First match wins (break on line 561).
         strategy_hints = {
-            # External strategies
-            "search": ["search", "look up", "find", "research", "learn about", "understand"],
-            "code": ["code", "write", "implement", "build", "create", "program"],
-            "install": ["install", "add", "get", "acquire", "capability", "tool"],
-
-            # Internal strategies - expanded for better matching
-            "curate": ["optimize", "clean", "consolidate", "prune", "organize", "simplify",
-                       "remove duplicate", "merge similar", "curate", "tidy", "declutter",
-                       "resolve inconsistency", "fix graph", "data inconsistency",
-                       "verify ground truth", "graph health"],
+            # Internal strategies (more specific) - CHECK FIRST
             "reconcile_orphans": ["orphan", "orphaned", "disconnected", "isolated", "unconnected",
                                   "reduce orphan", "connect experience", "link experience",
                                   "reconcile orphan", "integrate experience", "connect nodes",
                                   "integrate", "fragmentation", "strengthen self-model", "unify"],
+            "curate": ["optimize", "clean", "consolidate", "prune", "organize", "simplify",
+                       "remove duplicate", "merge similar", "curate", "tidy", "declutter",
+                       "resolve inconsistency", "fix graph", "data inconsistency",
+                       "verify ground truth", "graph health"],
             "self_modify": ["add to myself", "implement in my", "extend my", "modify my code",
                            "add method", "enhance my capability", "add to memory.py",
                            "add to dreamer.py", "add to seeker.py", "improve my observation",
                            "extend graph health", "add introspection", "re-enable",
-                           "enable self", "disable self", "activate", "unlock"],
-
-            # Introspection - pure self-observation without modification
+                           "enable self", "disable self", "activate", "unlock",
+                           "self-modification"],
             "introspect": ["introspect", "analyze myself", "examine my", "self-awareness",
                           "understand my state", "meta-analysis", "self-knowledge",
                           "observe my", "inspect my", "status of my", "state of my",
-                          "verify", "check my", "audit my", "assess my"],
+                          "verify", "check my", "audit my", "assess my",
+                          "nature of", "fundamental property", "cognitive dissonance"],
+
+            # External strategies (more general) - CHECK LAST (fallback)
+            "code": ["code", "write", "implement", "build", "create", "program"],
+            "install": ["install", "add", "get", "acquire", "capability", "tool"],
+            "search": ["search", "look up", "find", "research", "learn about", "understand"],
         }
 
         for key, value in output.items():
