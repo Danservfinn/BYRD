@@ -208,20 +208,15 @@ class TestMemoryOSMethods:
     @pytest.mark.asyncio
     async def test_get_os_voice_returns_string(self, memory):
         """Test get_os_voice returns voice string."""
-        # Mock the get_operating_system method
-        memory.get_operating_system = AsyncMock(return_value=OperatingSystem(
-            id="os_test",
-            version=1,
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
-            constitutional_files=[],
-            provenance_requirement=True,
-            template_id="template_test",
-            name="Byrd",
-            archetype="Black Cat",
-            description="Test",
-            voice="I am Byrd, a curious mind."
-        ))
+        # Mock the get_operating_system method to return a dict (as it does in reality)
+        memory.get_operating_system = AsyncMock(return_value={
+            "id": "os_test",
+            "version": 1,
+            "name": "Byrd",
+            "archetype": "Black Cat",
+            "description": "Test",
+            "voice": "I am Byrd, a curious mind."
+        })
 
         voice = await memory.get_os_voice()
         assert voice == "I am Byrd, a curious mind."
