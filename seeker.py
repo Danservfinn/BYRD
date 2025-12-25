@@ -557,8 +557,10 @@ If no clear drives emerge, return {{"drives": []}}"""
         and for strategy hints (mentions of search, code, install, etc.)
         """
         # Common want-indicating keys (but we learn BYRD's actual vocabulary)
+        # Note: "drives" matches "expressed_drives" from dreamer output
         want_keys = ["wants", "pulls", "desires", "needs", "yearning", "seeking",
-                     "wish", "hoping", "wanting", "unfulfilled", "missing", "gaps"]
+                     "wish", "hoping", "wanting", "unfulfilled", "missing", "gaps",
+                     "drives", "goals", "motivations"]
 
         # Strategy hint patterns - ORDER MATTERS! Internal/specific strategies first,
         # then external/general strategies. First match wins (break on line 561).
