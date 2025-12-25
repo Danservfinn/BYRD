@@ -472,25 +472,28 @@ class Memory:
         output_str = json.dumps(raw_output, sort_keys=True, default=str)
         ref_id = self._generate_id(output_str)
 
-        # Serialize metadata if present
-        metadata_str = json.dumps(metadata, default=str) if metadata else None
+        # Serialize metadata if present (use empty string if None to avoid Neo4j null issues)
+        metadata_str = json.dumps(metadata, default=str) if metadata else "{}"
 
         async with self.driver.session() as session:
             # Store reflection with raw JSON output and optional metadata
-            await session.run("""
-                CREATE (r:Reflection {
-                    id: $id,
-                    raw_output: $raw_output,
-                    output_keys: $output_keys,
-                    metadata: $metadata,
-                    timestamp: datetime()
-                })
-            """,
-            id=ref_id,
-            raw_output=output_str,  # Store as JSON string
-            output_keys=list(raw_output.keys()) if isinstance(raw_output, dict) else [],
-            metadata=metadata_str
-            )
+            try:
+                await session.run("""
+                    CREATE (r:Reflection {
+                        id: $id,
+                        raw_output: $raw_output,
+                        output_keys: $output_keys,
+                        metadata: $metadata,
+                        timestamp: datetime()
+                    })
+                """,
+                id=ref_id,
+                raw_output=output_str,  # Store as JSON string
+                output_keys=list(raw_output.keys()) if isinstance(raw_output, dict) else [],
+                metadata=metadata_str
+                )
+            except Exception as e:
+                print(f"⚠️ Failed to store reflection: {e}")
 
             # Link to source experiences
             if source_experience_ids:
