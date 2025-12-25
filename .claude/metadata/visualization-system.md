@@ -14,6 +14,7 @@ Real-time 3D visualization of BYRD's cognitive state through WebSocket-based eve
 
 ## Files
 - `/Users/kurultai/BYRD/byrd-3d-visualization.html` - Mind Space (neural network)
+- `/Users/kurultai/BYRD/byrd-architecture.html` - Architecture View (system modules)
 - `/Users/kurultai/BYRD/byrd-cat-visualization.html` - Ego Space (cat avatar)
 - `/Users/kurultai/BYRD/server.py` - WebSocket + REST API server
 
@@ -39,6 +40,15 @@ Full memory graph exploration (within Mind Space).
 - **All Node Types**: Including reflections and custom types
 - **Physics Simulation**: Interactive node dragging
 - **Connection Display**: All relationships visible
+
+### Architecture View
+3D orbital visualization of BYRD's system architecture.
+- **Central Memory Core**: Icosahedron at center representing Neo4j
+- **Orbiting Modules**: Dreamer, Seeker, Actor, Coder, EventBus, Quantum, Ego
+- **Data Flow Lines**: Color-coded curved lines showing data movement
+- **Click Interactions**: Select modules to highlight connections
+- **Real-time Updates**: Reflects current module status (active/idle/disabled)
+- **API Endpoint**: `/api/architecture` provides live system data
 
 ## Genesis Modal
 Displays BYRD's non-emergent foundations:
