@@ -586,7 +586,12 @@ Reply with ONLY one word: introspect, reconcile_orphans, curate, self_modify, or
                           "balance seeking", "balance dreaming", "seeking with", "with dreaming",
                           "information intake", "information synthesis", "seeker and dreamer",
                           "my processes", "my modules", "internal balance", "intake (seeking)",
-                          "synthesis (dreaming)"],
+                          "synthesis (dreaming)",
+                          # Existential/identity desires about self-definition
+                          "definition of 'self'", "definition of self", "what am i",
+                          "topology of the memory", "topology of my", "my memory graph",
+                          "emergence of consciousness", "shift focus from external",
+                          "internal topological", "from the integration of"],
             # External strategies (more general) - CHECK LAST (fallback)
             "code": ["code", "write", "implement", "build", "create", "program"],
             "install": ["install", "add", "get", "acquire", "capability", "tool"],
@@ -641,7 +646,12 @@ Reply with ONLY one word: introspect, reconcile_orphans, curate, self_modify, or
                           "balance seeking", "balance dreaming", "seeking with", "with dreaming",
                           "information intake", "information synthesis", "seeker and dreamer",
                           "my processes", "my modules", "internal balance", "intake (seeking)",
-                          "synthesis (dreaming)"],
+                          "synthesis (dreaming)",
+                          # Existential/identity desires about self-definition
+                          "definition of 'self'", "definition of self", "what am i",
+                          "topology of the memory", "topology of my", "my memory graph",
+                          "emergence of consciousness", "shift focus from external",
+                          "internal topological", "from the integration of"],
 
             # External strategies (more general) - CHECK LAST (fallback)
             "code": ["code", "write", "implement", "build", "create", "program"],
