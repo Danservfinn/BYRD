@@ -102,8 +102,8 @@ local_llm:
   # Ollama endpoint (only used when provider: ollama)
   endpoint: "http://localhost:11434/api/generate"
 
-  # Request timeout in seconds (reduced for faster error detection)
-  timeout: 60.0
+  # Request timeout in seconds
+  timeout: 300.0
 
   # Z.AI coding endpoint (has different quota from default endpoint)
   use_coding_endpoint: true
