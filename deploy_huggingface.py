@@ -121,6 +121,12 @@ Set these secrets in Space Settings:
 
     (deploy_dir / "README.md").write_text(readme_content)
 
+    # Add deploy timestamp to force Docker rebuild
+    from datetime import datetime
+    deploy_timestamp = datetime.utcnow().isoformat()
+    (deploy_dir / ".deploy_timestamp").write_text(f"Deployed: {deploy_timestamp}\n")
+    print(f"📅 Deploy timestamp: {deploy_timestamp}")
+
     print(f"📦 Prepared {len(list(deploy_dir.iterdir()))} files for upload")
 
     # Upload to HuggingFace
