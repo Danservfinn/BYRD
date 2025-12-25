@@ -482,11 +482,14 @@ Example format: {"output": {...your reflection...}}"""
                     # Rate limited - wait and retry with exponential backoff (capped)
                     delay = min(base_delay * (2 ** attempt), max_delay)
                     print(f"⏳ Z.AI rate limited, waiting {delay}s (attempt {attempt + 1}/{max_retries})")
+                    print(f"⏳ Response body: {response.text[:200] if response.text else 'empty'}")
                     await asyncio.sleep(delay)
                     continue
 
                 if response.status_code != 200:
-                    raise LLMError(f"Z.AI error: {response.status_code} - {response.text}")
+                    error_text = response.text[:500] if response.text else "empty"
+                    print(f"❌ Z.AI error {response.status_code}: {error_text}")
+                    raise LLMError(f"Z.AI error: {response.status_code} - {error_text}")
 
                 result = response.json()
                 message = result["choices"][0]["message"]
