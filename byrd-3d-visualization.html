@@ -3184,10 +3184,33 @@
         const heatBonus = getHeatIntensity(accessCount) * 0.3;
         const size = baseSize + heatBonus;
 
-        // GEOMETRY: Experience nodes (memories) use crystal shape; others use spheres
+        // GEOMETRY: Different shapes for different node types
         const typeLower = type.toLowerCase();
         let geometry;
-        if (typeLower === 'experience') {
+
+        // Operating System uses cat head geometry - BYRD's self-model
+        if (typeLower === 'operatingsystem') {
+            const catHead = createCatHeadGeometry(3.5);
+            catHead.position.set(position.x, position.y, position.z);
+            catHead.userData = {
+                id: nodeData.id,
+                type: type,
+                content: nodeData.content,
+                importance: 1.0,
+                accessCount: nodeData.access_count || 0,
+                nodeData: nodeData,
+                baseScale: 1,
+                targetScale: new THREE.Vector3(1, 1, 1),
+                velocity: new THREE.Vector3(0, 0, 0),
+                force: new THREE.Vector3(0, 0, 0),
+                isOSNode: true
+            };
+            scene.add(catHead);
+            nodes3D.push(catHead);
+            graphState.nodeIdToMesh.set(nodeData.id, catHead);
+            osNodeGroup = catHead;
+            return catHead;
+        } else if (typeLower === 'experience') {
             // Memory crystals - octahedron for crystalline appearance
             geometry = new THREE.OctahedronGeometry(size * 1.2, 0);
         } else {
