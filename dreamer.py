@@ -388,10 +388,16 @@ class Dreamer:
         # Get active Ego nodes for living identity context
         ego_nodes = await self.memory.get_active_ego()
 
+        # Get current beliefs and desires for self-awareness
+        current_beliefs = await self.memory.get_beliefs(min_confidence=0.3, limit=20)
+        active_desires = await self.memory.get_unfulfilled_desires(limit=15)
+
         # Emit event for memories being accessed (for visualization highlighting)
         all_accessed_ids = recent_ids.copy()
         all_accessed_ids.extend([r.get("id") for r in related if r.get("id")])
         all_accessed_ids.extend([c.get("id") for c in capabilities if c.get("id")])
+        all_accessed_ids.extend([b.get("id") for b in current_beliefs if b.get("id")])
+        all_accessed_ids.extend([d.get("id") for d in active_desires if d.get("id")])
         all_accessed_ids.extend([r.get("id") for r in previous_reflections if r.get("id")])
 
         # Track access counts for heat map visualization (Phase 4)
@@ -415,7 +421,8 @@ class Dreamer:
         # 2. REFLECT - Ask local LLM to reflect (minimal, unbiased prompt)
         reflection_output = await self._reflect(
             recent, related, capabilities, previous_reflections, graph_health,
-            seeds=seeds, memory_summaries=memory_summaries, ego_nodes=ego_nodes
+            seeds=seeds, memory_summaries=memory_summaries, ego_nodes=ego_nodes,
+            current_beliefs=current_beliefs, active_desires=active_desires
         )
 
         if not reflection_output:
@@ -1056,7 +1063,9 @@ For NONE: {{"operation": "NONE", "details": {{"reason": "why no action"}}}}"""
         graph_health: Optional[Dict] = None,
         seeds: Optional[List[Dict]] = None,
         memory_summaries: Optional[List[Dict]] = None,
-        ego_nodes: Optional[List[Dict]] = None
+        ego_nodes: Optional[List[Dict]] = None,
+        current_beliefs: Optional[List[Dict]] = None,
+        active_desires: Optional[List[Dict]] = None
     ) -> Optional[Dict]:
         """
         Ask local LLM to reflect on memories using minimal, unbiased prompt.
@@ -1172,14 +1181,32 @@ For NONE: {{"operation": "NONE", "details": {{"reason": "why no action"}}}}"""
         # Format operational constraints for self-awareness
         constraints_text = self._format_operational_constraints()
 
+        # Format current beliefs for self-awareness
+        beliefs_text = ""
+        if current_beliefs:
+            beliefs_text = "\n".join([
+                f"- [{b.get('confidence', 0.5):.1f}] {b.get('content', '')[:200]}"
+                for b in current_beliefs[:15]
+            ])
+
+        # Format active desires for self-awareness
+        desires_text = ""
+        if active_desires:
+            desires_text = "\n".join([
+                f"- [{d.get('intensity', 0.5):.1f}] {d.get('description', '')[:200]}"
+                for d in active_desires[:10]
+            ])
+
         # MINIMAL PROMPT - pure data presentation, no guidance
-        # Structure: Quantum direction (if any) -> Foundation (seeds) -> Ego (identity) -> Historical (summaries) -> Recent -> Related -> Constraints
+        # Structure: Quantum direction (if any) -> Foundation (seeds) -> Ego (identity) -> Historical (summaries) -> Recent -> Related -> Beliefs -> Desires -> Constraints
         prompt = f"""{direction_text}{f"FOUNDATION (always present):{chr(10)}{seeds_text}{chr(10)}" if seeds_text else ""}{f"EGO (current self-model):{chr(10)}{ego_text}{chr(10)}" if ego_text else ""}{f"MEMORY SUMMARIES (past periods):{chr(10)}{summaries_text}{chr(10)}" if summaries_text else ""}RECENT EXPERIENCES:
 {recent_text}
 
 RELATED MEMORIES:
 {related_text}
 
+{f"CURRENT BELIEFS:{chr(10)}{beliefs_text}{chr(10)}" if beliefs_text else ""}
+{f"ACTIVE DESIRES:{chr(10)}{desires_text}{chr(10)}" if desires_text else ""}
 AVAILABLE CAPABILITIES:
 {caps_text}
 
