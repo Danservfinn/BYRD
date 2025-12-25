@@ -1590,7 +1590,177 @@ class Memory:
             "capabilities": [r["c"] for r in caps],
             "recent_experiences": [r["e"] for r in experiences]
         }
-    
+
+    async def semantic_search(
+        self,
+        keywords: List[str],
+        node_types: Optional[List[str]] = None,
+        limit: int = 50,
+        min_score: float = 0.0
+    ) -> List[Dict[str, Any]]:
+        """
+        Search memories by semantic relevance using keyword matching.
+
+        Args:
+            keywords: List of keywords/concepts to search for
+            node_types: Node types to search (default: Experience, Belief, Desire, Reflection, Crystal)
+            limit: Maximum results to return
+            min_score: Minimum relevance score (0-1) to include
+
+        Returns:
+            List of nodes with relevance scores, sorted by score descending
+        """
+        if not keywords:
+            return []
+
+        # Default node types to search
+        if node_types is None:
+            node_types = ["Experience", "Belief", "Desire", "Reflection", "Crystal"]
+
+        # Normalize keywords for case-insensitive matching
+        keywords = [k.lower().strip() for k in keywords if k.strip()]
+        if not keywords:
+            return []
+
+        results = []
+
+        async with self.driver.session() as session:
+            for node_type in node_types:
+                # Determine which field to search based on node type
+                content_field = "content"
+                if node_type == "Desire":
+                    content_field = "description"
+                elif node_type == "Crystal":
+                    content_field = "synthesis"
+                elif node_type == "Reflection":
+                    content_field = "raw_output"
+
+                # Build dynamic query for keyword matching
+                # Score based on how many keywords match
+                query = f"""
+                    MATCH (n:{node_type})
+                    WHERE n.{content_field} IS NOT NULL
+                    WITH n, toLower(toString(n.{content_field})) as text
+                    WITH n, text,
+                         reduce(score = 0.0, kw IN $keywords |
+                             CASE WHEN text CONTAINS kw THEN score + 1.0 ELSE score END
+                         ) as match_score
+                    WHERE match_score > 0
+                    RETURN n, match_score, labels(n)[0] as node_type
+                    ORDER BY match_score DESC
+                    LIMIT $limit
+                """
+
+                result = await session.run(query, keywords=keywords, limit=limit)
+                records = await result.data()
+
+                for r in records:
+                    node = dict(r["n"])
+                    node["_node_type"] = r["node_type"]
+                    node["_relevance_score"] = r["match_score"] / len(keywords)  # Normalize to 0-1
+                    results.append(node)
+
+        # Sort all results by relevance score
+        results.sort(key=lambda x: x["_relevance_score"], reverse=True)
+
+        # Filter by minimum score and limit
+        results = [r for r in results if r["_relevance_score"] >= min_score][:limit]
+
+        return results
+
+    async def extract_concepts(self, text: str, max_concepts: int = 10) -> List[str]:
+        """
+        Extract key concepts from text for semantic search.
+
+        Uses simple NLP heuristics (no external model required):
+        - Removes common stopwords
+        - Extracts longer words (more likely to be meaningful)
+        - Preserves capitalized terms (likely proper nouns/concepts)
+        """
+        import re
+
+        # Common English stopwords
+        stopwords = {
+            "a", "an", "the", "is", "are", "was", "were", "be", "been", "being",
+            "have", "has", "had", "do", "does", "did", "will", "would", "could",
+            "should", "may", "might", "must", "shall", "can", "need", "dare",
+            "to", "of", "in", "for", "on", "with", "at", "by", "from", "as",
+            "into", "through", "during", "before", "after", "above", "below",
+            "between", "under", "again", "further", "then", "once", "here",
+            "there", "when", "where", "why", "how", "all", "each", "few",
+            "more", "most", "other", "some", "such", "no", "nor", "not",
+            "only", "own", "same", "so", "than", "too", "very", "just",
+            "and", "but", "if", "or", "because", "until", "while", "this",
+            "that", "these", "those", "am", "it", "its", "i", "you", "he",
+            "she", "we", "they", "what", "which", "who", "whom", "my", "your"
+        }
+
+        # Extract words
+        words = re.findall(r'\b[a-zA-Z]{3,}\b', text)
+
+        # Score words by importance
+        scored = []
+        for word in words:
+            lower = word.lower()
+            if lower in stopwords:
+                continue
+
+            score = 0
+            # Longer words are often more meaningful
+            score += min(len(word) / 10, 1.0)
+            # Capitalized words (in middle of text) might be concepts
+            if word[0].isupper():
+                score += 0.3
+            # Words with numbers might be specific identifiers
+            if any(c.isdigit() for c in word):
+                score += 0.2
+
+            scored.append((lower, score))
+
+        # Deduplicate and sort by score
+        seen = set()
+        unique = []
+        for word, score in sorted(scored, key=lambda x: -x[1]):
+            if word not in seen:
+                seen.add(word)
+                unique.append(word)
+
+        return unique[:max_concepts]
+
+    async def get_semantically_related(
+        self,
+        context_text: str,
+        limit: int = 30,
+        node_types: Optional[List[str]] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Get memories semantically related to the given context.
+
+        Combines concept extraction with semantic search for
+        relevance-based memory retrieval during reflection.
+
+        Args:
+            context_text: Text to find related memories for
+            limit: Maximum memories to return
+            node_types: Node types to search (default: all major types)
+
+        Returns:
+            List of relevant memories with scores
+        """
+        # Extract key concepts from context
+        concepts = await self.extract_concepts(context_text, max_concepts=15)
+
+        if not concepts:
+            return []
+
+        # Search for memories matching these concepts
+        return await self.semantic_search(
+            keywords=concepts,
+            node_types=node_types,
+            limit=limit,
+            min_score=0.1  # At least 10% of concepts should match
+        )
+
     # =========================================================================
     # STATS
     # =========================================================================

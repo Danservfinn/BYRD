@@ -126,6 +126,15 @@ dreamer:
   # How many recent experiences to consider (reduced from 50 for token efficiency)
   context_window: 30
 
+  # ---------------------------------------------------------------------------
+  # SEMANTIC SEARCH (Relevance-Based Memory Retrieval)
+  # ---------------------------------------------------------------------------
+  # Queries memories by semantic relevance to current context, not just recency.
+  # Extracts concepts from recent experiences and finds related memories.
+  semantic_search:
+    enabled: true
+    limit: 30                   # Max semantically related memories to include
+
   # Adaptive interval settings
   adaptive_interval: false     # Disabled for consistent 60s narration
   min_interval_seconds: 60    # Fixed at 60s
