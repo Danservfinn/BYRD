@@ -378,6 +378,14 @@ class QuantumRandomnessProvider:
 
         return index, source
 
+    def reset(self):
+        """Reset quantum provider statistics for fresh start."""
+        self._quantum_fetches = 0
+        self._classical_fallbacks = 0
+        self._total_bytes_used = 0
+        self._last_error = None
+        # Note: Pool and fallback mode are preserved to maintain entropy availability
+
     def get_pool_status(self) -> Dict[str, Any]:
         """Get current status of the quantum entropy pool."""
         return {
