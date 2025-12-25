@@ -1216,6 +1216,15 @@ Output JSON with:
             raw_text = response.text
             if not raw_text:
                 print(f"💭 Empty response from LLM")
+                # Emit error event for debugging
+                await event_bus.emit(Event(
+                    type=EventType.LLM_ERROR,
+                    data={
+                        "error": "Empty response from LLM",
+                        "cycle": self._dream_count,
+                        "model": getattr(self.llm_client, 'model', 'unknown')
+                    }
+                ))
                 return None
 
             # Debug: show response length and first chars
@@ -1235,8 +1244,21 @@ Output JSON with:
 
         except Exception as e:
             import traceback
-            print(f"💭 Reflection error: {type(e).__name__}: {e}")
+            error_msg = f"{type(e).__name__}: {e}"
+            print(f"💭 Reflection error: {error_msg}")
             traceback.print_exc()
+            # Emit error event for debugging
+            try:
+                import asyncio
+                asyncio.create_task(event_bus.emit(Event(
+                    type=EventType.REFLECTION_ERROR,
+                    data={
+                        "error": error_msg,
+                        "cycle": self._dream_count
+                    }
+                )))
+            except Exception:
+                pass  # Best effort
             return None
 
     def _extract_inner_voice(self, reflection: Dict) -> str:

@@ -83,6 +83,10 @@ class EventType(Enum):
     QUANTUM_MOMENT_CREATED = "quantum_moment_created"  # Significant moment recorded
     QUANTUM_COLLAPSE = "quantum_collapse"          # Multi-stream collapsed to one reality
 
+    # Error events (for debugging)
+    LLM_ERROR = "llm_error"                        # LLM call failed
+    REFLECTION_ERROR = "reflection_error"          # Reflection processing failed
+
     # Hierarchical memory events
     MEMORY_SUMMARIZED = "memory_summarized"        # Older experiences compressed into summary
 
