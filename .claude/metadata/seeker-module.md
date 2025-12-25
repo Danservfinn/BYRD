@@ -114,6 +114,77 @@ async def _execute_pattern_strategy(self, pattern):
     ...
 ```
 
+## Strategy Hints
+
+The Seeker uses hint matching to route desires to appropriate strategies:
+
+```python
+strategy_hints = {
+    # External strategies
+    "search": ["search", "look up", "find", "research", "learn about", "understand"],
+    "code": ["code", "write", "implement", "build", "create", "program"],
+    "install": ["install", "add", "get", "acquire", "capability", "tool"],
+
+    # Internal strategies
+    "curate": ["optimize", "clean", "consolidate", "prune", "organize", "simplify",
+               "remove duplicate", "merge similar", "curate", "tidy", "declutter",
+               "resolve inconsistency", "fix graph", "data inconsistency",
+               "verify ground truth", "graph health"],
+    "reconcile_orphans": ["orphan", "orphaned", "disconnected", "isolated", "unconnected",
+                          "reduce orphan", "connect experience", "link experience",
+                          "reconcile orphan", "integrate experience", "connect nodes",
+                          "integrate", "fragmentation", "strengthen self-model", "unify"],
+    "self_modify": ["add to myself", "implement in my", "extend my", "modify my code",
+                   "add method", "enhance my capability", "add to memory.py",
+                   "add to dreamer.py", "add to seeker.py", "improve my observation",
+                   "extend graph health", "add introspection", "re-enable",
+                   "enable self", "disable self", "activate", "unlock"],
+    "introspect": ["introspect", "analyze myself", "examine my", "self-awareness",
+                  "understand my state", "meta-analysis", "self-knowledge",
+                  "observe my", "inspect my", "status of my", "state of my",
+                  "verify", "check my", "audit my", "assess my"],
+}
+```
+
+## Internal Strategies
+
+### Introspect Strategy
+
+Pure self-observation without graph modification:
+
+```python
+async def _execute_introspect_strategy(self, description: str, desire_id: str = None) -> bool:
+    """
+    Gather and report internal state.
+    - Graph statistics (nodes, relationships)
+    - Orphan count, duplicate beliefs
+    - Active desires and beliefs
+    Records findings as experience for reflection.
+    Emits INTROSPECTION_COMPLETE event.
+    """
+```
+
+### Curate Strategy
+
+Graph maintenance and optimization:
+- Detects duplicate beliefs
+- Archives stale nodes
+- Resolves inconsistencies
+
+### Reconcile Orphans Strategy
+
+Connects isolated experiences:
+- Finds orphan nodes (no relationships)
+- Uses LLM to find semantic connections
+- Creates relationships to integrate them
+
+### Self-Modify Strategy
+
+Enables BYRD to modify its own code:
+- Identifies target files from description
+- Generates modification plan via LLM
+- Executes via Coder with provenance tracking
+
 ## Trust Computation (Emergence-Based)
 
 **No hardcoded trusted owners.** Trust is learned from experience:
