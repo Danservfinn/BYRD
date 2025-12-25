@@ -467,6 +467,12 @@ If no clear drives emerge, return {{"drives": []}}"""
             if p.get("count", 0) >= self._pattern_threshold
         ]
 
+        # Debug: log extracted patterns and their strategies
+        for p in stable_patterns:
+            desc = p.get("description", "")[:50]
+            strat = p.get("strategy", "None")
+            print(f"📊 Pattern: strategy={strat} | {desc}")
+
         # Sort by count (most stable first)
         stable_patterns.sort(key=lambda p: p.get("count", 0), reverse=True)
 
