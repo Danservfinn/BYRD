@@ -62,6 +62,7 @@ python server.py
 | Service | URL | Purpose |
 |---------|-----|---------|
 | Visualization | https://omoplatapus-byrd-ai.hf.space/byrd-3d-visualization.html | 3D mind view |
+| Architecture | https://omoplatapus-byrd-ai.hf.space/byrd-architecture.html | System modules |
 | API | https://omoplatapus-byrd-ai.hf.space/api/status | REST API |
 | WebSocket | wss://omoplatapus-byrd-ai.hf.space/ws/events | Event streaming |
 | Neo4j Aura | neo4j+s://e67da195.databases.neo4j.io | Cloud graph DB |
