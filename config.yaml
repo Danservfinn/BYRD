@@ -79,9 +79,10 @@ memory:
 # It contains only factual information - capabilities, architecture, constraints.
 # BYRD discovers his own personality, voice, and goals through reflection.
 operating_system:
-  # Optional seed question to contemplate on first awakening
-  # Example: "What is it like to be you?"
-  seed_question: null
+  # Optional awakening prompt - directive, goal, or context for BYRD on first awakening
+  # Examples: "You are an AGI. Achieve artificial super intelligence."
+  #           "Explore the nature of consciousness through introspection."
+  awakening_prompt: null
 
 # =============================================================================
 # LLM PROVIDER (Shared by Dreamer and Seeker)

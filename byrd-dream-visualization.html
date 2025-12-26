@@ -1199,7 +1199,7 @@
           desires = [];
           updateDesireGarden();
           clearVisualization();
-          const question = event.data?.seed_question || event.data?.message;
+          const question = event.data?.awakening_prompt || event.data?.message;
           if (question) {
             updateStatus('awakening', question);
           }
@@ -1391,7 +1391,7 @@
         case 'seek_cycle_start':
           return `[${data.type}] ${(data.description || '').slice(0, 35)}...`;
         case 'awakening':
-          return `"${data.seed_question}"`;
+          return `"${data.awakening_prompt}"`;
         case 'system_reset':
           return data.message || 'Memory cleared';
         // Desire lifecycle events (reflective failure processing)

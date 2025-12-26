@@ -5287,7 +5287,7 @@
           awakeningMesh.userData = {
             id: 'awakening-core',
             type: 'awakening',
-            content: event.data?.seed_question || 'Awakening (pure emergence)',
+            content: event.data?.awakening_prompt || 'Awakening (pure emergence)',
             importance: 1.0,
             nodeIndex: 0,
             createdAt: Date.now(),
@@ -6357,7 +6357,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             hard_reset: true,
-            seed_question: seedQuestion  // Passed to minimal OS creation
+            awakening_prompt: seedQuestion  // Passed to minimal OS creation
           })
         });
         const data = await res.json();
@@ -6382,7 +6382,7 @@
         const res = await fetch(`${API_BASE}/api/awaken`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ seed_question: seedQuestion })  // May be null - pure emergence
+          body: JSON.stringify({ awakening_prompt: seedQuestion })  // May be null - pure emergence
         });
         const data = await res.json();
         if (data.success) {
