@@ -40,6 +40,14 @@ class Dreamer:
         self.llm_client = llm_client
         self.coordinator = coordinator  # For synchronizing with Seeker/Coder
 
+        # Debug: track last reflection result for diagnostics
+        self.last_reflection_result = {
+            "success": None,
+            "error": None,
+            "response_length": 0,
+            "timestamp": None
+        }
+
         # Timing - base interval
         self.interval = config.get("interval_seconds", 30)
         self.context_window = config.get("context_window", 50)
@@ -1537,6 +1545,12 @@ Output JSON with:
             raw_text = response.text
             if not raw_text:
                 print(f"💭 Empty response from LLM")
+                self.last_reflection_result = {
+                    "success": False,
+                    "error": "Empty response from LLM",
+                    "response_length": 0,
+                    "timestamp": datetime.now().isoformat()
+                }
                 # Emit error event for debugging
                 await event_bus.emit(Event(
                     type=EventType.LLM_ERROR,
@@ -1556,10 +1570,24 @@ Output JSON with:
             if result is None:
                 # JSON parse failed - try to extract useful content anyway
                 print(f"💭 JSON parse failed, full response: {raw_text[:500]}")
+                self.last_reflection_result = {
+                    "success": True,
+                    "error": "JSON parse failed, using raw text",
+                    "response_length": len(raw_text),
+                    "response_preview": raw_text[:200],
+                    "timestamp": datetime.now().isoformat()
+                }
                 # Wrap raw text as output if it's not JSON
                 return {"output": raw_text.strip()}
             else:
                 print(f"💭 JSON parsed successfully, keys: {list(result.keys())[:5]}")
+                self.last_reflection_result = {
+                    "success": True,
+                    "error": None,
+                    "response_length": len(raw_text),
+                    "response_keys": list(result.keys())[:5],
+                    "timestamp": datetime.now().isoformat()
+                }
 
             return result
 
@@ -1568,6 +1596,12 @@ Output JSON with:
             error_msg = f"{type(e).__name__}: {e}"
             print(f"💭 Reflection error: {error_msg}")
             traceback.print_exc()
+            self.last_reflection_result = {
+                "success": False,
+                "error": error_msg,
+                "response_length": 0,
+                "timestamp": datetime.now().isoformat()
+            }
             # Emit error event for debugging - use await since we're in async context
             await event_bus.emit(Event(
                 type=EventType.REFLECTION_ERROR,

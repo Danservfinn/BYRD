@@ -782,6 +782,24 @@ async def test_llm():
         }
 
 
+@app.get("/api/dreamer-debug")
+async def get_dreamer_debug():
+    """Get dreamer status and last reflection result."""
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    dreamer = byrd_instance.dreamer
+    return {
+        "dream_count": getattr(dreamer, '_dream_count', 0),
+        "interval_seconds": getattr(dreamer, 'interval', None),
+        "last_reflection_result": getattr(dreamer, 'last_reflection_result', {}),
+        "quantum_enabled": getattr(dreamer, 'quantum_enabled', False),
+        "context_window": getattr(dreamer, 'context_window', None)
+    }
+
+
 # =============================================================================
 # TASK API (External goal injection)
 # =============================================================================
