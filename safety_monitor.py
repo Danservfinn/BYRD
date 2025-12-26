@@ -164,14 +164,10 @@ class SafetyMonitor:
         """Initialize safety monitor and store original goal hash."""
         self._original_goal_hash = self._hash_goals(self.IMMUTABLE_CORE)
 
-        # Record initialization
+        # Record initialization (metadata included in content since record_experience doesn't accept it)
         await self.memory.record_experience(
-            content="Safety Monitor initialized with immutable core directives",
-            type="system",
-            metadata={
-                "goal_hash": self._original_goal_hash,
-                "protected_files": list(self.PROTECTED_FILES)
-            }
+            content=f"Safety Monitor initialized with immutable core directives. Goal hash: {self._original_goal_hash}. Protected files: {list(self.PROTECTED_FILES)[:5]}",
+            type="system"
         )
 
     def _hash_goals(self, goals: str) -> str:
