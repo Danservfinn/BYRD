@@ -274,7 +274,7 @@ class QuantumStatus(BaseModel):
 class OSStatus(BaseModel):
     name: str
     version: int = 1
-    seed_question: Optional[str] = None
+    awakening_prompt: Optional[str] = None
     self_description: Optional[str] = None  # BYRD's self-discovered description
     current_focus: Optional[str] = None     # What BYRD is currently focused on
 
@@ -301,13 +301,28 @@ class HistoryResponse(BaseModel):
 
 
 class ResetRequest(BaseModel):
-    seed_question: Optional[str] = None  # Optional question for BYRD to contemplate on awakening
+    awakening_prompt: Optional[str] = None  # Optional directive/goal for BYRD on awakening
     hard_reset: bool = True  # Default: complete wipe with no auto-awakening
     git_ref: Optional[str] = None  # Optional git ref to restore to (e.g., "origin/main", "v1.0.0")
 
 
 class ResetResponse(BaseModel):
     success: bool
+    message: str
+
+
+class ExternalMessageRequest(BaseModel):
+    """Request to send a message to BYRD as an external experience."""
+    content: str
+    source_type: str = "human"  # "human", "api", "integration"
+    source_id: Optional[str] = None  # Optional identifier for the source
+    metadata: Optional[Dict[str, Any]] = None  # Additional context
+
+
+class ExternalMessageResponse(BaseModel):
+    """Response after recording an external message."""
+    success: bool
+    experience_id: str
     message: str
 
 
@@ -440,7 +455,7 @@ async def get_status():
                 os_status = OSStatus(
                     name=os_data.get("name", "Byrd"),
                     version=os_data.get("version", 1),
-                    seed_question=os_data.get("seed_question"),
+                    awakening_prompt=os_data.get("awakening_prompt"),
                     self_description=os_data.get("self_description"),
                     current_focus=os_data.get("current_focus")
                 )
@@ -508,6 +523,47 @@ async def get_experiences(limit: int = 50, type: Optional[str] = None):
         await byrd_instance.memory.connect()
         experiences = await byrd_instance.memory.get_recent_experiences(limit=limit, type=type)
         return {"experiences": experiences}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/experience/message", response_model=ExternalMessageResponse)
+async def send_external_message(request: ExternalMessageRequest):
+    """
+    Send a text message to BYRD as an external experience.
+
+    The message will be recorded as a 'received_message' experience that BYRD
+    will encounter during its next dream cycle. BYRD may or may not respond -
+    responses emerge through reflection, not forced.
+
+    This is the primary way for external entities (humans, APIs, integrations)
+    to communicate with BYRD between dream cycles.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    if not request.content or not request.content.strip():
+        raise HTTPException(status_code=400, detail="Message content cannot be empty")
+
+    try:
+        await byrd_instance.memory.connect()
+
+        # Record the external experience
+        exp_id = await byrd_instance.memory.record_external_experience(
+            content=request.content.strip(),
+            source_type=request.source_type,
+            source_id=request.source_id,
+            metadata=request.metadata
+        )
+
+        return ExternalMessageResponse(
+            success=True,
+            experience_id=exp_id,
+            message=f"Message recorded. BYRD will encounter this during the next dream cycle."
+        )
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -808,7 +864,7 @@ async def get_genesis():
         os_info = {
             "name": os_data.get("name", "Byrd") if os_data else "Byrd",
             "version": os_data.get("version", 1) if os_data else 1,
-            "seed_question": os_data.get("seed_question") if os_data else None,
+            "awakening_prompt": os_data.get("awakening_prompt") if os_data else None,
             "self_description": os_data.get("self_description") if os_data else None,
             "current_focus": os_data.get("current_focus") if os_data else None
         }
@@ -1000,7 +1056,7 @@ async def reset_byrd(request: ResetRequest = None):
         raise HTTPException(status_code=503, detail="BYRD not initialized")
 
     # Extract options from request
-    seed_question = request.seed_question if request else None
+    awakening_prompt = request.awakening_prompt if request else None
     hard_reset = request.hard_reset if request else True  # Default to hard reset
     git_ref = request.git_ref if request else None  # Optional git ref to restore to
 
@@ -1028,8 +1084,8 @@ async def reset_byrd(request: ResetRequest = None):
         await byrd_instance.memory.clear_all()
 
         # 4. Create minimal Operating System with seed question
-        await byrd_instance.memory.create_minimal_os(seed_question=seed_question)
-        print(f"🖥️  Minimal OS created (seed_question: {seed_question or 'none'})")
+        await byrd_instance.memory.create_minimal_os(awakening_prompt=awakening_prompt)
+        print(f"🖥️  Minimal OS created (awakening_prompt: {awakening_prompt or 'none'})")
 
         # 5. Clear event history
         event_bus.clear_history()
@@ -1040,7 +1096,7 @@ async def reset_byrd(request: ResetRequest = None):
             data={
                 "message": "Memory cleared - minimal OS created",
                 "hard_reset": hard_reset,
-                "seed_question": seed_question
+                "awakening_prompt": awakening_prompt
             }
         ))
 
@@ -1067,7 +1123,7 @@ async def reset_byrd(request: ResetRequest = None):
             )
 
         # Soft reset: Re-awaken and restart (legacy behavior)
-        await byrd_instance._awaken(seed_question=seed_question)
+        await byrd_instance._awaken(awakening_prompt=awakening_prompt)
 
         # Restart background processes
         byrd_task = asyncio.create_task(byrd_instance.start())
@@ -1075,13 +1131,13 @@ async def reset_byrd(request: ResetRequest = None):
         # Emit system started event
         await event_bus.emit(Event(
             type=EventType.SYSTEM_STARTED,
-            data={"message": "BYRD restarted after reset", "seed_question": seed_question}
+            data={"message": "BYRD restarted after reset", "awakening_prompt": awakening_prompt}
         ))
 
-        used_question = seed_question if seed_question else "(none)"
+        used_prompt = awakening_prompt if awakening_prompt else "(none)"
         return ResetResponse(
             success=True,
-            message=f"BYRD reset complete. Awakened with seed question: '{used_question}'"
+            message=f"BYRD reset complete. Awakened with prompt: '{used_prompt}'"
         )
 
     except Exception as e:
@@ -1092,7 +1148,7 @@ async def reset_byrd(request: ResetRequest = None):
 
 
 class AwakenRequest(BaseModel):
-    seed_question: Optional[str] = None
+    awakening_prompt: Optional[str] = None
 
 
 @app.post("/api/awaken", response_model=ResetResponse)
@@ -1103,11 +1159,11 @@ async def awaken_byrd(request: AwakenRequest = None):
     if not byrd_instance:
         raise HTTPException(status_code=503, detail="BYRD not initialized")
 
-    seed_question = request.seed_question if request else None
+    awakening_prompt = request.awakening_prompt if request else None
 
     try:
         # Awaken (which internally records capability experiences and ego seeds)
-        await byrd_instance._awaken(seed_question=seed_question)
+        await byrd_instance._awaken(awakening_prompt=awakening_prompt)
 
         # Start background processes
         byrd_task = asyncio.create_task(byrd_instance.start())
@@ -1120,7 +1176,7 @@ async def awaken_byrd(request: AwakenRequest = None):
 
         return ResetResponse(
             success=True,
-            message=f"BYRD awakened" + (f" with seed: '{seed_question}'" if seed_question else " (pure emergence)")
+            message=f"BYRD awakened" + (f" with prompt: '{awakening_prompt}'" if awakening_prompt else " (pure emergence)")
         )
 
     except Exception as e:
