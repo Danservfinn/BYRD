@@ -29,6 +29,7 @@ class EventType(Enum):
 
     # External input events (communication from outside BYRD)
     EXTERNAL_INPUT_RECEIVED = "external_input_received"  # Message/media from external source
+    FEEDING_RECEIVED = "feeding_received"  # Nurturing/care act from caretaker
 
     # Dynamic ontology events (BYRD evolving its own node types)
     NODE_TYPE_DISCOVERED = "node_type_discovered"  # First use of a new node type
@@ -118,6 +119,13 @@ class EventType(Enum):
     SELF_NAMED = "self_named"                        # BYRD chose a name for itself
     IDENTITY_OBSERVATION = "identity_observation"    # Self-reflection about identity
     VOICE_CRYSTALLIZED = "voice_crystallized"        # Voice synthesized from identity beliefs
+
+    # Voice events (ElevenLabs TTS)
+    VOICE_SELECTED = "voice_selected"                # BYRD chose a voice
+    VOICE_CHANGED = "voice_changed"                  # BYRD changed voice settings
+    VOICE_SPOKE = "voice_spoke"                      # BYRD spoke to an observer
+    VOICE_CREDITS_LOW = "voice_credits_low"          # Voice credits below threshold
+    VOICE_CREDITS_EXHAUSTED = "voice_credits_exhausted"  # Monthly credits used up
 
     # Prediction events (belief validation loop)
     PREDICTION_CREATED = "prediction_created"          # Testable hypothesis from belief

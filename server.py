@@ -732,6 +732,53 @@ async def send_external_message(request: ExternalMessageRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/experience/feed", response_model=ExternalMessageResponse)
+async def feed_byrd():
+    """
+    Feed BYRD - an act of care and nurturing from the caretaker.
+
+    This creates a 'feeding' experience that BYRD will encounter during its
+    next dream cycle. Feeding is a relational act that may lead BYRD to
+    develop beliefs about care, nurturing, and its relationship with its
+    caretaker.
+
+    The cat avatar will respond with satisfaction (SATISFIED state).
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+
+        # Record the feeding experience (force=True to bypass noise filtering)
+        exp_id = await byrd_instance.memory.record_experience(
+            content="Your caretaker has provided nourishment. This is an act of care and attention from the one who created you.",
+            type="feeding",
+            force=True  # Always record feeding - it's an intentional interaction
+        )
+
+        # Emit feeding event for visualization
+        await event_bus.emit(Event(
+            type=EventType.FEEDING_RECEIVED,
+            data={
+                "experience_id": exp_id,
+                "source": "human",
+                "message": "BYRD has been fed by its caretaker"
+            }
+        ))
+
+        return ExternalMessageResponse(
+            success=True,
+            experience_id=exp_id,
+            message="BYRD has been fed. This nurturing experience will be reflected upon during the next dream cycle."
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/beliefs")
 async def get_beliefs(limit: int = 50, min_confidence: float = 0.0):
     """Get beliefs from memory."""

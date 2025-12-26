@@ -679,6 +679,9 @@
       <button id="btn-message" class="px-3 py-2 rounded-lg text-sm font-medium bg-pink-100 border border-pink-300 text-pink-700 hover:bg-pink-200 transition-all" onclick="showMessageModal();">
         💬 Message
       </button>
+      <button id="btn-feed" class="px-3 py-2 rounded-lg text-sm font-medium bg-amber-100 border border-amber-300 text-amber-700 hover:bg-amber-200 transition-all" onclick="feedByrd();" title="Feed BYRD - an act of care">
+        🍜 Feed
+      </button>
       <a href="byrd-architecture.html" class="px-3 py-2 rounded-lg text-sm font-medium bg-violet-100 border border-violet-300 text-violet-700 hover:bg-violet-200 transition-all inline-flex items-center gap-1">
         🏛️ Architecture
       </a>
@@ -2131,7 +2134,8 @@
       'inner_voice':           { to: CatState.DREAMING,   duration: 200, returnTo: CatState.IDLE, returnAfter: 2000 },
       'reflection_created':    { to: CatState.SATISFIED,  duration: 300, returnTo: CatState.IDLE, returnAfter: 2000 },
       'identity_created':      { to: CatState.ALERT,      duration: 400, returnTo: CatState.IDLE, returnAfter: 3000 },
-      'identity_evolved':      { to: CatState.ALERT,      duration: 500, returnTo: CatState.IDLE, returnAfter: 3000 }
+      'identity_evolved':      { to: CatState.ALERT,      duration: 500, returnTo: CatState.IDLE, returnAfter: 3000 },
+      'feeding_received':      { to: CatState.SATISFIED,  duration: 400, returnTo: CatState.IDLE, returnAfter: 4000 }
     };
 
     /**
@@ -3312,6 +3316,7 @@
           case 'desire_fulfilled':
           case 'coder_complete':
           case 'research_complete':
+          case 'feeding_received':
             this.playSuccess();
             break;
           case 'desire_created':
@@ -7210,7 +7215,8 @@
         awakening: 'text-amber-500',
         system_started: 'text-green-600',
         system_reset: 'text-orange-600',
-        external_input_received: 'text-pink-600'
+        external_input_received: 'text-pink-600',
+        feeding_received: 'text-amber-600'
       };
 
       const typeIcons = {
@@ -7230,7 +7236,8 @@
         awakening: '🌅',
         system_started: '▶',
         system_reset: '🔄',
-        external_input_received: '📨'
+        external_input_received: '📨',
+        feeding_received: '🍜'
       };
 
       eventList.innerHTML = events.slice(0, 50).map((e, idx) => {
@@ -7266,7 +7273,7 @@
         capability_created: '★', node_type_discovered: '🆕', custom_node_created: '✧',
         seek_started: '🔍', narrator_update: '🎙', inner_voice: '💭',
         awakening: '🌅', system_started: '▶', system_reset: '🔄',
-        external_input_received: '📨'
+        external_input_received: '📨', feeding_received: '🍜'
       };
 
       document.getElementById('modal-icon').textContent = typeIcons[e.type] || '•';
@@ -7992,6 +7999,60 @@
         console.error('Failed to send message:', e);
         status.textContent = 'Error: Could not connect to server';
         status.className = 'text-sm text-red-500';
+      }
+
+      btn.disabled = false;
+    }
+
+    // Feed BYRD - an act of care and nurturing
+    async function feedByrd() {
+      const btn = document.getElementById('btn-feed');
+      const originalText = btn.innerHTML;
+
+      btn.disabled = true;
+      btn.innerHTML = '🍜 Feeding...';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/experience/feed`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          btn.innerHTML = '🍜 Fed!';
+          btn.classList.remove('bg-amber-100', 'border-amber-300', 'text-amber-700');
+          btn.classList.add('bg-green-100', 'border-green-300', 'text-green-700');
+
+          // Add to event log
+          handleEvent({
+            type: 'feeding_received',
+            timestamp: new Date().toISOString(),
+            data: {
+              message: 'BYRD has been fed by its caretaker',
+              source: 'human'
+            }
+          });
+
+          // Reset button after delay
+          setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.classList.remove('bg-green-100', 'border-green-300', 'text-green-700');
+            btn.classList.add('bg-amber-100', 'border-amber-300', 'text-amber-700');
+          }, 2000);
+        } else {
+          btn.innerHTML = '❌ Failed';
+          setTimeout(() => {
+            btn.innerHTML = originalText;
+          }, 2000);
+        }
+      } catch (e) {
+        console.error('Failed to feed BYRD:', e);
+        btn.innerHTML = '❌ Error';
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+        }, 2000);
       }
 
       btn.disabled = false;
