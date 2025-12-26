@@ -218,8 +218,16 @@ async def lifespan(app: FastAPI):
             # Subsequent run - just ensure we're ready
             print(f"🧠 BYRD resuming (OS exists: {os_data.get('name', 'Byrd')})")
 
-        # Start the dream and seek loops
-        byrd_task = asyncio.create_task(byrd_instance.start())
+        # Start the dream and seek loops with error handling
+        async def start_with_error_handling():
+            try:
+                await byrd_instance.start()
+            except Exception as e:
+                print(f"❌ BYRD background task failed: {type(e).__name__}: {e}")
+                import traceback
+                traceback.print_exc()
+
+        byrd_task = asyncio.create_task(start_with_error_handling())
 
         # Emit system started event
         await event_bus.emit(Event(
@@ -1253,8 +1261,16 @@ async def start_byrd():
     if byrd_instance._running:
         return {"message": "BYRD already running"}
 
-    # Start in background task
-    byrd_task = asyncio.create_task(byrd_instance.start())
+    # Start in background task with error handling
+    async def start_with_error_handling():
+        try:
+            await byrd_instance.start()
+        except Exception as e:
+            print(f"❌ BYRD start failed: {type(e).__name__}: {e}")
+            import traceback
+            traceback.print_exc()
+
+    byrd_task = asyncio.create_task(start_with_error_handling())
 
     await event_bus.emit(Event(
         type=EventType.SYSTEM_STARTED,

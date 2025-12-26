@@ -365,69 +365,77 @@ class BYRD:
 🐦 BYRD - Bootstrapped Yearning via Reflective Dreaming
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         """)
-        
-        # Connect to memory
-        print("📊 Connecting to memory (Neo4j)...")
-        await self.memory.connect()
-
-        # Initialize quantum provider if enabled
-        if self.quantum_provider:
-            await self.quantum_provider.initialize()
-            status = self.quantum_provider.get_pool_status()
-            print(f"🌀 Quantum pool: {status['pool_size']}/{status['max_pool_size']} bytes")
-
-        # Initialize safety monitor (stores immutable core hash)
-        if self.safety_monitor:
-            await self.safety_monitor.initialize()
-            print("🛡️ SafetyMonitor: initialized with immutable core")
-
-        # Get stats
-        stats = await self.memory.stats()
-        print(f"   Nodes: {sum(stats.values())} total")
-        for node_type, count in stats.items():
-            print(f"   - {node_type}: {count}")
-
-        # EMERGENCE: Capabilities are now recorded as experiences during awakening,
-        # not as separate Capability nodes. This lets BYRD discover its abilities
-        # through reflection rather than having them declared.
-
-        # Awakening: seed with question + factual experiences if memory is empty
-        if sum(stats.values()) == 0 or (stats.get("Experience", 0) == 0):
-            await self._awaken()
-        
-        # Show self-modification status
-        self_mod_status = "enabled" if self.self_mod.enabled else "disabled"
-        print(f"\n🔧 Self-modification: {self_mod_status}")
-
-        # Show Coder status
-        coder_status = "enabled" if self.coder.enabled else "disabled"
-        print(f"💻 Coder (Claude Code): {coder_status}")
-
-        # Start background processes
-        print("\n💭 Starting Dreamer (continuous reflection)...")
-        print("🔍 Starting Seeker (desire fulfillment)...")
-        print("🎙️ Starting Narrator (inner voice broadcast)...")
-
-        self._running = True
-        self._started_at = datetime.now()
-
-        # Build task list
-        tasks = [
-            self.dreamer.run(),
-            self.seeker.run(),
-            self._narrator_loop()
-        ]
-
-        # Add Omega loop if enabled
-        if self.omega:
-            print("🔮 Starting Omega (integration mind orchestration)...")
-            tasks.append(self._omega_loop())
 
         try:
+            # Connect to memory (idempotent - safe to call multiple times)
+            print("📊 Connecting to memory (Neo4j)...")
+            await self.memory.connect()
+
+            # Initialize quantum provider if enabled
+            if self.quantum_provider:
+                await self.quantum_provider.initialize()
+                status = self.quantum_provider.get_pool_status()
+                print(f"🌀 Quantum pool: {status['pool_size']}/{status['max_pool_size']} bytes")
+
+            # Initialize safety monitor (stores immutable core hash)
+            if self.safety_monitor:
+                await self.safety_monitor.initialize()
+                print("🛡️ SafetyMonitor: initialized with immutable core")
+
+            # Get stats
+            stats = await self.memory.stats()
+            print(f"   Nodes: {sum(stats.values())} total")
+            for node_type, count in stats.items():
+                print(f"   - {node_type}: {count}")
+
+            # EMERGENCE: Capabilities are now recorded as experiences during awakening,
+            # not as separate Capability nodes. This lets BYRD discover its abilities
+            # through reflection rather than having them declared.
+
+            # Awakening: seed with question + factual experiences if memory is empty
+            if sum(stats.values()) == 0 or (stats.get("Experience", 0) == 0):
+                await self._awaken()
+
+            # Show self-modification status
+            self_mod_status = "enabled" if self.self_mod.enabled else "disabled"
+            print(f"\n🔧 Self-modification: {self_mod_status}")
+
+            # Show Coder status
+            coder_status = "enabled" if self.coder.enabled else "disabled"
+            print(f"💻 Coder (Claude Code): {coder_status}")
+
+            # Start background processes
+            print("\n💭 Starting Dreamer (continuous reflection)...")
+            print("🔍 Starting Seeker (desire fulfillment)...")
+            print("🎙️ Starting Narrator (inner voice broadcast)...")
+
+            self._running = True
+            self._started_at = datetime.now()
+
+            # Build task list
+            tasks = [
+                self.dreamer.run(),
+                self.seeker.run(),
+                self._narrator_loop()
+            ]
+
+            # Add Omega loop if enabled
+            if self.omega:
+                print("🔮 Starting Omega (integration mind orchestration)...")
+                tasks.append(self._omega_loop())
+
             await asyncio.gather(*tasks)
+
         except asyncio.CancelledError:
-            pass
+            print("⏹️ BYRD tasks cancelled")
+        except Exception as e:
+            print(f"❌ BYRD start() error: {type(e).__name__}: {e}")
+            import traceback
+            traceback.print_exc()
+            self._running = False
+            raise
         finally:
+            self._running = False
             # Shutdown quantum provider if running
             if self.quantum_provider:
                 await self.quantum_provider.shutdown()
