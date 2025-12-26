@@ -25,13 +25,15 @@ RUN echo '#!/bin/bash\n\
 set -e\n\
 \n\
 # Configure Claude CLI credentials from environment variable\n\
-# On Linux, Claude Code stores credentials at ~/.claude/.credentials.json\n\
+# Use $HOME which is /home/user on HuggingFace, /root on local Docker\n\
+CLAUDE_DIR="$HOME/.claude"\n\
 if [ -n "$CLAUDE_OAUTH_CREDS" ]; then\n\
     echo "Configuring Claude CLI OAuth credentials..."\n\
-    mkdir -p /root/.claude\n\
-    echo "$CLAUDE_OAUTH_CREDS" | base64 -d > /root/.claude/.credentials.json\n\
-    chmod 600 /root/.claude/.credentials.json\n\
-    echo "Claude CLI configured at /root/.claude/.credentials.json"\n\
+    mkdir -p "$CLAUDE_DIR"\n\
+    echo "$CLAUDE_OAUTH_CREDS" | base64 -d > "$CLAUDE_DIR/.credentials.json"\n\
+    chmod 600 "$CLAUDE_DIR/.credentials.json"\n\
+    echo "Claude CLI configured at $CLAUDE_DIR/.credentials.json"\n\
+    ls -la "$CLAUDE_DIR"\n\
 else\n\
     echo "No CLAUDE_OAUTH_CREDS found - Claude CLI will be disabled"\n\
 fi\n\
