@@ -275,6 +275,10 @@ class Coder:
         cwd = working_dir or str(self.project_root)
         start_time = datetime.now()
 
+        # Debug: log command structure (not full prompt)
+        cmd_preview = [cmd[0]] + [c if c != full_prompt else f"<prompt:{len(full_prompt)}chars>" for c in cmd[1:]]
+        print(f"🔧 Coder executing: {' '.join(cmd_preview[:8])}{'...' if len(cmd_preview) > 8 else ''}")
+
         try:
             process = await asyncio.create_subprocess_exec(
                 *cmd,
@@ -303,10 +307,28 @@ class Coder:
             stderr_str = stderr.decode("utf-8", errors="replace")
 
             if process.returncode != 0:
+                # Extract more diagnostic info from JSON output if possible
+                error_detail = stderr_str or f"CLI exited with code {process.returncode}"
+                try:
+                    # Claude CLI may output JSON with error info to stdout
+                    import json
+                    output_data = json.loads(stdout_str.strip())
+                    if output_data.get("is_error"):
+                        error_detail = output_data.get("result", error_detail)
+                    elif "error" in output_data:
+                        error_detail = output_data.get("error", error_detail)
+                except (json.JSONDecodeError, Exception):
+                    pass  # Non-JSON output, use stderr or default
+
+                # Log for debugging
+                print(f"❌ Coder CLI failed (code {process.returncode}): {error_detail[:200]}")
+                if stdout_str and not stderr_str:
+                    print(f"   stdout: {stdout_str[:300]}")
+
                 return CoderResult(
                     success=False,
                     output=stdout_str,
-                    error=stderr_str or f"CLI exited with code {process.returncode}",
+                    error=error_detail,
                     duration_ms=duration_ms
                 )
 

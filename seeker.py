@@ -1204,14 +1204,22 @@ Output JSON: {{"learnings": ["learning 1", "learning 2"]}}
         }
         return await self._seek_knowledge(fake_desire)
 
-    async def _seek_capability_semantic(self, description: str) -> bool:
+    async def _seek_capability_semantic(self, description: str, desire_id: str = None) -> bool:
         """Semantic capability seeking."""
-        fake_desire = {"description": description, "type": "semantic"}
+        fake_desire = {
+            "description": description,
+            "type": "semantic",
+            "id": desire_id or f"semantic-cap-{int(datetime.now().timestamp())}"
+        }
         return await self._seek_capability(fake_desire)
 
-    async def _execute_code_strategy(self, description: str) -> bool:
+    async def _execute_code_strategy(self, description: str, desire_id: str = None) -> bool:
         """Execute a coding strategy using coder."""
-        fake_desire = {"description": description, "type": "semantic"}
+        fake_desire = {
+            "description": description,
+            "type": "coding",
+            "id": desire_id or f"code-strategy-{int(datetime.now().timestamp())}"
+        }
         return await self._seek_with_coder(fake_desire)
 
     async def _execute_curate_strategy(self, description: str, desire_id: str = None) -> bool:
@@ -3723,10 +3731,14 @@ If the change is too risky or unclear, output: ERROR: <reason>"""
                 print(f"✅ Coder complete: {description[:50]}")
                 return True
             else:
+                # Include output for debugging (truncated)
+                error_msg = result.error or "Unknown error"
+                if result.output and not result.error:
+                    error_msg += f" | stdout: {result.output[:200]}"
                 await self._record_seek_failure(
                     desire,
                     "coder_execution_failed",
-                    result.error or "Unknown error"
+                    error_msg
                 )
                 return False
 
