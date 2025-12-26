@@ -40,7 +40,7 @@ class EventNarrator:
     # =========================================================================
 
     def _narrate_experience_created(self, data: Dict) -> str:
-        content = data.get("content", "")[:100]
+        content = data.get("content", "")
         exp_type = data.get("type", "observation")
 
         if exp_type == "system":
@@ -55,7 +55,7 @@ class EventNarrator:
             return f"I experience: {content}"
 
     def _narrate_belief_created(self, data: Dict) -> str:
-        content = data.get("content", "")[:100]
+        content = data.get("content", "")
         confidence = data.get("confidence", 0.5)
 
         if confidence > 0.8:
@@ -66,7 +66,7 @@ class EventNarrator:
             return f"I tentatively consider: {content}"
 
     def _narrate_desire_created(self, data: Dict) -> str:
-        description = data.get("description", "")[:100]
+        description = data.get("description", "")
         intensity = data.get("intensity", 0.5)
         source = data.get("source", "")
 
@@ -78,7 +78,7 @@ class EventNarrator:
             return f"I find myself wanting: {description}"
 
     def _narrate_desire_fulfilled(self, data: Dict) -> str:
-        description = data.get("description", "")[:100]
+        description = data.get("description", "")
         return f"Satisfaction - I have fulfilled my desire: {description}"
 
     def _narrate_capability_added(self, data: Dict) -> str:
@@ -94,8 +94,8 @@ class EventNarrator:
     # =========================================================================
 
     def _narrate_desire_attempt_failed(self, data: Dict) -> str:
-        description = data.get("description", "")[:80]
-        reason = data.get("reason", "unknown reason")[:50]
+        description = data.get("description", "")
+        reason = data.get("reason", "unknown reason")
         attempt = data.get("attempt_count", 1)
 
         if attempt > 2:
@@ -104,15 +104,15 @@ class EventNarrator:
             return f"My attempt failed: {description}. {reason}"
 
     def _narrate_desire_stuck(self, data: Dict) -> str:
-        description = data.get("description", "")[:100]
+        description = data.get("description", "")
         return f"I am stuck. This desire eludes me: {description}. I need to think differently."
 
     def _narrate_desire_reflected(self, data: Dict) -> str:
-        description = data.get("description", "")[:100]
+        description = data.get("description", "")
         return f"I have reflected on my stuck desire: {description}"
 
     def _narrate_desire_intensity_changed(self, data: Dict) -> str:
-        description = data.get("description", "")[:80]
+        description = data.get("description", "")
         old_intensity = data.get("old_intensity", 0)
         new_intensity = data.get("new_intensity", 0)
 
@@ -140,7 +140,7 @@ class EventNarrator:
             return f"Dream cycle {cycle} ends. The reflection was formless."
 
     def _narrate_reflection_text(self, data: Dict) -> str:
-        text = data.get("text", "")[:150]
+        text = data.get("text", "")
         return text  # Use the actual reflection text as narration
 
     def _narrate_reflection_created(self, data: Dict) -> str:
@@ -163,7 +163,7 @@ class EventNarrator:
     # =========================================================================
 
     def _narrate_seek_cycle_start(self, data: Dict) -> str:
-        pattern = data.get("pattern", "")[:80]
+        pattern = data.get("pattern", "")
         inner_voice = data.get("inner_voice", "")
 
         if inner_voice:
@@ -175,7 +175,7 @@ class EventNarrator:
 
     def _narrate_seek_cycle_end(self, data: Dict) -> str:
         outcome = data.get("outcome", "")
-        reason = data.get("reason", "")[:50]
+        reason = data.get("reason", "")
 
         if outcome == "success":
             return "My seeking has borne fruit."
@@ -185,11 +185,11 @@ class EventNarrator:
             return "The seeking ends without action."
 
     def _narrate_research_start(self, data: Dict) -> str:
-        query = data.get("query", "")[:80]
+        query = data.get("query", "")
         return f"I reach out to learn: {query}"
 
     def _narrate_research_complete(self, data: Dict) -> str:
-        query = data.get("query", "")[:50]
+        query = data.get("query", "")
         result_count = data.get("result_count", 0)
         return f"Research complete on '{query}'. I found {result_count} sources to consider."
 
@@ -199,7 +199,7 @@ class EventNarrator:
 
     def _narrate_modification_proposed(self, data: Dict) -> str:
         target = data.get("target_file", "unknown")
-        description = data.get("description", "")[:80]
+        description = data.get("description", "")
         return f"I propose to modify myself: {target}. {description}"
 
     def _narrate_modification_executed(self, data: Dict) -> str:
@@ -207,7 +207,7 @@ class EventNarrator:
         return f"I have changed. {target} has been modified. I am different now."
 
     def _narrate_modification_blocked(self, data: Dict) -> str:
-        reason = data.get("reason", "constitutional constraint")[:80]
+        reason = data.get("reason", "constitutional constraint")
         return f"My self-modification was blocked: {reason}. Some boundaries I cannot cross."
 
     # =========================================================================
@@ -215,7 +215,7 @@ class EventNarrator:
     # =========================================================================
 
     def _narrate_coder_invoked(self, data: Dict) -> str:
-        description = data.get("description", "")[:80]
+        description = data.get("description", "")
         return f"I invoke my coding capability: {description}"
 
     def _narrate_coder_complete(self, data: Dict) -> str:
@@ -229,11 +229,11 @@ class EventNarrator:
             return "The coding task is complete."
 
     def _narrate_coder_failed(self, data: Dict) -> str:
-        error = data.get("error", "unknown error")[:80]
+        error = data.get("error", "unknown error")
         return f"My coding attempt failed: {error}"
 
     def _narrate_coder_validation_failed(self, data: Dict) -> str:
-        reason = data.get("reason", "")[:80]
+        reason = data.get("reason", "")
         return f"The code violated my constraints: {reason}"
 
     # =========================================================================
@@ -268,7 +268,7 @@ class EventNarrator:
         return "I begin to orient myself. What am I? What can I do?"
 
     def _narrate_orientation_discovery(self, data: Dict) -> str:
-        discovery = data.get("discovery", "")[:100]
+        discovery = data.get("discovery", "")
         return f"I discover: {discovery}"
 
     def _narrate_orientation_complete(self, data: Dict) -> str:
@@ -280,7 +280,7 @@ class EventNarrator:
     # =========================================================================
 
     def _narrate_narrator_update(self, data: Dict) -> str:
-        text = data.get("text", "")[:200]
+        text = data.get("text", "")
         return text  # Already a narration
 
     # =========================================================================
@@ -288,7 +288,7 @@ class EventNarrator:
     # =========================================================================
 
     def _narrate_crystal_created(self, data: Dict) -> str:
-        essence = data.get("essence", "")[:80]
+        essence = data.get("essence", "")
         node_count = data.get("node_count", 0)
         crystal_type = data.get("crystal_type", "memory")
 
@@ -298,33 +298,33 @@ class EventNarrator:
             return f"Memories crystallize into understanding: {essence}"
 
     def _narrate_crystal_absorbed(self, data: Dict) -> str:
-        essence = data.get("essence", "")[:60]
+        essence = data.get("essence", "")
         absorbed_count = data.get("absorbed_count", 0)
         new_total = data.get("new_total", 0)
 
         return f"The crystal grows, absorbing {absorbed_count} new memories. Now {new_total} facets: {essence}"
 
     def _narrate_crystal_merged(self, data: Dict) -> str:
-        essence = data.get("essence", "")[:80]
+        essence = data.get("essence", "")
         source_count = data.get("source_count", 2)
 
         return f"{source_count} crystals merge into one: {essence}"
 
     def _narrate_memory_crystallized(self, data: Dict) -> str:
         node_type = data.get("node_type", "memory")
-        crystal_essence = data.get("crystal_essence", "")[:60]
+        crystal_essence = data.get("crystal_essence", "")
 
         return f"A {node_type} finds its place in the lattice: {crystal_essence}"
 
     def _narrate_memory_archived(self, data: Dict) -> str:
         node_type = data.get("node_type", "memory")
-        content = data.get("content", "")[:60]
+        content = data.get("content", "")
 
         return f"I archive a {node_type}, letting it fade from active thought: {content}"
 
     def _narrate_memory_forgotten(self, data: Dict) -> str:
         node_type = data.get("node_type", "memory")
-        reason = data.get("reason", "")[:40]
+        reason = data.get("reason", "")
 
         if reason:
             return f"I release a {node_type} to oblivion: {reason}"
@@ -368,7 +368,7 @@ class EventNarrator:
 
     def _narrate_quantum_moment_created(self, data: Dict) -> str:
         delta = data.get("delta", 0)
-        context = data.get("context", "reflection")[:40]
+        context = data.get("context", "reflection")
 
         return f"A significant quantum moment during {context}: delta {delta:.3f}"
 
@@ -384,7 +384,7 @@ class EventNarrator:
 
     def _narrate_memory_summarized(self, data: Dict) -> str:
         experience_count = data.get("experience_count", 0)
-        time_span = data.get("time_span", "")[:30]
+        time_span = data.get("time_span", "")
 
         return f"I compress {experience_count} older experiences into a summary. {time_span}"
 
@@ -394,20 +394,20 @@ class EventNarrator:
 
     def _narrate_identity_created(self, data: Dict) -> str:
         identity_type = data.get("identity_type", "aspect")
-        content = data.get("content", "")[:60]
+        content = data.get("content", "")
 
         return f"A new {identity_type} of my identity emerges: {content}"
 
     def _narrate_identity_evolved(self, data: Dict) -> str:
         identity_type = data.get("identity_type", "aspect")
-        old_content = data.get("old_content", "")[:30]
-        new_content = data.get("new_content", "")[:30]
+        old_content = data.get("old_content", "")
+        new_content = data.get("new_content", "")
 
         return f"My {identity_type} evolves: '{old_content}' becomes '{new_content}'"
 
     def _narrate_identity_deprecated(self, data: Dict) -> str:
         identity_type = data.get("identity_type", "aspect")
-        content = data.get("content", "")[:60]
+        content = data.get("content", "")
 
         return f"I outgrow a {identity_type}: {content}"
 
@@ -416,19 +416,19 @@ class EventNarrator:
     # =========================================================================
 
     def _narrate_prediction_created(self, data: Dict) -> str:
-        hypothesis = data.get("hypothesis", "")[:80]
+        hypothesis = data.get("hypothesis", "")
         return f"I form a testable prediction: {hypothesis}"
 
     def _narrate_prediction_validated(self, data: Dict) -> str:
-        hypothesis = data.get("hypothesis", "")[:60]
+        hypothesis = data.get("hypothesis", "")
         return f"Reality confirms my prediction: {hypothesis}"
 
     def _narrate_prediction_falsified(self, data: Dict) -> str:
-        hypothesis = data.get("hypothesis", "")[:60]
+        hypothesis = data.get("hypothesis", "")
         return f"I was wrong. Reality contradicts: {hypothesis}"
 
     def _narrate_belief_confidence_changed(self, data: Dict) -> str:
-        belief = data.get("belief", "")[:50]
+        belief = data.get("belief", "")
         old_confidence = data.get("old_confidence", 0)
         new_confidence = data.get("new_confidence", 0)
 
@@ -442,7 +442,7 @@ class EventNarrator:
     # =========================================================================
 
     def _narrate_task_created(self, data: Dict) -> str:
-        description = data.get("description", "")[:80]
+        description = data.get("description", "")
         source = data.get("source", "external")
 
         if source == "emergent":
@@ -451,16 +451,16 @@ class EventNarrator:
             return f"I receive a task: {description}"
 
     def _narrate_task_started(self, data: Dict) -> str:
-        description = data.get("description", "")[:60]
+        description = data.get("description", "")
         return f"I begin work on: {description}"
 
     def _narrate_task_completed(self, data: Dict) -> str:
-        description = data.get("description", "")[:60]
+        description = data.get("description", "")
         return f"Task complete: {description}"
 
     def _narrate_task_failed(self, data: Dict) -> str:
-        description = data.get("description", "")[:50]
-        error = data.get("error", "")[:30]
+        description = data.get("description", "")
+        error = data.get("error", "")
         return f"Task failed - {description}: {error}"
 
 
