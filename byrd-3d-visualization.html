@@ -3464,11 +3464,17 @@
     }
 
     /**
-     * Clear event-mode nodes (keep core, cat)
+     * Clear event-mode nodes (keep OS cat head)
      */
     function clearEventModeNodes() {
-        // Remove all existing nodes
+        // Remove all existing nodes EXCEPT the OS cat head
+        const nodesToKeep = [];
         for (const node of nodes3D) {
+            // Keep the OS node (cat head) - it's the core of BYRD's identity
+            if (node.userData?.isOSNode || node.userData?.type?.toLowerCase() === 'operatingsystem') {
+                nodesToKeep.push(node);
+                continue;
+            }
             scene.remove(node);
             if (node.geometry) node.geometry.dispose();
             if (node.material) node.material.dispose();
@@ -3477,6 +3483,7 @@
             }
         }
         nodes3D.length = 0;
+        nodes3D.push(...nodesToKeep);
 
         // Remove all connections
         for (const conn of connections3D) {
@@ -3494,9 +3501,14 @@
         }
         graphState.relationshipLines.length = 0;
 
-        // Clear maps
+        // Clear maps but preserve OS node mapping
+        const osNodeId = osNodeGroup?.userData?.id;
         connectionCounts.clear();
         graphState.nodeIdToMesh.clear();
+        if (osNodeGroup && osNodeId) {
+            graphState.nodeIdToMesh.set(osNodeId, osNodeGroup);
+            connectionCounts.set(osNodeId, 0);
+        }
     }
 
     /**
@@ -6347,6 +6359,9 @@
       }
       nodes3D = [];
 
+      // Reset OS node reference (will be recreated on reload)
+      osNodeGroup = null;
+
       // Immediately remove all connections from scene
       for (const conn of connections3D) {
         scene.remove(conn);
@@ -6357,6 +6372,7 @@
 
       // Clear connection tracking for gravitational spiral
       connectionCounts.clear();
+      graphState.nodeIdToMesh.clear();
 
       // Clear event list
       events = [];
