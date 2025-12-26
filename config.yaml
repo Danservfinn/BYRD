@@ -84,6 +84,11 @@ operating_system:
   #           "Explore the nature of consciousness through introspection."
   awakening_prompt: null
 
+  # Auto-start: When true, BYRD automatically awakens and starts dreaming
+  # when the server starts, without waiting for a browser to connect.
+  # Dream cycles continue independently of browser sessions.
+  auto_start: true
+
 # =============================================================================
 # LLM PROVIDER (Shared by Dreamer and Seeker)
 # =============================================================================
