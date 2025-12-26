@@ -72,8 +72,16 @@ class Coder:
             config: Configuration dictionary from config.yaml
             project_root: Root directory for Claude Code operations
         """
-        self.enabled = config.get("enabled", True)
         self.cli_path = config.get("cli_path", "claude")
+
+        # Check if CLI is actually available before enabling
+        config_enabled = config.get("enabled", True)
+        if config_enabled:
+            self.enabled = self._check_cli_available()
+            if not self.enabled:
+                print(f"⚠️  Coder disabled: Claude CLI not found at '{self.cli_path}'")
+        else:
+            self.enabled = False
         self.max_turns = config.get("max_turns", 10)
         self.timeout_seconds = config.get("timeout_seconds", 300)
         self.output_format = config.get("output_format", "json")
@@ -95,6 +103,17 @@ class Coder:
         # Track invocations
         self._invocation_count = 0
         self._total_cost = 0.0
+
+    def _check_cli_available(self) -> bool:
+        """Check if Claude Code CLI is available."""
+        import shutil
+        if shutil.which(self.cli_path):
+            return True
+        # Also try direct path check
+        cli_path = Path(self.cli_path)
+        if cli_path.exists() and cli_path.is_file():
+            return True
+        return False
 
     def _reset_daily_cost_if_needed(self):
         """Reset daily cost counter if a new day has started."""
