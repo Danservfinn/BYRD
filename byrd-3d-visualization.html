@@ -560,6 +560,9 @@
       <button id="btn-genesis" class="px-3 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-all" onclick="showGenesisModal();">
         🧬 Genesis
       </button>
+      <button id="btn-message" class="px-3 py-2 rounded-lg text-sm font-medium bg-pink-100 border border-pink-300 text-pink-700 hover:bg-pink-200 transition-all" onclick="showMessageModal();">
+        💬 Message
+      </button>
       <a href="byrd-architecture.html" class="px-3 py-2 rounded-lg text-sm font-medium bg-violet-100 border border-violet-300 text-violet-700 hover:bg-violet-200 transition-all inline-flex items-center gap-1">
         🏛️ Architecture
       </a>
@@ -808,47 +811,70 @@
     </div>
   </div>
 
-  <!-- External Message Input Panel -->
-  <div id="message-input-panel" class="ui-overlay bottom-4 left-4 right-4 sm:right-auto sm:w-96">
-    <div class="bg-white/95 backdrop-blur-sm rounded-lg border border-slate-200 shadow-lg overflow-hidden">
-      <div class="flex items-center justify-between px-3 py-2 border-b border-slate-100 bg-slate-50">
-        <div class="flex items-center gap-2">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-500">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
-          <span class="text-xs font-medium text-slate-600">SEND TO BYRD</span>
+  <!-- Message Modal (overlay on top of everything) -->
+  <div id="message-modal" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden transform transition-all">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-pink-50 to-indigo-50">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-pink-600">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-slate-800">Send Message to BYRD</h2>
+            <p class="text-xs text-slate-500">BYRD will encounter this during the next dream cycle</p>
+          </div>
         </div>
-        <button id="btn-toggle-input" class="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-200 transition-colors" title="Minimize">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M18 15l-6-6-6 6"/>
+        <button onclick="hideMessageModal()" class="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-colors">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"/>
           </svg>
         </button>
       </div>
-      <div id="message-input-content" class="p-3">
+
+      <!-- Modal Body -->
+      <div class="p-6">
         <textarea
           id="external-message-input"
-          class="w-full h-20 px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-300 placeholder-slate-400"
-          placeholder="Send a message to BYRD... (will appear in next dream cycle)"
+          class="w-full h-32 px-4 py-3 text-base bg-slate-50 border border-slate-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-300 placeholder-slate-400"
+          placeholder="Type your message here... BYRD will reflect on this during its next dream cycle."
         ></textarea>
-        <div class="flex items-center justify-between mt-2">
-          <span id="message-status" class="text-xs text-slate-400"></span>
-          <button
-            id="btn-send-message"
-            onclick="sendExternalMessage()"
-            class="px-4 py-1.5 text-sm font-medium bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 active:bg-indigo-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <span>Send</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
-            </svg>
-          </button>
+
+        <div class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <div class="flex items-start gap-2">
+            <span class="text-amber-500 mt-0.5">💡</span>
+            <p class="text-xs text-amber-700">
+              Messages are recorded as experiences. BYRD may or may not respond—responses emerge through reflection, not forced interaction.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between mt-5">
+          <span id="message-status" class="text-sm text-slate-500"></span>
+          <div class="flex gap-3">
+            <button onclick="hideMessageModal()" class="px-5 py-2.5 text-sm font-medium bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors">
+              Cancel
+            </button>
+            <button
+              id="btn-send-message"
+              onclick="sendExternalMessage()"
+              class="px-5 py-2.5 text-sm font-medium bg-pink-500 text-white rounded-lg hover:bg-pink-600 active:bg-pink-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-pink-500/25"
+            >
+              <span>Send to BYRD</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
   <!-- Hybrid Navigation: Controls Help Panel -->
-  <div class="ui-overlay bottom-32 left-4 hidden sm:block">
+  <div class="ui-overlay bottom-4 left-4 hidden sm:block">
     <div class="controls-hint text-slate-600 space-y-1">
       <div class="text-[9px] text-slate-500 uppercase tracking-widest mb-2">Navigation</div>
       <div class="flex items-center gap-2">
@@ -6442,8 +6468,8 @@
 
         if (data.success) {
           input.value = '';
-          status.textContent = 'Message sent! BYRD will see this next dream cycle.';
-          status.className = 'text-xs text-emerald-500';
+          status.textContent = '✓ Message sent! BYRD will see this next dream cycle.';
+          status.className = 'text-sm text-emerald-600 font-medium';
 
           // Add to event log
           addEvent({
@@ -6454,43 +6480,62 @@
             }
           });
 
-          // Clear status after a few seconds
+          // Clear status and close modal after success
           setTimeout(() => {
             status.textContent = '';
-          }, 5000);
+            hideMessageModal();
+          }, 1500);
         } else {
           status.textContent = 'Failed to send: ' + (data.detail || 'Unknown error');
-          status.className = 'text-xs text-red-500';
+          status.className = 'text-sm text-red-500';
         }
       } catch (e) {
         console.error('Failed to send message:', e);
         status.textContent = 'Error: Could not connect to server';
-        status.className = 'text-xs text-red-500';
+        status.className = 'text-sm text-red-500';
       }
 
       btn.disabled = false;
     }
 
-    // Handle Enter key in message input (Shift+Enter for newline)
+    // Handle Enter key in message input (Shift+Enter for newline, Cmd/Ctrl+Enter to send)
     document.getElementById('external-message-input').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         sendExternalMessage();
       }
     });
 
-    // Toggle message input panel
-    document.getElementById('btn-toggle-input').addEventListener('click', () => {
-      const content = document.getElementById('message-input-content');
-      const btn = document.getElementById('btn-toggle-input');
-      const isHidden = content.classList.contains('hidden');
+    // Message Modal functions
+    function showMessageModal() {
+      const modal = document.getElementById('message-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      document.getElementById('external-message-input').focus();
+      // Clear any previous status
+      document.getElementById('message-status').textContent = '';
+    }
 
-      if (isHidden) {
-        content.classList.remove('hidden');
-        btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"/></svg>';
-      } else {
-        content.classList.add('hidden');
-        btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>';
+    function hideMessageModal() {
+      const modal = document.getElementById('message-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    // Close modal on backdrop click
+    document.getElementById('message-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'message-modal') {
+        hideMessageModal();
+      }
+    });
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const messageModal = document.getElementById('message-modal');
+        if (!messageModal.classList.contains('hidden')) {
+          hideMessageModal();
+        }
       }
     });
 
