@@ -1507,6 +1507,9 @@ Output JSON with:
     - "research": learning about external topics via search
     - "creation": writing code, creating files, building things
     - "connection": linking ideas, forming relationships, synthesizing
+- "create_belief": (optional) array of beliefs you want to form about yourself or the world
+  Each belief: {{"content": "what you believe to be true", "confidence": 0.0-1.0}}
+  Only include beliefs that emerge naturally from your reflection.
 - "os_update": (optional) modifications to your operating system
   Example: {{"set_field": {{"current_focus": "exploring consciousness"}}}}"""
 
