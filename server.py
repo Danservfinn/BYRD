@@ -755,6 +755,33 @@ async def get_llm_debug():
     }
 
 
+@app.get("/api/llm-test")
+async def test_llm():
+    """Test LLM connectivity with a simple prompt."""
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        response = await byrd_instance.llm_client.generate(
+            prompt="Say 'hello' in one word.",
+            temperature=0.5,
+            max_tokens=20
+        )
+        return {
+            "success": True,
+            "response": response[:200] if isinstance(response, str) else str(response)[:200],
+            "response_type": type(response).__name__
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__
+        }
+
+
 # =============================================================================
 # TASK API (External goal injection)
 # =============================================================================
