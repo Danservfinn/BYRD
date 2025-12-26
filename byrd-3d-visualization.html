@@ -742,8 +742,8 @@
           type="text"
           id="seed-question-input"
           class="w-full px-4 py-3 border border-slate-300 rounded-lg text-base text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          placeholder="Who am I?"
-          value="Who am I?"
+          placeholder="Optional question for BYRD to contemplate..."
+          value=""
         />
         <div class="flex gap-3 mt-4">
           <button id="btn-seed-cancel" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-all">
@@ -4873,7 +4873,7 @@
           awakeningMesh.userData = {
             id: 'awakening-core',
             type: 'awakening',
-            content: 'Who am I?',
+            content: 'Awakening',
             importance: 1.0,
             nodeIndex: 0,
             createdAt: Date.now(),
@@ -5248,7 +5248,7 @@
           awakeningMesh.userData = {
             id: 'awakening-core',
             type: 'awakening',
-            content: event.data?.seed_question || 'Who am I?',
+            content: event.data?.seed_question || 'Awakening (pure emergence)',
             importance: 1.0,
             nodeIndex: 0,
             createdAt: Date.now(),
@@ -6309,11 +6309,14 @@
 
     async function resetByrd(seedQuestion = null) {
       try {
-        // Always do hard reset (clear only, no auto-awaken)
+        // Hard reset with optional seed question for contemplation
         const res = await fetch(`${API_BASE}/api/reset`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ hard_reset: true })
+          body: JSON.stringify({
+            hard_reset: true,
+            seed_question: seedQuestion  // Passed to minimal OS creation
+          })
         });
         const data = await res.json();
         if (data.success) {
@@ -6337,7 +6340,7 @@
         const res = await fetch(`${API_BASE}/api/awaken`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ seed_question: seedQuestion || 'Who am I?' })
+          body: JSON.stringify({ seed_question: seedQuestion })  // May be null - pure emergence
         });
         const data = await res.json();
         if (data.success) {
@@ -6578,7 +6581,7 @@
     document.getElementById('btn-seed-confirm').addEventListener('click', async () => {
       const seedQuestion = document.getElementById('seed-question-input').value.trim();
       hideSeedModal();
-      await resetByrd(seedQuestion || 'Who am I?');  // Clear and awaken
+      await resetByrd(seedQuestion || null);  // Clear and awaken (seed question is optional)
     });
 
     document.getElementById('seed-question-input').addEventListener('keydown', async (e) => {

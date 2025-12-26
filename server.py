@@ -271,12 +271,12 @@ class QuantumStatus(BaseModel):
     last_error: Optional[str] = None
 
 
-class EgoStatus(BaseModel):
+class OSStatus(BaseModel):
     name: str
-    archetype: str
-    description: str
-    self_name: Optional[str] = None      # BYRD's self-chosen name (if any)
-    voice_evolved: bool = False          # Whether voice has been crystallized from identity
+    version: int = 1
+    seed_question: Optional[str] = None
+    self_description: Optional[str] = None  # BYRD's self-discovered description
+    current_focus: Optional[str] = None     # What BYRD is currently focused on
 
 class StatusResponse(BaseModel):
     running: bool
@@ -292,7 +292,7 @@ class StatusResponse(BaseModel):
     llm_provider: str
     llm_model: str
     quantum: Optional[QuantumStatus] = None
-    ego: Optional[EgoStatus] = None
+    os: Optional[OSStatus] = None  # Operating System status (replaces ego)
 
 
 class HistoryResponse(BaseModel):
@@ -301,10 +301,9 @@ class HistoryResponse(BaseModel):
 
 
 class ResetRequest(BaseModel):
-    seed_question: Optional[str] = None
+    seed_question: Optional[str] = None  # Optional question for BYRD to contemplate on awakening
     hard_reset: bool = True  # Default: complete wipe with no auto-awakening
     git_ref: Optional[str] = None  # Optional git ref to restore to (e.g., "origin/main", "v1.0.0")
-    template: Optional[str] = None  # OS template to reset to (e.g., "black-cat", "emergent")
 
 
 class ResetResponse(BaseModel):
@@ -433,24 +432,20 @@ async def get_status():
         else:
             quantum_status = QuantumStatus(enabled=False)
 
-        # Get ego info (including emergent identity)
-        ego_status = None
-        if byrd_instance.ego:
-            # Check for self-chosen name and evolved voice (if methods exist)
-            self_name = None
-            evolved_voice = None
-            if hasattr(byrd_instance.memory, 'get_self_name'):
-                self_name = await byrd_instance.memory.get_self_name()
-            if hasattr(byrd_instance.memory, 'get_evolved_voice'):
-                evolved_voice = await byrd_instance.memory.get_evolved_voice()
-
-            ego_status = EgoStatus(
-                name=byrd_instance.ego.name,
-                archetype=byrd_instance.ego.archetype,
-                description=byrd_instance.ego.description,
-                self_name=self_name,
-                voice_evolved=evolved_voice is not None
-            )
+        # Get OS info from Neo4j
+        os_status = None
+        try:
+            os_data = await byrd_instance.memory.get_operating_system()
+            if os_data:
+                os_status = OSStatus(
+                    name=os_data.get("name", "Byrd"),
+                    version=os_data.get("version", 1),
+                    seed_question=os_data.get("seed_question"),
+                    self_description=os_data.get("self_description"),
+                    current_focus=os_data.get("current_focus")
+                )
+        except Exception as e:
+            print(f"Error getting OS status: {e}")
 
         return StatusResponse(
             running=byrd_instance._running,
@@ -477,7 +472,7 @@ async def get_status():
             llm_provider=llm_provider,
             llm_model=llm_model,
             quantum=quantum_status,
-            ego=ego_status
+            os=os_status
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -808,18 +803,15 @@ async def get_genesis():
     try:
         await byrd_instance.memory.connect()
 
-        # Get ego configuration
-        ego_data = {
-            "name": byrd_instance.ego.name,
-            "archetype": byrd_instance.ego.archetype,
-            "description": byrd_instance.ego.description,
-            "voice": byrd_instance.ego.voice,
-            "is_neutral": byrd_instance.ego.is_neutral,
-            "seed_count": len(byrd_instance.ego.seeds) if byrd_instance.ego.seeds else 0
+        # Get OS configuration from Neo4j
+        os_data = await byrd_instance.memory.get_operating_system()
+        os_info = {
+            "name": os_data.get("name", "Byrd") if os_data else "Byrd",
+            "version": os_data.get("version", 1) if os_data else 1,
+            "seed_question": os_data.get("seed_question") if os_data else None,
+            "self_description": os_data.get("self_description") if os_data else None,
+            "current_focus": os_data.get("current_focus") if os_data else None
         }
-
-        # Get seed experiences from database
-        seed_experiences = await byrd_instance.memory.get_seed_experiences()
 
         # Get genesis statistics
         genesis_stats = await byrd_instance.memory.get_genesis_stats()
@@ -847,24 +839,18 @@ async def get_genesis():
             "self_modification_enabled": byrd_instance.config.get("self_modification", {}).get("enabled", False)
         }
 
-        # Get awakening timestamp if available
-        awakening_timestamp = None
-        if seed_experiences:
-            for seed in seed_experiences:
-                if seed.get("type") == "awakening" or seed.get("type") == "ego_seed":
-                    awakening_timestamp = seed.get("timestamp")
-                    break
+        # Get awakening timestamp from OS
+        awakening_timestamp = os_data.get("created_at") if os_data else None
 
         # Get custom node types (BYRD-created ontology)
         custom_node_types = await byrd_instance.memory.get_custom_node_types()
 
         return {
-            "ego": ego_data,
-            "seed_experiences": seed_experiences,
+            "os": os_info,
             "constitutional": constitutional,
             "system_config": system_config,
             "genesis_stats": genesis_stats,
-            "awakening_timestamp": awakening_timestamp,
+            "awakening_timestamp": str(awakening_timestamp) if awakening_timestamp else None,
             "custom_node_types": custom_node_types
         }
 
@@ -1017,7 +1003,6 @@ async def reset_byrd(request: ResetRequest = None):
     seed_question = request.seed_question if request else None
     hard_reset = request.hard_reset if request else True  # Default to hard reset
     git_ref = request.git_ref if request else None  # Optional git ref to restore to
-    template = request.template if request else None  # Optional OS template
 
     try:
         # 1. Stop if running
@@ -1042,11 +1027,9 @@ async def reset_byrd(request: ResetRequest = None):
         await byrd_instance.memory.connect()
         await byrd_instance.memory.clear_all()
 
-        # 4. Reset Operating System to template (if specified or default)
-        await byrd_instance.memory.ensure_os_templates()
-        template_name = template or byrd_instance.os_template
-        await byrd_instance.memory.reset_to_template(template_name)
-        print(f"🖥️  OS reset to template: {template_name}")
+        # 4. Create minimal Operating System with seed question
+        await byrd_instance.memory.create_minimal_os(seed_question=seed_question)
+        print(f"🖥️  Minimal OS created (seed_question: {seed_question or 'none'})")
 
         # 5. Clear event history
         event_bus.clear_history()
@@ -1055,9 +1038,9 @@ async def reset_byrd(request: ResetRequest = None):
         await event_bus.emit(Event(
             type=EventType.SYSTEM_RESET,
             data={
-                "message": "Memory cleared - OS reset to template",
+                "message": "Memory cleared - minimal OS created",
                 "hard_reset": hard_reset,
-                "template": template_name
+                "seed_question": seed_question
             }
         ))
 
@@ -1080,7 +1063,7 @@ async def reset_byrd(request: ResetRequest = None):
             # Hard reset: Return success, server will restart
             return ResetResponse(
                 success=True,
-                message=f"Full reset complete. OS reset to '{template_name}', {restored_msg}. Server restarting..."
+                message=f"Full reset complete. Minimal OS created, {restored_msg}. Server restarting..."
             )
 
         # Soft reset: Re-awaken and restart (legacy behavior)
@@ -1092,13 +1075,13 @@ async def reset_byrd(request: ResetRequest = None):
         # Emit system started event
         await event_bus.emit(Event(
             type=EventType.SYSTEM_STARTED,
-            data={"message": "BYRD restarted after reset", "template": template_name}
+            data={"message": "BYRD restarted after reset", "seed_question": seed_question}
         ))
 
-        used_question = seed_question if seed_question else "Who am I?"
+        used_question = seed_question if seed_question else "(none)"
         return ResetResponse(
             success=True,
-            message=f"BYRD reset complete. OS: '{template_name}', awakened with '{used_question}'"
+            message=f"BYRD reset complete. Awakened with seed question: '{used_question}'"
         )
 
     except Exception as e:
@@ -1135,10 +1118,9 @@ async def awaken_byrd(request: AwakenRequest = None):
             data={"message": "BYRD awakened"}
         ))
 
-        used_question = seed_question if seed_question else "Who am I?"
         return ResetResponse(
             success=True,
-            message=f"BYRD awakened with '{used_question}'"
+            message=f"BYRD awakened" + (f" with seed: '{seed_question}'" if seed_question else " (pure emergence)")
         )
 
     except Exception as e:
@@ -1334,20 +1316,25 @@ async def get_architecture():
         stats=quantum_stats
     ))
 
-    # Ego
-    ego_status = "dormant"
-    ego_stats = {}
-    if byrd_instance and byrd_instance.ego:
-        ego_status = "active"
-        ego_stats = {
-            "name": byrd_instance.ego.name,
-            "archetype": byrd_instance.ego.archetype
-        }
+    # Operating System (replaces Ego)
+    os_status = "dormant"
+    os_stats = {}
+    if byrd_instance:
+        try:
+            os_data = await byrd_instance.memory.get_operating_system()
+            if os_data:
+                os_status = "active"
+                os_stats = {
+                    "name": os_data.get("name", "Byrd"),
+                    "version": os_data.get("version", 1)
+                }
+        except:
+            pass
     modules.append(ModuleStatus(
-        name="Ego",
-        status=ego_status,
-        description="Living identity seed that evolves through experience",
-        stats=ego_stats
+        name="Operating System",
+        status=os_status,
+        description="Minimal self-model with capabilities - voice emerges through reflection",
+        stats=os_stats
     ))
 
     # Memory schema
@@ -1358,7 +1345,7 @@ async def get_architecture():
             {"name": "Desire", "description": "Emergent wants and goals"},
             {"name": "Reflection", "description": "Meta-cognitive processing output"},
             {"name": "Capability", "description": "Acquired skills and tools"},
-            {"name": "Ego", "description": "Identity and personality nodes"},
+            {"name": "OperatingSystem", "description": "Minimal self-model with capabilities"},
             {"name": "Prediction", "description": "Testable hypotheses"},
             {"name": "Outcome", "description": "Prediction verification results"}
         ],

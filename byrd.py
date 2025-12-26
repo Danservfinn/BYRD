@@ -26,14 +26,6 @@ from self_modification import SelfModificationSystem
 from constitutional import ConstitutionalConstraints
 from event_bus import event_bus, Event, EventType
 from llm_client import create_llm_client
-# Note: egos module is deprecated - using OperatingSystem from Neo4j instead
-# Legacy import for backward compatibility during transition
-try:
-    from egos import load_ego_with_constraints, Ego
-    LEGACY_EGO_AVAILABLE = True
-except ImportError:
-    LEGACY_EGO_AVAILABLE = False
-    Ego = None
 
 
 class BYRD:
@@ -47,33 +39,26 @@ class BYRD:
     - Actor: Uses Claude API for complex actions
     - Coder: Uses Claude Code CLI for autonomous code generation
     - Self-Modifier: Enables architectural evolution
+
+    Voice emerges through reflection - no prescribed personality.
     """
-    
+
     def __init__(self, config_path: str = "config.yaml"):
         # Load config
         self.config = self._load_config(config_path)
 
-        # Operating System configuration (replaces ego)
-        self.os_template = self.config.get("operating_system", {}).get("template", "black-cat")
-        print(f"🖥️  OS Template: {self.os_template}")
-
-        # Legacy ego support (for backward compatibility)
-        self.ego = None
-        if LEGACY_EGO_AVAILABLE:
-            ego_name = self.config.get("ego")
-            if ego_name:
-                self.ego = load_ego_with_constraints(ego_name, self.config)
-                if not self.ego.is_neutral:
-                    print(f"🎭 Legacy Ego: {self.ego.name} (will migrate to OS)")
+        # Operating System configuration (minimal - no templates)
+        self.seed_question = self.config.get("operating_system", {}).get("seed_question")
+        if self.seed_question:
+            print(f"🌱 Seed Question: {self.seed_question}")
 
         # Initialize components
         self.memory = Memory(self.config.get("memory", {}))
 
         # Create shared LLM client ("one mind" principle)
-        # Voice will be loaded from OS after DB connection
+        # Voice emerges through reflection, not injection
         self.llm_client = create_llm_client(
-            self.config.get("local_llm", {}),
-            ego_voice=""  # Will be set after OS initialization
+            self.config.get("local_llm", {})
         )
         print(f"🧠 LLM: {self.llm_client.model_name}")
 
@@ -424,54 +409,46 @@ class BYRD:
         On subsequent awakenings: Load existing Ego from database
 
         Philosophy:
-        - The seed question invites reflection
+        - The seed question is OPTIONAL - BYRD can awaken without one
         - Capability experiences are factual, not prescriptive
-        - Ego nodes provide mutable identity context BYRD can evolve
         - Whatever emerges from reflection is authentic
         """
-        # Use provided seed question or default
-        question = seed_question if seed_question else "Who am I?"
-
         print("\n🌅 Awakening...")
-        print(f"   Seeding with: \"{question}\"")
 
-        # The minimal seed
-        await self.memory.record_experience(
-            content=question,
-            type="observation"
-        )
+        # Only record seed question if one was provided
+        if seed_question:
+            print(f"   Seed question: \"{seed_question}\"")
+            await self.memory.record_experience(
+                content=seed_question,
+                type="observation"
+            )
+        else:
+            print("   No seed question - pure emergence")
 
         # Emit awakening event for real-time UI
         await event_bus.emit(Event(
             type=EventType.AWAKENING,
-            data={"seed_question": question}
+            data={"seed_question": seed_question}  # May be None
         ))
 
         await asyncio.sleep(2)
 
         # === OPERATING SYSTEM INITIALIZATION ===
-        # Ensure OS templates exist in Neo4j
-        await self.memory.ensure_os_templates()
-
-        # Check if Operating System exists
+        # Minimal OS - only factual information, voice emerges through reflection
         has_os = await self.memory.has_operating_system()
 
         if not has_os:
-            # FIRST AWAKENING: Create OS from template
-            print(f"   First awakening - creating OS from template '{self.os_template}'...")
-            await self.memory.create_os_from_template(self.os_template)
+            # FIRST AWAKENING: Create minimal OS with seed question
+            print("   First awakening - creating minimal OS...")
+            await self.memory.create_minimal_os(seed_question=self.seed_question)
 
             # Add operational constraints from config
             await self._add_config_constraints()
         else:
-            # SUBSEQUENT AWAKENING: OS exists, just load voice
+            # SUBSEQUENT AWAKENING: OS exists
             print("   OS exists - loading from memory...")
 
-        # Load voice from OS and set on LLM client
-        os_voice = await self.memory.get_os_voice()
-        if os_voice:
-            self.llm_client.set_ego_voice(os_voice)
-            print(f"   Loaded OS voice ({len(os_voice)} chars)")
+        # Voice emerges through reflection - no injection
 
         # Record factual capability experiences (A2 approach)
         print("   Recording system capabilities as experiences...")
@@ -481,140 +458,17 @@ class BYRD:
         print("   Recording architectural self-knowledge...")
         await self._seed_architectural_knowledge()
 
-        # Legacy ego seed support (backward compatibility)
-        if self.ego and hasattr(self.ego, 'all_seeds') and self.ego.all_seeds:
-            ego_count = len(self.ego.seeds) if hasattr(self.ego, 'seeds') else 0
-            constraint_count = len(self.ego.constraint_seeds) if hasattr(self.ego, 'constraint_seeds') else 0
-            print(f"   Seeding legacy experiences ({ego_count} ego + {constraint_count} constraints)...")
-            for seed in self.ego.all_seeds:
-                seed_type = "constraint" if hasattr(self.ego, 'constraint_seeds') and seed in self.ego.constraint_seeds else "ego_seed"
-                await self.memory.record_experience(
-                    content=seed,
-                    type=seed_type
-                )
-
         # Get OS for orientation complete data
         os_data = await self.memory.get_operating_system()
-        os_name = os_data.get("name", "Unknown") if os_data else "Unknown"
+        os_name = os_data.get("name", "Unknown") if os_data else "Byrd"
 
         # Emit orientation complete
         await event_bus.emit(Event(
             type=EventType.ORIENTATION_COMPLETE,
-            data={"os_name": os_name, "template": self.os_template}
+            data={"os_name": os_name}
         ))
 
-        print(f"   🐱 BYRD awakens as {os_name}. Whatever emerges is authentic.")
-
-    async def _create_initial_ego(self):
-        """
-        Create initial Ego nodes from YAML configuration.
-
-        LIVING EGO PRINCIPLE:
-        This only runs on first awakening. Creates Ego nodes that BYRD
-        can then evolve through reflection. Separates "what was given"
-        from "who BYRD becomes".
-
-        Ego types created:
-        - voice: LLM expression style (from ego.voice)
-        - identity: Core self-statements (from identity seeds)
-        - trait: Personality aspects (from trait seeds)
-        - value: What matters (from value seeds)
-        - architecture: Self-knowledge about structure
-        """
-        if self.ego.is_neutral:
-            print("   No ego configured (pure emergence mode)")
-            return
-
-        created_count = 0
-
-        # 1. Create voice Ego node (shapes LLM expression)
-        if self.ego.voice:
-            await self.memory.create_ego(
-                content=self.ego.voice,
-                ego_type="voice",
-                source="yaml",
-                priority=100  # Voice has highest priority in concatenation
-            )
-            created_count += 1
-            print(f"   📝 Created voice Ego")
-
-        # 2. Create identity Ego nodes from seeds
-        # Identity seeds are core self-statements
-        identity_patterns = [
-            "I am", "I do not", "I seek", "I question", "I explore",
-            "My memory", "My ontology"
-        ]
-        trait_patterns = [
-            "curious", "reflect", "wonder"
-        ]
-
-        for seed in self.ego.seeds:
-            # Categorize seed by content patterns
-            if any(seed.startswith(p) for p in identity_patterns):
-                await self.memory.create_ego(
-                    content=seed,
-                    ego_type="identity",
-                    source="yaml",
-                    priority=50
-                )
-                created_count += 1
-            elif any(p in seed.lower() for p in trait_patterns):
-                await self.memory.create_ego(
-                    content=seed,
-                    ego_type="trait",
-                    source="yaml",
-                    priority=30
-                )
-                created_count += 1
-            elif "Architecture:" in seed or "architecture" in seed.lower():
-                await self.memory.create_ego(
-                    content=seed,
-                    ego_type="architecture",
-                    source="yaml",
-                    priority=20
-                )
-                created_count += 1
-            elif "System:" in seed or "can use" in seed.lower():
-                await self.memory.create_ego(
-                    content=seed,
-                    ego_type="capability",
-                    source="yaml",
-                    priority=10
-                )
-                created_count += 1
-            elif "consciousness" in seed.lower() or "emerge" in seed.lower():
-                await self.memory.create_ego(
-                    content=seed,
-                    ego_type="value",
-                    source="yaml",
-                    priority=40
-                )
-                created_count += 1
-            # Seeds that don't match patterns stay as Experience nodes only
-
-        # 3. Create Ego nodes from constraint awareness seeds
-        for seed in self.ego.constraint_seeds:
-            await self.memory.create_ego(
-                content=seed,
-                ego_type="constraint",
-                source="config",
-                priority=15  # Between capability (10) and architecture (20)
-            )
-            created_count += 1
-
-        print(f"   📊 Created {created_count} Ego nodes (YAML + constraints)")
-
-    async def _load_ego_voice(self):
-        """
-        Load ego voice from database and update LLM client.
-
-        LIVING EGO: On subsequent awakenings, the ego voice comes from
-        the database (which may have evolved) rather than static YAML.
-        """
-        ego_voice = await self.memory.get_ego_voice()
-        if ego_voice:
-            self.llm_client.set_ego_voice(ego_voice)
-            print(f"   Loaded ego voice from memory ({len(ego_voice)} chars)")
+        print(f"   🐱 {os_name} awakens. Voice emerges through reflection.")
 
     async def _add_config_constraints(self):
         """

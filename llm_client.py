@@ -31,29 +31,21 @@ class LLMClient(ABC):
     # Quantum provider reference (set via set_quantum_provider)
     _quantum_provider = None
 
-    # Ego voice for personality shaping (Living Ego system)
-    _ego_voice: str = ""
-
     def set_quantum_provider(self, provider):
         """Set the quantum randomness provider for temperature modulation."""
         self._quantum_provider = provider
 
     def set_ego_voice(self, voice: str):
-        """
-        Set the ego voice for LLM expression shaping.
-
-        LIVING EGO SYSTEM: The ego voice can be updated dynamically
-        as BYRD's identity evolves through reflection.
-        """
-        self._ego_voice = voice
+        """DEPRECATED: Voice injection removed for pure emergence."""
+        pass  # No-op - voice emerges through reflection
 
     def get_ego_voice(self) -> str:
-        """Get the current ego voice."""
-        return self._ego_voice or ""
+        """DEPRECATED: Voice injection removed for pure emergence."""
+        return ""  # No prescribed voice
 
     def reset(self):
         """Reset LLM client state for fresh start."""
-        self._ego_voice = ""
+        pass  # Nothing to reset
 
     @abstractmethod
     async def generate(
@@ -400,15 +392,12 @@ class ZAIClient(LLMClient):
         model: str,
         api_key: Optional[str] = None,
         timeout: float = 120.0,
-        use_coding_endpoint: bool = True,
-        ego_voice: str = ""
+        use_coding_endpoint: bool = True
     ):
         self.model = model
         self.api_key = api_key or os.environ.get("ZAI_API_KEY")
         self.timeout = timeout
         self.endpoint = self.CODING_ENDPOINT if use_coding_endpoint else self.DEFAULT_ENDPOINT
-        # Set initial ego voice via base class method (can be updated dynamically)
-        self._ego_voice = ego_voice
 
         if not self.api_key:
             raise LLMError("Z.AI requires api_key in config or ZAI_API_KEY environment variable")
@@ -431,9 +420,7 @@ RULES:
 Example format: {"output": {...your reflection...}}"""
 
     def _build_system_message(self) -> str:
-        """Build system message, optionally prepending ego voice."""
-        if self._ego_voice:
-            return f"{self._ego_voice}\n\n---\n\n{self.SYSTEM_MESSAGE}"
+        """Build system message. Voice emerges through reflection, not injection."""
         return self.SYSTEM_MESSAGE
 
     async def generate(
@@ -533,7 +520,7 @@ def create_llm_client(config: Dict, ego_voice: str = "") -> LLMClient:
             - timeout: Request timeout in seconds
             - site_url: (openrouter only) HTTP-Referer header
             - app_name: (openrouter only) X-Title header
-        ego_voice: Optional ego personality voice to prepend to system message
+        ego_voice: DEPRECATED - voice emerges through reflection
 
     Returns:
         Configured LLMClient instance
@@ -561,8 +548,7 @@ def create_llm_client(config: Dict, ego_voice: str = "") -> LLMClient:
             model=config.get("model", "glm-4.7"),
             api_key=config.get("api_key"),
             timeout=config.get("timeout", 120.0),
-            use_coding_endpoint=config.get("use_coding_endpoint", True),
-            ego_voice=ego_voice
+            use_coding_endpoint=config.get("use_coding_endpoint", True)
         )
 
     else:
