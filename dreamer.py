@@ -756,10 +756,10 @@ SUMMARY:"""
             # Get candidates: orphan nodes, existing crystals, and their contexts
             candidates = await self.memory.get_crystallization_candidates(
                 min_age_hours=self.crystallization_min_age_hours,
-                limit=50
+                max_nodes=50
             )
 
-            orphan_nodes = candidates.get("orphan_nodes", [])
+            orphan_nodes = candidates.get("loose_nodes", [])
             existing_crystals = candidates.get("crystals", [])
             crystallized_nodes = candidates.get("crystallized_nodes", [])
 
