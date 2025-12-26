@@ -2009,7 +2009,7 @@ Write ONLY the inner thought, nothing else:"""
                     data={
                         "id": node_id,
                         "type": node_type,
-                        "content": properties.get("content", "")[:100],
+                        "content": properties.get("content", ""),
                         "cycle": self._dream_count
                     }
                 ))
