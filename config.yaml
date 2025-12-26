@@ -541,3 +541,37 @@ option_b:
 
     # Confidence threshold for capability claims
     confidence_threshold: 0.6
+
+  # World Model - outcome prediction and causal reasoning
+  world_model:
+    # Cache TTL for causal graph (minutes)
+    cache_ttl_minutes: 10
+
+    # Minimum similar cases for empirical prediction
+    min_empirical_cases: 5
+
+    # Whether to use LLM for causal reasoning
+    enable_causal_reasoning: true
+
+  # Safety Monitor - modification guardrails
+  safety_monitor:
+    # Goal stability check interval (hours)
+    goal_check_interval_hours: 1
+
+    # Whether to fail-safe on verification errors
+    fail_safe_on_error: true
+
+  # Meta-Learning - plateau detection and learning optimization
+  meta_learning:
+    # Plateau detection thresholds
+    plateau_thresholds:
+      minor: 0.02      # improvement_rate < 0.02
+      moderate: 0.005  # improvement_rate < 0.005
+      severe: 0.0      # improvement_rate <= 0
+      critical: -0.01  # improvement_rate declining
+
+    # Whether to automatically respond to plateaus
+    auto_respond: true
+
+    # Metrics window for trajectory analysis
+    metrics_window: 100

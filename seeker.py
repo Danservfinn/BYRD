@@ -102,6 +102,10 @@ class Seeker:
         # Coder (Claude Code CLI) - injected later by BYRD
         self.coder = None
 
+        # AGI Seed components (injected later by BYRD if Option B enabled)
+        self.world_model = None
+        self.safety_monitor = None
+
         # aitmpl.com integration
         aitmpl_config = config.get("aitmpl", {})
         self.aitmpl_enabled = aitmpl_config.get("enabled", True)
@@ -1880,6 +1884,37 @@ If no reasonable connections, return: {{"connections": [], "new_beliefs": []}}""
             # 4. Execute modification via coder
             # Build a detailed prompt for Claude Code
             coder_prompt = self._build_coder_prompt(description, mod_plan, desire_id)
+
+            # AGI SEED: Safety verification before modification
+            if self.safety_monitor:
+                try:
+                    target_file = target_files[0] if target_files else "unknown"
+                    safety = await self.safety_monitor.verify_modification_safety(
+                        proposed_modification=coder_prompt,
+                        target_file=target_file,
+                        context={"desire_id": desire_id, "description": description}
+                    )
+
+                    if not safety.safe:
+                        await self.memory.record_experience(
+                            content=f"[SELF_MODIFY_BLOCKED] Safety check failed: {safety.recommendation}\n"
+                                   f"Target: {target_file}\n"
+                                   f"Concerns: {[c.reason for c in safety.concerns[:3]] if safety.concerns else 'None'}",
+                            type="self_modify_blocked"
+                        )
+                        print(f"🛡️ Safety blocked modification: {safety.recommendation}")
+                        return False
+
+                    if safety.concerns:
+                        print(f"🛡️ Safety approved with {len(safety.concerns)} concerns")
+                except Exception as e:
+                    print(f"🛡️ SafetyMonitor verification failed: {e}")
+                    # Fail-safe: block modification if safety check itself fails
+                    await self.memory.record_experience(
+                        content=f"[SELF_MODIFY_BLOCKED] Safety check error: {e}",
+                        type="self_modify_blocked"
+                    )
+                    return False
 
             success = await self._seek_with_coder({
                 "description": coder_prompt,

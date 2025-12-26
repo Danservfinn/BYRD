@@ -129,6 +129,9 @@ class BYRDOmega:
         # Coupling tracker
         self._coupling_tracker = get_coupling_tracker()
 
+        # Meta-learning system (injected by BYRD if Option B enabled)
+        self.meta_learning = None
+
         # Metrics history
         self._capability_history: List[Tuple[datetime, float]] = []
         self._max_history = 1000
@@ -232,6 +235,24 @@ class BYRDOmega:
 
             # Measure coupling
             await self._coupling_tracker.emit_coupling_event()
+
+            # AGI SEED: Meta-learning plateau detection
+            if self.meta_learning:
+                try:
+                    plateau = await self.meta_learning.detect_plateau()
+                    if plateau.is_plateau:
+                        results["plateau"] = {
+                            "severity": plateau.severity.value,
+                            "duration": plateau.duration_cycles,
+                            "causes": plateau.likely_causes[:3] if plateau.likely_causes else []
+                        }
+
+                        # Respond to severe or critical plateaus
+                        if plateau.severity.value in ["severe", "critical"]:
+                            await self.meta_learning.respond_to_plateau(plateau)
+                            logger.info(f"Meta-learning: Responding to {plateau.severity.value} plateau")
+                except Exception as e:
+                    logger.warning(f"Meta-learning plateau detection error: {e}")
 
             # Check for mode transition
             if self.should_transition():
@@ -410,6 +431,14 @@ class BYRDOmega:
         """Get comprehensive Omega metrics."""
         critical = self._coupling_tracker.get_critical_coupling()
 
+        # Get meta-learning stats if available
+        meta_learning_data = {}
+        if self.meta_learning:
+            try:
+                meta_learning_data = self.meta_learning.get_statistics()
+            except Exception:
+                pass
+
         return {
             "mode": self._mode.value,
             "total_cycles": self._total_cycles,
@@ -424,7 +453,8 @@ class BYRDOmega:
                 "goal_evolver": self.goal_evolver.get_metrics() if self.goal_evolver else {},
                 "dreaming_machine": self.dreaming_machine.get_metrics() if self.dreaming_machine else {},
             },
-            "coupling": self._coupling_tracker.get_summary()
+            "coupling": self._coupling_tracker.get_summary(),
+            "meta_learning": meta_learning_data
         }
 
     def get_loop_health(self) -> Dict[str, bool]:

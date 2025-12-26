@@ -29,6 +29,11 @@ from event_bus import event_bus, Event, EventType
 from llm_client import create_llm_client
 from contextlib import asynccontextmanager
 
+# AGI Seed components (imported conditionally in Option B block)
+# from world_model import WorldModel
+# from safety_monitor import SafetyMonitor
+# from meta_learning import MetaLearningSystem
+
 
 class ComponentCoordinator:
     """
@@ -251,6 +256,9 @@ class BYRD:
         self.omega = None
         self.coupling_tracker = None
         self.self_model = None
+        self.world_model = None
+        self.safety_monitor = None
+        self.meta_learning = None
 
         option_b_config = self.config.get("option_b", {})
         if option_b_config.get("enabled", False):
@@ -258,12 +266,45 @@ class BYRD:
                 from omega import create_omega
                 from coupling_tracker import get_coupling_tracker
                 from self_model import SelfModel
+                from world_model import WorldModel
+                from safety_monitor import SafetyMonitor
+                from meta_learning import MetaLearningSystem
 
+                # Core Option B components
                 self.omega = create_omega(self.memory, self.llm_client, self.config)
                 self.coupling_tracker = get_coupling_tracker()
                 self.self_model = SelfModel(self.memory, self.llm_client)
 
+                # AGI Seed: World Model for outcome prediction
+                self.world_model = WorldModel(
+                    self.memory,
+                    self.llm_client,
+                    config=option_b_config.get("world_model", {})
+                )
+
+                # AGI Seed: Safety Monitor for modification guardrails
+                self.safety_monitor = SafetyMonitor(
+                    self.memory,
+                    self.llm_client,
+                    config=option_b_config.get("safety_monitor", {})
+                )
+
+                # AGI Seed: Meta-Learning for plateau detection
+                self.meta_learning = MetaLearningSystem(self.memory, self.llm_client)
+                self.meta_learning.self_model = self.self_model  # Required injection
+
+                # Inject AGI Seed components into Seeker
+                self.seeker.world_model = self.world_model
+                self.seeker.safety_monitor = self.safety_monitor
+
+                # Inject meta_learning into Omega
+                if self.omega:
+                    self.omega.meta_learning = self.meta_learning
+
                 print("🔮 Option B (Omega): enabled - Five Compounding Loops active")
+                print("   WorldModel: initialized")
+                print("   SafetyMonitor: pending async init")
+                print("   MetaLearningSystem: initialized")
             except ImportError as e:
                 print(f"⚠️ Option B (Omega): disabled - missing module: {e}")
             except Exception as e:
@@ -334,6 +375,11 @@ class BYRD:
             await self.quantum_provider.initialize()
             status = self.quantum_provider.get_pool_status()
             print(f"🌀 Quantum pool: {status['pool_size']}/{status['max_pool_size']} bytes")
+
+        # Initialize safety monitor (stores immutable core hash)
+        if self.safety_monitor:
+            await self.safety_monitor.initialize()
+            print("🛡️ SafetyMonitor: initialized with immutable core")
 
         # Get stats
         stats = await self.memory.stats()
