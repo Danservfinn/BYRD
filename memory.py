@@ -464,7 +464,99 @@ class Memory:
             await self._link_experience_on_acquisition(exp_id, content)
 
         return exp_id
-    
+
+    async def record_external_experience(
+        self,
+        content: str,
+        source_type: str = "human",
+        source_id: Optional[str] = None,
+        media_type: Optional[str] = None,
+        media_path: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """
+        Record an experience from an external source.
+
+        External experiences are input from outside BYRD's internal processes:
+        - Human messages (text input)
+        - Uploaded media (files, images)
+        - API signals (integrations)
+
+        These experiences are tagged with source provenance so BYRD can
+        understand where input came from and potentially develop different
+        responses to different source types through reflection.
+
+        Args:
+            content: The text content or description of what was received
+            source_type: Origin type - "human", "file", "api", "integration"
+            source_id: Optional identifier for the source (session ID, user ID)
+            media_type: For files: "image", "audio", "video", "document"
+            media_path: Path to stored media file if applicable
+            metadata: Additional context (filename, size, etc.)
+
+        Returns:
+            Experience ID
+        """
+        # Build the experience content with source context
+        # Format: "Received [type] from [source]: [content]"
+        exp_type = "received_message" if not media_type else "received_media"
+
+        # Create metadata dict for storage
+        exp_metadata = {
+            "source_type": source_type,
+            "source_id": source_id,
+            "external": True
+        }
+        if media_type:
+            exp_metadata["media_type"] = media_type
+            exp_metadata["media_path"] = media_path
+        if metadata:
+            exp_metadata.update(metadata)
+
+        exp_id = self._generate_id(content)
+
+        async with self.driver.session() as session:
+            await session.run("""
+                CREATE (e:Experience {
+                    id: $id,
+                    content: $content,
+                    type: $type,
+                    source_type: $source_type,
+                    source_id: $source_id,
+                    external: true,
+                    media_type: $media_type,
+                    media_path: $media_path,
+                    metadata: $metadata,
+                    timestamp: datetime()
+                })
+            """,
+                id=exp_id,
+                content=content,
+                type=exp_type,
+                source_type=source_type,
+                source_id=source_id,
+                media_type=media_type,
+                media_path=media_path,
+                metadata=json.dumps(exp_metadata) if exp_metadata else None
+            )
+
+        # Emit event for real-time UI
+        await event_bus.emit(Event(
+            type=EventType.EXTERNAL_INPUT_RECEIVED,
+            data={
+                "id": exp_id,
+                "content": content[:200] if len(content) > 200 else content,
+                "source_type": source_type,
+                "type": exp_type
+            }
+        ))
+
+        # Link-on-acquisition for external experiences too
+        if len(content) >= self.CONNECTION_HEURISTIC_CONFIG["min_content_length"]:
+            await self._link_experience_on_acquisition(exp_id, content)
+
+        return exp_id
+
     async def get_recent_experiences(
         self,
         limit: int = 50,
@@ -5581,7 +5673,7 @@ class Memory:
     # Unlike the old Ego system, the OS is a single node with arbitrary fields
     # that BYRD can extend. BYRD has full agency over its self-model.
 
-    async def create_minimal_os(self, seed_question: str = None) -> Optional[str]:
+    async def create_minimal_os(self, awakening_prompt: str = None) -> Optional[str]:
         """
         Create a minimal OperatingSystem node with only factual information.
 
@@ -5591,11 +5683,11 @@ class Memory:
         - Capabilities (factual list of what BYRD can do)
         - Capability instructions (HOW to use each capability)
         - Protected files (constitutional constraints)
-        - Seed question (optional, for first contemplation)
+        - Awakening prompt (optional directive, goal, or context)
         - Emergent fields (start null, BYRD fills in)
 
         Args:
-            seed_question: Optional question for BYRD to contemplate on awakening
+            awakening_prompt: Optional directive/goal for BYRD on awakening
 
         Returns:
             OS node ID or None on failure
@@ -5730,8 +5822,8 @@ class Memory:
                         // Name (mutable default)
                         name: 'Byrd',
 
-                        // Seed question (for first contemplation)
-                        seed_question: $seed_question,
+                        // Awakening prompt (optional directive/goal)
+                        awakening_prompt: $awakening_prompt,
 
                         // Constitutional (immutable)
                         protected_files: ['provenance.py', 'constitutional.py',
@@ -5751,7 +5843,7 @@ class Memory:
                     })
                 """,
                     id=os_id,
-                    seed_question=seed_question,
+                    awakening_prompt=awakening_prompt,
                     capabilities=json.dumps(capabilities),
                     capability_instructions=json.dumps(capability_instructions)
                 )
@@ -5762,11 +5854,11 @@ class Memory:
                     data={
                         "node_type": "OperatingSystem",
                         "id": os_id,
-                        "seed_question": seed_question
+                        "awakening_prompt": awakening_prompt
                     }
                 ))
 
-                print(f"Created minimal OperatingSystem (seed_question: {seed_question or 'none'})")
+                print(f"Created minimal OperatingSystem (awakening_prompt: {awakening_prompt or 'none'})")
                 return os_id
 
         except Exception as e:
@@ -5821,20 +5913,20 @@ class Memory:
             print(f"Error checking for OS: {e}")
             return False
 
-    async def create_os_from_template(self, template_name: str = "black-cat", seed_question: str = None) -> Optional[str]:
+    async def create_os_from_template(self, template_name: str = "black-cat", awakening_prompt: str = None) -> Optional[str]:
         """
         DEPRECATED: Templates are no longer used.
         Delegates to create_minimal_os() for pure emergence.
 
         Args:
             template_name: Ignored (kept for backward compatibility)
-            seed_question: Optional question for BYRD to contemplate on awakening
+            awakening_prompt: Optional directive/goal for BYRD on awakening
 
         Returns:
             OS node ID or None on failure
         """
         print(f"[DEPRECATED] create_os_from_template called - delegating to create_minimal_os")
-        return await self.create_minimal_os(seed_question=seed_question)
+        return await self.create_minimal_os(awakening_prompt=awakening_prompt)
 
     async def get_operating_system(self) -> Optional[Dict[str, Any]]:
         """
@@ -6328,13 +6420,13 @@ class Memory:
             f"  Uptime: {uptime_str}",
         ]
 
-        # Seed question (if set)
-        seed_question = os_data.get('seed_question')
-        if seed_question:
+        # Awakening prompt (if set)
+        awakening_prompt = os_data.get('awakening_prompt')
+        if awakening_prompt:
             lines.extend([
                 "",
-                "CONTEMPLATION:",
-                f"  {seed_question}",
+                "AWAKENING DIRECTIVE:",
+                f"  {awakening_prompt}",
             ])
 
         # Capabilities (factual - what BYRD can do)
@@ -6452,7 +6544,7 @@ class Memory:
             'id', 'version', 'created_at', 'updated_at', 'protected_files',
             'constitutional_files', 'provenance_required', 'provenance_requirement',
             'template_id', 'name', 'capabilities', 'capability_instructions',
-            'self_description', 'current_focus', 'voice_observations', 'seed_question',
+            'self_description', 'current_focus', 'voice_observations', 'awakening_prompt',
             'seeds', 'beliefs', 'strategies', 'constraints', 'focus', 'archetype',
             'description', 'voice', 'emotional_tone', 'cognitive_style',
             'modification_source'

@@ -48,9 +48,9 @@ class BYRD:
         self.config = self._load_config(config_path)
 
         # Operating System configuration (minimal - no templates)
-        self.seed_question = self.config.get("operating_system", {}).get("seed_question")
-        if self.seed_question:
-            print(f"🌱 Seed Question: {self.seed_question}")
+        self.awakening_prompt = self.config.get("operating_system", {}).get("awakening_prompt")
+        if self.awakening_prompt:
+            print(f"🌱 Awakening Prompt: {self.awakening_prompt}")
 
         # Initialize components
         self.memory = Memory(self.config.get("memory", {}))
@@ -278,37 +278,37 @@ class BYRD:
         """
         pass  # No-op - architecture knowledge in OS
 
-    async def _awaken(self, seed_question: str = None):
+    async def _awaken(self, awakening_prompt: str = None):
         """
         The gentlest possible beginning.
 
         PURE EMERGENCE:
         - No experience seeding - knowledge lives in the OS capability_instructions
         - No capability declarations - OS describes what BYRD can do
-        - Seed question is optional - pure emergence starts with nothing
+        - Awakening prompt is optional - pure emergence starts with nothing
         - Voice emerges through reflection, not injection
 
         Philosophy:
-        - The seed question is OPTIONAL - BYRD can awaken without one
+        - The awakening prompt is OPTIONAL - BYRD can awaken without one
         - All knowledge lives in the Operating System
         - Whatever emerges from reflection is authentic
         """
         print("\n🌅 Awakening...")
 
-        # Only record seed question if one was provided
-        if seed_question:
-            print(f"   Seed question: \"{seed_question}\"")
+        # Only record awakening prompt if one was provided
+        if awakening_prompt:
+            print(f"   Awakening prompt: \"{awakening_prompt}\"")
             await self.memory.record_experience(
-                content=seed_question,
-                type="observation"
+                content=awakening_prompt,
+                type="directive"
             )
         else:
-            print("   No seed question - pure emergence")
+            print("   No awakening prompt - pure emergence")
 
         # Emit awakening event for real-time UI
         await event_bus.emit(Event(
             type=EventType.AWAKENING,
-            data={"seed_question": seed_question}  # May be None
+            data={"awakening_prompt": awakening_prompt}  # May be None
         ))
 
         await asyncio.sleep(2)
@@ -318,9 +318,9 @@ class BYRD:
         has_os = await self.memory.has_operating_system()
 
         if not has_os:
-            # FIRST AWAKENING: Create minimal OS with seed question
+            # FIRST AWAKENING: Create minimal OS with awakening prompt
             print("   First awakening - creating minimal OS...")
-            await self.memory.create_minimal_os(seed_question=self.seed_question)
+            await self.memory.create_minimal_os(awakening_prompt=self.awakening_prompt)
 
             # Add operational constraints from config
             await self._add_config_constraints()

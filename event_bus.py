@@ -27,6 +27,9 @@ class EventType(Enum):
     CONNECTION_HEURISTIC = "connection_heuristic"  # Generic heuristic events (e.g., orphan reconciliation)
     CONNECTION_HEURISTIC_APPLIED = "connection_heuristic_applied"
 
+    # External input events (communication from outside BYRD)
+    EXTERNAL_INPUT_RECEIVED = "external_input_received"  # Message/media from external source
+
     # Dynamic ontology events (BYRD evolving its own node types)
     NODE_TYPE_DISCOVERED = "node_type_discovered"  # First use of a new node type
     CUSTOM_NODE_CREATED = "custom_node_created"    # Node of emergent type created
