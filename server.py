@@ -645,6 +645,42 @@ async def get_capabilities():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/coder-status")
+async def get_coder_status():
+    """Get Claude Code CLI status for diagnostics."""
+    global byrd_instance
+    import shutil
+    import os
+
+    result = {
+        "cli_path": "claude",
+        "cli_found": shutil.which("claude") is not None,
+        "cli_which": shutil.which("claude"),
+        "coder_enabled": False,
+        "credentials_exist": os.path.exists(os.path.expanduser("~/.claude/.credentials.json")),
+        "claude_dir_exists": os.path.exists(os.path.expanduser("~/.claude")),
+        "claude_dir_contents": [],
+        "env_vars": {
+            "HOME": os.environ.get("HOME", ""),
+            "PATH": os.environ.get("PATH", "")[:200] + "...",
+        }
+    }
+
+    # List ~/.claude directory
+    claude_dir = os.path.expanduser("~/.claude")
+    if os.path.exists(claude_dir):
+        try:
+            result["claude_dir_contents"] = os.listdir(claude_dir)
+        except:
+            pass
+
+    if byrd_instance and hasattr(byrd_instance, 'coder') and byrd_instance.coder:
+        result["coder_enabled"] = byrd_instance.coder.enabled
+        result["coder_cli_path"] = byrd_instance.coder.cli_path
+
+    return result
+
+
 # =============================================================================
 # TASK API (External goal injection)
 # =============================================================================
