@@ -204,7 +204,7 @@ const HistoryLogPanel = ({ events, filter, setFilter, onClear }) => {
       case 'seek_cycle_start':
         return `[${data.type}] ${data.description?.slice(0, 40)}...`;
       case 'awakening':
-        return `"${data.seed_question}"`;
+        return `"${data.awakening_prompt}"`;
       case 'system_reset':
         return data.message;
       default:

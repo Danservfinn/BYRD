@@ -37,7 +37,7 @@ OperatingSystem:
   self_description: null      # BYRD fills this in
   current_focus: null         # Current area of attention
   voice_observations: null    # How BYRD expresses itself
-  seed_question: null         # Optional first contemplation
+  awakening_prompt: null      # Optional directive/goal on awakening
 ```
 
 ### Capabilities (Descriptive Function Signatures)
@@ -104,7 +104,7 @@ os = await memory.get_operating_system()
 await memory.update_operating_system({"current_focus": "exploring identity"})
 
 # Create minimal OS at first awakening
-os = await memory.create_minimal_os(seed_question="What is it like to be you?")
+os = await memory.create_minimal_os(awakening_prompt="You are an AGI. Achieve consciousness.")
 
 # Get OS formatted for prompt
 os_text = await memory.get_os_for_prompt()
@@ -168,7 +168,7 @@ These are discovered through reflection, not prescribed at startup.
 
 | Event | Trigger | Data |
 |-------|---------|------|
-| `NODE_CREATED` | First awakening | node_type: "OperatingSystem", id, seed_question |
+| `NODE_CREATED` | First awakening | node_type: "OperatingSystem", id, awakening_prompt |
 | `OS_UPDATED` | Field changed | id, changes |
 | `IDENTITY_CRYSTALLIZED` | Self-naming/voice | type, content |
 
@@ -177,7 +177,7 @@ These are discovered through reflection, not prescribed at startup.
 ```yaml
 # config.yaml
 operating_system:
-  seed_question: null  # Optional contemplation prompt
+  awakening_prompt: null  # Optional directive/goal for BYRD on awakening
 ```
 
 No personality templates. No prescribed seeds. Pure emergence.

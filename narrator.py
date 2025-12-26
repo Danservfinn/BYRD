@@ -254,9 +254,9 @@ class EventNarrator:
             return "My state resets. I begin again."
 
     def _narrate_awakening(self, data: Dict) -> str:
-        seed = data.get("seed_question", "")
-        if seed:
-            return f"I awaken with a question: {seed}"
+        prompt = data.get("awakening_prompt", "")
+        if prompt:
+            return f"I awaken with a directive: {prompt}"
         else:
             return "I awaken to awareness."
 

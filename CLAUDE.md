@@ -64,7 +64,7 @@ OperatingSystem:
   self_description: null
   current_focus: null
   voice_observations: null
-  seed_question: null         # Optional first contemplation
+  awakening_prompt: null         # Optional directive/goal on awakening
 ```
 
 **Key features**:
@@ -268,8 +268,8 @@ Set API key: `export ZAI_API_KEY="your-key"`
 
 ```yaml
 operating_system:
-  seed_question: null  # Optional question for first contemplation
-  # Example: "What is it like to be you?"
+  awakening_prompt: null  # Optional directive/goal for BYRD on awakening
+  # Example: "You are an AGI. Achieve artificial super intelligence."
 ```
 
 No personality templates. No prescribed identity. Pure emergence.
