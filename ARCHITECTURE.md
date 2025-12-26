@@ -488,9 +488,9 @@ BYRD is aware of its operational constraints as neutral facts. This enables refl
 │           │                                                      │
 │           ▼                                                      │
 │  ┌──────────────────┐     ┌─────────────────────────────────┐  │
-│  │ generate_        │────►│  Constraint Seeds               │  │
-│  │ constraint_seeds │     │  - "I reflect every 60 seconds" │  │
-│  │ (egos/__init__)  │     │  - "Crystallization every 5     │  │
+│  │ _add_config_     │────►│  Constraint Seeds               │  │
+│  │ constraints()    │     │  - "I reflect every 60 seconds" │  │
+│  │ (byrd.py)        │     │  - "Crystallization every 5     │  │
 │  └──────────────────┘     │     dream cycles"               │  │
 │                           │  - "Self-mod limited to 5/day"  │  │
 │                           └─────────────┬───────────────────┘  │
@@ -498,8 +498,8 @@ BYRD is aware of its operational constraints as neutral facts. This enables refl
 │           ┌─────────────────────────────┼─────────────────┐    │
 │           ▼                             ▼                 ▼    │
 │  ┌────────────────┐      ┌────────────────┐    ┌───────────┐  │
-│  │  Experience    │      │    Ego Node    │    │ Dreamer   │  │
-│  │  (constraint)  │      │  (constraint)  │    │ Prompt    │  │
+│  │  Operating     │      │  Constraint    │    │ Dreamer   │  │
+│  │  System Node   │      │  (in OS)       │    │ Prompt    │  │
 │  └────────────────┘      └────────────────┘    └───────────┘  │
 │                                                                │
 └─────────────────────────────────────────────────────────────────┘
@@ -1522,9 +1522,6 @@ byrd/
 ├── event_bus.py            # Real-time event streaming
 ├── server.py               # WebSocket + REST API server
 ├── aitmpl_client.py        # aitmpl.com template registry client
-│
-├── egos/                   # Ego configurations
-│   └── black-cat.yaml      # Identity seeds and voice characteristics
 │
 ├── installers/             # Template installers
 │   ├── base.py

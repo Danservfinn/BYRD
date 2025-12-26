@@ -1,6 +1,15 @@
 # Emergent Identity Plan
 
-## The Problem
+> **STATUS: SUPERSEDED**
+>
+> This plan has been superseded by the **OperatingSystem** architecture.
+> The egos/ directory and YAML-based ego system no longer exist.
+> Identity now emerges through the OperatingSystem node in Neo4j.
+> See `.claude/metadata/ego-system.md` for current architecture.
+
+---
+
+## The Problem (Historical)
 
 BYRD's identity is currently **prescribed, not emerged**:
 
