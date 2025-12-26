@@ -105,15 +105,46 @@ class Coder:
         self._total_cost = 0.0
 
     def _check_cli_available(self) -> bool:
-        """Check if Claude Code CLI is available."""
+        """Check if Claude Code CLI is available and working."""
         import shutil
-        if shutil.which(self.cli_path):
-            return True
-        # Also try direct path check
-        cli_path = Path(self.cli_path)
-        if cli_path.exists() and cli_path.is_file():
-            return True
-        return False
+        import subprocess
+
+        # First check if the binary exists
+        cli_path = shutil.which(self.cli_path)
+        if not cli_path:
+            cli_path_obj = Path(self.cli_path)
+            if not (cli_path_obj.exists() and cli_path_obj.is_file()):
+                return False
+            cli_path = str(cli_path_obj)
+
+        # Verify it's actually Claude Code CLI by running --version
+        # This distinguishes from other 'claude' binaries (like anthropic SDK)
+        try:
+            result = subprocess.run(
+                [cli_path, "--version"],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            # Claude Code CLI outputs version info to stdout
+            # Other 'claude' commands may error or output differently
+            output = result.stdout.lower() + result.stderr.lower()
+            if "claude" in output and result.returncode == 0:
+                return True
+            # If --version failed, try --help
+            result = subprocess.run(
+                [cli_path, "--help"],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            output = result.stdout.lower()
+            # Look for Claude Code CLI specific help text
+            if "claude code" in output or "anthropic" in output:
+                return True
+            return False
+        except (subprocess.TimeoutExpired, FileNotFoundError, PermissionError):
+            return False
 
     def _reset_daily_cost_if_needed(self):
         """Reset daily cost counter if a new day has started."""

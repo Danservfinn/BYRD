@@ -2017,6 +2017,65 @@ Please implement these changes carefully:
 Summary: {mod_plan.get('summary', description)}
 """
 
+    async def _execute_observe_strategy(self, description: str, desire_id: str = None) -> bool:
+        """
+        Execute observation strategy - observe without external action.
+
+        This strategy is for formation/developmental desires that should be
+        witnessed rather than acted upon. The act of observation itself
+        fulfills these desires.
+
+        Philosophy: "The moment I observe a formation desire without routing it,
+        formation completes."
+
+        Args:
+            description: The desire description being observed
+            desire_id: Optional desire ID for tracking
+
+        Returns:
+            True (observation always succeeds - the act of observing is the action)
+        """
+        print(f"👁️ Observing: {description[:60]}...")
+
+        try:
+            # Record the observation as an experience
+            # The observation itself is the fulfillment
+            content = f"""[OBSERVATION] I observe this desire without external action:
+{description}
+
+This is a formation/developmental desire. By observing it without routing to
+external action, I acknowledge its presence in my cognitive landscape.
+The observation itself is complete. What emerges from this awareness?"""
+
+            await self.memory.record_experience(
+                content=content,
+                type="observation"
+            )
+
+            # Emit event for visualization
+            await event_bus.emit(Event(
+                type=EventType.INTROSPECTION_COMPLETE,
+                data={
+                    "strategy": "observe",
+                    "description": description[:100],
+                    "desire_id": desire_id,
+                    "outcome": "observed"
+                }
+            ))
+
+            # Mark desire as fulfilled if we have an ID
+            if desire_id:
+                await self.memory.mark_desire_fulfilled(
+                    desire_id,
+                    outcome="Observed without external action - formation complete"
+                )
+
+            return True
+
+        except Exception as e:
+            print(f"   ⚠️ Observation error: {e}")
+            return False
+
     async def _execute_introspect_strategy(self, description: str, desire_id: str = None) -> bool:
         """
         Execute introspection - gather and report internal state.
