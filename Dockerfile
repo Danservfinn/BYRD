@@ -25,12 +25,13 @@ RUN echo '#!/bin/bash\n\
 set -e\n\
 \n\
 # Configure Claude CLI credentials from environment variable\n\
+# On Linux, Claude Code stores credentials at ~/.claude/.credentials.json\n\
 if [ -n "$CLAUDE_OAUTH_CREDS" ]; then\n\
     echo "Configuring Claude CLI OAuth credentials..."\n\
-    mkdir -p /root/.config/claude-code\n\
-    echo "$CLAUDE_OAUTH_CREDS" | base64 -d > /root/.config/claude-code/credentials.json\n\
-    chmod 600 /root/.config/claude-code/credentials.json\n\
-    echo "Claude CLI configured with OAuth credentials"\n\
+    mkdir -p /root/.claude\n\
+    echo "$CLAUDE_OAUTH_CREDS" | base64 -d > /root/.claude/.credentials.json\n\
+    chmod 600 /root/.claude/.credentials.json\n\
+    echo "Claude CLI configured at /root/.claude/.credentials.json"\n\
 else\n\
     echo "No CLAUDE_OAUTH_CREDS found - Claude CLI will be disabled"\n\
 fi\n\
