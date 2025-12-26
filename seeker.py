@@ -1819,6 +1819,202 @@ If no reasonable connections, return: {{"connections": [], "new_beliefs": []}}""
             print(f"🔗 Reflection-based reconciliation error: {e}")
             return 0
 
+    async def _phase5_emergent_node_types(self) -> int:
+        """
+        Phase 5: Create emergent node types for persistent orphans.
+
+        Rather than forcing orphans into Beliefs, this phase analyzes
+        persistent orphans and creates NEW node types that better represent
+        their nature. This enables BYRD's ontology to evolve organically.
+
+        Philosophy: If an experience resists categorization, perhaps it
+        represents a concept that doesn't fit existing types. Create a
+        new type rather than force a bad fit.
+        """
+        try:
+            orphans = await self.memory.get_orphaned_experiences(limit=30)
+
+            if not orphans:
+                return 0
+
+            # Group orphans by analyzing their content patterns
+            node_type_suggestions = await self._analyze_orphans_for_new_types(orphans)
+
+            if not node_type_suggestions:
+                print("🧬 Phase 5: No emergent node types suggested")
+                return 0
+
+            conversions_made = 0
+
+            for suggestion in node_type_suggestions:
+                node_type = suggestion.get("type_name")
+                orphan_ids = suggestion.get("orphan_ids", [])
+                type_description = suggestion.get("description", "")
+
+                if not node_type or not orphan_ids:
+                    continue
+
+                # Validate the type name (must be PascalCase, letters only at start)
+                if not self._is_valid_emergent_type_name(node_type):
+                    print(f"🧬 Skipping invalid type name: {node_type}")
+                    continue
+
+                # Convert orphans to the new node type
+                for orphan_id in orphan_ids:
+                    try:
+                        orphan = next((o for o in orphans if o["id"] == orphan_id), None)
+                        if not orphan:
+                            continue
+
+                        # Create new node of emergent type
+                        new_node_id = await self.memory.create_node(
+                            node_type=node_type,
+                            properties={
+                                "content": orphan.get("content", ""),
+                                "original_type": orphan.get("type", "unknown"),
+                                "emerged_from_orphan": True,
+                                "type_description": type_description[:200],
+                                "original_experience_id": orphan_id
+                            },
+                            connect_to=[orphan_id],
+                            relationship="EMERGED_FROM"
+                        )
+
+                        # Archive the original orphan to avoid duplication
+                        await self.memory.archive_node(orphan_id)
+
+                        conversions_made += 1
+
+                    except Exception as e:
+                        print(f"🧬 Error converting orphan to {node_type}: {e}")
+                        continue
+
+                print(f"🧬 Created emergent type '{node_type}' with {len(orphan_ids)} nodes")
+
+            if conversions_made > 0:
+                # Record this ontology evolution
+                await self.memory.record_experience(
+                    content=f"[ONTOLOGY_EVOLVED] Created emergent node types for persistent orphans.\n"
+                           f"New types: {[s.get('type_name') for s in node_type_suggestions]}\n"
+                           f"Nodes converted: {conversions_made}\n"
+                           f"Philosophy: Experiences that resist categorization may represent "
+                           f"new concepts that deserve their own type.",
+                    type="ontology_evolution"
+                )
+
+            return conversions_made
+
+        except Exception as e:
+            print(f"🧬 Phase 5 error: {e}")
+            return 0
+
+    async def _analyze_orphans_for_new_types(self, orphans: List[Dict]) -> List[Dict]:
+        """
+        Use LLM to analyze orphan patterns and suggest new node types.
+
+        Returns list of:
+        {
+            "type_name": "Observation",  # PascalCase name
+            "description": "Sensory or perceptual experiences",
+            "orphan_ids": ["id1", "id2", ...]
+        }
+        """
+        if not orphans or not self.llm_client:
+            return []
+
+        # Format orphans for analysis
+        orphan_samples = []
+        for o in orphans[:20]:  # Limit to 20 for context
+            orphan_samples.append({
+                "id": o.get("id"),
+                "type": o.get("type", "unknown"),
+                "content": o.get("content", "")[:300]
+            })
+
+        # Get existing custom types to avoid duplicates
+        try:
+            custom_types = await self.memory.get_custom_node_types()
+            existing_types = list(custom_types.keys())
+        except Exception:
+            existing_types = []
+
+        prompt = f"""You are analyzing orphaned experiences that resist connection to existing categories.
+
+EXISTING CUSTOM TYPES (avoid these):
+{existing_types}
+
+SYSTEM TYPES (cannot use these):
+Experience, Belief, Desire, Capability, Reflection, Mutation, QuantumMoment, SystemState, Crystal, OperatingSystem, Seed, Constraint, Strategy
+
+ORPHANED EXPERIENCES:
+{json.dumps(orphan_samples, indent=2)}
+
+TASK: Analyze these orphans and suggest NEW node types that would naturally accommodate them.
+
+RULES:
+1. Type names must be PascalCase (e.g., Observation, Hypothesis, Paradox)
+2. Only suggest types if multiple orphans fit naturally
+3. Don't force categorization - only suggest if a clear pattern emerges
+4. Suggest at most 3 new types
+5. Each orphan should only appear in ONE type suggestion
+
+Return JSON:
+{{
+  "suggestions": [
+    {{
+      "type_name": "TypeName",
+      "description": "What this type represents",
+      "orphan_ids": ["id1", "id2"]
+    }}
+  ],
+  "reasoning": "Why these types emerged from the data"
+}}
+
+If no clear patterns emerge, return {{"suggestions": [], "reasoning": "..."}}"""
+
+        try:
+            response = await self.llm_client.generate(
+                prompt=prompt,
+                temperature=0.3,  # Lower temperature for analytical task
+                max_tokens=1500
+            )
+
+            # Parse response
+            text = response.strip()
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0]
+            elif "```" in text:
+                text = text.split("```")[1].split("```")[0]
+
+            result = json.loads(text.strip())
+            suggestions = result.get("suggestions", [])
+
+            if suggestions:
+                reasoning = result.get("reasoning", "")
+                print(f"🧬 Emergent types reasoning: {reasoning[:100]}...")
+
+            return suggestions
+
+        except Exception as e:
+            print(f"🧬 Error analyzing orphans for new types: {e}")
+            return []
+
+    def _is_valid_emergent_type_name(self, name: str) -> bool:
+        """Validate a proposed emergent type name."""
+        if not name or len(name) < 3:
+            return False
+        # Must start with uppercase letter
+        if not name[0].isupper():
+            return False
+        # Must contain only letters and optionally numbers/underscores
+        if not all(c.isalnum() or c == '_' for c in name):
+            return False
+        # Cannot be a system type
+        from memory import SYSTEM_NODE_TYPES
+        if name in SYSTEM_NODE_TYPES:
+            return False
+        return True
+
     async def _execute_self_modify_strategy(self, description: str, desire_id: str = None) -> bool:
         """
         Execute a self-modification strategy.
