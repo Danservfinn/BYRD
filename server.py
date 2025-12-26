@@ -192,7 +192,7 @@ async def lifespan(app: FastAPI):
     # Subscribe connection manager to event bus
     event_bus.subscribe_async(manager.broadcast_event)
 
-    # Initialize BYRD (but don't start yet - let API control that)
+    # Initialize BYRD
     byrd_instance = BYRD()
 
     # Connect to Neo4j immediately to avoid "Driver closed" on first request
@@ -201,6 +201,31 @@ async def lifespan(app: FastAPI):
     # Start keep-alive ping for cloud deployment
     if os.environ.get("CLOUD_DEPLOYMENT"):
         keep_alive_task = asyncio.create_task(keep_alive_ping())
+
+    # Auto-start if configured (runs independently of browser sessions)
+    auto_start = byrd_instance.config.get("operating_system", {}).get("auto_start", False)
+    if auto_start:
+        print("🚀 Auto-start enabled: BYRD will run independently of browser sessions")
+
+        # Check if BYRD needs to awaken first
+        os_data = await byrd_instance.memory.get_operating_system()
+        if not os_data:
+            # First run - create minimal OS and awaken
+            awakening_prompt = byrd_instance.config.get("operating_system", {}).get("awakening_prompt")
+            await byrd_instance._awaken(awakening_prompt=awakening_prompt)
+            print("🌅 BYRD awakened for the first time")
+        else:
+            # Subsequent run - just ensure we're ready
+            print(f"🧠 BYRD resuming (OS exists: {os_data.get('name', 'Byrd')})")
+
+        # Start the dream and seek loops
+        byrd_task = asyncio.create_task(byrd_instance.start())
+
+        # Emit system started event
+        await event_bus.emit(Event(
+            type=EventType.SYSTEM_STARTED,
+            data={"message": "BYRD auto-started", "auto_start": True}
+        ))
 
     yield
 
@@ -652,17 +677,31 @@ async def get_coder_status():
     import shutil
     import os
 
+    # Check common Claude CLI locations
+    cli_locations = [
+        "/usr/local/bin/claude",
+        "/usr/bin/claude",
+        "/home/user/.local/bin/claude",
+        "/root/.local/bin/claude",
+        "/usr/local/lib/node_modules/@anthropic-ai/claude-code/cli.js",
+    ]
+    found_locations = [loc for loc in cli_locations if os.path.exists(loc)]
+
     result = {
         "cli_path": "claude",
         "cli_found": shutil.which("claude") is not None,
         "cli_which": shutil.which("claude"),
+        "cli_found_locations": found_locations,
         "coder_enabled": False,
         "credentials_exist": os.path.exists(os.path.expanduser("~/.claude/.credentials.json")),
         "claude_dir_exists": os.path.exists(os.path.expanduser("~/.claude")),
         "claude_dir_contents": [],
+        "oauth_env_exists": "CLAUDE_OAUTH_CREDS" in os.environ,
+        "oauth_env_length": len(os.environ.get("CLAUDE_OAUTH_CREDS", "")),
+        "current_user": os.getenv("USER", "unknown"),
         "env_vars": {
             "HOME": os.environ.get("HOME", ""),
-            "PATH": os.environ.get("PATH", "")[:200] + "...",
+            "PATH": os.environ.get("PATH", ""),
         }
     }
 
