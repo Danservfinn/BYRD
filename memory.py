@@ -3851,6 +3851,7 @@ class Memory:
                         n.id as id,
                         labels(n)[0] as type,
                         n.content as content,
+                        n.raw_output as raw_output,
                         n.description as description,
                         n.name as name,
                         n.confidence as confidence,
@@ -3872,12 +3873,36 @@ class Memory:
                     node_type = record["type"].lower() if record["type"] else "unknown"
 
                     # Get display content based on node type
-                    content = (
-                        record["content"] or
-                        record["description"] or
-                        record["name"] or
-                        ""
-                    )
+                    # For Reflections, parse raw_output JSON and extract meaningful content
+                    raw_output = record["raw_output"]
+                    if node_type == "reflection" and raw_output:
+                        try:
+                            parsed = json.loads(raw_output) if isinstance(raw_output, str) else raw_output
+                            # Extract the most meaningful content from reflection
+                            # BYRD's reflections may have various keys - check common ones
+                            content = (
+                                parsed.get("reflection_title") or
+                                parsed.get("title") or
+                                parsed.get("narrative") or
+                                parsed.get("narrative_stream") or
+                                parsed.get("inner_voice") or
+                                parsed.get("summary") or
+                                # For insights, get first one if it's a list
+                                (parsed.get("insights", [{}])[0] if isinstance(parsed.get("insights"), list) and parsed.get("insights") else None) or
+                                str(list(parsed.keys()))[:100]  # Fallback: show keys
+                            )
+                            # If content is a dict, stringify it nicely
+                            if isinstance(content, dict):
+                                content = content.get("content") or content.get("insight") or str(content)[:150]
+                        except:
+                            content = str(raw_output)[:200] if raw_output else ""
+                    else:
+                        content = (
+                            record["content"] or
+                            record["description"] or
+                            record["name"] or
+                            ""
+                        )
 
                     nodes.append({
                         "id": record["id"],
