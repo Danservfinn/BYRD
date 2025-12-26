@@ -63,18 +63,28 @@ def main():
     # Copy necessary files
     src = Path(__file__).parent
     files_to_copy = [
+        # Core BYRD
         "byrd.py", "memory.py", "dreamer.py", "seeker.py", "actor.py",
         "llm_client.py", "event_bus.py", "server.py", "narrator.py",
         "constitutional.py", "provenance.py", "modification_log.py",
         "self_modification.py", "quantum_randomness.py",
         "aitmpl_client.py", "coder.py", "graph_algorithms.py",
+        # Option B - Five Compounding Loops
+        "embedding.py", "coupling_tracker.py", "memory_reasoner.py",
+        "goal_evolver.py", "dreaming_machine.py", "omega.py",
+        "kill_criteria.py", "accelerators.py",
+        # AGI Seed components
+        "meta_learning.py", "self_model.py", "world_model.py",
+        "corrigibility.py", "rollback.py", "safety_monitor.py",
+        "semantic_lexicon.py",
+        # Config and assets
         "config.yaml", "requirements.txt",
         "byrd-3d-visualization.html",
         "byrd-architecture.html",
     ]
 
     # Copy directories
-    dirs_to_copy = ["installers"]
+    dirs_to_copy = ["installers", "kernel", "models"]
 
     for f in files_to_copy:
         src_file = src / f
