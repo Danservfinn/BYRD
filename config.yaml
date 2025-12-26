@@ -106,7 +106,7 @@ local_llm:
 
   # API key - use environment variable (never commit real keys!)
   # Set: export ZAI_API_KEY="your-key-here"
-  # api_key: "${ZAI_API_KEY}"
+  api_key: "${ZAI_API_KEY}"
 
   # Ollama endpoint (only used when provider: ollama)
   endpoint: "http://localhost:11434/api/generate"
