@@ -1439,6 +1439,89 @@ The Ego Space provides an embodied presence for BYRD:
 - **Thought Bubbles**: Inner voice displayed as speech bubbles near the avatar
 - **Starfield Environment**: Deep space background representing the mind's infinite potential
 
+### Cat Animation System Architecture
+
+The cat avatar is more than decoration—it's a real-time visualization of BYRD's cognitive state. Every animation is driven by actual backend events.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          CAT ANIMATION SYSTEM                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌─────────────────────┐                                                   │
+│  │  CatAnimationController  │◄──── handleEvent() triggers                   │
+│  └───────────┬─────────┘                                                   │
+│              │                                                              │
+│              ▼                                                              │
+│  ┌─────────────────────┐     ┌─────────────────────────────────────────┐   │
+│  │  CatStateMachine    │     │  9 States:                              │   │
+│  │  - currentState     │────►│  IDLE, DREAMING, SEEKING, PROCESSING,  │   │
+│  │  - blendFactor      │     │  ALERT, SATISFIED, FRUSTRATED,         │   │
+│  │  - transitions      │     │  CONNECTING, QUANTUM                   │   │
+│  └─────────────────────┘     └─────────────────────────────────────────┘   │
+│              │                                                              │
+│              ├──────────────────┬──────────────────┬──────────────────┐    │
+│              ▼                  ▼                  ▼                  ▼    │
+│  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐  ┌──────────────┐│
+│  │ EyeController │  │ EarController │  │BodyPoseCtrl  │  │WhiskerCtrl   ││
+│  │ - dilation    │  │ - rotation    │  │ - breathing   │  │ - 12 whiskers││
+│  │ - blink rate  │  │ - twitching   │  │ - sway        │  │ - node links ││
+│  │ - glow        │  │ - alertness   │  │ - posture     │  │ - extend/    ││
+│  │ - look-at     │  │ - direction   │  │              │  │   retract    ││
+│  └───────────────┘  └───────────────┘  └───────────────┘  └──────────────┘│
+│              │                                                              │
+│              ▼                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                      CatParticleSystem                              │   │
+│  │  - Aura particles (100 orbital, purple/gold)                        │   │
+│  │  - Thought particles (rising from head on inner_voice)              │   │
+│  │  - Quantum burst (on quantum_collapse)                              │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│              │                                                              │
+│              ▼                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                      CatAudioController                             │   │
+│  │  - Web Audio API synthesis (no external files)                      │   │
+│  │  - Tones: chime (440Hz), success (523Hz), quantum (330Hz)           │   │
+│  │  - Toggle via UI button                                             │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Event-to-Animation Mapping
+
+The system maps 40+ backend events to specific animations:
+
+| Event Category | Events | Cat Response |
+|---------------|--------|--------------|
+| **Dream Cycle** | `dream_cycle_start`, `dream_cycle_end`, `reflection_created` | Eyes half-close, aura activates, breathing slows |
+| **Seek Cycle** | `seek_cycle_start`, `research_start`, `research_complete` | Ears perk, pupils dilate, head tilts |
+| **Desires** | `desire_created`, `desire_fulfilled`, `desire_stuck` | Alert posture → cat smile → flattened ears |
+| **Memory** | `memories_accessed`, `belief_created`, `crystal_created` | Whiskers extend to nodes, sparkle effects |
+| **Quantum** | `quantum_collapse`, `quantum_influence` | Pupils contract, freeze, burst; iris color shift |
+| **Coder** | `coder_invoked`, `coder_complete`, `coder_failed` | Processing pose, success particles, frustrated pose |
+| **System** | `awakening`, `mode_transition`, `inner_voice` | Eyes open from darkness, posture change, thought particles |
+
+#### State Transitions
+
+```javascript
+// Example state transition configuration
+const StateTransitions = {
+  'dream_cycle_start':    { to: 'DREAMING',   duration: 800, easing: 'easeOutCubic' },
+  'desire_created':       { to: 'ALERT',      duration: 200, returnTo: 'IDLE', returnAfter: 2000 },
+  'desire_fulfilled':     { to: 'SATISFIED',  duration: 300, returnTo: 'IDLE', returnAfter: 3000 },
+  'quantum_collapse':     { to: 'QUANTUM',    duration: 100, returnTo: 'IDLE', returnAfter: 1500 }
+};
+```
+
+#### Performance Requirements
+
+- Maintains 60fps with all animations active
+- Animation system adds < 2ms per frame
+- Particle system stays under 500 active particles
+- No memory leaks over 24-hour runtime
+
 ### Genesis Modal
 
 The Genesis Modal provides transparency about BYRD's non-emergent foundations:

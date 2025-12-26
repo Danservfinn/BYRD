@@ -3,9 +3,9 @@ title: Visualization System
 link: visualization-system
 type: metadata
 ontological_relations: []
-tags: [visualization, 3d, webgl, mind-space, ego-space, websocket]
+tags: [visualization, 3d, webgl, mind-space, ego-space, websocket, cat-animation, state-machine]
 created_at: 2025-12-24T00:00:00Z
-updated_at: 2025-12-24T00:00:00Z
+updated_at: 2025-12-26T00:00:00Z
 uuid: v1s2u3a4-5678-90ab-cdef-visualize0001
 ---
 
@@ -34,6 +34,43 @@ Embodied representation with black cat avatar.
 - **Ambient Animation**: Blinking, breathing, ear twitching
 - **Thought Bubbles**: Inner voice displayed near avatar
 - **Starfield Environment**: Deep space background
+- **Cat Animation System**: Event-driven animations (see below)
+
+## Cat Animation System
+
+The cat avatar is a living visualization of BYRD's cognitive state, driven by real backend events.
+
+### State Machine
+9 distinct behavioral states with smooth eased transitions:
+- `IDLE` - Default: slow breathing, occasional blink
+- `DREAMING` - Dream cycle: eyes half-closed, purple aura
+- `SEEKING` - Research: dilated pupils, perked ears
+- `PROCESSING` - Coding: focused eyes, thinking particles
+- `ALERT` - New desire: wide eyes, rotated ears
+- `SATISFIED` - Fulfilled: squinted eyes (cat smile), purr
+- `FRUSTRATED` - Stuck: flattened ears, agitated
+- `CONNECTING` - Memory access: whiskers extend to nodes
+- `QUANTUM` - Collapse: pupils contract, freeze, burst
+
+### Body Controllers
+- **EyeController**: Pupil dilation, blinking, glow, look-at
+- **EarController**: Alert rotation, random twitches
+- **BodyPoseController**: Breathing, sway, posture changes
+- **WhiskerController**: 12 whiskers (6/side) that connect to memory nodes
+
+### Particle Effects
+- **Aura System**: Purple/gold orbital particles during dreaming
+- **Thought Particles**: Rising bubbles on `inner_voice` events
+- **Quantum Burst**: Visual effect on `quantum_collapse`
+
+### Audio Feedback
+- Web Audio API synthesis (no external files)
+- Tones: chime (440Hz), success (523Hz), quantum (330Hz)
+- Toggle via UI button
+
+### Event Coverage
+Maps 40+ backend events to animations across categories:
+dream cycle, seek cycle, desires, memory, quantum, coder, system
 
 ### Graph Mode
 Full memory graph exploration (within Mind Space).

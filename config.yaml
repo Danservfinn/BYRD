@@ -330,7 +330,7 @@ coder:
   # - cli: Use Claude Code CLI (requires 'claude' command installed)
   # - agent: Use LLM-based agent with tools (works anywhere)
   # - auto: Prefer CLI if available, fall back to Agent
-  type: "auto"
+  type: "agent"  # Uses Z.AI GLM instead of Claude CLI (avoids OAuth issues)
 
   # ---------------------------------------------------------------------------
   # CLI MODE SETTINGS (only used when type: "cli" or auto-detected)

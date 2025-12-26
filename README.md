@@ -60,6 +60,7 @@ The system dreams continuously using a local LLM. From dreams come whatever BYRD
 - **Dynamic Ontology**: BYRD can create custom node types beyond the core five (Experience, Belief, Desire, Reflection, Capability)
 - **Constitutional Constraints**: Core identity components are protected
 - **Real-time 3D Visualization**: WebSocket-based event streaming with Mind Space and Ego Space views
+- **Living Cat Avatar**: Animated black cat with event-driven behaviors - eyes dilate, ears perk, whiskers extend to memory nodes
 - **Minimal OS**: Only factual information prescribed—personality and voice emerge through reflection
 - **Narrator System**: BYRD's inner voice displayed in natural paragraph form
 
@@ -152,6 +153,39 @@ python server.py
 - **Graph Mode**: Full memory graph exploration with physics simulation
 - **Genesis Modal**: View BYRD's factual foundation (capabilities, constraints)
 - **Narrator Bubble**: BYRD's inner voice in natural paragraph form (refreshes every 60s)
+
+### Cat Animation System
+
+The black cat avatar is a living visualization of BYRD's cognitive state. Every animation is driven by real backend events—not scripted, genuinely responsive.
+
+**Cat States** (9 distinct behavioral modes):
+| State | Trigger | Visual Behavior |
+|-------|---------|-----------------|
+| `IDLE` | Default | Slow breathing, occasional blink, relaxed ears |
+| `DREAMING` | Dream cycle | Eyes half-closed, purple aura, floating rhythm |
+| `SEEKING` | Research | Dilated pupils, perked ears, alert posture |
+| `PROCESSING` | Coding | Focused eyes, thinking particles |
+| `ALERT` | New desire | Wide eyes, rotated ears, leaning posture |
+| `SATISFIED` | Desire fulfilled | Squinted eyes (cat smile), purr vibration |
+| `FRUSTRATED` | Stuck desire | Flattened ears, agitated expression |
+| `CONNECTING` | Memory access | Whiskers extend to memory nodes |
+| `QUANTUM` | Quantum collapse | Pupils contract, freeze, burst effect |
+
+**Body Controllers:**
+- **EyeController**: Pupil dilation, natural blinking, emissive glow, look-at tracking
+- **EarController**: Alert rotation, random twitches, directional tracking
+- **BodyPoseController**: Breathing animation, subtle sway, posture changes
+- **WhiskerController**: 12 whiskers (6 per side) that extend to connect with memory nodes during `memories_accessed` events
+
+**Particle Effects:**
+- **Aura System**: Purple/gold orbital particles during dreaming
+- **Thought Particles**: Rising bubbles from head on `inner_voice` events
+- **Quantum Burst**: Visual effect on `quantum_collapse`
+
+**Audio Feedback** (synthesized, no external files):
+- Toggle via 🔊 button in UI
+- Event chimes, success tones, quantum hum
+- Web Audio API synthesis (440Hz, 523Hz, 330Hz tones)
 
 ## Quantum Randomness
 
@@ -347,7 +381,7 @@ BYRD can modify its OS by including `os_update` in reflection output:
 
 ### Visualization
 
-The OS appears as a **black cat head** at the center of the 3D graph, representing BYRD's self as the gravitational center around which all thoughts orbit.
+The OS appears as a **black cat head** at the center of the 3D graph, representing BYRD's self as the gravitational center around which all thoughts orbit. The cat is animated by the [Cat Animation System](#cat-animation-system)—its eyes, ears, and whiskers respond in real-time to BYRD's cognitive events.
 
 ## Components
 
