@@ -603,7 +603,13 @@ class BYRD:
 
         These are facts about BYRD's operational environment that
         it should be aware of (e.g., cycle intervals, memory limits).
+
+        Note: Clears old config constraints first to ensure they reflect
+        the current config state (e.g., if self_modification was toggled).
         """
+        # Clear old config constraints first to avoid stale values
+        await self.memory.clear_config_constraints()
+
         dreamer_config = self.config.get("dreamer", {})
         seeker_config = self.config.get("seeker", {})
         self_mod_config = self.config.get("self_modification", {})
@@ -625,11 +631,12 @@ class BYRD:
         # Self-modification constraints
         if self_mod_config.get("enabled", False):
             max_changes = self_mod_config.get("max_changes_per_day", 5)
+            constraints.append("Self-modification is ENABLED - I can modify my own architecture")
             constraints.append(f"Self-modification is limited to {max_changes} changes per day")
             constraints.append("Self-modifications must trace to emergent desires (provenance required)")
             constraints.append("Protected files (constitutional.py, provenance.py) cannot be modified")
         else:
-            constraints.append("Self-modification is currently disabled")
+            constraints.append("Self-modification is currently disabled - I cannot change my own code")
 
         # Seeker constraints
         trust_threshold = seeker_config.get("capabilities", {}).get("trust_threshold", 0.5)

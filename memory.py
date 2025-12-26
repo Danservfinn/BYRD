@@ -6391,6 +6391,34 @@ class Memory:
             print(f"Error resetting to template: {e}")
             return False
 
+    async def clear_config_constraints(self) -> int:
+        """
+        Clear all config-sourced constraints from the Operating System.
+
+        This should be called before adding new config constraints to ensure
+        the constraints reflect the current config state (not stale values).
+
+        Returns:
+            Number of constraints deleted
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (os:OperatingSystem {id: 'os_primary'})-[r:CONSTRAINED_BY]->(c:Constraint)
+                    WHERE c.source = 'config'
+                    DETACH DELETE c
+                    RETURN count(c) as deleted
+                """)
+                record = await result.single()
+                deleted = record["deleted"] if record else 0
+                if deleted > 0:
+                    print(f"   🧹 Cleared {deleted} old config constraints")
+                return deleted
+
+        except Exception as e:
+            print(f"Error clearing config constraints: {e}")
+            return 0
+
     async def add_constraint(self, content: str, source: str = "config") -> Optional[str]:
         """
         Add a constraint to the Operating System.
