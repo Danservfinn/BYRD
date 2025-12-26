@@ -4886,7 +4886,7 @@
         return;
       }
 
-      ws.onopen = () => {
+      ws.onopen = async () => {
         connected = true;
         connectionDot.className = 'w-2 h-2 rounded-full bg-green-400';
         connectionText.textContent = 'Connected';
@@ -4897,6 +4897,20 @@
         // Create awakening node on connect (in case we missed the event)
         const existingAwakening = nodes3D.find(n => n.userData?.id === 'awakening-core');
         if (!existingAwakening) {
+          // Fetch OS status to get awakening_prompt
+          let awakeningPrompt = 'Awakening (pure emergence)';
+          try {
+            const statusRes = await fetch(`${API_BASE}/api/status`);
+            if (statusRes.ok) {
+              const statusData = await statusRes.json();
+              if (statusData.os?.awakening_prompt) {
+                awakeningPrompt = statusData.os.awakening_prompt;
+              }
+            }
+          } catch (e) {
+            console.log('Could not fetch awakening_prompt:', e);
+          }
+
           // Create the central consciousness node - larger and at center
           const colors = NODE_COLORS.awakening;
           const size = 3.0; // Prominent central node
@@ -4912,7 +4926,7 @@
           awakeningMesh.userData = {
             id: 'awakening-core',
             type: 'awakening',
-            content: 'Awakening',
+            content: awakeningPrompt,
             importance: 1.0,
             nodeIndex: 0,
             createdAt: Date.now(),
