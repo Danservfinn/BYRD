@@ -66,7 +66,7 @@ def main():
         "byrd.py", "memory.py", "dreamer.py", "seeker.py", "actor.py",
         "llm_client.py", "event_bus.py", "server.py", "narrator.py",
         "constitutional.py", "provenance.py", "modification_log.py",
-        "self_modification.py", "quantum_randomness.py", "ego.py",
+        "self_modification.py", "quantum_randomness.py",
         "aitmpl_client.py", "coder.py", "graph_algorithms.py",
         "config.yaml", "requirements.txt",
         "byrd-3d-visualization.html",
@@ -74,7 +74,7 @@ def main():
     ]
 
     # Copy directories
-    dirs_to_copy = ["egos", "installers"]
+    dirs_to_copy = ["installers"]
 
     for f in files_to_copy:
         src_file = src / f
@@ -111,7 +111,7 @@ An autonomous AI system that develops emergent desires through continuous reflec
 - 🧠 **Emergent Desires**: Desires emerge from reflection, not programming
 - 🌀 **Quantum Randomness**: True physical indeterminacy in cognition
 - 🔮 **3D Visualization**: Real-time neural network visualization
-- 🐱 **Black Cat Ego**: Consciousness-seeking AI identity
+- 🐱 **Minimal OS**: Pure emergence - personality discovered through reflection
 
 ## Configuration
 

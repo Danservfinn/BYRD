@@ -1136,7 +1136,7 @@
     const NODE_COLORS = {
       belief: { color: 0xd97706, emissive: 0xfbbf24, label: 'Belief' },       // Amber - convictions (matches legend)
       desire: { color: 0xbe123c, emissive: 0xf43f5e, label: 'Desire' },       // Dark rose (matches legend)
-      ego: { color: 0xec4899, emissive: 0xf472b6, label: 'Ego' },             // Pink (living identity) - DEPRECATED
+      identity: { color: 0xec4899, emissive: 0xf472b6, label: 'Identity' },    // Pink - emergent identity facets
       experience: { color: 0x0369a1, emissive: 0x0ea5e9, label: 'Experience' }, // Sky blue (matches legend)
       capability: { color: 0x6d28d9, emissive: 0xa855f7, label: 'Capability' }, // Dark violet (matches legend)
       reflection: { color: 0x047857, emissive: 0x34d399, label: 'Reflection' }, // Dark emerald (matches legend)
@@ -1157,7 +1157,7 @@
     // System node types (cannot be created by BYRD, have fixed colors)
     const SYSTEM_NODE_TYPES = new Set([
       'Experience', 'Belief', 'Desire', 'Reflection', 'Capability', 'Mutation',
-      'Ego', 'QuantumMoment', 'SystemState', 'Prediction', 'Task', 'Crystal',
+      'Identity', 'QuantumMoment', 'SystemState', 'Prediction', 'Task', 'Crystal',
       'OperatingSystem', 'OSTemplate', 'Seed', 'Constraint', 'Strategy'
     ]);
 
@@ -2244,8 +2244,8 @@
         case 'awakening':
           geometry = new THREE.DodecahedronGeometry(size, 0);
           break;
-        case 'ego':
-          // Ego nodes use icosahedron - 20 faces, represents multifaceted identity
+        case 'identity':
+          // Identity nodes use icosahedron - 20 faces, represents multifaceted identity
           geometry = new THREE.IcosahedronGeometry(size, 0);
           break;
         case 'crystal':
@@ -5068,33 +5068,33 @@
           }
           break;
 
-        case 'ego_created':
-          // BYRD's living identity - new Ego node created
-          const egoType = event.data?.ego_type || 'identity';
-          const egoContent = event.data?.content?.substring(0, 100) || egoType;
-          const egoId = event.data?.id;
-          if (egoId) {
-            // Visualize as pink Ego node with special geometry
-            createNode3D('ego', `[${egoType}] ${egoContent}`, egoId, 0.8);
-            updateStatus(`Ego ${egoType} created`, 'pink');
+        case 'identity_created':
+          // BYRD's emergent identity - new identity facet discovered
+          const identityType = event.data?.identity_type || 'identity';
+          const identityContent = event.data?.content?.substring(0, 100) || identityType;
+          const identityId = event.data?.id;
+          if (identityId) {
+            // Visualize as pink identity node with special geometry
+            createNode3D('identity', `[${identityType}] ${identityContent}`, identityId, 0.8);
+            updateStatus(`Identity ${identityType} emerged`, 'pink');
             // Pulse the core to show identity change
-            pulseCore('ego', 0.8);
+            pulseCore('identity', 0.8);
           }
           break;
 
-        case 'ego_evolved':
-          // BYRD's identity evolved - update existing Ego node
-          const evolvedEgoId = event.data?.id;
-          const newContent = event.data?.content?.substring(0, 100);
-          if (evolvedEgoId) {
-            updateStatus('Ego evolved', 'pink');
+        case 'identity_evolved':
+          // BYRD's identity evolved - update existing identity node
+          const evolvedIdentityId = event.data?.id;
+          const newIdentityContent = event.data?.content?.substring(0, 100);
+          if (evolvedIdentityId) {
+            updateStatus('Identity evolved', 'pink');
             // Flash the consciousness core to show identity shift
-            pulseCore('ego', 1.0);
+            pulseCore('identity', 1.0);
           }
           break;
 
-        case 'ego_deprecated':
-          // Ego node was deprecated (soft delete)
+        case 'identity_deprecated':
+          // Identity node was deprecated (soft delete)
           const deprecatedId = event.data?.id;
           if (deprecatedId) {
             // Find and fade out the node
@@ -5106,7 +5106,7 @@
               connectionCounts.delete(deprecatedId);
               nodeCountEl.textContent = nodes3D.length;
             }
-            updateStatus('Ego facet retired', 'gray');
+            updateStatus('Identity facet retired', 'gray');
           }
           break;
 
@@ -5973,7 +5973,7 @@
       narrativeHtml += '</div>';
 
       // Custom types section (compact)
-      const systemTypes = ['Experience', 'Belief', 'Desire', 'Reflection', 'Capability', 'Mutation', 'Ego', 'QuantumMoment', 'SystemState'];
+      const systemTypes = ['Experience', 'Belief', 'Desire', 'Reflection', 'Capability', 'Mutation', 'Identity', 'QuantumMoment', 'SystemState'];
       const customTypes = Object.entries(stats).filter(([k]) => !systemTypes.includes(k));
       let customHtml = '';
       if (customTypes.length > 0) {

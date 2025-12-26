@@ -104,12 +104,10 @@ class EventType(Enum):
     CRYSTALLIZATION_PROPOSED = "crystallization_proposed"  # LLM proposals generated
     CRYSTALLIZATION_COLLAPSED = "crystallization_collapsed"  # Quantum selected proposal
 
-    # Ego events (living identity system)
-    EGO_CREATED = "ego_created"          # New Ego node created (identity, trait, voice, etc.)
-    EGO_EVOLVED = "ego_evolved"          # Ego node updated with history preservation
-    EGO_DEPRECATED = "ego_deprecated"    # Ego node deprecated (soft delete)
-
-    # Emergent identity events (self-discovery)
+    # Identity crystallization events (emergent self-discovery)
+    IDENTITY_CREATED = "identity_created"            # New identity facet emerged
+    IDENTITY_EVOLVED = "identity_evolved"            # Identity facet evolved with history
+    IDENTITY_DEPRECATED = "identity_deprecated"      # Identity facet retired
     SELF_NAMED = "self_named"                        # BYRD chose a name for itself
     IDENTITY_OBSERVATION = "identity_observation"    # Self-reflection about identity
     VOICE_CRYSTALLIZED = "voice_crystallized"        # Voice synthesized from identity beliefs

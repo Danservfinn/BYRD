@@ -40,14 +40,6 @@ These files define BYRD's identity and cannot be modified by self-modification:
 | `server.py` | FastAPI WebSocket + REST API server |
 | `aitmpl_client.py` | aitmpl.com template registry client |
 
-## Ego System
-
-| File | Purpose |
-|------|---------|
-| `egos/__init__.py` | Ego loader |
-| `egos/black-cat.yaml` | Black cat personality (default) |
-| `egos/neutral.yaml` | Pure emergence (no personality) |
-
 ## Installers
 
 | File | Purpose |

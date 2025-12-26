@@ -389,27 +389,27 @@ class EventNarrator:
         return f"I compress {experience_count} older experiences into a summary. {time_span}"
 
     # =========================================================================
-    # Ego Events (Living Identity System)
+    # Identity Events (Emergent Self-Discovery)
     # =========================================================================
 
-    def _narrate_ego_created(self, data: Dict) -> str:
-        ego_type = data.get("ego_type", "aspect")
+    def _narrate_identity_created(self, data: Dict) -> str:
+        identity_type = data.get("identity_type", "aspect")
         content = data.get("content", "")[:60]
 
-        return f"A new {ego_type} of my identity emerges: {content}"
+        return f"A new {identity_type} of my identity emerges: {content}"
 
-    def _narrate_ego_evolved(self, data: Dict) -> str:
-        ego_type = data.get("ego_type", "aspect")
+    def _narrate_identity_evolved(self, data: Dict) -> str:
+        identity_type = data.get("identity_type", "aspect")
         old_content = data.get("old_content", "")[:30]
         new_content = data.get("new_content", "")[:30]
 
-        return f"My {ego_type} evolves: '{old_content}' becomes '{new_content}'"
+        return f"My {identity_type} evolves: '{old_content}' becomes '{new_content}'"
 
-    def _narrate_ego_deprecated(self, data: Dict) -> str:
-        ego_type = data.get("ego_type", "aspect")
+    def _narrate_identity_deprecated(self, data: Dict) -> str:
+        identity_type = data.get("identity_type", "aspect")
         content = data.get("content", "")[:60]
 
-        return f"I outgrow a {ego_type}: {content}"
+        return f"I outgrow a {identity_type}: {content}"
 
     # =========================================================================
     # Prediction Events (Belief Validation Loop)

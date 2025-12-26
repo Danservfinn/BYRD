@@ -4432,10 +4432,10 @@ class Memory:
 
                 # Emit event
                 await event_bus.emit(Event(
-                    type=EventType.EGO_CREATED,
+                    type=EventType.IDENTITY_CREATED,
                     data={
                         "id": ego_id,
-                        "ego_type": ego_type,
+                        "identity_type": ego_type,
                         "content": content[:100],
                         "source": source
                     }
@@ -4618,11 +4618,11 @@ class Memory:
 
                     # Emit event
                     await event_bus.emit(Event(
-                        type=EventType.EGO_EVOLVED,
+                        type=EventType.IDENTITY_EVOLVED,
                         data={
                             "old_id": ego_id,
                             "new_id": new_id,
-                            "ego_type": old_node.get("ego_type"),
+                            "identity_type": old_node.get("ego_type"),
                             "action": "update"
                         }
                     ))
@@ -4663,10 +4663,10 @@ class Memory:
                 record = await result.single()
                 if record:
                     await event_bus.emit(Event(
-                        type=EventType.EGO_EVOLVED,
+                        type=EventType.IDENTITY_DEPRECATED,
                         data={
                             "id": ego_id,
-                            "ego_type": record["ego_type"],
+                            "identity_type": record["ego_type"],
                             "action": "deprecate"
                         }
                     ))
@@ -4674,7 +4674,7 @@ class Memory:
                 return False
 
         except Exception as e:
-            print(f"Error deprecating ego: {e}")
+            print(f"Error deprecating identity: {e}")
             return False
 
     async def deprecate_ego_by_source(self, source_id: str) -> int:
