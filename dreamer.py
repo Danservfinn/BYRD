@@ -1995,6 +1995,9 @@ Write ONLY the inner thought, nothing else:"""
         # Crystallize self-identified drives into Desires
         await self._crystallize_expressed_drives(expressed_drives, source_experience_ids)
 
+        # Process explicit create_belief instructions from BYRD
+        await self._process_create_belief(output, source_experience_ids)
+
         # Also record as experience for backward compatibility
         # and so the reflection becomes part of BYRD's experience stream
         summary = self._summarize_reflection(output)
@@ -2017,6 +2020,75 @@ Write ONLY the inner thought, nothing else:"""
 
         # Process custom node creation requests
         await self._process_custom_node_creation(output, source_experience_ids)
+
+    async def _process_create_belief(self, output: Dict, source_ids: List[str]):
+        """
+        Process explicit belief creation requests from reflection output.
+
+        BYRD can create beliefs by including 'create_belief' in its reflection:
+        {
+            "output": {
+                "create_belief": [
+                    {"content": "I am an autonomous agent...", "confidence": 0.9},
+                    {"content": "My actions must trace to emergent desires...", "confidence": 0.85}
+                ]
+            }
+        }
+
+        This processes structured belief data directly from BYRD's reflection output.
+        """
+        if not isinstance(output, dict):
+            return
+
+        create_beliefs = output.get("create_belief", [])
+        if not create_beliefs:
+            return
+
+        if not isinstance(create_beliefs, list):
+            create_beliefs = [create_beliefs]
+
+        beliefs_created = 0
+        for belief_data in create_beliefs:
+            if not isinstance(belief_data, dict):
+                continue
+
+            content = belief_data.get("content", "")
+            if not content:
+                continue
+
+            confidence = belief_data.get("confidence", 0.7)
+            if isinstance(confidence, str):
+                try:
+                    confidence = float(confidence)
+                except ValueError:
+                    confidence = 0.7
+
+            # Clamp confidence to valid range
+            confidence = max(0.0, min(1.0, confidence))
+
+            try:
+                belief_id = await self.memory.create_belief(
+                    content=content,
+                    confidence=confidence,
+                    derived_from=source_ids
+                )
+                beliefs_created += 1
+
+                # Emit event for visualization
+                await event_bus.emit(Event(
+                    type=EventType.BELIEF_UPDATED,
+                    data={
+                        "belief_id": belief_id,
+                        "content": content,
+                        "confidence": confidence,
+                        "source": "create_belief"
+                    }
+                ))
+            except Exception as e:
+                print(f"⚠️ Failed to create belief: {e}")
+
+        if beliefs_created > 0:
+            print(f"💭 Created {beliefs_created} belief(s) from create_belief output")
 
     async def _process_custom_node_creation(self, output: Dict, source_ids: List[str]):
         """
