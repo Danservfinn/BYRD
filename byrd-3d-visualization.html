@@ -7236,7 +7236,7 @@
       eventList.innerHTML = events.slice(0, 50).map((e, idx) => {
         const colorClass = typeColors[e.type] || 'text-slate-600';
         const icon = typeIcons[e.type] || '•';
-        const time = new Date(e.timestamp).toLocaleTimeString();
+        const time = e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
         // Prefer narration (BYRD's inner voice) over raw data for display
         const preview = e.narration || e.data?.content || e.data?.description || e.data?.inner_voice || '';
 
@@ -7972,6 +7972,7 @@
           // Add to event log
           handleEvent({
             type: 'external_input_received',
+            timestamp: new Date().toISOString(),
             data: {
               content: content.length > 50 ? content.substring(0, 50) + '...' : content,
               source_type: 'human'
