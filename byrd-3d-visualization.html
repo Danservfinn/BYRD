@@ -7847,6 +7847,11 @@
       }
     });
 
+    // Expose message modal functions to global scope (required for onclick handlers)
+    window.showMessageModal = showMessageModal;
+    window.hideMessageModal = hideMessageModal;
+    window.sendExternalMessage = sendExternalMessage;
+
     // Kernel state for AGI Seed Directive editing
     let originalKernelYaml = '';
     let currentKernelYaml = '';
