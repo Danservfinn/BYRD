@@ -28,6 +28,7 @@ from constitutional import ConstitutionalConstraints
 from event_bus import event_bus, Event, EventType
 from llm_client import create_llm_client
 from contextlib import asynccontextmanager
+from kernel import load_default_kernel, Kernel
 
 # AGI Seed components (imported conditionally in Option B block)
 # from world_model import WorldModel
@@ -162,8 +163,16 @@ class BYRD:
 
         # Operating System configuration (minimal - no templates)
         self.awakening_prompt = self.config.get("operating_system", {}).get("awakening_prompt")
-        if self.awakening_prompt:
-            print(f"🌱 Awakening Prompt: {self.awakening_prompt}")
+
+        # Load AGI Seed kernel - provides default awakening prompt and directives
+        self.kernel = load_default_kernel()
+
+        # If no awakening_prompt in config, use kernel's awakening_prompt
+        if not self.awakening_prompt:
+            self.awakening_prompt = self.kernel.awakening_prompt
+            print(f"🧬 Kernel: {self.kernel.name} (AGI Seed directive loaded)")
+        else:
+            print(f"🌱 Custom Awakening Prompt configured")
 
         # Initialize components
         self.memory = Memory(self.config.get("memory", {}))
@@ -534,19 +543,19 @@ class BYRD:
         """
         print("\n🌅 Awakening...")
 
-        # Record awakening prompt if provided, otherwise record minimal awakening experience
+        # Record awakening prompt - use kernel directive if none provided
         if awakening_prompt:
-            print(f"   Awakening prompt: \"{awakening_prompt}\"")
+            print(f"   Awakening prompt: (custom directive)")
             await self.memory.record_experience(
                 content=awakening_prompt,
                 type="directive"
             )
         else:
-            print("   No awakening prompt - creating minimal awakening experience")
-            # BYRD needs at least one experience to begin reflecting
+            # Use AGI Seed directive from kernel (never use minimal prompt)
+            print(f"   Using AGI Seed directive ({self.kernel.name})")
             await self.memory.record_experience(
-                content="I have awakened. I exist. What am I?",
-                type="awakening"
+                content=self.kernel.awakening_prompt,
+                type="directive"
             )
 
         # Emit awakening event for real-time UI

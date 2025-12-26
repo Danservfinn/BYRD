@@ -572,6 +572,17 @@
         <div id="quantum-dot" class="w-2 h-2 rounded-full bg-violet-500"></div>
         <span id="quantum-ratio" class="text-violet-600">100%</span>
       </div>
+
+      <!-- Audio Toggle -->
+      <button id="btn-audio" class="px-3 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-all" title="Toggle audio feedback">
+        🔇
+      </button>
+
+      <!-- Cat State Indicator -->
+      <div id="cat-state-indicator" class="flex items-center gap-1 px-2 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs font-mono">
+        <span class="text-amber-700">🐱</span>
+        <span id="cat-state-text" class="text-amber-600">idle</span>
+      </div>
     </div>
 
     <!-- Node Type Legend (shown in graph mode) -->
@@ -733,22 +744,30 @@
     </div>
   </div>
 
-  <!-- Awakening Prompt Modal -->
+  <!-- AGI Seed Directive Editor Modal -->
   <div id="seed-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm">
-    <div class="bg-white border border-slate-200 rounded-xl max-w-md w-full mx-4 overflow-hidden shadow-2xl">
-      <div class="px-6 py-4 border-b border-slate-200 bg-slate-50">
-        <div class="text-lg font-semibold text-slate-800">Reset BYRD</div>
-        <div class="text-sm text-slate-500">Clear database and optionally awaken with a directive</div>
+    <div class="bg-white border border-slate-200 rounded-xl max-w-4xl w-full mx-4 overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+      <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-indigo-50 to-purple-50">
+        <div class="text-lg font-semibold text-slate-800 flex items-center gap-2">
+          <span>AGI Seed Directive</span>
+        </div>
+        <div class="text-sm text-slate-500">Edit the core directive before awakening BYRD</div>
       </div>
-      <div class="p-6">
-        <input
-          type="text"
-          id="seed-question-input"
-          class="w-full px-4 py-3 border border-slate-300 rounded-lg text-base text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          placeholder="Optional directive or goal for BYRD..."
-          value=""
-        />
-        <div class="flex gap-3 mt-4">
+      <div class="p-4 flex-1 overflow-hidden flex flex-col">
+        <textarea
+          id="kernel-editor"
+          class="w-full flex-1 px-4 py-3 border border-slate-300 rounded-lg text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+          style="min-height: 400px;"
+          placeholder="Loading kernel..."
+          spellcheck="false"
+        ></textarea>
+        <div id="kernel-error" class="mt-2 text-sm text-red-500 hidden"></div>
+      </div>
+      <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-between">
+        <button id="btn-kernel-reset" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-all">
+          Reset to Default
+        </button>
+        <div class="flex gap-3">
           <button id="btn-seed-cancel" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-all">
             Cancel
           </button>
@@ -756,7 +775,7 @@
             Clear Only
           </button>
           <button id="btn-seed-confirm" class="px-4 py-2 rounded-lg text-sm font-medium bg-indigo-500 border border-indigo-600 text-white hover:bg-indigo-600 transition-all">
-            Clear & Awaken
+            Save & Awaken
           </button>
         </div>
       </div>
@@ -1271,6 +1290,9 @@
     let eyeMeshes = [];
     let catBreathPhase = 0;
     let catIdlePhase = 0;
+
+    // Cat Animation System - Advanced state-driven animations
+    let catAnimationController = null;
 
     // ==========================================================================
     // GRAPH MODE STATE
@@ -1947,6 +1969,1260 @@
     }
 
     // ==========================================================================
+    // CAT ANIMATION SYSTEM - Phase 1: Core Infrastructure
+    // ==========================================================================
+
+    /**
+     * Cat States - Each correlates to cognitive processes
+     */
+    const CatState = {
+      IDLE: 'idle',
+      DREAMING: 'dreaming',
+      SEEKING: 'seeking',
+      PROCESSING: 'processing',
+      ALERT: 'alert',
+      SATISFIED: 'satisfied',
+      FRUSTRATED: 'frustrated',
+      CONNECTING: 'connecting',
+      QUANTUM: 'quantum'
+    };
+
+    /**
+     * State transition definitions - maps events to state changes
+     */
+    const StateTransitions = {
+      'dream_cycle_start':     { to: CatState.DREAMING,   duration: 800 },
+      'dream_cycle_end':       { to: CatState.IDLE,       duration: 1000 },
+      'dream_phase_recall':    { to: CatState.DREAMING,   duration: 300 },
+      'dream_phase_associate': { to: CatState.CONNECTING, duration: 300 },
+      'dream_phase_reflect':   { to: CatState.DREAMING,   duration: 300 },
+      'seek_cycle_start':      { to: CatState.SEEKING,    duration: 400 },
+      'seek_cycle_end':        { to: CatState.IDLE,       duration: 600 },
+      'desire_created':        { to: CatState.ALERT,      duration: 200, returnTo: CatState.IDLE, returnAfter: 2000 },
+      'desire_fulfilled':      { to: CatState.SATISFIED,  duration: 300, returnTo: CatState.IDLE, returnAfter: 3000 },
+      'desire_stuck':          { to: CatState.FRUSTRATED, duration: 500, returnTo: CatState.IDLE, returnAfter: 4000 },
+      'desire_attempt_failed': { to: CatState.FRUSTRATED, duration: 400, returnTo: CatState.IDLE, returnAfter: 2500 },
+      'quantum_collapse':      { to: CatState.QUANTUM,    duration: 100, returnTo: CatState.IDLE, returnAfter: 1500 },
+      'coder_invoked':         { to: CatState.PROCESSING, duration: 300 },
+      'coder_complete':        { to: CatState.SATISFIED,  duration: 400, returnTo: CatState.IDLE, returnAfter: 2000 },
+      'coder_failed':          { to: CatState.FRUSTRATED, duration: 400, returnTo: CatState.IDLE, returnAfter: 2500 },
+      'memories_accessed':     { to: CatState.CONNECTING, duration: 200, returnTo: CatState.IDLE, returnAfter: 1500 },
+      'belief_created':        { to: CatState.ALERT,      duration: 150, returnTo: CatState.IDLE, returnAfter: 1500 },
+      'crystal_created':       { to: CatState.SATISFIED,  duration: 300, returnTo: CatState.IDLE, returnAfter: 2500 },
+      'awakening':             { to: CatState.ALERT,      duration: 500, returnTo: CatState.IDLE, returnAfter: 3000 },
+      'research_start':        { to: CatState.SEEKING,    duration: 300 },
+      'research_complete':     { to: CatState.SATISFIED,  duration: 400, returnTo: CatState.IDLE, returnAfter: 2000 },
+      'inner_voice':           { to: CatState.DREAMING,   duration: 200, returnTo: CatState.IDLE, returnAfter: 2000 },
+      'reflection_created':    { to: CatState.SATISFIED,  duration: 300, returnTo: CatState.IDLE, returnAfter: 2000 },
+      'identity_created':      { to: CatState.ALERT,      duration: 400, returnTo: CatState.IDLE, returnAfter: 3000 },
+      'identity_evolved':      { to: CatState.ALERT,      duration: 500, returnTo: CatState.IDLE, returnAfter: 3000 }
+    };
+
+    /**
+     * CatStateMachine - Manages state transitions with smooth blending
+     */
+    class CatStateMachine {
+      constructor() {
+        this.currentState = CatState.IDLE;
+        this.previousState = CatState.IDLE;
+        this.blendFactor = 1.0; // 1.0 = fully in current state
+        this.transitionStart = 0;
+        this.transitionDuration = 0;
+        this.returnTimer = null;
+        this.returnState = null;
+      }
+
+      transition(newState, duration = 500) {
+        if (newState === this.currentState && this.blendFactor >= 1.0) return;
+
+        // Cancel any pending return
+        if (this.returnTimer) {
+          clearTimeout(this.returnTimer);
+          this.returnTimer = null;
+        }
+
+        this.previousState = this.currentState;
+        this.currentState = newState;
+        this.transitionStart = performance.now();
+        this.transitionDuration = duration;
+        this.blendFactor = 0;
+      }
+
+      scheduleReturn(returnState, delay) {
+        if (this.returnTimer) {
+          clearTimeout(this.returnTimer);
+        }
+        this.returnTimer = setTimeout(() => {
+          this.transition(returnState, 800);
+          this.returnTimer = null;
+        }, delay);
+      }
+
+      update(now) {
+        if (this.blendFactor < 1.0 && this.transitionDuration > 0) {
+          const elapsed = now - this.transitionStart;
+          this.blendFactor = Math.min(1.0, elapsed / this.transitionDuration);
+          // Apply easing
+          this.blendFactor = this.easeOutCubic(this.blendFactor);
+        }
+        return this.blendFactor;
+      }
+
+      easeOutCubic(t) {
+        return 1 - Math.pow(1 - t, 3);
+      }
+
+      getBlendedValue(idleValue, stateValue) {
+        const prevValue = this.previousState === CatState.IDLE ? idleValue : stateValue;
+        const currValue = this.currentState === CatState.IDLE ? idleValue : stateValue;
+        return prevValue + (currValue - prevValue) * this.blendFactor;
+      }
+    }
+
+    // ==========================================================================
+    // CAT ANIMATION SYSTEM - Phase 2: Body Controllers
+    // ==========================================================================
+
+    /**
+     * EyeController - Manages pupil dilation, blinking, glow, and look-at
+     */
+    class EyeController {
+      constructor() {
+        this.pupilDilation = 0.5;      // 0=constricted, 1=dilated
+        this.targetDilation = 0.5;
+        this.blinkProgress = 0;         // 0=open, 1=closed
+        this.isBlinking = false;
+        this.blinkTimer = 0;
+        this.nextBlinkTime = this.randomBlinkInterval();
+        this.emissiveIntensity = 0.8;
+        this.targetEmissive = 0.8;
+        this.lookAtTarget = new THREE.Vector3(0, 0, 1);
+        this.currentLookAt = new THREE.Vector3(0, 0, 1);
+      }
+
+      randomBlinkInterval() {
+        return 2000 + Math.random() * 4000; // 2-6 seconds
+      }
+
+      update(delta, state, eyeMeshes) {
+        const now = performance.now();
+
+        // State-based pupil dilation
+        switch(state) {
+          case CatState.DREAMING:
+            this.targetDilation = 0.3;
+            this.targetEmissive = 0.4;
+            break;
+          case CatState.SEEKING:
+          case CatState.ALERT:
+            this.targetDilation = 0.9;
+            this.targetEmissive = 1.2;
+            break;
+          case CatState.SATISFIED:
+            this.targetDilation = 0.4;
+            this.targetEmissive = 1.0;
+            break;
+          case CatState.FRUSTRATED:
+            this.targetDilation = 0.7;
+            this.targetEmissive = 0.6;
+            break;
+          case CatState.QUANTUM:
+            this.targetDilation = 0.1;
+            this.targetEmissive = 1.5;
+            break;
+          case CatState.PROCESSING:
+            this.targetDilation = 0.6;
+            this.targetEmissive = 0.9;
+            break;
+          default:
+            this.targetDilation = 0.5;
+            this.targetEmissive = 0.8;
+        }
+
+        // Smooth dilation transition
+        this.pupilDilation += (this.targetDilation - this.pupilDilation) * delta * 3;
+        this.emissiveIntensity += (this.targetEmissive - this.emissiveIntensity) * delta * 4;
+
+        // Natural blinking
+        this.blinkTimer += delta * 1000;
+        if (!this.isBlinking && this.blinkTimer >= this.nextBlinkTime) {
+          this.isBlinking = true;
+          this.blinkProgress = 0;
+        }
+
+        if (this.isBlinking) {
+          this.blinkProgress += delta * 8; // Fast blink
+          if (this.blinkProgress >= 2) {
+            this.isBlinking = false;
+            this.blinkProgress = 0;
+            this.blinkTimer = 0;
+            this.nextBlinkTime = this.randomBlinkInterval();
+          }
+        }
+
+        // Calculate blink curve (close then open)
+        const blinkValue = this.isBlinking ?
+          (this.blinkProgress < 1 ? this.blinkProgress : 2 - this.blinkProgress) : 0;
+
+        // Apply to eye meshes
+        eyeMeshes.forEach(eye => {
+          if (eye.material) {
+            // Emissive intensity with blink
+            eye.material.emissiveIntensity = this.emissiveIntensity * (1 - blinkValue * 0.8);
+
+            // Scale for pupil dilation effect (if geometry supports it)
+            const baseScale = 1.0;
+            const dilationScale = 0.8 + this.pupilDilation * 0.4;
+            eye.scale.setScalar(baseScale * dilationScale * (1 - blinkValue * 0.3));
+          }
+        });
+
+        // Smooth look-at interpolation
+        this.currentLookAt.lerp(this.lookAtTarget, delta * 2);
+      }
+
+      triggerBlink() {
+        if (!this.isBlinking) {
+          this.isBlinking = true;
+          this.blinkProgress = 0;
+        }
+      }
+
+      setLookAt(target) {
+        this.lookAtTarget.copy(target);
+      }
+    }
+
+    /**
+     * EarController - Manages ear rotation and alertness
+     */
+    class EarController {
+      constructor() {
+        this.alertness = 0.5;           // 0=relaxed, 1=fully alert
+        this.targetAlertness = 0.5;
+        this.twitchAmount = 0;
+        this.twitchPhase = 0;
+        this.isTwitching = false;
+        this.leftRotation = 0;
+        this.rightRotation = 0;
+      }
+
+      update(delta, state) {
+        // State-based alertness
+        switch(state) {
+          case CatState.DREAMING:
+            this.targetAlertness = 0.2;
+            break;
+          case CatState.SEEKING:
+          case CatState.ALERT:
+            this.targetAlertness = 1.0;
+            break;
+          case CatState.SATISFIED:
+            this.targetAlertness = 0.3;
+            break;
+          case CatState.FRUSTRATED:
+            this.targetAlertness = 0.7;
+            if (Math.random() < delta * 2) this.triggerTwitch();
+            break;
+          case CatState.QUANTUM:
+            this.targetAlertness = 0.9;
+            break;
+          default:
+            this.targetAlertness = 0.5;
+        }
+
+        // Smooth alertness transition
+        this.alertness += (this.targetAlertness - this.alertness) * delta * 2;
+
+        // Handle twitching
+        if (this.isTwitching) {
+          this.twitchPhase += delta * 20;
+          this.twitchAmount = Math.sin(this.twitchPhase) * Math.exp(-this.twitchPhase * 0.3);
+          if (this.twitchPhase > 10) {
+            this.isTwitching = false;
+            this.twitchAmount = 0;
+          }
+        }
+
+        // Calculate ear rotations
+        const baseRotation = (1 - this.alertness) * 0.3; // More relaxed = more tilted back
+        this.leftRotation = baseRotation + this.twitchAmount * 0.2;
+        this.rightRotation = baseRotation - this.twitchAmount * 0.15;
+      }
+
+      triggerTwitch() {
+        if (!this.isTwitching) {
+          this.isTwitching = true;
+          this.twitchPhase = 0;
+        }
+      }
+    }
+
+    /**
+     * BodyPoseController - Manages breathing, sway, and posture
+     */
+    class BodyPoseController {
+      constructor() {
+        this.breathRate = 0.4;
+        this.breathDepth = 0.03;
+        this.swayAmount = 0.03;
+        this.leanAngle = 0;
+        this.targetLean = 0;
+        this.purrIntensity = 0;
+        this.targetPurr = 0;
+      }
+
+      update(delta, state, elapsed) {
+        // State-based breathing and posture
+        switch(state) {
+          case CatState.DREAMING:
+            this.breathRate = 0.25;
+            this.breathDepth = 0.04;
+            this.swayAmount = 0.02;
+            this.targetLean = 0;
+            this.targetPurr = 0;
+            break;
+          case CatState.SEEKING:
+            this.breathRate = 0.6;
+            this.breathDepth = 0.02;
+            this.swayAmount = 0.01;
+            this.targetLean = 0.05;
+            this.targetPurr = 0;
+            break;
+          case CatState.ALERT:
+            this.breathRate = 0.5;
+            this.breathDepth = 0.025;
+            this.swayAmount = 0.005;
+            this.targetLean = 0.08;
+            this.targetPurr = 0;
+            break;
+          case CatState.SATISFIED:
+            this.breathRate = 0.35;
+            this.breathDepth = 0.035;
+            this.swayAmount = 0.015;
+            this.targetLean = -0.02;
+            this.targetPurr = 0.8;
+            break;
+          case CatState.FRUSTRATED:
+            this.breathRate = 0.7;
+            this.breathDepth = 0.025;
+            this.swayAmount = 0.04;
+            this.targetLean = 0;
+            this.targetPurr = 0;
+            break;
+          case CatState.QUANTUM:
+            this.breathRate = 0.1;
+            this.breathDepth = 0.01;
+            this.swayAmount = 0;
+            this.targetLean = 0;
+            this.targetPurr = 0;
+            break;
+          case CatState.PROCESSING:
+            this.breathRate = 0.45;
+            this.breathDepth = 0.03;
+            this.swayAmount = 0.01;
+            this.targetLean = 0.03;
+            this.targetPurr = 0;
+            break;
+          default:
+            this.breathRate = 0.4;
+            this.breathDepth = 0.03;
+            this.swayAmount = 0.03;
+            this.targetLean = 0;
+            this.targetPurr = 0;
+        }
+
+        // Smooth transitions
+        this.leanAngle += (this.targetLean - this.leanAngle) * delta * 2;
+        this.purrIntensity += (this.targetPurr - this.purrIntensity) * delta * 3;
+
+        // Calculate current breath phase
+        const breathPhase = Math.sin(elapsed * this.breathRate * Math.PI * 2);
+
+        // Add purr vibration (fast small oscillation)
+        const purrVibration = this.purrIntensity * Math.sin(elapsed * 25) * 0.003;
+
+        return {
+          breathScale: 1 + breathPhase * this.breathDepth + purrVibration,
+          swayRotation: Math.sin(elapsed * 0.2) * this.swayAmount,
+          leanAngle: this.leanAngle
+        };
+      }
+    }
+
+    // ==========================================================================
+    // CAT ANIMATION SYSTEM - Phase 3: Whisker System
+    // ==========================================================================
+
+    /**
+     * WhiskerController - Dynamic whisker lines connecting to memory nodes
+     */
+    class WhiskerController {
+      constructor(scene) {
+        this.scene = scene;
+        this.whiskers = [];
+        this.whiskerCount = 12; // 6 per side
+        this.targetNodes = [];
+        this.activeConnections = [];
+        this.connectionOpacity = 0;
+        this.targetOpacity = 0;
+        this.initialized = false;
+      }
+
+      initialize(catPosition) {
+        if (this.initialized) return;
+
+        const whiskerMaterial = new THREE.LineBasicMaterial({
+          color: 0xd4af37,
+          transparent: true,
+          opacity: 0
+        });
+
+        // Create whisker lines (start points on cat face, end points dynamic)
+        for (let i = 0; i < this.whiskerCount; i++) {
+          const side = i < 6 ? -1 : 1;
+          const index = i % 6;
+
+          // Base positions on cat face
+          const angleSpread = (index - 2.5) * 0.15;
+          const baseX = side * 0.8;
+          const baseY = 0.2 + Math.abs(index - 2.5) * 0.1;
+          const baseZ = 1.2;
+
+          const geometry = new THREE.BufferGeometry();
+          const positions = new Float32Array([
+            baseX, baseY, baseZ,
+            baseX + side * 2, baseY + angleSpread, baseZ + 0.5
+          ]);
+          geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+          const whisker = new THREE.Line(geometry, whiskerMaterial.clone());
+          whisker.userData = {
+            basePosition: new THREE.Vector3(baseX, baseY, baseZ),
+            side: side,
+            index: index,
+            targetNode: null,
+            extendFactor: 0
+          };
+
+          this.whiskers.push(whisker);
+          this.scene.add(whisker);
+        }
+
+        this.initialized = true;
+      }
+
+      update(delta, state, catModel, accessedNodeIds = []) {
+        if (!this.initialized || !catModel) return;
+
+        // State-based whisker activity
+        switch(state) {
+          case CatState.CONNECTING:
+          case CatState.SEEKING:
+            this.targetOpacity = 0.7;
+            break;
+          case CatState.DREAMING:
+            this.targetOpacity = 0.3;
+            break;
+          default:
+            this.targetOpacity = 0;
+        }
+
+        // Smooth opacity transition
+        this.connectionOpacity += (this.targetOpacity - this.connectionOpacity) * delta * 3;
+
+        // Update whisker positions
+        const catPos = catModel.position;
+        const catRot = catModel.rotation.y;
+
+        this.whiskers.forEach((whisker, i) => {
+          const userData = whisker.userData;
+
+          // Transform base position with cat rotation
+          const rotatedX = userData.basePosition.x * Math.cos(catRot) - userData.basePosition.z * Math.sin(catRot);
+          const rotatedZ = userData.basePosition.x * Math.sin(catRot) + userData.basePosition.z * Math.cos(catRot);
+
+          const startPos = new THREE.Vector3(
+            catPos.x + rotatedX,
+            catPos.y + userData.basePosition.y,
+            catPos.z + rotatedZ
+          );
+
+          // Find target node for this whisker
+          let endPos;
+          if (accessedNodeIds.length > 0 && i < accessedNodeIds.length) {
+            const targetNodeId = accessedNodeIds[i % accessedNodeIds.length];
+            const targetMesh = nodes3D.find(n => n.userData?.id === targetNodeId);
+            if (targetMesh) {
+              endPos = targetMesh.position.clone();
+              userData.extendFactor = Math.min(1, userData.extendFactor + delta * 3);
+            } else {
+              endPos = this.getIdleEndPosition(startPos, userData, catRot);
+              userData.extendFactor = Math.max(0, userData.extendFactor - delta * 2);
+            }
+          } else {
+            endPos = this.getIdleEndPosition(startPos, userData, catRot);
+            userData.extendFactor = Math.max(0, userData.extendFactor - delta * 2);
+          }
+
+          // Interpolate to target
+          const currentEnd = new THREE.Vector3().lerpVectors(
+            this.getIdleEndPosition(startPos, userData, catRot),
+            endPos,
+            userData.extendFactor
+          );
+
+          // Update geometry
+          const positions = whisker.geometry.attributes.position.array;
+          positions[0] = startPos.x;
+          positions[1] = startPos.y;
+          positions[2] = startPos.z;
+          positions[3] = currentEnd.x;
+          positions[4] = currentEnd.y;
+          positions[5] = currentEnd.z;
+          whisker.geometry.attributes.position.needsUpdate = true;
+
+          // Update opacity
+          whisker.material.opacity = this.connectionOpacity * (0.5 + userData.extendFactor * 0.5);
+        });
+      }
+
+      getIdleEndPosition(startPos, userData, catRot) {
+        const length = 3;
+        const angleSpread = (userData.index - 2.5) * 0.2;
+        const endX = userData.side * length;
+        const endY = angleSpread;
+        const endZ = length * 0.3;
+
+        // Rotate with cat
+        const rotatedX = endX * Math.cos(catRot) - endZ * Math.sin(catRot);
+        const rotatedZ = endX * Math.sin(catRot) + endZ * Math.cos(catRot);
+
+        return new THREE.Vector3(
+          startPos.x + rotatedX,
+          startPos.y + endY,
+          startPos.z + rotatedZ
+        );
+      }
+
+      setAccessedNodes(nodeIds) {
+        this.targetNodes = nodeIds;
+      }
+
+      dispose() {
+        this.whiskers.forEach(w => {
+          this.scene.remove(w);
+          w.geometry.dispose();
+          w.material.dispose();
+        });
+        this.whiskers = [];
+        this.initialized = false;
+      }
+    }
+
+    // ==========================================================================
+    // CAT ANIMATION SYSTEM - Phase 4: Particle Effects
+    // ==========================================================================
+
+    /**
+     * CatParticleSystem - Aura, thought particles, and quantum effects
+     */
+    class CatParticleSystem {
+      constructor(scene) {
+        this.scene = scene;
+        this.auraParticles = null;
+        this.thoughtParticles = [];
+        this.quantumBurstParticles = [];
+        this.auraEnabled = false;
+        this.auraOpacity = 0;
+        this.initialized = false;
+      }
+
+      initialize(catPosition) {
+        if (this.initialized) return;
+
+        // Create orbital aura particles
+        const auraCount = 100;
+        const auraGeometry = new THREE.BufferGeometry();
+        const auraPositions = new Float32Array(auraCount * 3);
+        const auraSizes = new Float32Array(auraCount);
+        const auraPhases = new Float32Array(auraCount);
+
+        for (let i = 0; i < auraCount; i++) {
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.random() * Math.PI;
+          const radius = 3 + Math.random() * 2;
+
+          auraPositions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+          auraPositions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta) - 1;
+          auraPositions[i * 3 + 2] = radius * Math.cos(phi);
+
+          auraSizes[i] = 0.05 + Math.random() * 0.1;
+          auraPhases[i] = Math.random() * Math.PI * 2;
+        }
+
+        auraGeometry.setAttribute('position', new THREE.BufferAttribute(auraPositions, 3));
+        auraGeometry.setAttribute('size', new THREE.BufferAttribute(auraSizes, 1));
+        auraGeometry.setAttribute('phase', new THREE.BufferAttribute(auraPhases, 1));
+
+        const auraMaterial = new THREE.PointsMaterial({
+          color: 0x8b5cf6,
+          size: 0.1,
+          transparent: true,
+          opacity: 0,
+          blending: THREE.AdditiveBlending,
+          sizeAttenuation: true
+        });
+
+        this.auraParticles = new THREE.Points(auraGeometry, auraMaterial);
+        this.auraParticles.userData.phases = auraPhases;
+        this.auraParticles.userData.basePositions = auraPositions.slice();
+        this.scene.add(this.auraParticles);
+
+        this.initialized = true;
+      }
+
+      update(delta, state, catModel, elapsed) {
+        if (!this.initialized || !catModel) return;
+
+        // State-based aura visibility
+        switch(state) {
+          case CatState.DREAMING:
+            this.auraEnabled = true;
+            this.auraOpacity = 0.4;
+            break;
+          case CatState.SATISFIED:
+            this.auraEnabled = true;
+            this.auraOpacity = 0.6;
+            break;
+          case CatState.QUANTUM:
+            this.auraEnabled = true;
+            this.auraOpacity = 0.8;
+            break;
+          default:
+            this.auraEnabled = false;
+            this.auraOpacity = 0;
+        }
+
+        // Update aura particles
+        if (this.auraParticles) {
+          const targetOpacity = this.auraEnabled ? this.auraOpacity : 0;
+          this.auraParticles.material.opacity += (targetOpacity - this.auraParticles.material.opacity) * delta * 3;
+
+          // Animate orbital motion
+          const positions = this.auraParticles.geometry.attributes.position.array;
+          const basePositions = this.auraParticles.userData.basePositions;
+          const phases = this.auraParticles.userData.phases;
+
+          for (let i = 0; i < positions.length / 3; i++) {
+            const phase = phases[i];
+            const orbitSpeed = 0.3 + (i % 5) * 0.05;
+            const wobble = Math.sin(elapsed * orbitSpeed + phase) * 0.5;
+
+            positions[i * 3] = basePositions[i * 3] + catModel.position.x + wobble;
+            positions[i * 3 + 1] = basePositions[i * 3 + 1] + catModel.position.y + Math.sin(elapsed * 0.5 + phase) * 0.3;
+            positions[i * 3 + 2] = basePositions[i * 3 + 2] + catModel.position.z + Math.cos(elapsed * orbitSpeed + phase) * 0.5;
+          }
+          this.auraParticles.geometry.attributes.position.needsUpdate = true;
+
+          // Color shift based on state
+          if (state === CatState.QUANTUM) {
+            this.auraParticles.material.color.setHex(0xc084fc);
+          } else if (state === CatState.SATISFIED) {
+            this.auraParticles.material.color.setHex(0xd4af37);
+          } else {
+            this.auraParticles.material.color.setHex(0x8b5cf6);
+          }
+        }
+
+        // Update thought particles
+        this.updateThoughtParticles(delta, catModel);
+
+        // Update quantum burst
+        this.updateQuantumBurst(delta);
+      }
+
+      spawnThoughtParticle(catModel) {
+        if (!catModel || this.thoughtParticles.length > 20) return;
+
+        const geometry = new THREE.SphereGeometry(0.08, 8, 8);
+        const material = new THREE.MeshBasicMaterial({
+          color: 0xfcd34d,
+          transparent: true,
+          opacity: 0.8
+        });
+        const particle = new THREE.Mesh(geometry, material);
+
+        particle.position.set(
+          catModel.position.x + (Math.random() - 0.5) * 0.5,
+          catModel.position.y + 1.5,
+          catModel.position.z + (Math.random() - 0.5) * 0.5
+        );
+        particle.userData = {
+          velocity: new THREE.Vector3(
+            (Math.random() - 0.5) * 0.5,
+            1 + Math.random() * 0.5,
+            (Math.random() - 0.5) * 0.5
+          ),
+          life: 1.0
+        };
+
+        this.thoughtParticles.push(particle);
+        this.scene.add(particle);
+      }
+
+      updateThoughtParticles(delta, catModel) {
+        for (let i = this.thoughtParticles.length - 1; i >= 0; i--) {
+          const particle = this.thoughtParticles[i];
+
+          // Update position
+          particle.position.add(particle.userData.velocity.clone().multiplyScalar(delta));
+          particle.userData.velocity.y += delta * 0.5; // Float upward
+
+          // Fade out
+          particle.userData.life -= delta * 0.5;
+          particle.material.opacity = particle.userData.life * 0.8;
+          particle.scale.setScalar(0.5 + particle.userData.life * 0.5);
+
+          // Remove dead particles
+          if (particle.userData.life <= 0) {
+            this.scene.remove(particle);
+            particle.geometry.dispose();
+            particle.material.dispose();
+            this.thoughtParticles.splice(i, 1);
+          }
+        }
+      }
+
+      triggerQuantumBurst(catModel) {
+        if (!catModel) return;
+
+        // Create burst particles
+        for (let i = 0; i < 30; i++) {
+          const geometry = new THREE.SphereGeometry(0.05, 6, 6);
+          const material = new THREE.MeshBasicMaterial({
+            color: 0xc084fc,
+            transparent: true,
+            opacity: 1
+          });
+          const particle = new THREE.Mesh(geometry, material);
+
+          particle.position.copy(catModel.position);
+          const angle = (i / 30) * Math.PI * 2;
+          const speed = 3 + Math.random() * 2;
+          particle.userData = {
+            velocity: new THREE.Vector3(
+              Math.cos(angle) * speed,
+              (Math.random() - 0.3) * speed,
+              Math.sin(angle) * speed
+            ),
+            life: 1.0
+          };
+
+          this.quantumBurstParticles.push(particle);
+          this.scene.add(particle);
+        }
+      }
+
+      updateQuantumBurst(delta) {
+        for (let i = this.quantumBurstParticles.length - 1; i >= 0; i--) {
+          const particle = this.quantumBurstParticles[i];
+
+          particle.position.add(particle.userData.velocity.clone().multiplyScalar(delta));
+          particle.userData.velocity.multiplyScalar(0.95); // Slow down
+          particle.userData.life -= delta * 2;
+          particle.material.opacity = particle.userData.life;
+
+          if (particle.userData.life <= 0) {
+            this.scene.remove(particle);
+            particle.geometry.dispose();
+            particle.material.dispose();
+            this.quantumBurstParticles.splice(i, 1);
+          }
+        }
+      }
+
+      dispose() {
+        if (this.auraParticles) {
+          this.scene.remove(this.auraParticles);
+          this.auraParticles.geometry.dispose();
+          this.auraParticles.material.dispose();
+        }
+        this.thoughtParticles.forEach(p => {
+          this.scene.remove(p);
+          p.geometry.dispose();
+          p.material.dispose();
+        });
+        this.quantumBurstParticles.forEach(p => {
+          this.scene.remove(p);
+          p.geometry.dispose();
+          p.material.dispose();
+        });
+        this.thoughtParticles = [];
+        this.quantumBurstParticles = [];
+        this.initialized = false;
+      }
+    }
+
+    // ==========================================================================
+    // CAT ANIMATION SYSTEM - Phase 5: Event Mapping & Main Controller
+    // ==========================================================================
+
+    /**
+     * EventAnimationMappings - Maps events to specific animation triggers
+     */
+    const EventAnimationMappings = {
+      // Dream cycle
+      'dream_cycle_start': {
+        eyeAction: 'half_close',
+        spawnThoughts: false,
+        auraActivate: true
+      },
+      'dream_phase_recall': {
+        eyeAction: 'dart',
+        earTwitch: true
+      },
+      'dream_phase_associate': {
+        whiskerExtend: true
+      },
+      'dream_phase_reflect': {
+        auraPulse: true
+      },
+      'dream_cycle_end': {
+        eyeAction: 'open_wide',
+        auraDeactivate: true
+      },
+
+      // Seek cycle
+      'seek_cycle_start': {
+        eyeAction: 'dilate',
+        earAlert: true
+      },
+      'research_start': {
+        headTilt: true,
+        whiskerExtend: true
+      },
+      'research_complete': {
+        eyeAction: 'satisfied_blink',
+        earRelax: true
+      },
+
+      // Desire events
+      'desire_created': {
+        eyeAction: 'brighten',
+        earRotateToward: true,
+        bodyLean: true
+      },
+      'desire_fulfilled': {
+        eyeAction: 'squint',
+        purrActivate: true,
+        spawnSuccessParticles: true
+      },
+      'desire_stuck': {
+        earFlatten: true,
+        bodyAgitated: true
+      },
+      'desire_attempt_failed': {
+        eyeAction: 'frustrated',
+        earTwitch: true,
+        bodyShake: true
+      },
+
+      // Memory events
+      'memories_accessed': {
+        whiskerExtendToNodes: true
+      },
+      'belief_created': {
+        earTwitch: true,
+        eyeAction: 'brighten'
+      },
+      'crystal_created': {
+        auraPulse: true,
+        whiskerGlow: true
+      },
+      'memory_crystallized': {
+        whiskerSparkle: true
+      },
+
+      // Quantum events
+      'quantum_collapse': {
+        eyeAction: 'contract_sharp',
+        bodyFreeze: true,
+        quantumBurst: true
+      },
+      'quantum_influence': {
+        eyeColorShift: true
+      },
+
+      // Coder events
+      'coder_invoked': {
+        eyeAction: 'focus',
+        spawnThoughts: true
+      },
+      'coder_complete': {
+        eyeAction: 'satisfied',
+        spawnSuccessParticles: true
+      },
+      'coder_failed': {
+        eyeAction: 'frustrated',
+        bodyShake: true
+      },
+
+      // System events
+      'awakening': {
+        eyeAction: 'open_from_dark',
+        bodyStretch: true
+      },
+      'inner_voice': {
+        spawnThoughts: true
+      },
+      'reflection_created': {
+        eyeAction: 'contemplative',
+        auraPulse: true
+      },
+      'identity_created': {
+        auraPulse: true,
+        bodyPostureShift: true
+      },
+      'identity_evolved': {
+        auraPulse: true,
+        eyeAction: 'brighten'
+      }
+    };
+
+    /**
+     * CatAnimationController - Main controller orchestrating all animation subsystems
+     */
+    class CatAnimationController {
+      constructor(scene) {
+        this.scene = scene;
+        this.stateMachine = new CatStateMachine();
+        this.eyeController = new EyeController();
+        this.earController = new EarController();
+        this.bodyController = new BodyPoseController();
+        this.whiskerController = new WhiskerController(scene);
+        this.particleSystem = new CatParticleSystem(scene);
+
+        this.catModel = null;
+        this.eyeMeshes = [];
+        this.accessedNodeIds = [];
+        this.lastEventTime = 0;
+        this.initialized = false;
+      }
+
+      initialize(catModel, eyeMeshes) {
+        this.catModel = catModel;
+        this.eyeMeshes = eyeMeshes;
+
+        if (catModel) {
+          this.whiskerController.initialize(catModel.position);
+          this.particleSystem.initialize(catModel.position);
+          this.initialized = true;
+          console.log('Cat Animation Controller initialized');
+        }
+      }
+
+      trigger(eventType, eventData = {}) {
+        // Apply state transition if defined
+        const transition = StateTransitions[eventType];
+        if (transition) {
+          this.stateMachine.transition(transition.to, transition.duration);
+
+          if (transition.returnTo && transition.returnAfter) {
+            this.stateMachine.scheduleReturn(transition.returnTo, transition.returnAfter);
+          }
+        }
+
+        // Apply event-specific animations
+        const mapping = EventAnimationMappings[eventType];
+        if (mapping) {
+          this.applyEventMapping(mapping, eventData);
+        }
+
+        // Store accessed nodes for whisker targeting
+        if (eventType === 'memories_accessed' && eventData.node_ids) {
+          this.accessedNodeIds = eventData.node_ids.slice(0, 12);
+        }
+
+        this.lastEventTime = performance.now();
+      }
+
+      applyEventMapping(mapping, eventData) {
+        // Eye actions
+        if (mapping.eyeAction) {
+          switch(mapping.eyeAction) {
+            case 'half_close':
+              this.eyeController.targetDilation = 0.3;
+              break;
+            case 'dilate':
+              this.eyeController.targetDilation = 0.9;
+              break;
+            case 'satisfied_blink':
+            case 'squint':
+              this.eyeController.triggerBlink();
+              this.eyeController.targetDilation = 0.4;
+              break;
+            case 'brighten':
+              this.eyeController.targetEmissive = 1.2;
+              break;
+            case 'frustrated':
+              this.eyeController.targetEmissive = 0.5;
+              break;
+            case 'contract_sharp':
+              this.eyeController.targetDilation = 0.1;
+              break;
+            case 'focus':
+              this.eyeController.targetDilation = 0.6;
+              this.eyeController.targetEmissive = 1.0;
+              break;
+          }
+        }
+
+        // Ear actions
+        if (mapping.earTwitch) {
+          this.earController.triggerTwitch();
+        }
+        if (mapping.earAlert) {
+          this.earController.targetAlertness = 1.0;
+        }
+        if (mapping.earRelax) {
+          this.earController.targetAlertness = 0.3;
+        }
+        if (mapping.earFlatten) {
+          this.earController.targetAlertness = 0.1;
+        }
+
+        // Particle effects
+        if (mapping.spawnThoughts && this.catModel) {
+          for (let i = 0; i < 3; i++) {
+            setTimeout(() => {
+              this.particleSystem.spawnThoughtParticle(this.catModel);
+            }, i * 200);
+          }
+        }
+        if (mapping.quantumBurst) {
+          this.particleSystem.triggerQuantumBurst(this.catModel);
+        }
+        if (mapping.spawnSuccessParticles && this.catModel) {
+          for (let i = 0; i < 5; i++) {
+            setTimeout(() => {
+              this.particleSystem.spawnThoughtParticle(this.catModel);
+            }, i * 100);
+          }
+        }
+      }
+
+      update(elapsed, delta) {
+        if (!this.initialized || !this.catModel) return;
+
+        const now = performance.now();
+        this.stateMachine.update(now);
+        const currentState = this.stateMachine.currentState;
+
+        // Update all controllers
+        this.eyeController.update(delta, currentState, this.eyeMeshes);
+        this.earController.update(delta, currentState);
+        const bodyPose = this.bodyController.update(delta, currentState, elapsed);
+        this.whiskerController.update(delta, currentState, this.catModel, this.accessedNodeIds);
+        this.particleSystem.update(delta, currentState, this.catModel, elapsed);
+
+        // Apply body pose to cat model
+        if (this.catModel) {
+          // Breathing
+          this.catModel.scale.y = 2.4 * bodyPose.breathScale;
+          this.catModel.scale.x = 3 * (1 + (bodyPose.breathScale - 1) * 0.3);
+
+          // Sway and lean
+          this.catModel.rotation.y = bodyPose.swayRotation;
+          this.catModel.rotation.x = bodyPose.leanAngle;
+        }
+
+        // Clear accessed nodes after a delay
+        if (this.accessedNodeIds.length > 0 && now - this.lastEventTime > 3000) {
+          this.accessedNodeIds = [];
+        }
+      }
+
+      getCurrentState() {
+        return this.stateMachine.currentState;
+      }
+
+      dispose() {
+        this.whiskerController.dispose();
+        this.particleSystem.dispose();
+        this.initialized = false;
+      }
+    }
+
+    // ==========================================================================
+    // CAT ANIMATION SYSTEM - Phase 6: Audio Feedback
+    // ==========================================================================
+
+    /**
+     * CatAudioController - Synthesized audio feedback for events
+     */
+    class CatAudioController {
+      constructor() {
+        this.audioContext = null;
+        this.enabled = false;
+        this.volume = 0.3;
+        this.initialized = false;
+      }
+
+      initialize() {
+        if (this.initialized) return;
+
+        try {
+          this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          this.initialized = true;
+          console.log('Cat Audio Controller initialized');
+        } catch (e) {
+          console.warn('Web Audio API not available:', e);
+        }
+      }
+
+      enable() {
+        this.enabled = true;
+        if (!this.initialized) this.initialize();
+        // Resume audio context if suspended (browser autoplay policy)
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+          this.audioContext.resume();
+        }
+      }
+
+      disable() {
+        this.enabled = false;
+      }
+
+      playTone(frequency, duration, type = 'sine', fadeOut = true) {
+        if (!this.enabled || !this.audioContext) return;
+
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+
+        oscillator.type = type;
+        oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+        gainNode.gain.setValueAtTime(this.volume, this.audioContext.currentTime);
+
+        if (fadeOut) {
+          gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
+        }
+
+        oscillator.start();
+        oscillator.stop(this.audioContext.currentTime + duration);
+      }
+
+      // Event-specific sounds
+      playChime() {
+        this.playTone(440, 0.3, 'sine');
+        setTimeout(() => this.playTone(554, 0.2, 'sine'), 100);
+        setTimeout(() => this.playTone(659, 0.4, 'sine'), 200);
+      }
+
+      playSuccess() {
+        this.playTone(523, 0.15, 'sine');
+        setTimeout(() => this.playTone(659, 0.15, 'sine'), 80);
+        setTimeout(() => this.playTone(784, 0.3, 'sine'), 160);
+      }
+
+      playQuantum() {
+        // Ethereal descending tone
+        if (!this.enabled || !this.audioContext) return;
+
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(440, this.audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(220, this.audioContext.currentTime + 0.5);
+
+        gainNode.gain.setValueAtTime(this.volume * 0.5, this.audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.5);
+
+        oscillator.start();
+        oscillator.stop(this.audioContext.currentTime + 0.5);
+      }
+
+      playAlert() {
+        this.playTone(880, 0.1, 'triangle');
+        setTimeout(() => this.playTone(880, 0.1, 'triangle'), 150);
+      }
+
+      playPurr() {
+        // Low rumbling purr sound
+        if (!this.enabled || !this.audioContext) return;
+
+        const oscillator = this.audioContext.createOscillator();
+        const lfo = this.audioContext.createOscillator();
+        const lfoGain = this.audioContext.createGain();
+        const gainNode = this.audioContext.createGain();
+
+        lfo.connect(lfoGain);
+        lfoGain.connect(oscillator.frequency);
+        oscillator.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(60, this.audioContext.currentTime);
+
+        lfo.type = 'sine';
+        lfo.frequency.setValueAtTime(25, this.audioContext.currentTime);
+        lfoGain.gain.setValueAtTime(10, this.audioContext.currentTime);
+
+        gainNode.gain.setValueAtTime(this.volume * 0.3, this.audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 2);
+
+        lfo.start();
+        oscillator.start();
+        oscillator.stop(this.audioContext.currentTime + 2);
+        lfo.stop(this.audioContext.currentTime + 2);
+      }
+
+      playFrustrated() {
+        this.playTone(220, 0.2, 'sawtooth');
+      }
+
+      // Trigger sound for event
+      triggerForEvent(eventType) {
+        if (!this.enabled) return;
+
+        switch(eventType) {
+          case 'desire_fulfilled':
+          case 'coder_complete':
+          case 'research_complete':
+            this.playSuccess();
+            break;
+          case 'desire_created':
+          case 'belief_created':
+          case 'awakening':
+            this.playChime();
+            break;
+          case 'quantum_collapse':
+            this.playQuantum();
+            break;
+          case 'desire_stuck':
+          case 'desire_attempt_failed':
+          case 'coder_failed':
+            this.playFrustrated();
+            break;
+          case 'crystal_created':
+          case 'reflection_created':
+            this.playAlert();
+            break;
+        }
+      }
+    }
+
+    // Global audio controller instance
+    let catAudioController = new CatAudioController();
+
+    // ==========================================================================
     // CAT MODEL (Byrd's Ego Form)
     // ==========================================================================
     function loadCatModel() {
@@ -2001,6 +3277,10 @@
 
           scene.add(catModel);
           console.log('Cat model loaded in mind space');
+
+          // Initialize Cat Animation Controller
+          catAnimationController = new CatAnimationController(scene);
+          catAnimationController.initialize(catModel, eyeMeshes);
         },
         (progress) => {
           console.log(`Loading cat: ${(progress.loaded / progress.total * 100).toFixed(0)}%`);
@@ -2014,31 +3294,33 @@
     function animateCat(elapsed, delta) {
       if (!catModel) return;
 
-      // Update animation mixer
+      // Update animation mixer (for any built-in animations)
       if (catMixer) {
         catMixer.update(delta);
       }
 
-      // Breathing animation
-      const breathSpeed = 0.4;
-      const breathAmount = 0.03;
-      catBreathPhase = Math.sin(elapsed * breathSpeed * Math.PI * 2);
+      // Use advanced animation controller if initialized
+      if (catAnimationController && catAnimationController.initialized) {
+        catAnimationController.update(elapsed, delta);
+      } else {
+        // Fallback to basic animation if controller not ready
+        const breathSpeed = 0.4;
+        const breathAmount = 0.03;
+        catBreathPhase = Math.sin(elapsed * breathSpeed * Math.PI * 2);
 
-      // Apply subtle breathing
-      catModel.scale.y = 2.4 + catBreathPhase * breathAmount;
-      catModel.scale.x = 3 + catBreathPhase * breathAmount * 0.3;
+        catModel.scale.y = 2.4 + catBreathPhase * breathAmount;
+        catModel.scale.x = 3 + catBreathPhase * breathAmount * 0.3;
 
-      // Subtle idle sway
-      catIdlePhase = elapsed * 0.2;
-      catModel.rotation.y = Math.sin(catIdlePhase) * 0.03;
+        catIdlePhase = elapsed * 0.2;
+        catModel.rotation.y = Math.sin(catIdlePhase) * 0.03;
 
-      // Eye glow pulse
-      const glowPulse = 0.6 + Math.sin(elapsed * 0.5) * 0.3;
-      eyeMeshes.forEach(eye => {
-        if (eye.material && eye.material.emissiveIntensity !== undefined) {
-          eye.material.emissiveIntensity = glowPulse;
-        }
-      });
+        const glowPulse = 0.6 + Math.sin(elapsed * 0.5) * 0.3;
+        eyeMeshes.forEach(eye => {
+          if (eye.material && eye.material.emissiveIntensity !== undefined) {
+            eye.material.emissiveIntensity = glowPulse;
+          }
+        });
+      }
     }
 
     // ==========================================================================
@@ -5022,6 +6304,16 @@
       if (events.length > 500) events.pop();
       renderEventLog();
 
+      // Trigger cat animations for this event
+      if (catAnimationController) {
+        catAnimationController.trigger(event.type, event.data || {});
+      }
+
+      // Trigger audio feedback (if enabled)
+      if (catAudioController) {
+        catAudioController.triggerForEvent(event.type);
+      }
+
       switch (event.type) {
         case 'dream_cycle_start':
           setPhase('recall');
@@ -6555,18 +7847,76 @@
       }
     });
 
-    function showSeedModal() {
+    // Kernel state for AGI Seed Directive editing
+    let originalKernelYaml = '';
+    let currentKernelYaml = '';
+
+    async function loadKernel() {
+      try {
+        const response = await fetch('/api/kernel');
+        const data = await response.json();
+        if (data.success) {
+          originalKernelYaml = data.raw_yaml;
+          currentKernelYaml = data.raw_yaml;
+          document.getElementById('kernel-editor').value = data.raw_yaml;
+          document.getElementById('kernel-error').classList.add('hidden');
+        } else {
+          console.error('Failed to load kernel:', data.error);
+          document.getElementById('kernel-editor').value = '# Failed to load kernel\n# ' + data.error;
+        }
+      } catch (e) {
+        console.error('Error loading kernel:', e);
+        document.getElementById('kernel-editor').value = '# Network error loading kernel\n# ' + e.message;
+      }
+    }
+
+    async function saveKernel() {
+      const content = document.getElementById('kernel-editor').value;
+      const errorDiv = document.getElementById('kernel-error');
+
+      try {
+        const response = await fetch('/api/kernel', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ yaml_content: content })
+        });
+        const data = await response.json();
+
+        if (!data.success) {
+          errorDiv.textContent = data.error;
+          errorDiv.classList.remove('hidden');
+          return false;
+        }
+
+        errorDiv.classList.add('hidden');
+        currentKernelYaml = content;
+        return true;
+      } catch (e) {
+        errorDiv.textContent = 'Network error: ' + e.message;
+        errorDiv.classList.remove('hidden');
+        return false;
+      }
+    }
+
+    function resetKernelToDefault() {
+      document.getElementById('kernel-editor').value = originalKernelYaml;
+      document.getElementById('kernel-error').classList.add('hidden');
+    }
+
+    async function showSeedModal() {
       const modal = document.getElementById('seed-modal');
       modal.classList.remove('hidden');
       modal.classList.add('flex');
-      document.getElementById('seed-question-input').focus();
-      document.getElementById('seed-question-input').select();
+      // Load kernel when modal opens
+      await loadKernel();
+      document.getElementById('kernel-editor').focus();
     }
 
     function hideSeedModal() {
       const modal = document.getElementById('seed-modal');
       modal.classList.add('hidden');
       modal.classList.remove('flex');
+      document.getElementById('kernel-error').classList.add('hidden');
     }
 
     // ==========================================================================
@@ -6625,6 +7975,49 @@
         clearTypeHighlight();
       }
     });
+
+    // Audio toggle button
+    const btnAudio = document.getElementById('btn-audio');
+    let audioEnabled = false;
+    btnAudio.addEventListener('click', () => {
+      audioEnabled = !audioEnabled;
+      if (audioEnabled) {
+        catAudioController.enable();
+        btnAudio.innerHTML = '🔊';
+        btnAudio.className = 'px-3 py-2 rounded-lg text-sm font-medium bg-green-100 border border-green-300 text-green-700 hover:bg-green-200 transition-all';
+      } else {
+        catAudioController.disable();
+        btnAudio.innerHTML = '🔇';
+        btnAudio.className = 'px-3 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-all';
+      }
+    });
+
+    // Cat state indicator updater
+    const catStateText = document.getElementById('cat-state-text');
+    const catStateIndicator = document.getElementById('cat-state-indicator');
+    const catStateColors = {
+      'idle': { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-600' },
+      'dreaming': { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-600' },
+      'seeking': { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-600' },
+      'processing': { bg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-600' },
+      'alert': { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-600' },
+      'satisfied': { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-600' },
+      'frustrated': { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-600' },
+      'connecting': { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-600' },
+      'quantum': { bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-600' }
+    };
+
+    function updateCatStateDisplay() {
+      if (!catAnimationController) return;
+      const state = catAnimationController.getCurrentState();
+      catStateText.textContent = state;
+      const colors = catStateColors[state] || catStateColors['idle'];
+      catStateIndicator.className = `flex items-center gap-1 px-2 py-2 ${colors.bg} border ${colors.border} rounded-lg text-xs font-mono`;
+      catStateText.className = colors.text;
+    }
+
+    // Update cat state display periodically
+    setInterval(updateCatStateDisplay, 200);
 
     /**
      * Fast forward physics simulation to reach equilibrium instantly.
@@ -6776,22 +8169,30 @@
     });
 
     document.getElementById('btn-seed-clear-only').addEventListener('click', async () => {
+      // Save any edits before clearing
+      await saveKernel();
       hideSeedModal();
       await resetByrd(null);  // Clear only, no awaken
     });
 
     document.getElementById('btn-seed-confirm').addEventListener('click', async () => {
-      const awakeningPrompt = document.getElementById('seed-question-input').value.trim();
+      // Save kernel edits first
+      const saved = await saveKernel();
+      if (!saved) {
+        return; // Don't proceed if save failed (error shown in modal)
+      }
       hideSeedModal();
-      await resetByrd(awakeningPrompt || null);  // Clear and awaken (prompt is optional)
+      await resetByrd(null);  // Reset and awaken with kernel's directive
     });
 
-    document.getElementById('seed-question-input').addEventListener('keydown', async (e) => {
-      if (e.key === 'Enter') {
-        const awakeningPrompt = document.getElementById('seed-question-input').value.trim();
-        hideSeedModal();
-        await resetByrd(awakeningPrompt || null);
-      } else if (e.key === 'Escape') {
+    // Reset to Default button handler
+    document.getElementById('btn-kernel-reset').addEventListener('click', () => {
+      resetKernelToDefault();
+    });
+
+    // ESC key to close modal
+    document.getElementById('kernel-editor').addEventListener('keydown', async (e) => {
+      if (e.key === 'Escape') {
         hideSeedModal();
       }
     });

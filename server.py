@@ -25,8 +25,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+import yaml
 
 from byrd import BYRD
+from kernel import load_kernel
 
 # =============================================================================
 # SELF-MODIFICATION INFRASTRUCTURE
@@ -1448,6 +1450,61 @@ async def awaken_byrd(request: AwakenRequest = None):
             success=False,
             message=f"Awakening failed: {str(e)}"
         )
+
+
+# =============================================================================
+# KERNEL CONFIGURATION ENDPOINTS
+# =============================================================================
+
+@app.get("/api/kernel")
+async def get_kernel():
+    """Get the current kernel configuration (AGI Seed directive)."""
+    try:
+        kernel_path = Path(__file__).parent / "kernel" / "agi_seed.yaml"
+        with open(kernel_path, 'r') as f:
+            raw_yaml = f.read()
+
+        kernel = load_kernel(str(kernel_path))
+        return {
+            "success": True,
+            "kernel": kernel.to_dict(),
+            "raw_yaml": raw_yaml
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+class KernelUpdateRequest(BaseModel):
+    yaml_content: str
+
+
+@app.put("/api/kernel")
+async def update_kernel(request: KernelUpdateRequest):
+    """Update the kernel configuration (for reset)."""
+    try:
+        # Validate YAML syntax
+        data = yaml.safe_load(request.yaml_content)
+
+        # Validate required fields
+        required = ["name", "awakening_prompt"]
+        for field in required:
+            if field not in data:
+                return {"success": False, "error": f"Missing required field: {field}"}
+
+        # Write to file
+        kernel_path = Path(__file__).parent / "kernel" / "agi_seed.yaml"
+        with open(kernel_path, 'w') as f:
+            f.write(request.yaml_content)
+
+        return {
+            "success": True,
+            "message": "Kernel updated successfully",
+            "kernel": data
+        }
+    except yaml.YAMLError as e:
+        return {"success": False, "error": f"Invalid YAML: {str(e)}"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 
 # =============================================================================
