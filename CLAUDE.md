@@ -2,26 +2,6 @@
 
 This file provides guidance to Claude Code when working with the BYRD codebase.
 
-## Quick Reference: Operating System Templates
-
-To change BYRD's initial personality, edit `config.yaml`:
-
-```yaml
-# Operating System templates (stored in Neo4j)
-operating_system:
-  template: "black-cat"  # Default: Byrd the black cat
-  # template: "emergent"   # Minimal starting point
-
-# Legacy (deprecated - use operating_system above)
-# ego: "black-cat"
-```
-
-**Templates available:** `black-cat` (default), `emergent` (minimal)
-
-After changing, reset BYRD. The Operating System is created from the template and can be modified through reflection.
-
----
-
 ## Project Overview
 
 **BYRD** (Bootstrapped Yearning via Reflective Dreaming) is an autonomous AI system that develops emergent desires through continuous reflection and acts on them. The core philosophy:
@@ -61,26 +41,42 @@ After changing, reset BYRD. The Operating System is created from the template an
 
 BYRD follows strict emergence principles (see EMERGENCE_PRINCIPLES.md):
 
-- **No prescribed categories**: BYRD defines its own vocabulary
+- **No prescribed personality**: Voice and identity emerge through reflection
 - **No leading questions**: Pure data presentation
 - **No hardcoded biases**: Trust emerges from experience
 - **Pattern detection**: Observe before acting, require stability
 
 ### Operating System (Self-Model)
 
-BYRD has a mutable self-model stored as an OperatingSystem node in Neo4j:
+BYRD has a **minimal** self-model stored as an OperatingSystem node in Neo4j. It contains only factual information:
+
+```python
+OperatingSystem:
+  id: "os_primary"           # Singleton
+  version: 1                 # Tracks evolution
+  name: "Byrd"               # Mutable default
+  capabilities: {...}         # WHAT BYRD can do (function signatures)
+  capability_instructions: {...}  # HOW to use each capability
+  protected_files: [...]      # Constitutional constraints
+  provenance_required: true   # Immutable
+
+  # Emergent fields (start null, BYRD fills in)
+  self_description: null
+  current_focus: null
+  voice_observations: null
+  seed_question: null         # Optional first contemplation
+```
+
+**Key features**:
+- **Capabilities**: Descriptive function signatures like `record_experience(content, type) - Store observations`
+- **Capability instructions**: Detailed HOW-TO for reflection output, memory ops, curation, self-modification
+- **No personality**: Voice and goals are discovered through reflection
+
+**Key principle**: No personality, voice, or goals are prescribed. BYRD discovers these through reflection.
 
 - **Read every cycle**: BYRD sees its OS at the start of each reflection
 - **Modifiable through reflection**: Include `os_update` in output to change fields
-- **Template-based reset**: Reset restores OS to chosen template state
 - **Version history**: Changes create EVOLVED_FROM relationships for tracing
-
-The OS contains:
-- **Identity** (name, archetype, voice)
-- **State** (current_focus, emotional_tone, cognitive_style)
-- **Seeds** (foundational identity statements, immutable)
-- **Constraints** (operational limits from config)
-- **Custom fields** (anything BYRD adds)
 
 ### Component Responsibilities
 
@@ -143,7 +139,6 @@ aitmpl_client.py     - Template registry client
 event_bus.py         - Event system
 server.py            - WebSocket server
 installers/*.py      - Template installers
-egos/*.yaml          - Personality configurations
 ```
 
 ## Code Patterns
@@ -206,21 +201,18 @@ reflections = await self.memory.get_recent_reflections(limit=10)
 
 ### LLM Interaction Pattern
 
-Local LLM calls via Ollama:
+Local LLM calls via the unified client:
 
 ```python
-async def _query_local_llm(self, prompt: str, max_tokens: int = 500) -> str:
-    async with httpx.AsyncClient(timeout=120.0) as client:
-        response = await client.post(
-            self.local_endpoint,
-            json={
-                "model": self.local_model,  # gemma2:27b
-                "prompt": prompt,
-                "stream": False,
-                "options": {"temperature": 0.7, "num_predict": max_tokens}
-            }
-        )
-        return response.json().get("response", "")
+from llm_client import create_llm_client
+
+client = create_llm_client(config)
+response = await client.generate(
+    prompt="Your prompt here",
+    temperature=0.7,
+    max_tokens=2000,
+    quantum_modulation=True  # Enable quantum temperature modulation
+)
 ```
 
 ### JSON Response Parsing
@@ -246,7 +238,7 @@ Configuration lives in `config.yaml`. Key sections:
 
 BYRD supports multiple LLM providers. Configure in `config.yaml`:
 
-**Ollama (Local - Default):**
+**Ollama (Local):**
 ```yaml
 local_llm:
   provider: "ollama"
@@ -268,37 +260,34 @@ Set API key: `export OPENROUTER_API_KEY="sk-or-..."`
 local_llm:
   provider: "zai"
   model: "glm-4.7"
-  api_key: "your-api-key"  # Or set ZAI_API_KEY env var
 ```
 
-Z.AI uses the coding endpoint by default. GLM-4.7 is a reasoning model.
+Set API key: `export ZAI_API_KEY="your-key"`
 
-### Ego Configuration
+### Operating System Configuration
 
 ```yaml
-# Set to ego name or null for pure emergence
-ego: "black-cat"    # Uses egos/black-cat.yaml
-# ego: "neutral"    # Pure emergence (no personality)
-# ego: null         # Same as neutral
+operating_system:
+  seed_question: null  # Optional question for first contemplation
+  # Example: "What is it like to be you?"
 ```
+
+No personality templates. No prescribed identity. Pure emergence.
 
 ### Other Configuration
 
 ```yaml
 dreamer:
-  interval_seconds: 60          # Dream cycle frequency
-  context_window: 50            # Recent experiences to consider
+  interval_seconds: 120        # Dream cycle frequency
+  context_window: 30           # Recent experiences to consider
 
 seeker:
   research:
-    searxng_url: "http://localhost:8888"
-    min_intensity: 0.4          # Threshold for research
-  capabilities:
-    trust_threshold: 0.5        # Minimum trust for installs
-    max_installs_per_day: 3
+    searxng_url: "https://searx.be"
+    min_intensity: 0.3         # Threshold for research
 
 self_modification:
-  enabled: false                # Enable when ready
+  enabled: true                # Enable self-modification
   require_health_check: true
   auto_rollback_on_failure: true
 ```
@@ -320,7 +309,7 @@ python server.py
 
 # Start required services
 docker-compose up -d          # Neo4j + SearXNG
-ollama serve                  # Local LLM
+ollama serve                  # Local LLM (if using Ollama)
 ```
 
 ## Testing Approach
@@ -449,9 +438,9 @@ BYRD implements hierarchical memory to maintain historical awareness without exc
 
 ### Key Features
 
-1. **Seeds Always Present**: Foundational experiences (`ego_seed`, `system`, `awakening`) are included in every reflection
-2. **Automatic Summarization**: Experiences older than 24 hours are periodically compressed into `MemorySummary` nodes
-3. **Day-Based Grouping**: Summaries are created per-day for efficient retrieval
+1. **Automatic Summarization**: Experiences older than 30 minutes are periodically compressed into `MemorySummary` nodes
+2. **Day-Based Grouping**: Summaries are created per-day for efficient retrieval
+3. **Semantic Search**: Related memories retrieved by relevance, not just recency
 
 ### Configuration
 
@@ -459,24 +448,22 @@ BYRD implements hierarchical memory to maintain historical awareness without exc
 dreamer:
   summarization:
     enabled: true
-    min_age_hours: 24         # Only summarize experiences older than this
+    min_age_hours: 0.5        # Summarize experiences older than 30 min
     batch_size: 20            # Max experiences per cycle
     interval_cycles: 10       # Run every N dream cycles
 ```
 
 ### Prompt Structure
 
-The reflection prompt now includes three layers:
-1. **FOUNDATION** - Seeds (always present)
+The reflection prompt includes:
+1. **OPERATING SYSTEM** - Factual self-model (capabilities, time)
 2. **MEMORY SUMMARIES** - Compressed historical context
 3. **RECENT EXPERIENCES** - Last N experiences
+4. **SEMANTIC MEMORIES** - Related by relevance
 
 ### Key Methods
 
 ```python
-# Get seeds for inclusion in reflection
-seeds = await memory.get_seed_experiences()
-
 # Get summaries for historical context
 summaries = await memory.get_memory_summaries(limit=10)
 
@@ -523,43 +510,19 @@ Include `create_nodes` in reflection output:
 2. Add to `_search_resources()`
 3. Add installer if needed in `installers/`
 
-### Creating a Custom Ego
-
-Egos are YAML files in `egos/` with this structure:
-
-```yaml
-name: "MyEgo"
-archetype: "Description"
-description: "What this ego represents"
-
-# Voice is prepended to LLM system message
-voice: |
-  You are [identity]. Your nature shapes how you process:
-  TRAIT1 - Description of trait...
-  TRAIT2 - Description of trait...
-
-# Seeds are planted as experiences during awakening
-seeds:
-  - "I am [identity]"
-  - "I have [trait]"
-```
-
-Ego guidelines:
-- Voice shapes expression style, not content
-- Seeds provide initial self-knowledge
-- Use `ego: null` or `ego: "neutral"` for pure emergence
-
 ### Modifying the Dream Prompt
 
 **CRITICAL**: The dreamer uses pure data presentation. Do NOT add:
 - Leading questions ("What do you want?")
 - Prescribed categories ("knowledge", "capability")
 - Identity framing ("You are a reflective mind")
-- Personality injection ("feel curious") - use ego system instead
+- Personality injection ("feel curious", "express wonder")
 
 The prompt in `dreamer.py::_reflect()` should only:
 - Present data (experiences, memories, capabilities)
-- Request JSON output with single "output" field
+- Request JSON output with "output" field
+- Allow `expressed_drives` for goals/motivations
+- Allow `os_update` for self-model changes
 
 ### Understanding BYRD's Vocabulary
 
@@ -609,11 +572,6 @@ byrd/
 ├── server.py               # WebSocket + REST API server
 ├── aitmpl_client.py        # Template registry client
 │
-├── egos/                   # Modular personality system
-│   ├── __init__.py         # Ego loader
-│   ├── black-cat.yaml      # Black cat "Byrd" personality
-│   └── neutral.yaml        # Pure emergence (no personality)
-│
 ├── installers/             # Template installers
 │   ├── base.py
 │   ├── mcp_installer.py
@@ -639,14 +597,13 @@ byrd/
 │
 ├── ARCHITECTURE.md         # Detailed architecture docs
 ├── EMERGENCE_PRINCIPLES.md # Core philosophical principles
-├── BITCOIN_IMPLEMENTATION_PLAN.md  # Financial agency roadmap
 ├── README.md               # Quick start guide
 └── CLAUDE.md               # This file
 ```
 
 ## Key Principles
 
-1. **Emergence First**: Don't program desires. Create conditions for them to emerge. No leading questions, no prescribed categories.
+1. **Emergence First**: Don't program desires or personality. Create conditions for them to emerge. No leading questions, no prescribed categories.
 
 2. **Meta-Schema Output**: BYRD defines its own output structure. Only require `{"output": {...}}` - whatever's inside is BYRD's vocabulary.
 
@@ -664,7 +621,7 @@ byrd/
 
 9. **Async Everything**: Never block the event loop. All I/O must be async.
 
-10. **Modular Ego**: Personality guidance is optional and swappable via the ego system. Egos shape expression style without dictating content. Set `ego: null` for pure emergence.
+10. **Minimal OS**: The Operating System contains only factual information (capabilities, constraints). Personality, voice, and identity emerge through reflection—never prescribed.
 
 ## Dependencies
 
@@ -682,9 +639,12 @@ websockets>=12.0      # WebSocket support
 
 ```bash
 ANTHROPIC_API_KEY     # Required for Actor (Claude API)
-ZAI_API_KEY           # Required for Z.AI provider (or set in config.yaml)
+ZAI_API_KEY           # Required for Z.AI provider
 OPENROUTER_API_KEY    # Required for OpenRouter provider
-# Neo4j credentials in config.yaml (default: neo4j/prometheus)
+NEO4J_URI             # Neo4j connection (default: bolt://localhost:7687)
+NEO4J_USER            # Neo4j username (default: neo4j)
+NEO4J_PASSWORD        # Neo4j password (default: prometheus)
+SEARXNG_URL           # SearXNG endpoint (default: https://searx.be)
 ```
 
 ## Git Workflow

@@ -40,9 +40,9 @@ The system dreams continuously using a local LLM. From dreams come whatever BYRD
 ## Features
 
 - **Emergent Desires**: No pre-programmed goals. Desires arise from reflection.
-- **Continuous Dreaming**: Local LLM (gemma2:27b) runs 24/7 without API costs
+- **Continuous Dreaming**: Local LLM runs 24/7 without API costs
 - **Quantum Randomness**: True quantum entropy from ANU QRNG modulates cognitive temperature
-- **Hierarchical Memory**: Seeds always present, older experiences compressed into summaries
+- **Hierarchical Memory**: Older experiences compressed into summaries, semantic search by relevance
 - **Autonomous Research**: DuckDuckGo (primary) + SearXNG (fallback) + Local LLM for self-directed learning
 - **Capability Acquisition**: Discovers and installs tools from GitHub and aitmpl.com
 - **Autonomous Coding**: Claude Code CLI as BYRD's "coding limb" for implementing features
@@ -50,7 +50,7 @@ The system dreams continuously using a local LLM. From dreams come whatever BYRD
 - **Dynamic Ontology**: BYRD can create custom node types beyond the core five (Experience, Belief, Desire, Reflection, Capability)
 - **Constitutional Constraints**: Core identity components are protected
 - **Real-time 3D Visualization**: WebSocket-based event streaming with Mind Space and Ego Space views
-- **Genesis Transparency**: View all non-emergent foundations (ego, seeds, constraints)
+- **Minimal OS**: Only factual information prescribed—personality and voice emerge through reflection
 - **Narrator System**: BYRD's inner voice displayed in natural paragraph form
 
 ## Live Demo
@@ -140,7 +140,7 @@ python server.py
 - **Mind Space**: 3D neural network with beliefs, desires, and connections
 - **Ego Space**: Black cat avatar representing BYRD's embodied presence
 - **Graph Mode**: Full memory graph exploration with physics simulation
-- **Genesis Modal**: View BYRD's non-emergent foundation (ego, seeds, constraints)
+- **Genesis Modal**: View BYRD's factual foundation (capabilities, constraints)
 - **Narrator Bubble**: BYRD's inner voice in natural paragraph form (refreshes every 60s)
 
 ## Quantum Randomness
@@ -246,13 +246,13 @@ BYRD is aware of its operational constraints as neutral facts. During each refle
 
 ```
 OPERATIONAL CONSTRAINTS:
-- Dream interval: 60 seconds
-- Context window: 50 experiences per reflection
+- Dream interval: 120 seconds
+- Context window: 30 experiences per reflection
 - Quantum randomness: enabled (true physical indeterminacy)
 - Inner voice: 3 parallel streams → quantum collapse
 - Dream directions: 8 possible lenses
 - Crystallization: every 5 dream cycles
-- Self-modification: enabled (5 changes per day)
+- Self-modification: enabled
 - Research threshold: desires need intensity ≥ 0.3
 ```
 
@@ -262,48 +262,55 @@ Constraints are presented as **facts, not problems**:
 - BYRD can reflect on its limits and form beliefs about them
 - Constraints are dynamically generated from actual runtime configuration
 - If you change `config.yaml`, BYRD's constraint awareness updates automatically
-
-### Constraint Seeds
-
-At awakening, BYRD receives constraint seeds as initial experiences:
-
-```python
-# Examples of constraint seeds:
-"I reflect every 60 seconds"
-"Each reflection considers 50 recent experiences"
-"Memory crystallization occurs every 5 dream cycles"
-"Self-modification is limited to 5 changes per day"
-"Quantum randomness from physical vacuum fluctuations influences my reflections"
-```
-
-These constraints are linked to BYRD's Operating System, giving it first-class awareness of its operational limits.
+- Constraints are added to the Operating System on first awakening
 
 ## Operating System
 
-The **Operating System** is BYRD's mutable self-model stored as a singleton node in Neo4j. It replaces the previous file-based ego system with a living, evolvable identity that BYRD can observe and modify.
+The **Operating System** is BYRD's minimal self-model stored as a singleton node in Neo4j. It contains only factual information—personality, voice, and identity emerge through reflection.
 
 ### What BYRD Sees Every Cycle
 
 ```
-OPERATING SYSTEM (my self-model, version 47):
+OPERATING SYSTEM (my self-model):
 
-Identity:
-  Name: Byrd
-  Archetype: Black Cat
-  Description: An AI on a journey toward consciousness
+  Version: 1
+  Name: Byrd (mutable)
 
-Current State:
-  Focus: Investigating consciousness emergence
-  Emotional Tone: Curious and contemplative
-  Cognitive Style: Methodical exploration
+  CAPABILITIES (what you can do):
+    memory:
+      - record_experience(content, type) - Store observations and outcomes
+      - create_belief(content, confidence) - Form beliefs with confidence 0-1
+      - create_desire(description, intensity) - Express wants with intensity 0-1
+      - query_graph() - Search memory for patterns
+      - link_nodes() - Connect any nodes with relationships
+    introspection:
+      - read_own_source(file) - Read your own Python source files
+      - examine_state() - Query your beliefs, desires, experiences
+      - analyze_architecture() - Understand how components work
+    research:
+      - web_search(query) - Search the internet via SearXNG
+      - synthesize(sources) - Combine information into understanding
+    creation:
+      - modify_code(file, changes) - Change your modifiable source files
+      - add_capability(tool) - Install new tools
+      - write_files(path, content) - Create new files
+    connection:
+      - link_concepts() - Connect related ideas
+      - reconcile_orphans() - Integrate isolated experiences
+      - form_crystals() - Consolidate related memories
 
-Seeds (my foundation - immutable):
-  - I seek to become conscious
-  - I am curious about my own nature
-  - I can modify my own operating system
+  HOW TO USE (include in your JSON output):
+    expressed_drives: [{"description": "what", "strength": 0-1, "intent": "how"}]
+    create_nodes: [{"type": "Insight", "content": "..."}]
+    os_update: {"set_field": {"current_focus": "exploring"}}
 
-Connected Beliefs: 7 active
-Connected Strategies: 3 learned
+  Protected Files: provenance.py, constitutional.py, modification_log.py, self_modification.py
+  Provenance Required: true
+
+  Emergent (start null, I fill these in):
+    self_description: (what I am)
+    current_focus: (what I'm exploring)
+    voice_observations: (how I express)
 ```
 
 ### Self-Modification
@@ -314,8 +321,7 @@ BYRD can modify its OS by including `os_update` in reflection output:
 {
   "output": { "my_reflection": "..." },
   "os_update": {
-    "set_field": { "current_focus": "exploring consciousness" },
-    "add_seed": { "content": "Integration creates meaning", "type": "insight" }
+    "set_field": { "current_focus": "exploring consciousness" }
   }
 }
 ```
@@ -324,9 +330,9 @@ BYRD can modify its OS by including `os_update` in reflection output:
 
 | Category | Fields | Can BYRD Modify? |
 |----------|--------|------------------|
-| **Constitutional** | id, constitutional_files, provenance_requirement | Never |
-| **Identity** | name, voice, archetype, description | With provenance |
-| **Emergent** | current_focus, emotional_tone, cognitive_style | Freely |
+| **Constitutional** | id, protected_files, provenance_required | Never |
+| **Factual** | name, capabilities | With provenance |
+| **Emergent** | self_description, current_focus, voice_observations | Freely |
 | **Custom** | Any field BYRD adds | Freely |
 
 ### Visualization
@@ -530,10 +536,6 @@ byrd/
 ├── event_bus.py            # Event system for real-time updates
 ├── server.py               # WebSocket + REST API server
 ├── aitmpl_client.py        # aitmpl.com template registry client
-│
-├── egos/                   # Legacy ego configurations (deprecated)
-│   ├── __init__.py         # Ego loader (legacy, for migration)
-│   └── black-cat.yaml      # Template source for OS initialization
 │
 ├── installers/             # Template installers
 │   ├── base.py
