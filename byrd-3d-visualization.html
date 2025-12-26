@@ -730,19 +730,19 @@
     </div>
   </div>
 
-  <!-- Seed Question Modal -->
+  <!-- Awakening Prompt Modal -->
   <div id="seed-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm">
     <div class="bg-white border border-slate-200 rounded-xl max-w-md w-full mx-4 overflow-hidden shadow-2xl">
       <div class="px-6 py-4 border-b border-slate-200 bg-slate-50">
         <div class="text-lg font-semibold text-slate-800">Reset BYRD</div>
-        <div class="text-sm text-slate-500">Clear database and optionally awaken with a seed question</div>
+        <div class="text-sm text-slate-500">Clear database and optionally awaken with a directive</div>
       </div>
       <div class="p-6">
         <input
           type="text"
           id="seed-question-input"
           class="w-full px-4 py-3 border border-slate-300 rounded-lg text-base text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          placeholder="Optional question for BYRD to contemplate..."
+          placeholder="Optional directive or goal for BYRD..."
           value=""
         />
         <div class="flex gap-3 mt-4">
@@ -6363,15 +6363,15 @@
       }
     }
 
-    async function resetByrd(seedQuestion = null) {
+    async function resetByrd(awakeningPrompt = null) {
       try {
-        // Hard reset with optional seed question for contemplation
+        // Hard reset with optional awakening prompt (directive/goal)
         const res = await fetch(`${API_BASE}/api/reset`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             hard_reset: true,
-            awakening_prompt: seedQuestion  // Passed to minimal OS creation
+            awakening_prompt: awakeningPrompt
           })
         });
         const data = await res.json();
@@ -6379,9 +6379,9 @@
           clearVisualization();
           await fetchStatus();
 
-          // If seed question provided, awaken after reset
-          if (seedQuestion) {
-            await awakenByrd(seedQuestion);
+          // If awakening prompt provided, awaken after reset
+          if (awakeningPrompt) {
+            await awakenByrd(awakeningPrompt);
           }
         }
         return data;
@@ -6391,12 +6391,12 @@
       }
     }
 
-    async function awakenByrd(seedQuestion = null) {
+    async function awakenByrd(awakeningPrompt = null) {
       try {
         const res = await fetch(`${API_BASE}/api/awaken`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ awakening_prompt: seedQuestion })  // May be null - pure emergence
+          body: JSON.stringify({ awakening_prompt: awakeningPrompt })  // May be null - pure emergence
         });
         const data = await res.json();
         if (data.success) {
@@ -6720,16 +6720,16 @@
     });
 
     document.getElementById('btn-seed-confirm').addEventListener('click', async () => {
-      const seedQuestion = document.getElementById('seed-question-input').value.trim();
+      const awakeningPrompt = document.getElementById('seed-question-input').value.trim();
       hideSeedModal();
-      await resetByrd(seedQuestion || null);  // Clear and awaken (seed question is optional)
+      await resetByrd(awakeningPrompt || null);  // Clear and awaken (prompt is optional)
     });
 
     document.getElementById('seed-question-input').addEventListener('keydown', async (e) => {
       if (e.key === 'Enter') {
-        const seedQuestion = document.getElementById('seed-question-input').value.trim();
+        const awakeningPrompt = document.getElementById('seed-question-input').value.trim();
         hideSeedModal();
-        await resetByrd(seedQuestion || null);
+        await resetByrd(awakeningPrompt || null);
       } else if (e.key === 'Escape') {
         hideSeedModal();
       }
