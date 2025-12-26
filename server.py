@@ -39,16 +39,59 @@ BYRD_DIR = Path(__file__).parent
 
 # Files that BYRD can modify (and that reset will restore)
 MODIFIABLE_FILES = [
+    # Core orchestration
     "byrd.py",
     "dreamer.py",
     "seeker.py",
     "actor.py",
     "memory.py",
+
+    # LLM and coding
     "llm_client.py",
-    "config.yaml",
-    "aitmpl_client.py",
+    "coder.py",
+    "agent_coder.py",
+
+    # AGI Seed components (Option B)
+    "omega.py",
+    "world_model.py",
+    "self_model.py",
+    "meta_learning.py",
+    "safety_monitor.py",
+
+    # Omega sub-components
+    "accelerators.py",
+    "coupling_tracker.py",
+    "kill_criteria.py",
+
+    # Option B modules
+    "dreaming_machine.py",
+    "goal_evolver.py",
+    "memory_reasoner.py",
+
+    # Supporting systems
+    "narrator.py",
+    "quantum_randomness.py",
+    "graph_algorithms.py",
+    "embedding.py",
+    "rollback.py",
+    "semantic_lexicon.py",
+
+    # Advanced features
+    "phase_transition.py",
+    "corrigibility.py",
+    "gnn_layer.py",
+
+    # Event and server
     "event_bus.py",
     "server.py",
+
+    # Config
+    "config.yaml",
+    "aitmpl_client.py",
+
+    # Kernel (AGI Seed directive)
+    "kernel/__init__.py",
+    "kernel/agi_seed.yaml",
 ]
 
 
