@@ -155,6 +155,11 @@ class BYRD:
         # Load config
         self.config = self._load_config(config_path)
 
+        # State tracking
+        self._running = False
+        self._started_at = None
+        self._last_error = None  # Capture startup errors for debugging
+
         # Operating System configuration (minimal - no templates)
         self.awakening_prompt = self.config.get("operating_system", {}).get("awakening_prompt")
         if self.awakening_prompt:
@@ -429,8 +434,14 @@ class BYRD:
         except asyncio.CancelledError:
             print("⏹️ BYRD tasks cancelled")
         except Exception as e:
-            print(f"❌ BYRD start() error: {type(e).__name__}: {e}")
             import traceback
+            error_msg = f"{type(e).__name__}: {e}"
+            self._last_error = {
+                "message": error_msg,
+                "traceback": traceback.format_exc(),
+                "timestamp": datetime.now().isoformat()
+            }
+            print(f"❌ BYRD start() error: {error_msg}")
             traceback.print_exc()
             self._running = False
             raise

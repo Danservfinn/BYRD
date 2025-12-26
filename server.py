@@ -892,6 +892,7 @@ async def get_dreamer_debug():
         "seeker_running": getattr(seeker, '_running', False),
         "byrd_running": byrd_instance._running,
         "byrd_started_at": str(byrd_instance._started_at) if byrd_instance._started_at else None,
+        "last_error": byrd_instance._last_error,
         "interval_seconds": getattr(dreamer, 'interval', None),
         "last_reflection_result": getattr(dreamer, 'last_reflection_result', {}),
         "quantum_enabled": getattr(dreamer, 'quantum_enabled', False),
