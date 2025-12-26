@@ -720,6 +720,41 @@ async def get_coder_status():
     return result
 
 
+@app.get("/api/llm-debug")
+async def get_llm_debug():
+    """Get LLM configuration and debug info."""
+    global byrd_instance
+    import os
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    llm = byrd_instance.llm_client
+
+    # Mask API key for security
+    api_key = getattr(llm, 'api_key', None)
+    masked_key = None
+    if api_key:
+        if len(api_key) > 8:
+            masked_key = api_key[:4] + "..." + api_key[-4:]
+        else:
+            masked_key = "***"
+
+    return {
+        "provider": byrd_instance.config.get("local_llm", {}).get("provider", "unknown"),
+        "model": getattr(llm, 'model', 'unknown'),
+        "endpoint": getattr(llm, 'endpoint', 'unknown'),
+        "use_coding_endpoint": byrd_instance.config.get("local_llm", {}).get("use_coding_endpoint", None),
+        "api_key_present": api_key is not None and len(api_key) > 0,
+        "api_key_masked": masked_key,
+        "api_key_from_config": byrd_instance.config.get("local_llm", {}).get("api_key") is not None,
+        "env_zai_api_key_set": "ZAI_API_KEY" in os.environ,
+        "env_zai_api_key_length": len(os.environ.get("ZAI_API_KEY", "")),
+        "timeout": getattr(llm, 'timeout', None),
+        "dream_count": byrd_instance.dream_count if hasattr(byrd_instance, 'dream_count') else "N/A"
+    }
+
+
 # =============================================================================
 # TASK API (External goal injection)
 # =============================================================================
