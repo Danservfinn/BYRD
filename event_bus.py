@@ -71,6 +71,12 @@ class EventType(Enum):
     SYSTEM_STOPPED = "system_stopped"
     SYSTEM_RESET = "system_reset"
     AWAKENING = "awakening"
+    SYSTEM = "system"                            # Generic system event (used by self_model)
+
+    # Node lifecycle events
+    NODE_CREATED = "node_created"                # New node added to graph
+    NODE_UPDATED = "node_updated"                # Node properties changed
+    DATABASE_CLEARED = "database_cleared"        # Database reset
 
     # Orientation events (self-discovery after awakening)
     ORIENTATION_START = "orientation_start"

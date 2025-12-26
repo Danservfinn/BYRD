@@ -7129,3 +7129,142 @@ class Memory:
             result = await session.run(query, limit=limit)
             records = await result.data()
             return [dict(r["ms"]) for r in records]
+
+    # -------------------------------------------------------------------------
+    # RAW QUERY EXECUTION (AGI Seed Components, Accelerators)
+    # -------------------------------------------------------------------------
+
+    async def execute_query(
+        self,
+        query: str,
+        params: Optional[Dict[str, Any]] = None
+    ) -> List[Dict]:
+        """
+        Execute a raw Cypher query and return results.
+
+        Used by AGI seed components (self_model, world_model, meta_learning)
+        and accelerators (GraphPoweredReasoning).
+
+        Args:
+            query: Cypher query string
+            params: Optional parameters dict
+
+        Returns:
+            List of result dictionaries
+        """
+        async with self.driver.session() as session:
+            result = await session.run(query, **(params or {}))
+            records = await result.data()
+            return records
+
+    async def _run_query(
+        self,
+        query: str,
+        params: Optional[Dict[str, Any]] = None
+    ) -> List[Dict]:
+        """Alias for execute_query (used by self_model, world_model)."""
+        return await self.execute_query(query, params)
+
+    async def _execute_query(
+        self,
+        query: str,
+        params: Optional[Dict[str, Any]] = None
+    ) -> List[Dict]:
+        """Alias for execute_query (used by accelerators, meta_learning)."""
+        return await self.execute_query(query, params)
+
+    # -------------------------------------------------------------------------
+    # SPREADING ACTIVATION (Memory Reasoner)
+    # -------------------------------------------------------------------------
+
+    async def find_similar_nodes(
+        self,
+        embedding: List[float],
+        min_similarity: float = 0.5,
+        limit: int = 10,
+        node_types: Optional[List[str]] = None
+    ) -> List[Dict]:
+        """
+        Find nodes semantically similar to the given embedding.
+
+        Uses cosine similarity computed in Python since Neo4j lacks
+        native vector similarity.
+
+        Args:
+            embedding: Query embedding vector
+            min_similarity: Minimum similarity threshold (0.0-1.0)
+            limit: Maximum results to return
+            node_types: Node labels to search (default: Experience, Belief, Reflection, Insight, Crystal)
+
+        Returns:
+            List of dicts with: id, labels, content, similarity
+        """
+        from embedding import cosine_similarity
+
+        if node_types is None:
+            node_types = ["Experience", "Belief", "Reflection", "Insight", "Crystal"]
+
+        results = []
+
+        async with self.driver.session() as session:
+            for node_type in node_types:
+                # Determine content field based on node type
+                content_field = "raw_output" if node_type == "Reflection" else "content"
+                if node_type == "Crystal":
+                    content_field = "essence"
+
+                query = f"""
+                    MATCH (n:{node_type})
+                    WHERE n.embedding IS NOT NULL
+                    RETURN n.id as id, labels(n) as labels,
+                           n.{content_field} as content, n.embedding as embedding
+                    LIMIT 200
+                """
+                result = await session.run(query)
+                records = await result.data()
+
+                for r in records:
+                    node_embedding = r.get("embedding")
+                    if node_embedding and len(node_embedding) == len(embedding):
+                        similarity = cosine_similarity(embedding, node_embedding)
+                        if similarity >= min_similarity:
+                            results.append({
+                                "id": r["id"],
+                                "labels": r["labels"],
+                                "content": r["content"],
+                                "similarity": similarity
+                            })
+
+        # Sort by similarity descending
+        results.sort(key=lambda x: x["similarity"], reverse=True)
+        return results[:limit]
+
+    async def get_neighbors(self, node_id: str) -> List[Dict]:
+        """
+        Get all connected neighbors of a node for spreading activation.
+
+        Args:
+            node_id: The node ID to find neighbors for
+
+        Returns:
+            List of dicts with: node (dict), labels, relationship_type
+        """
+        query = """
+            MATCH (n {id: $node_id})-[r]-(neighbor)
+            RETURN neighbor as node, labels(neighbor) as labels, type(r) as relationship_type
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(query, node_id=node_id)
+            records = await result.data()
+
+            neighbors = []
+            for r in records:
+                node_data = dict(r["node"])
+                neighbors.append({
+                    "node": node_data,
+                    "labels": r["labels"],
+                    "relationship_type": r["relationship_type"]
+                })
+
+            return neighbors

@@ -210,7 +210,7 @@ class MetaLearningSystem:
         if self.self_model:
             try:
                 metrics = await self.self_model.measure_improvement_rate()
-                improvement_rate = metrics.overall_rate
+                improvement_rate = metrics.improvement_rate
             except Exception:
                 pass
 
