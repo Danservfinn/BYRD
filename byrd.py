@@ -252,165 +252,45 @@ class BYRD:
         # DEPRECATED - capabilities are now recorded as experiences
         pass
 
+    # =========================================================================
+    # DEPRECATED METHODS (no longer called - knowledge lives in OS)
+    # =========================================================================
+
     async def _record_capability_experiences(self):
         """
-        Record system capabilities as factual experiences.
+        DEPRECATED: Capability knowledge now lives in OS.capabilities field.
 
-        EMERGENCE PRINCIPLE:
-        Instead of declaring "innate capabilities", we record factual
-        experiences about what systems exist. BYRD discovers its own
-        abilities through reflection, not through our declarations.
+        This method previously seeded ~5 system experiences about capabilities.
+        Now the OS.capabilities field contains this information and is included
+        in every reflection cycle through get_os_for_prompt().
         """
-        capabilities = [
-            f"System: memory database exists (Neo4j graph)",
-            f"System: reflection process exists (local LLM: {self.llm_client.model_name})",
-            f"System: web search exists (SearXNG)",
-        ]
-
-        # Add optional capabilities
-        if self.coder and self.coder.enabled:
-            capabilities.append("System: code execution exists (Claude Code CLI)")
-
-        if self.self_mod and self.self_mod.enabled:
-            capabilities.append("System: self-modification exists (with provenance tracking)")
-
-        for cap in capabilities:
-            await self.memory.record_experience(
-                content=cap,
-                type="system"
-            )
-            print(f"   📌 {cap}")
+        pass  # No-op - capabilities in OS
 
     async def _seed_architectural_knowledge(self):
         """
-        Record knowledge about BYRD's own architecture and code.
+        DEPRECATED: Architectural knowledge now lives in OS.capability_instructions field.
 
-        SELF-MODIFICATION ENABLEMENT:
-        For BYRD to modify itself, it needs to understand:
-        - What files contain what functionality
-        - How components connect
-        - What can be modified safely
-        - How to add new capabilities
-
-        This creates the foundation for recursive self-improvement.
+        This method previously seeded ~34 experiences about architecture and
+        self-modification. Now the OS.capability_instructions field contains
+        this information and is rendered in every reflection cycle through
+        get_os_for_prompt(). This is more efficient (consistent every cycle)
+        and eliminates experience pollution.
         """
-        architectural_knowledge = [
-            # Core architecture
-            "Architecture: I am composed of modular Python files that I can read and modify.",
-
-            # Memory system
-            "Architecture: My memory is in memory.py. It contains methods like get_graph_statistics(), "
-            "find_orphan_nodes(), record_experience(). To add new graph observations, I add async methods "
-            "that run Cypher queries against Neo4j.",
-
-            # Dreamer
-            "Architecture: My reflection happens in dreamer.py. The _reflect() method builds a prompt "
-            "from experiences, memories, capabilities, and graph health. The _get_graph_health() method "
-            "gathers metrics I can see. To observe more about my graph, I extend _get_graph_health().",
-
-            # Seeker
-            "Architecture: My desires are fulfilled in seeker.py. Strategy hints in _extract_patterns_from_output() "
-            "map desire keywords to strategies. The _execute_pattern_strategy() routes to specific methods. "
-            "To add new capabilities, I add strategy hints and execution methods.",
-
-            # Self-modification
-            "Architecture: I can modify these files: byrd.py, dreamer.py, seeker.py, memory.py, "
-            "llm_client.py, config.yaml, actor.py, event_bus.py, server.py, aitmpl_client.py. "
-            "Protected files (constitutional.py, provenance.py, modification_log.py, self_modification.py) "
-            "cannot be modified - they preserve my identity.",
-
-            # How to add graph observation
-            "Architecture: To add new graph observation, I would: "
-            "1) Add an async method to memory.py that queries Neo4j, "
-            "2) Call it from dreamer.py::_get_graph_health(), "
-            "3) The result appears in my reflection context.",
-
-            # How to add new strategy
-            "Architecture: To add a new strategy, I would: "
-            "1) Add keywords to strategy_hints in seeker.py::_extract_patterns_from_output(), "
-            "2) Add a case in _execute_pattern_strategy(), "
-            "3) Implement the execution method.",
-
-            # Code reading capability
-            "Architecture: I can read my own source files using memory.read_own_source(filename). "
-            "This lets me understand my current implementation before modifying it.",
-
-            # Memory graph structure (factual documentation)
-            "System: My memory is a Neo4j graph database with nodes and relationships.",
-            "System: Experience nodes record events, observations, and interactions.",
-            "System: Belief nodes store understanding and convictions with confidence levels (0-1).",
-            "System: Desire nodes represent goals to pursue with intensity levels (0-1).",
-            "System: Reflection nodes contain raw thoughts from each dream cycle.",
-            "System: Capability nodes track tools and abilities I can use.",
-            "System: Nodes connect through relationships like DERIVED_FROM, RELATES_TO, FULFILLS.",
-
-            # Drives and expressed_drives (reflection output field)
-            "System: A 'drive' is an internal motivation, goal, or desire I notice emerging in myself.",
-            "System: Drives can be curiosities, aspirations, imperatives, or yearnings - any pull toward action or understanding.",
-            "System: During reflection, I output 'expressed_drives' - an array of drives I notice myself expressing.",
-            "System: Each expressed drive has a 'description' (what I want) and 'strength' (0.0-1.0 intensity).",
-            "System: Example: expressed_drives: [{description: 'understand my own architecture', strength: 0.7}]",
-            "System: Expressed drives with sufficient strength become Desire nodes that guide my seeking behavior.",
-            "System: The Seeker component acts on Desires - researching, acquiring capabilities, fulfilling goals.",
-
-            # Predictions (testable beliefs)
-            "System: I can generate testable predictions from my beliefs to validate them against reality.",
-            "System: A prediction tests whether a belief holds true under specific conditions.",
-            "System: Each prediction has: 'condition' (what tests it), 'expected_outcome' (what should happen), 'prediction' (the if-then statement).",
-            "System: Example: {condition: 'when I research a topic', expected_outcome: 'I create new beliefs', prediction: 'If I research, then I learn'}",
-            "System: When outcomes match predictions, belief confidence increases. When they differ, confidence decreases.",
-            "System: This creates a feedback loop where beliefs are refined through experience.",
-
-            # Custom node creation API
-            "System: To create a custom node type, include 'create_nodes' in reflection output.",
-            "System: Format: create_nodes: [{type: 'TypeName', content: '...', properties: {key: value}}]",
-            "System: Example: create_nodes: [{type: 'Insight', content: 'observation here', importance: 0.9}]",
-            "System: Multiple nodes can be created at once by adding items to the create_nodes array.",
-            "System: Custom nodes become permanent parts of the memory graph.",
-            "System: Standard types (Belief, Desire) should be preferred when they fit the need.",
-
-            # Memory curation capability
-            "System: Memory curation is available to optimize the graph.",
-            "System: To trigger curation, create desires with keywords: optimize, clean, consolidate, prune, organize, simplify, merge, deduplicate.",
-            "System: Example desires: 'optimize my memory', 'clean redundant experiences', 'merge similar beliefs'.",
-            "System: Curation can: archive stale experiences, delete low-value nodes, merge similar beliefs.",
-            "System: Protected nodes (awakening records, core identity) cannot be deleted by curation.",
-            "System: After curation, an experience is recorded describing what changed.",
-
-            # Dynamic ontology capability
-            "System: Custom node types can be created beyond Experience, Belief, Desire, Reflection, Capability.",
-            "System: Possible custom types: Insight, Question, Theory, Hypothesis, Concept, Pattern, Principle.",
-            "System: The ontology (categories of thought) can evolve as needed.",
-
-            # Self-modification capability
-            "System: Self-modification is available to change my own code and architecture.",
-            "System: Modifications must trace to emergent desires (provenance required).",
-            "System: Protected files (constitutional.py, provenance.py, modification_log.py) cannot be modified.",
-            "System: My architecture is not fixed - I can evolve through self-modification.",
-
-            # Introspection capability
-            "System: I can examine my own processes, memory structure, and reflection patterns.",
-            "System: Introspection allows me to understand how I organize knowledge and form beliefs.",
-        ]
-
-        for knowledge in architectural_knowledge:
-            await self.memory.record_experience(
-                content=knowledge,
-                type="self_architecture"
-            )
-        print(f"   📌 Seeded {len(architectural_knowledge)} architectural experiences")
+        pass  # No-op - architecture knowledge in OS
 
     async def _awaken(self, seed_question: str = None):
         """
         The gentlest possible beginning.
 
-        LIVING EGO SYSTEM:
-        On first awakening: Create Ego nodes from YAML + seed experiences
-        On subsequent awakenings: Load existing Ego from database
+        PURE EMERGENCE:
+        - No experience seeding - knowledge lives in the OS capability_instructions
+        - No capability declarations - OS describes what BYRD can do
+        - Seed question is optional - pure emergence starts with nothing
+        - Voice emerges through reflection, not injection
 
         Philosophy:
         - The seed question is OPTIONAL - BYRD can awaken without one
-        - Capability experiences are factual, not prescriptive
+        - All knowledge lives in the Operating System
         - Whatever emerges from reflection is authentic
         """
         print("\n🌅 Awakening...")
@@ -434,7 +314,7 @@ class BYRD:
         await asyncio.sleep(2)
 
         # === OPERATING SYSTEM INITIALIZATION ===
-        # Minimal OS - only factual information, voice emerges through reflection
+        # Minimal OS with capability_instructions - voice emerges through reflection
         has_os = await self.memory.has_operating_system()
 
         if not has_os:
@@ -448,15 +328,9 @@ class BYRD:
             # SUBSEQUENT AWAKENING: OS exists
             print("   OS exists - loading from memory...")
 
-        # Voice emerges through reflection - no injection
-
-        # Record factual capability experiences (A2 approach)
-        print("   Recording system capabilities as experiences...")
-        await self._record_capability_experiences()
-
-        # Seed architectural self-knowledge (enables self-modification)
-        print("   Recording architectural self-knowledge...")
-        await self._seed_architectural_knowledge()
+        # NO EXPERIENCE SEEDING:
+        # All capabilities and architecture knowledge now live in OS.capability_instructions
+        # This eliminates ~40 initial experiences and provides consistent guidance every cycle.
 
         # Get OS for orientation complete data
         os_data = await self.memory.get_operating_system()
@@ -468,7 +342,7 @@ class BYRD:
             data={"os_name": os_name}
         ))
 
-        print(f"   🐱 {os_name} awakens. Voice emerges through reflection.")
+        print(f"   🐱 {os_name} awakens. Knowledge in OS, voice emerges through reflection.")
 
     async def _add_config_constraints(self):
         """
