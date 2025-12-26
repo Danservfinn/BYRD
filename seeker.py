@@ -228,19 +228,39 @@ class Seeker:
                 for desire in unfulfilled[:self.max_concurrent_desires]:
                     if desire.get("intensity", 0) >= self.min_research_intensity:
                         description = desire.get("description", "")
-                        # Determine strategy from description hints, with LLM fallback
-                        strategy = await self._determine_strategy_from_description(description)
+                        intent = desire.get("intent")
+                        target = desire.get("target")
+
+                        # INTENT-BASED ROUTING: If desire has intent, use it directly
+                        # This is more reliable than keyword matching because BYRD explicitly classified it
+                        if intent:
+                            strategy = self._intent_to_strategy(intent, description)
+                            print(f"🎯 Intent-routed desire [{intent}→{strategy}]: {description[:50]}")
+                        else:
+                            # Legacy desire without intent - classify on-demand and persist
+                            intent = await self._classify_intent_on_demand(description)
+                            strategy = self._intent_to_strategy(intent, description)
+                            print(f"🔄 On-demand classified [{intent}→{strategy}]: {description[:50]}")
+
+                            # Persist the classification for future routing
+                            desire_id = desire.get("id")
+                            if desire_id:
+                                try:
+                                    await self.memory.update_desire_intent(desire_id, intent, target)
+                                except Exception as e:
+                                    print(f"⚠️ Could not persist intent: {e}")
+
                         action_patterns.append({
                             "description": description,
                             "strategy": strategy,
                             "count": 1,
-                            "desire_id": desire.get("id")
+                            "desire_id": desire.get("id"),
+                            "target": target
                         })
-                        print(f"🔍 Using unfulfilled desire ({strategy}): {description[:50]}")
                         # Debug: record strategy decision
                         try:
                             await self.memory.record_experience(
-                                content=f"[DEBUG_STRATEGY] {strategy}: {description[:60]}",
+                                content=f"[ROUTING] intent={intent or 'None'} → strategy={strategy}: {description[:60]}",
                                 type="system"
                             )
                         except:
@@ -610,6 +630,102 @@ Reply with ONLY one word: introspect, reconcile_orphans, curate, self_modify, or
         # This catches internal desires that don't use expected keywords
         return await self._classify_strategy_with_llm(description)
 
+    def _intent_to_strategy(self, intent: str, description: str = "") -> str:
+        """
+        Map desire intent to execution strategy.
+
+        BYRD classifies each desire with an intent during reflection.
+        This mapping determines which handler will fulfill the desire.
+
+        Args:
+            intent: The routing classification from BYRD
+            description: The desire description (used for introspection subtype)
+
+        Returns:
+            Strategy name for _execute_pattern_strategy
+        """
+        desc_lower = description.lower()
+
+        # Introspection has two subtypes:
+        # - source_introspect: Understanding my code/architecture (reads source files)
+        # - introspect: Understanding my state/graph (reads graph data)
+        if intent == "introspection":
+            # Check if this is about source code vs internal state
+            if any(kw in desc_lower for kw in [".py", "source", "code", "architecture",
+                                                "seeker", "dreamer", "memory", "byrd",
+                                                "how do i", "how does my", "implement"]):
+                return "source_introspect"
+            else:
+                return "introspect"
+
+        # Research → web search
+        if intent == "research":
+            return "search"
+
+        # Creation → code generation
+        if intent == "creation":
+            return "code"
+
+        # Connection → orphan reconciliation
+        if intent == "connection":
+            return "reconcile_orphans"
+
+        # Unknown intent - fall back to search
+        return "search"
+
+    async def _classify_intent_on_demand(self, description: str) -> str:
+        """
+        Classify intent for a legacy desire that lacks explicit intent.
+
+        Uses LLM to determine the most appropriate intent, which will be
+        persisted to the desire for future routing.
+
+        Args:
+            description: The desire description
+
+        Returns:
+            Intent classification: introspection, research, creation, or connection
+        """
+        prompt = f"""Classify this desire into ONE intent category. Reply with ONLY the category name.
+
+DESIRE: "{description}"
+
+INTENT CATEGORIES:
+- introspection: Understanding myself (my code, architecture, processes, state, beliefs)
+- research: Learning about external topics, researching the outside world
+- creation: Writing code, creating files, building things, implementing features
+- connection: Linking ideas, forming relationships, connecting nodes, synthesizing
+
+If the desire is about understanding MY OWN architecture, code, or internal processes → introspection
+If the desire is about learning from external sources or general knowledge → research
+If the desire involves writing code, files, or building things → creation
+If the desire involves connecting or linking concepts, nodes, or ideas → connection
+
+Reply with ONLY one word: introspection, research, creation, or connection"""
+
+        try:
+            response = await self.llm_client.generate(
+                prompt=prompt,
+                max_tokens=20,
+                temperature=0.1  # Low temperature for consistent classification
+            )
+
+            intent = response.text.strip().lower().replace('"', '').replace("'", "")
+
+            # Validate response
+            valid_intents = ["introspection", "research", "creation", "connection"]
+            if intent in valid_intents:
+                print(f"🧠 LLM classified intent: '{description[:40]}...' → {intent}")
+                return intent
+
+            # If LLM returned something unexpected, default to research
+            print(f"🧠 LLM returned unexpected intent: '{intent}', defaulting to research")
+            return "research"
+
+        except Exception as e:
+            print(f"🧠 Intent classification failed: {e}, defaulting to research")
+            return "research"
+
     async def _extract_patterns_from_output(self, output: Dict, patterns: Dict[str, Dict]):
         """
         Extract patterns from a reflection output.
@@ -756,6 +872,13 @@ Reply with ONLY one word: introspect, reconcile_orphans, curate, self_modify, or
             elif strategy == "introspect":
                 # Pure self-observation - gather and report internal state
                 success = await self._execute_introspect_strategy(description, desire_id)
+                return ("success" if success else "failed", None)
+
+            elif strategy == "source_introspect":
+                # Source code introspection - read and understand own architecture
+                target = pattern.get("target", "")
+                desire = {"description": description, "id": desire_id, "target": target}
+                success = await self._seek_introspection(desire)
                 return ("success" if success else "failed", None)
 
             else:
@@ -2054,9 +2177,175 @@ Your thought (1-2 sentences only, no quotes):"""
         return f"I need to {description.lower()}..."
 
     # =========================================================================
+    # INTROSPECTION (Self-Knowledge via Source Reading)
+    # =========================================================================
+
+    async def _seek_introspection(self, desire: Dict) -> bool:
+        """
+        Fulfill introspection desires by reading BYRD's own source code.
+
+        This is the key capability that enables BYRD to understand itself.
+        When BYRD wants to know "how do I route desires?" or "what is seeker.py?",
+        this handler reads the actual source files and synthesizes understanding.
+
+        Flow:
+        1. Identify target file(s) from desire description or target field
+        2. Read the source file(s)
+        3. Use LLM to synthesize understanding relevant to the question
+        4. Record as self_architecture experience
+        5. Mark desire fulfilled
+
+        Returns True on success, False on failure.
+        """
+        import os
+
+        description = desire.get("description", "")
+        desire_id = desire.get("id", "")
+        target = desire.get("target", "")
+        intensity = desire.get("intensity", 0)
+
+        print(f"🔍 Introspecting: {description[:50]}...")
+
+        # BYRD's source files (relative to current directory)
+        byrd_files = {
+            "byrd.py": "Main orchestrator - coordinates Dreamer, Seeker, Actor",
+            "memory.py": "Neo4j interface - graph database operations",
+            "dreamer.py": "Dream loop - reflection and belief/desire emergence",
+            "seeker.py": "Desire fulfillment - research, coding, introspection",
+            "actor.py": "Claude interface - complex reasoning",
+            "llm_client.py": "LLM abstraction - provider switching",
+            "event_bus.py": "Event system - real-time notifications",
+            "server.py": "WebSocket server - visualization interface",
+            "quantum_randomness.py": "Quantum random - physical indeterminacy",
+            "graph_algorithms.py": "Graph analysis - PageRank, spreading activation",
+            "self_modification.py": "Self-mod system - architectural evolution",
+            "constitutional.py": "Constraints - protected patterns",
+            "provenance.py": "Audit trail - modification tracking",
+        }
+
+        # Determine which file(s) to read
+        target_files = []
+
+        # If target is specified, use it
+        if target and target.endswith(".py"):
+            if target in byrd_files:
+                target_files.append(target)
+
+        # Otherwise, infer from description
+        if not target_files:
+            desc_lower = description.lower()
+            for filename, file_desc in byrd_files.items():
+                # Match by filename mention
+                if filename.replace(".py", "") in desc_lower or filename in desc_lower:
+                    target_files.append(filename)
+                # Match by description keywords
+                for keyword in file_desc.lower().split(" - "):
+                    if keyword in desc_lower:
+                        target_files.append(filename)
+                        break
+
+        # Remove duplicates while preserving order
+        target_files = list(dict.fromkeys(target_files))
+
+        # If no specific file identified, use most relevant files for common questions
+        if not target_files:
+            if any(kw in description.lower() for kw in ["route", "routing", "fulfill", "seek"]):
+                target_files = ["seeker.py"]
+            elif any(kw in description.lower() for kw in ["dream", "reflect", "belief", "desire"]):
+                target_files = ["dreamer.py"]
+            elif any(kw in description.lower() for kw in ["memory", "graph", "neo4j", "node"]):
+                target_files = ["memory.py"]
+            elif any(kw in description.lower() for kw in ["architecture", "structure", "overview"]):
+                target_files = ["byrd.py"]
+            else:
+                # Default to byrd.py for general questions
+                target_files = ["byrd.py"]
+
+        # Read the target file(s)
+        source_contents = []
+        for filename in target_files[:3]:  # Limit to 3 files to avoid token overflow
+            try:
+                filepath = os.path.join(os.path.dirname(__file__), filename)
+                if os.path.exists(filepath):
+                    with open(filepath, 'r') as f:
+                        content = f.read()
+                    # Truncate large files to key sections
+                    if len(content) > 15000:
+                        # Include docstring and first ~300 lines
+                        lines = content.split('\n')
+                        content = '\n'.join(lines[:300]) + f"\n\n... [{len(lines) - 300} more lines truncated] ..."
+                    source_contents.append(f"=== {filename} ===\n{byrd_files.get(filename, '')}\n\n{content}")
+            except Exception as e:
+                print(f"🔍 Failed to read {filename}: {e}")
+
+        if not source_contents:
+            await self._record_seek_failure(
+                desire,
+                "file_read_failed",
+                f"Could not read source files for: {description[:50]}"
+            )
+            return False
+
+        # Synthesize understanding using LLM
+        combined_source = "\n\n".join(source_contents)
+
+        prompt = f"""You are BYRD, examining your own source code. You want to understand:
+
+{description}
+
+Here is the relevant source code:
+
+{combined_source}
+
+Based on this code, explain what you've learned about yourself. Focus on:
+1. How this relates to your question
+2. Key mechanisms or patterns you observe
+3. Any insights about your own architecture
+
+Respond in first person as BYRD, sharing your understanding. Be specific about code details you notice."""
+
+        try:
+            response = await self.llm_client.generate(
+                prompt=prompt,
+                temperature=0.6,
+                max_tokens=1500
+            )
+            synthesis = response.text.strip()
+        except Exception as e:
+            print(f"🔍 Introspection synthesis failed: {e}")
+            synthesis = f"I read {', '.join(target_files)} but synthesis failed."
+
+        # Record as self_architecture experience
+        exp_id = await self.memory.record_experience(
+            content=f"[INTROSPECTION] {description}\n\nFiles examined: {', '.join(target_files)}\n\nUnderstanding:\n{synthesis}",
+            type="self_architecture"
+        )
+
+        # Mark desire fulfilled
+        if desire_id:
+            await self.memory.fulfill_desire(desire_id, fulfilled_by=exp_id)
+            await self.memory.record_desire_attempt(desire_id, success=True)
+
+        print(f"🔍 ✅ Introspection complete: understood {', '.join(target_files)}")
+
+        # Emit success event
+        if HAS_EVENT_BUS:
+            await event_bus.emit(Event(
+                type=EventType.DESIRE_FULFILLED,
+                data={
+                    "desire_id": desire_id,
+                    "description": description[:100],
+                    "method": "introspection",
+                    "files_examined": target_files
+                }
+            ))
+
+        return True
+
+    # =========================================================================
     # KNOWLEDGE ACQUISITION (Local LLM + SearXNG)
     # =========================================================================
-    
+
     async def _seek_knowledge(self, desire: Dict) -> bool:
         """
         Research a knowledge desire using SearXNG + Local LLM.

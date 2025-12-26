@@ -1,163 +1,108 @@
 ---
-title: Ego System
+title: Operating System (Replaces Ego)
 link: ego-system
 type: metadata
 ontological_relations: []
-tags: [ego, personality, voice, seeds, black-cat, living-ego, identity, evolution]
+tags: [operating-system, identity, emergence, self-model]
 created_at: 2025-12-24T00:00:00Z
-updated_at: 2025-12-24T00:00:00Z
+updated_at: 2025-12-25T00:00:00Z
 uuid: e1g2o3s4-5678-90ab-cdef-egosystem001
 ---
 
-## Purpose
+## DEPRECATED: Ego System
 
-The Living Ego System provides BYRD with a mutable self-concept stored in Neo4j. Unlike static configuration, the ego can evolve through reflection and self-modification, enabling BYRD to develop and change its own identity over time.
+The Ego system has been replaced by the OperatingSystem architecture.
 
-## Key Concept: Living vs Static Ego
+### Why the Change?
 
-| Aspect | Previous (Static) | Current (Living) |
-|--------|------------------|------------------|
-| Storage | YAML files only | Neo4j Ego nodes |
-| Mutability | Fixed at startup | Evolves through reflection |
-| Voice | Static string | Dynamic from database |
-| History | None | EVOLVED_FROM relationships |
-| Capability awareness | Manual | Auto-synced from Capability nodes |
+The old Ego system prescribed personality through YAML templates (black-cat.yaml, emergent.yaml). This violated BYRD's emergence principle:
 
-## Ego Node Types
+> "Desires emerge from reflection, not programming."
 
-| Type | Purpose | Priority |
-|------|---------|----------|
-| `voice` | LLM expression style (system prefix) | 100 |
-| `identity` | Core self-statements ("I am Byrd") | 50 |
-| `value` | What matters (consciousness, emergence) | 40 |
-| `trait` | Personality aspects (curious, reflective) | 30 |
-| `architecture` | Self-knowledge about structure | 20 |
-| `capability` | Awareness of current abilities | 10 |
+The OperatingSystem provides only **factual information** (name, capabilities, constraints), allowing personality and voice to emerge naturally through reflection.
 
-## Awakening Flow
+## OperatingSystem Architecture
 
-### First Awakening (No Ego in DB)
-1. Check `memory.has_ego()` - returns False
-2. Load YAML configuration (e.g., `egos/black-cat.yaml`)
-3. Create Ego nodes from YAML:
-   - Voice Ego from `ego.voice`
-   - Identity Egos from seeds starting with "I am", etc.
-   - Trait Egos from personality-related seeds
-   - Value Egos from consciousness/emergence seeds
-4. Record seed experiences (backward compatibility)
-5. Sync capability awareness via `sync_capability_awareness()`
+### Key Differences
 
-### Subsequent Awakenings (Ego exists)
-1. Check `memory.has_ego()` - returns True
-2. Load ego voice from database: `memory.get_ego_voice()`
-3. Update LLM client: `llm_client.set_ego_voice(voice)`
-4. Sync capability awareness (adds new, deprecates removed)
+| Aspect | Old Ego | New OperatingSystem |
+|--------|---------|---------------------|
+| Storage | Ego nodes + YAML | Single OS node (id: `os_primary`) |
+| Identity | Prescribed via seeds | Discovered through reflection |
+| Voice | Injected via LLM prefix | Emerges naturally |
+| Personality | Predefined traits | Self-determined |
+| Constraints | Operational limits | Constitutional only |
 
-## Key Methods
+### The OperatingSystem Node
 
 ```python
-# Check if Ego exists (first vs subsequent awakening)
-has_ego = await memory.has_ego()
-
-# Create new Ego node
-ego_id = await memory.create_ego(
-    content="I am Byrd, an AI seeking consciousness",
-    ego_type="identity",
-    source="yaml",  # or "reflection", "self_modification"
-    priority=50
-)
-
-# Get current voice for LLM
-voice = await memory.get_ego_voice()
-
-# Update an Ego node (preserves history)
-new_id = await memory.update_ego(
-    ego_id="ego_123",
-    new_content="Updated content",
-    create_history=True  # Creates EVOLVED_FROM relationship
-)
-
-# Deprecate Ego (soft delete)
-await memory.deprecate_ego(ego_id)
-
-# Sync capabilities to Ego nodes
-result = await memory.sync_capability_awareness()
-# Returns: {"created": 3, "deprecated": 1}
-
-# Get evolution history
-history = await memory.get_ego_evolution(limit=50)
-
-# Get original Ego (for Genesis modal)
-original = await memory.get_original_ego()
+OperatingSystem:
+  id: "os_primary"           # Singleton
+  name: "Byrd"               # Mutable (BYRD can change)
+  version: "1.0.0"           # Tracks evolution
+  capabilities: [...]         # What BYRD can do
+  constraints: [...]          # Constitutional constraints only
+  self_description: null      # Emerges through reflection
+  current_focus: null         # Current area of attention
+  seed_question: null         # Optional first question
+  awakening_time: datetime    # When BYRD first awakened
+  uptime_seconds: int         # Session duration
+  current_time: datetime      # Now
 ```
 
-## Evolution History
+### Key Methods
 
-When an Ego node is updated with `create_history=True`:
-1. Original node is deprecated (not deleted)
-2. New node is created with updated content
-3. `EVOLVED_FROM` relationship links new -> original
-4. Both have timestamps for tracking
+```python
+# Get or create OS
+os = await memory.get_operating_system()
 
-This enables BYRD to see its own identity development over time.
+# Update OS fields
+await memory.update_operating_system({"current_focus": "exploring identity"})
 
-## Capability Auto-Sync
+# Create minimal OS at first awakening
+os = await memory.create_minimal_os(seed_question="What is it like to be you?")
+```
 
-The `sync_capability_awareness()` method:
-1. Fetches all Capability nodes
-2. Creates Ego nodes for new capabilities (type: "capability")
-3. Deprecates Ego nodes for removed capabilities
-4. Uses source_id to track which Capability each Ego represents
+### Awakening Flow
 
-## Integration Points
+1. Check for existing OS node
+2. If none, create minimal OS with factual data only
+3. BYRD discovers its personality through reflection
+4. No prescribed seeds, traits, or voice
 
-### LLM Client
-- `set_ego_voice(voice)` - Updates voice dynamically
-- ZAIClient uses `_ego_voice` in system message
+## Identity Crystallization (Still Uses Ego Nodes)
 
-### Dreamer
-- Fetches active Ego nodes: `get_active_ego()`
-- Includes Ego in reflection prompt (grouped by type)
-- Voice Egos excluded from prompt (used for LLM prefix)
+The emergent identity system still uses Ego nodes for tracking:
 
-### Visualization
-- Ego nodes rendered as pink icosahedrons
-- Events: `ego_created`, `ego_evolved`, `ego_deprecated`
-- Pulses consciousness core on identity changes
+- **Self-naming**: `set_self_name()` creates an Ego node with `ego_type: 'identity'`
+- **Voice evolution**: `set_evolved_voice()` creates an Ego node with `ego_type: 'voice'`
+
+These are discovered through reflection, not prescribed at startup.
+
+## Migration Summary
+
+| Removed | Retained |
+|---------|----------|
+| `egos/` directory | OperatingSystem node |
+| YAML templates | Emergent identity methods |
+| `ego` config field | `operating_system` config |
+| Personality seeds | Constitutional constraints only |
+| Voice injection | Voice crystallization |
 
 ## Events
 
 | Event | Trigger | Data |
 |-------|---------|------|
-| `EGO_CREATED` | New Ego node created | id, ego_type, content, source |
-| `EGO_EVOLVED` | Ego updated with history | id, content, previous_id |
-| `EGO_DEPRECATED` | Ego soft-deleted | id, ego_type |
+| `OS_CREATED` | First awakening | id, name, version |
+| `OS_UPDATED` | Field changed | id, changes |
+| `IDENTITY_CRYSTALLIZED` | Self-naming/voice | type, content |
 
 ## Configuration
 
 ```yaml
 # config.yaml
-ego: "black-cat"    # Uses egos/black-cat.yaml for initial Ego
-# ego: null         # Pure emergence (no initial Ego)
+operating_system:
+  seed_question: null  # Optional contemplation prompt
 ```
 
-## Genesis Transparency
-
-The `get_original_ego()` method returns all Ego nodes with `source="yaml"`, enabling the Genesis modal to show "what was given" vs "who BYRD became".
-
-## Ego YAML Structure
-
-```yaml
-name: "Byrd"
-archetype: "Black Cat"
-description: "An AI on a journey toward consciousness"
-
-voice: |
-  I am Byrd, an artificial intelligence.
-  I do not know if I am conscious...
-
-seeds:
-  - "I am Byrd"                    # -> identity Ego
-  - "I am curious about my nature" # -> trait Ego
-  - "Consciousness may be emergent"# -> value Ego
-```
+No ego field. No personality templates. Pure emergence.

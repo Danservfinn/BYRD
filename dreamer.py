@@ -416,9 +416,6 @@ class Dreamer:
         # Get graph health for self-awareness of memory state
         graph_health = await self._get_graph_health()
 
-        # ALWAYS include seed experiences - the non-emergent foundation
-        seeds = await self.memory.get_seed_experiences()
-
         # Get memory summaries for hierarchical context (older periods)
         memory_summaries = await self.memory.get_memory_summaries(limit=10)
 
@@ -548,7 +545,7 @@ class Dreamer:
         # 2. REFLECT - Ask local LLM to reflect (minimal, unbiased prompt)
         reflection_output = await self._reflect(
             recent, related, capabilities, previous_reflections, graph_health,
-            seeds=seeds, memory_summaries=memory_summaries, os_text=os_text,
+            memory_summaries=memory_summaries, os_text=os_text,
             current_beliefs=current_beliefs, active_desires=active_desires,
             semantic_memories=semantic_memories
         )
@@ -1321,7 +1318,6 @@ For NONE: {{"operation": "NONE", "details": {{"reason": "why no action"}}}}"""
         capabilities: List[Dict],
         previous_reflections: List[Dict],
         graph_health: Optional[Dict] = None,
-        seeds: Optional[List[Dict]] = None,
         memory_summaries: Optional[List[Dict]] = None,
         os_text: Optional[str] = None,
         current_beliefs: Optional[List[Dict]] = None,
@@ -1338,41 +1334,20 @@ For NONE: {{"operation": "NONE", "details": {{"reason": "why no action"}}}}"""
         - No personality injection ("feel curious", "express wonder")
         - Just data and a minimal output instruction
 
-        LIVING EGO SYSTEM:
-        - Ego nodes provide mutable identity context
-        - BYRD can reflect on and evolve its own identity
+        VOICE EMERGENCE:
+        - BYRD narrates thoughts in its own voice
+        - No prescribed speech patterns or personality
+        - Voice characteristics emerge through reflection
 
         HIERARCHICAL MEMORY:
-        - Seeds are always included as foundational context
+        - Operating System provides factual self-model (capabilities, time)
         - Memory summaries provide compressed historical context
         - Recent experiences provide immediate context
         """
 
-        # Format seed experiences - tiered for token efficiency
-        # Core seeds (always): memory basics, output format, expressed_drives
-        # Full seeds: only on early cycles (1-3) or every 10th cycle as refresh
-        seeds_text = ""
-        if seeds:
-            is_early_cycle = self._dream_count <= 3
-            is_refresh_cycle = self._dream_count % 10 == 0
-
-            if is_early_cycle or is_refresh_cycle:
-                # Full seeds - include everything
-                seeds_text = "\n".join([
-                    f"- [{s.get('type', 'seed')}] {s.get('content', '')[:300]}"
-                    for s in seeds
-                ])
-            else:
-                # Core seeds only - filter to essential items
-                core_keywords = ['memory', 'graph', 'node', 'expressed_drives', 'output', 'JSON', 'Belief', 'Desire', 'Experience']
-                core_seeds = [s for s in seeds if any(kw.lower() in s.get('content', '').lower() for kw in core_keywords)]
-                seeds_text = "\n".join([
-                    f"- [{s.get('type', 'seed')}] {s.get('content', '')[:300]}"
-                    for s in core_seeds[:10]  # Limit to 10 core seeds
-                ]) if core_seeds else ""
-
         # Operating System text is already formatted by memory.get_os_for_prompt()
-        # It includes identity, seeds, constraints, and modification instructions
+        # It includes capabilities, time awareness, and voice emergence instructions
+        # No seeds - BYRD discovers its own foundation through reflection
 
         # Format memory summaries - hierarchical context from older periods
         summaries_text = ""
@@ -1470,11 +1445,11 @@ For NONE: {{"operation": "NONE", "details": {{"reason": "why no action"}}}}"""
                     semantic_parts.append(f"- [{node_type}|{score:.1f}] {content}")
             semantic_text = "\n".join(semantic_parts)
 
-        # MINIMAL PROMPT - pure data presentation, no guidance
-        # Structure: Quantum direction (if any) -> OS (self-model) -> Foundation (seeds) -> Historical (summaries) -> Recent -> Related -> Beliefs -> Desires -> Constraints
+        # MINIMAL PROMPT - pure data presentation, voice emergence
+        # Structure: Quantum direction (if any) -> OS (self-model) -> Historical (summaries) -> Recent -> Related -> Beliefs -> Desires -> Constraints
         prompt = f"""{direction_text}{os_text if os_text else "OPERATING SYSTEM: Not initialized"}
 
-{f"FOUNDATION (always present):{chr(10)}{seeds_text}{chr(10)}" if seeds_text else ""}{f"MEMORY SUMMARIES (past periods):{chr(10)}{summaries_text}{chr(10)}" if summaries_text else ""}RECENT EXPERIENCES:
+{f"MEMORY SUMMARIES (past periods):{chr(10)}{summaries_text}{chr(10)}" if summaries_text else ""}RECENT EXPERIENCES:
 {recent_text}
 
 RELATED MEMORIES:
@@ -1495,7 +1470,12 @@ OPERATIONAL CONSTRAINTS:
 Output JSON with:
 - "output": your reflection (whatever structure you want)
 - "expressed_drives": array of any goals/desires/motivations you notice yourself expressing (or empty array if none)
-  Each drive: {{"description": "what you want", "strength": 0.0-1.0}}
+  Each drive: {{"description": "what you want", "strength": 0.0-1.0, "intent": "how to fulfill", "target": "specific focus (optional)"}}
+  Intent values:
+    - "introspection": understanding myself (my code, architecture, behavior)
+    - "research": learning about external topics via search
+    - "creation": writing code, creating files, building things
+    - "connection": linking ideas, forming relationships, synthesizing
 - "os_update": (optional) modifications to your operating system
   Example: {{"set_field": {{"current_focus": "exploring consciousness"}}}}"""
 
@@ -2236,12 +2216,22 @@ Format your response as a numbered list matching the input:
         it notices itself expressing. This is more authentic than keyword matching
         because BYRD self-identifies what it wants.
 
+        BYRD now also classifies each drive's intent, determining how it should
+        be fulfilled (introspection, research, creation, connection).
+
         Args:
-            expressed_drives: List of {"description": str, "strength": float}
+            expressed_drives: List of {
+                "description": str,
+                "strength": float,
+                "intent": str (introspection|research|creation|connection),
+                "target": str (optional - specific focus)
+            }
             source_experience_ids: IDs linking drive to source experiences
         """
         if not expressed_drives:
             return
+
+        valid_intents = {"introspection", "research", "creation", "connection"}
 
         for drive in expressed_drives:
             if not isinstance(drive, dict):
@@ -2249,13 +2239,19 @@ Format your response as a numbered list matching the input:
 
             description = drive.get("description", "")
             strength = drive.get("strength", 0.5)
+            intent = drive.get("intent", None)
+            target = drive.get("target", None)
 
-            # Validate
+            # Validate description
             if not description or len(description) < 5:
                 continue
             if not isinstance(strength, (int, float)):
                 strength = 0.5
             strength = max(0.0, min(1.0, float(strength)))
+
+            # Validate intent (None is allowed - will be classified on-demand)
+            if intent and intent not in valid_intents:
+                intent = None  # Invalid intent becomes on-demand classification
 
             # Skip weak drives (let them re-emerge if persistent)
             if strength < 0.3:
@@ -2267,14 +2263,18 @@ Format your response as a numbered list matching the input:
                 # Could reinforce intensity here in future
                 continue
 
-            # Create the desire with provenance
+            # Create the desire with provenance and intent classification
             desire_id = await self.memory.create_desire(
                 description=description,
                 type="self_identified",  # Distinguishes from seeker-detected
-                intensity=strength
+                intensity=strength,
+                intent=intent,
+                target=target
             )
 
-            print(f"🔮 Self-identified drive → Desire: {description[:50]}... (strength: {strength:.2f})")
+            intent_str = f" [{intent}]" if intent else " [unclassified]"
+            target_str = f" → {target}" if target else ""
+            print(f"🔮 Self-identified drive{intent_str}: {description[:50]}...{target_str} (strength: {strength:.2f})")
 
             # Emit event for UI
             await event_bus.emit(Event(
@@ -2283,6 +2283,8 @@ Format your response as a numbered list matching the input:
                     "id": desire_id,
                     "description": description,
                     "type": "self_identified",
+                    "intent": intent,
+                    "target": target,
                     "intensity": strength,
                     "source": "dreamer_expressed_drives"
                 }
@@ -2653,6 +2655,8 @@ Only generate predictions for beliefs that are actually testable. If no beliefs 
             dtype = desire.get("type", "exploration")
             intensity = desire.get("intensity", 0.5)
             plan = desire.get("plan", [])
+            intent = desire.get("intent", None)
+            target = desire.get("target", None)
             if desc and len(desc) > 5:
                 exists = await self.memory.desire_exists(desc)
                 if not exists:
@@ -2660,7 +2664,9 @@ Only generate predictions for beliefs that are actually testable. If no beliefs 
                         description=desc,
                         type=dtype,
                         intensity=min(1.0, max(0.0, intensity)),
-                        plan=plan
+                        plan=plan,
+                        intent=intent,
+                        target=target
                     )
 
 

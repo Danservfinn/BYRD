@@ -76,15 +76,12 @@ memory:
 # OPERATING SYSTEM (BYRD's Self-Model)
 # =============================================================================
 # The Operating System is BYRD's mutable self-model stored in Neo4j.
-# It's read every dream cycle and can be modified through reflection.
-# Templates define the initial state when BYRD awakens for the first time.
-# Available templates: "black-cat" (default), "emergent" (minimal)
+# It contains only factual information - capabilities, architecture, constraints.
+# BYRD discovers his own personality, voice, and goals through reflection.
 operating_system:
-  template: "black-cat"
-
-# Legacy ego setting (DEPRECATED - use operating_system above)
-# Kept for backward compatibility during transition
-ego: "black-cat"
+  # Optional seed question to contemplate on first awakening
+  # Example: "What is it like to be you?"
+  seed_question: null
 
 # =============================================================================
 # LLM PROVIDER (Shared by Dreamer and Seeker)
@@ -244,10 +241,7 @@ seeker:
   capabilities:
     # Minimum trust score to consider installing (0-1)
     trust_threshold: 0.5
-    
-    # Rate limit for safety
-    max_installs_per_day: 3
-    
+
     # GitHub token for higher rate limits (optional)
     # github_token: "ghp_..."
   
@@ -303,7 +297,7 @@ actor:
   # api_key: "sk-ant-..."
 
 # =============================================================================
-# SELF-MODIFICATION (Future)
+# SELF-MODIFICATION
 # =============================================================================
 # Enables BYRD to modify its own code based on emergent desires.
 self_modification:
@@ -316,10 +310,6 @@ self_modification:
   # Safety settings
   require_health_check: true
   auto_rollback_on_failure: true
-
-  # Rate limiting
-  max_modifications_per_day: 5
-  cooldown_between_modifications_seconds: 3600
 
 # =============================================================================
 # CODER (Claude Code CLI)
