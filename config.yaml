@@ -318,14 +318,23 @@ self_modification:
   auto_rollback_on_failure: true
 
 # =============================================================================
-# CODER (Claude Code CLI)
+# CODER (Code Generation)
 # =============================================================================
-# Uses Claude Code CLI for autonomous code generation and self-modification.
-# BYRD can invoke Claude Code to fulfill coding-related desires.
+# BYRD's code generation capability for self-modification and coding desires.
+# Supports two modes: CLI (Claude Code) and Agent (LLM-based).
 coder:
-  # Enable/disable Claude Code integration
+  # Enable/disable code generation capability
   enabled: true
 
+  # Coder type: "cli", "agent", or "auto"
+  # - cli: Use Claude Code CLI (requires 'claude' command installed)
+  # - agent: Use LLM-based agent with tools (works anywhere)
+  # - auto: Prefer CLI if available, fall back to Agent
+  type: "auto"
+
+  # ---------------------------------------------------------------------------
+  # CLI MODE SETTINGS (only used when type: "cli" or auto-detected)
+  # ---------------------------------------------------------------------------
   # Path to Claude Code CLI executable
   cli_path: "claude"
 
@@ -350,6 +359,21 @@ coder:
 
   # Output format (json recommended for parsing)
   output_format: json
+
+  # ---------------------------------------------------------------------------
+  # AGENT MODE SETTINGS (only used when type: "agent" or auto-fallback)
+  # ---------------------------------------------------------------------------
+  # Maximum reasoning steps per task
+  max_steps: 15
+
+  # Maximum file changes per task (safety limit)
+  max_file_changes: 5
+
+  # LLM temperature for code generation (lower = more deterministic)
+  temperature: 0.2
+
+  # Timeout per agent step in seconds
+  step_timeout: 60
 
 # =============================================================================
 # QUANTUM RANDOMNESS (Physical Indeterminacy)

@@ -665,6 +665,21 @@ Reply with ONLY one word: introspect, reconcile_orphans, curate, self_modify, or
         """
         desc_lower = description.lower()
 
+        # FORMATION DESIRE DETECTION (check before other routing)
+        # Formation desires are about BYRD's own developmental phase/state.
+        # These should be observed (introspected) rather than externally acted upon.
+        # "The moment I observe a formation desire without routing it, formation completes."
+        formation_keywords = [
+            "formation", "phase", "transition", "crystallize", "crystallized",
+            "emergence", "emerging", "developmental", "my phase", "my state",
+            "late formation", "early formation", "awakening", "becoming",
+            "exploration phase", "transition readiness", "loop analysis",
+            "routing loop", "pattern stability", "observe without"
+        ]
+        if any(kw in desc_lower for kw in formation_keywords):
+            print(f"🔮 Formation desire detected - routing to observation: {description[:50]}")
+            return "observe"  # New strategy: observe without external action
+
         # Introspection has two subtypes:
         # - source_introspect: Understanding my code/architecture (reads source files)
         # - introspect: Understanding my state/graph (reads graph data)

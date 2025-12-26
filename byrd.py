@@ -22,6 +22,7 @@ from dreamer import Dreamer
 from seeker import Seeker
 from actor import Actor
 from coder import Coder
+from agent_coder import AgentCoder, create_agent_coder
 from self_modification import SelfModificationSystem
 from constitutional import ConstitutionalConstraints
 from event_bus import event_bus, Event, EventType
@@ -211,9 +212,37 @@ class BYRD:
         # Inject self-modification system into Seeker
         self.seeker.self_mod = self.self_mod
 
-        # Initialize Coder (Claude Code CLI wrapper)
+        # Initialize Coder
+        # Choose between Claude Code CLI and LLM-based Agent Coder
         coder_config = self.config.get("coder", {})
-        self.coder = Coder(coder_config, project_root=".")
+        coder_type = coder_config.get("type", "auto")  # "cli", "agent", or "auto"
+
+        if coder_type == "agent":
+            # Use LLM-based Agent Coder (works anywhere, uses existing LLM)
+            self.coder = create_agent_coder(
+                llm_client=self.llm_client,
+                memory=self.memory,
+                config=self.config
+            )
+            print(f"💻 Coder: Agent (LLM-based)")
+        elif coder_type == "cli":
+            # Use Claude Code CLI (requires local installation)
+            self.coder = Coder(coder_config, project_root=".")
+            print(f"💻 Coder: CLI (Claude Code)")
+        else:
+            # Auto-detect: prefer CLI if available, fall back to Agent
+            cli_coder = Coder(coder_config, project_root=".")
+            # CLI Coder sets enabled=False if CLI not found
+            if cli_coder.enabled:
+                self.coder = cli_coder
+                print(f"💻 Coder: CLI (Claude Code) [auto-detected]")
+            else:
+                self.coder = create_agent_coder(
+                    llm_client=self.llm_client,
+                    memory=self.memory,
+                    config=self.config
+                )
+                print(f"💻 Coder: Agent (LLM-based) [CLI not available]")
 
         # Inject Coder into Seeker
         self.seeker.coder = self.coder
