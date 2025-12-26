@@ -7970,7 +7970,7 @@
           status.className = 'text-sm text-emerald-600 font-medium';
 
           // Add to event log
-          addEvent({
+          handleEvent({
             type: 'external_input_received',
             data: {
               content: content.length > 50 ? content.substring(0, 50) + '...' : content,
