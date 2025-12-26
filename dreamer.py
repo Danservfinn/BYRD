@@ -35,9 +35,10 @@ class Dreamer:
     This is where "wanting" may emerge - if it does.
     """
 
-    def __init__(self, memory: Memory, llm_client: LLMClient, config: Dict):
+    def __init__(self, memory: Memory, llm_client: LLMClient, config: Dict, coordinator=None):
         self.memory = memory
         self.llm_client = llm_client
+        self.coordinator = coordinator  # For synchronizing with Seeker/Coder
 
         # Timing - base interval
         self.interval = config.get("interval_seconds", 30)
@@ -241,6 +242,12 @@ class Dreamer:
             print(f"💭 Restored dream count: {self._dream_count}")
 
         while self._running:
+            # Wait for any running Coder operations to complete before dreaming
+            if self.coordinator:
+                coder_ready = await self.coordinator.wait_for_coder(timeout=300.0)
+                if not coder_ready:
+                    print("💭 Coder still running after 5 min, proceeding anyway...")
+
             try:
                 await self._dream_cycle()
             except Exception as e:
@@ -1487,13 +1494,24 @@ Output JSON with:
                 data={"message": f"Calling LLM (cycle {self._dream_count})"}
             ))
 
-            response = await self.llm_client.generate(
-                prompt=prompt,
-                temperature=0.7,
-                max_tokens=3000,  # Increased to prevent JSON truncation
-                quantum_modulation=self.quantum_enabled,
-                quantum_context="dreamer_reflection"
-            )
+            # Acquire LLM lock to prevent concurrent calls with Seeker
+            if self.coordinator:
+                async with self.coordinator.llm_operation("dreamer_reflect"):
+                    response = await self.llm_client.generate(
+                        prompt=prompt,
+                        temperature=0.7,
+                        max_tokens=3000,  # Increased to prevent JSON truncation
+                        quantum_modulation=self.quantum_enabled,
+                        quantum_context="dreamer_reflection"
+                    )
+            else:
+                response = await self.llm_client.generate(
+                    prompt=prompt,
+                    temperature=0.7,
+                    max_tokens=3000,  # Increased to prevent JSON truncation
+                    quantum_modulation=self.quantum_enabled,
+                    quantum_context="dreamer_reflection"
+                )
 
             # Record significant quantum moments
             if response.quantum_influence:

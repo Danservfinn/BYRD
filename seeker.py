@@ -52,9 +52,10 @@ class Seeker:
     5. Record outcome as experience for BYRD to reflect on
     """
     
-    def __init__(self, memory: Memory, llm_client: LLMClient, config: Dict):
+    def __init__(self, memory: Memory, llm_client: LLMClient, config: Dict, coordinator=None):
         self.memory = memory
         self.llm_client = llm_client
+        self.coordinator = coordinator  # For synchronizing with Dreamer/Coder
 
         # Seeker cycle configuration
         self.interval_seconds = config.get("interval_seconds", 10)
@@ -394,11 +395,20 @@ Return JSON only:
 If no clear drives emerge, return {{"drives": []}}"""
 
         try:
-            response = await self.llm_client.generate(
-                prompt=prompt,
-                temperature=0.3,  # Low temp for consistency
-                max_tokens=1000
-            )
+            # Acquire LLM lock to prevent concurrent calls with Dreamer
+            if self.coordinator:
+                async with self.coordinator.llm_operation("seeker_detect_drives"):
+                    response = await self.llm_client.generate(
+                        prompt=prompt,
+                        temperature=0.3,  # Low temp for consistency
+                        max_tokens=1000
+                    )
+            else:
+                response = await self.llm_client.generate(
+                    prompt=prompt,
+                    temperature=0.3,  # Low temp for consistency
+                    max_tokens=1000
+                )
 
             # Parse response
             result = self.llm_client.parse_json_response(response.text)
@@ -550,11 +560,20 @@ If the desire is about understanding something EXTERNAL (concepts, topics, the w
 Reply with ONLY one word: introspect, reconcile_orphans, curate, self_modify, or search"""
 
         try:
-            response = await self.llm_client.generate(
-                prompt=prompt,
-                max_tokens=20,
-                temperature=0.1  # Low temperature for consistent classification
-            )
+            # Acquire LLM lock to prevent concurrent calls with Dreamer
+            if self.coordinator:
+                async with self.coordinator.llm_operation("seeker_classify_desire"):
+                    response = await self.llm_client.generate(
+                        prompt=prompt,
+                        max_tokens=20,
+                        temperature=0.1  # Low temperature for consistent classification
+                    )
+            else:
+                response = await self.llm_client.generate(
+                    prompt=prompt,
+                    max_tokens=20,
+                    temperature=0.1  # Low temperature for consistent classification
+                )
 
             strategy = response.strip().lower().replace('"', '').replace("'", "")
 
@@ -704,11 +723,20 @@ If the desire involves connecting or linking concepts, nodes, or ideas → conne
 Reply with ONLY one word: introspection, research, creation, or connection"""
 
         try:
-            response = await self.llm_client.generate(
-                prompt=prompt,
-                max_tokens=20,
-                temperature=0.1  # Low temperature for consistent classification
-            )
+            # Acquire LLM lock to prevent concurrent calls with Dreamer
+            if self.coordinator:
+                async with self.coordinator.llm_operation("seeker_classify_intent"):
+                    response = await self.llm_client.generate(
+                        prompt=prompt,
+                        max_tokens=20,
+                        temperature=0.1  # Low temperature for consistent classification
+                    )
+            else:
+                response = await self.llm_client.generate(
+                    prompt=prompt,
+                    max_tokens=20,
+                    temperature=0.1  # Low temperature for consistent classification
+                )
 
             intent = response.text.strip().lower().replace('"', '').replace("'", "")
 
@@ -3320,8 +3348,14 @@ If the change is too risky or unclear, output: ERROR: <reason>"""
             # 2. Construct prompt
             prompt = self._format_coder_prompt(desire, context)
 
-            # 3. Execute via Coder
-            result = await self.coder.execute(prompt, context)
+            # 3. Execute via Coder (signal coordinator to block Dreamer)
+            if self.coordinator:
+                self.coordinator.coder_started(description[:100])
+            try:
+                result = await self.coder.execute(prompt, context)
+            finally:
+                if self.coordinator:
+                    self.coordinator.coder_finished()
 
             # 4. Post-validate (constitutional constraints)
             if result.success:

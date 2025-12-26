@@ -26,6 +26,108 @@ from self_modification import SelfModificationSystem
 from constitutional import ConstitutionalConstraints
 from event_bus import event_bus, Event, EventType
 from llm_client import create_llm_client
+from contextlib import asynccontextmanager
+
+
+class ComponentCoordinator:
+    """
+    Coordinates heavy operations between Dreamer, Seeker, and Coder.
+
+    Prevents overlapping LLM calls and ensures Dreamer waits for Coder
+    to finish before starting a new reflection cycle.
+
+    Usage:
+        # For LLM calls (serialized access)
+        async with coordinator.llm_operation("dreamer_reflect"):
+            response = await llm_client.generate(...)
+
+        # For Coder (Dreamer waits for completion)
+        coordinator.coder_started()
+        try:
+            await coder.invoke(...)
+        finally:
+            coordinator.coder_finished()
+
+        # In Dreamer (wait for Coder before reflecting)
+        await coordinator.wait_for_coder()
+    """
+
+    def __init__(self):
+        # Lock for serializing LLM calls
+        self._llm_lock = asyncio.Lock()
+
+        # Event for Coder status (set = not running, clear = running)
+        self._coder_idle = asyncio.Event()
+        self._coder_idle.set()  # Initially idle
+
+        # Track active operation for debugging
+        self._active_operation: Optional[str] = None
+        self._coder_task: Optional[str] = None
+
+    @asynccontextmanager
+    async def llm_operation(self, name: str):
+        """
+        Acquire exclusive access for LLM operations.
+
+        This serializes LLM calls so only one component uses the LLM at a time,
+        preventing rate limiting and ensuring coherent context.
+
+        Args:
+            name: Description of the operation (for debugging)
+        """
+        async with self._llm_lock:
+            previous = self._active_operation
+            self._active_operation = name
+            try:
+                yield
+            finally:
+                self._active_operation = previous
+
+    async def wait_for_coder(self, timeout: Optional[float] = None) -> bool:
+        """
+        Wait until the Coder finishes if it's running.
+
+        Args:
+            timeout: Max seconds to wait (None = wait forever)
+
+        Returns:
+            True if coder is idle, False if timeout occurred
+        """
+        if self._coder_idle.is_set():
+            return True
+
+        try:
+            await asyncio.wait_for(self._coder_idle.wait(), timeout=timeout)
+            return True
+        except asyncio.TimeoutError:
+            return False
+
+    def coder_started(self, task_description: str = ""):
+        """Signal that the Coder has started a task."""
+        self._coder_idle.clear()
+        self._coder_task = task_description
+        print(f"🔧 Coder started: {task_description[:50]}..." if task_description else "🔧 Coder started")
+
+    def coder_finished(self):
+        """Signal that the Coder has finished."""
+        self._coder_task = None
+        self._coder_idle.set()
+        print("🔧 Coder finished")
+
+    @property
+    def is_coder_running(self) -> bool:
+        """Check if the Coder is currently running."""
+        return not self._coder_idle.is_set()
+
+    @property
+    def active_operation(self) -> Optional[str]:
+        """Get the name of the current LLM operation (for debugging)."""
+        return self._active_operation
+
+    @property
+    def coder_task(self) -> Optional[str]:
+        """Get the current Coder task description (for debugging)."""
+        return self._coder_task
 
 
 class BYRD:
@@ -73,6 +175,10 @@ class BYRD:
         else:
             print("🌀 Quantum randomness: disabled")
 
+        # Create component coordinator for synchronizing heavy operations
+        self.coordinator = ComponentCoordinator()
+        print("🔗 Component coordinator: initialized")
+
         # Build dreamer config including quantum settings
         dreamer_config = self.config.get("dreamer", {})
         dreamer_config["quantum"] = quantum_config
@@ -80,7 +186,8 @@ class BYRD:
         self.dreamer = Dreamer(
             memory=self.memory,
             llm_client=self.llm_client,
-            config=dreamer_config
+            config=dreamer_config,
+            coordinator=self.coordinator
         )
         self.seeker = Seeker(
             memory=self.memory,
@@ -88,7 +195,8 @@ class BYRD:
             config={
                 **self.config.get("seeker", {}),
                 "self_modification": self.config.get("self_modification", {})
-            }
+            },
+            coordinator=self.coordinator
         )
         self.actor = Actor(self.memory, self.config.get("actor", {}))
 
