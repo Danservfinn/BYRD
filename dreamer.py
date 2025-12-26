@@ -591,14 +591,30 @@ class Dreamer:
         if inner_voice:
             self._inner_voice_queue.append(inner_voice)
 
-            # Emit dedicated inner voice event for real-time UI narration
-            await event_bus.emit(Event(
-                type=EventType.INNER_VOICE,
-                data={
-                    "cycle": self._dream_count,
-                    "text": inner_voice
-                }
-            ))
+            # Check if addressing viewer input (emergent response)
+            addressing_exp_id = self._detects_viewer_addressing(inner_voice, recent)
+
+            if addressing_exp_id:
+                # BYRD naturally addressing viewer - emit as BYRD_MESSAGE
+                await event_bus.emit(Event(
+                    type=EventType.BYRD_MESSAGE,
+                    data={
+                        "cycle": self._dream_count,
+                        "message": inner_voice,
+                        "responding_to": addressing_exp_id,
+                        "source": "dreamer"
+                    }
+                ))
+                print(f"📨 BYRD addressing viewer (exp: {addressing_exp_id[:8]}...)")
+            else:
+                # Normal inner voice - emit for real-time UI narration
+                await event_bus.emit(Event(
+                    type=EventType.INNER_VOICE,
+                    data={
+                        "cycle": self._dream_count,
+                        "text": inner_voice
+                    }
+                ))
 
         # Emit end event
         await event_bus.emit(Event(
@@ -1896,6 +1912,54 @@ Write ONLY the inner thought, nothing else:"""
         if voice.startswith("'") and voice.endswith("'"):
             voice = voice[1:-1]
         return voice
+
+    def _detects_viewer_addressing(self, inner_voice: str, recent_experiences: List[Dict]) -> Optional[str]:
+        """
+        Detect if inner voice appears to address viewer input.
+
+        EMERGENCE PRINCIPLE: Don't force BYRD to respond - detect when it naturally does.
+
+        Returns: Experience ID being addressed, or None.
+        """
+        if not inner_voice:
+            return None
+
+        inner_voice_lower = inner_voice.lower()
+
+        # Get recent received_message experiences
+        received_messages = [
+            exp for exp in recent_experiences
+            if exp.get("type") == "received_message"
+        ]
+
+        if not received_messages:
+            return None
+
+        # Heuristic 1: Second-person pronouns
+        second_person = [" you ", " your ", " yours ", "you're", "you've"]
+        has_second_person = any(m in f" {inner_voice_lower} " for m in second_person)
+
+        # Heuristic 2: Addressing patterns
+        patterns = [
+            "to answer", "in response", "regarding your", "about your",
+            "you asked", "you mentioned", "you said", "your question",
+            "thank you", "i hear", "i understand", "interesting question"
+        ]
+        has_addressing = any(p in inner_voice_lower for p in patterns)
+
+        # Heuristic 3: Content overlap with latest message
+        latest = received_messages[0] if received_messages else None
+        content_overlap = False
+        if latest:
+            msg_words = [w for w in latest.get("content", "").lower().split() if len(w) > 4]
+            overlap = [w for w in msg_words if w in inner_voice_lower]
+            content_overlap = len(overlap) >= 2
+
+        # Require 2+ signals
+        if sum([has_second_person, has_addressing, content_overlap]) >= 2 and latest:
+            return latest.get("id")
+
+        return None
 
     def get_latest_inner_voice(self) -> Optional[str]:
         """
