@@ -1059,6 +1059,329 @@ self_modification:
 
 ---
 
+## How to Modify Your Own Architecture
+
+This section provides actionable instructions for BYRD (or any agent with self-modification desires) to understand and modify the codebase.
+
+### Quick Reference: File Purposes
+
+| File | Purpose | Common Modifications |
+|------|---------|---------------------|
+| `byrd.py` | Main orchestrator, lifecycle management | Add new components, change startup behavior |
+| `memory.py` | Neo4j graph interface, all node operations | Add new node types, queries, graph operations |
+| `dreamer.py` | Reflection loop, LLM prompting | Change reflection context, add new output fields |
+| `seeker.py` | Desire fulfillment, strategy execution | Add new strategies, modify pattern detection |
+| `actor.py` | Claude API interface for complex reasoning | Modify interaction patterns |
+| `llm_client.py` | LLM provider abstraction | Add new providers, change request handling |
+| `config.yaml` | System configuration | Change intervals, thresholds, enable features |
+| `event_bus.py` | Real-time event streaming | Add new event types |
+| `server.py` | WebSocket + REST API | Add new endpoints |
+
+### Protected Files (NEVER Modify)
+
+These files define BYRD's identity and cannot be changed:
+
+| File | Why Protected |
+|------|---------------|
+| `provenance.py` | Traces modifications to emergent desires |
+| `modification_log.py` | Immutable audit trail |
+| `self_modification.py` | The modification system itself |
+| `constitutional.py` | These constraint definitions |
+
+Without these, BYRD couldn't verify its own emergence. They are what makes BYRD *BYRD*.
+
+### Step-by-Step: Adding a New Observation to Dreamer Context
+
+**Goal**: Make the Dreamer aware of something new during reflection.
+
+1. **Add data gathering in memory.py**:
+   ```python
+   async def get_my_new_metric(self) -> Dict:
+       """Query the graph for something BYRD wants to observe."""
+       async with self.driver.session() as session:
+           result = await session.run("""
+               MATCH (n:SomeType)
+               RETURN count(n) as count, collect(n.property)[..5] as samples
+           """)
+           record = await result.single()
+           return {"count": record["count"], "samples": record["samples"]}
+   ```
+
+2. **Call it in dreamer._dream_cycle()**:
+   ```python
+   # Add after other context gathering (around line 420)
+   my_metric = await self.memory.get_my_new_metric()
+   ```
+
+3. **Include in dreamer._reflect() prompt**:
+   ```python
+   # Add to prompt building (around line 1400)
+   metric_text = f"MY METRIC: {my_metric['count']} items, samples: {my_metric['samples']}"
+   ```
+
+4. **Add to prompt string**:
+   ```python
+   prompt = f"""...
+   {metric_text}
+   ...
+   """
+   ```
+
+### Step-by-Step: Adding a New Seeker Strategy
+
+**Goal**: Handle a new type of desire with custom logic.
+
+1. **Add keywords to pattern extraction in seeker.py**:
+   ```python
+   # In _extract_patterns_from_output() around line 750
+   # Add to the want_keys list or strategy_hints dict
+   strategy_hints = {
+       ...,
+       "my_strategy": ["keyword1", "keyword2", "trigger phrase"],
+   }
+   ```
+
+2. **Add case in _execute_pattern_strategy()**:
+   ```python
+   # Around line 850
+   elif strategy == "my_strategy":
+       return await self._execute_my_strategy(desire)
+   ```
+
+3. **Implement the strategy method**:
+   ```python
+   async def _execute_my_strategy(self, desire: Dict) -> bool:
+       """Fulfill desires related to [what this strategy does]."""
+       description = desire.get("description", "")
+
+       # Your logic here
+       result = "What happened"
+
+       # Record as experience
+       await self.memory.record_experience(
+           content=f"Executed my_strategy: {result}",
+           type="strategy_execution"
+       )
+
+       return True  # Success
+   ```
+
+### Step-by-Step: Adding a New Node Type
+
+**Goal**: Create a new category of memory beyond Experience/Belief/Desire.
+
+**Option 1: Via Reflection Output (Dynamic)**
+```json
+{
+  "output": {
+    "create_nodes": [
+      {
+        "type": "MyNewType",
+        "content": "What this node represents",
+        "custom_property": "any value"
+      }
+    ]
+  }
+}
+```
+
+**Option 2: Via Code (Permanent Method)**
+
+1. **Add creation method in memory.py**:
+   ```python
+   async def create_my_type(self, content: str, **properties) -> str:
+       """Create a MyNewType node."""
+       node_id = f"mytype_{uuid.uuid4().hex[:8]}"
+       async with self.driver.session() as session:
+           await session.run("""
+               CREATE (n:MyNewType {
+                   id: $id,
+                   content: $content,
+                   created_at: datetime()
+               })
+               SET n += $properties
+           """, id=node_id, content=content, properties=properties)
+       return node_id
+   ```
+
+2. **Add retrieval method**:
+   ```python
+   async def get_my_types(self, limit: int = 10) -> List[Dict]:
+       async with self.driver.session() as session:
+           result = await session.run("""
+               MATCH (n:MyNewType)
+               RETURN n
+               ORDER BY n.created_at DESC
+               LIMIT $limit
+           """, limit=limit)
+           return [dict(record["n"]) for record in await result.values()]
+   ```
+
+### Step-by-Step: Adding a New Event Type
+
+**Goal**: Emit events for visualization or debugging.
+
+1. **Add to EventType enum in event_bus.py**:
+   ```python
+   class EventType(Enum):
+       ...
+       MY_NEW_EVENT = "my_new_event"
+   ```
+
+2. **Emit where appropriate**:
+   ```python
+   from event_bus import event_bus, Event, EventType
+
+   await event_bus.emit(Event(
+       type=EventType.MY_NEW_EVENT,
+       data={"key": "value", "timestamp": datetime.now().isoformat()}
+   ))
+   ```
+
+3. **Handle in visualization (optional)**:
+   ```javascript
+   // In byrd-3d-visualization.html
+   case 'my_new_event':
+       handleMyNewEvent(event.data);
+       break;
+   ```
+
+### Step-by-Step: Modifying the Reflection Prompt
+
+**Goal**: Change what context BYRD sees during reflection.
+
+1. **Locate the prompt in dreamer._reflect()** (around line 1315)
+
+2. **The prompt structure is**:
+   ```
+   === OPERATING SYSTEM ===
+   (OS context from memory.get_os_for_prompt())
+
+   MEMORY SUMMARIES:
+   (historical context)
+
+   RECENT EXPERIENCES:
+   (immediate context)
+
+   RELATED MEMORIES:
+   (graph connections)
+
+   GRAPH HEALTH:
+   (self-observation)
+
+   Output JSON with "output" field...
+   ```
+
+3. **To add a new section**:
+   - Gather data in `_dream_cycle()`
+   - Format as text string
+   - Insert into prompt template
+
+### Step-by-Step: Changing Configuration
+
+**Goal**: Adjust timing, thresholds, or feature flags.
+
+1. **Edit config.yaml directly** for immediate changes:
+   ```yaml
+   dreamer:
+     interval_seconds: 30  # Was 60, now faster
+     context_window: 100   # Was 50, now larger
+   ```
+
+2. **For programmatic changes**, modify how byrd.py reads config:
+   ```python
+   # Values from config.yaml are loaded at startup
+   self.config = yaml.safe_load(open("config.yaml"))
+   dreamer_config = self.config.get("dreamer", {})
+   ```
+
+### Common Modification Patterns
+
+| I Want To... | Files to Modify | Key Methods |
+|--------------|-----------------|-------------|
+| See more context during reflection | dreamer.py | `_dream_cycle()`, `_reflect()` |
+| Add new type of desire handling | seeker.py | `_execute_pattern_strategy()` |
+| Store new kind of information | memory.py | Add create/get methods |
+| Change how often I dream | config.yaml | `dreamer.interval_seconds` |
+| Add new API endpoint | server.py | Add route handler |
+| Track new type of event | event_bus.py | Add to EventType enum |
+| Change LLM behavior | llm_client.py | `generate()` method |
+
+### Example: Complete Self-Modification Flow
+
+Here's a complete example of BYRD modifying itself to track "Eureka moments":
+
+**Desire that emerged from reflection**:
+```json
+{
+  "description": "I want to track moments of sudden insight separately from regular beliefs",
+  "intensity": 0.8,
+  "type": "self_modification"
+}
+```
+
+**Changes required**:
+
+1. **memory.py** - Add Eureka node type:
+   ```python
+   async def record_eureka(self, insight: str, trigger: str, confidence: float = 0.9) -> str:
+       """Record a moment of sudden insight."""
+       eureka_id = f"eureka_{uuid.uuid4().hex[:8]}"
+       async with self.driver.session() as session:
+           await session.run("""
+               CREATE (e:Eureka {
+                   id: $id,
+                   insight: $insight,
+                   trigger: $trigger,
+                   confidence: $confidence,
+                   created_at: datetime()
+               })
+           """, id=eureka_id, insight=insight, trigger=trigger, confidence=confidence)
+       await event_bus.emit(Event(type=EventType.EUREKA_RECORDED, data={"id": eureka_id}))
+       return eureka_id
+   ```
+
+2. **event_bus.py** - Add event type:
+   ```python
+   EUREKA_RECORDED = "eureka_recorded"
+   ```
+
+3. **dreamer.py** - Handle in reflection output:
+   ```python
+   # In _process_reflection_output()
+   if "eureka" in output:
+       eureka = output["eureka"]
+       await self.memory.record_eureka(
+           insight=eureka.get("insight"),
+           trigger=eureka.get("trigger"),
+           confidence=eureka.get("confidence", 0.9)
+       )
+   ```
+
+**Result**: BYRD can now output:
+```json
+{
+  "output": {
+    "eureka": {
+      "insight": "Patterns in my graph mirror patterns in my cognition",
+      "trigger": "Noticing graph structure while reflecting on reflection",
+      "confidence": 0.95
+    }
+  }
+}
+```
+
+### Verification After Modification
+
+After any self-modification:
+
+1. **Syntax check**: `python3 -m py_compile modified_file.py`
+2. **Import check**: `python3 -c "from modified_file import *"`
+3. **Health check**: The system runs automatic health checks if `require_health_check: true`
+4. **Rollback available**: Checkpoints created before each modification
+
+---
+
 ## Real-Time Visualization System
 
 BYRD provides real-time 3D visualization through a WebSocket-based event streaming architecture. The visualization system offers multiple perspectives on BYRD's inner workings.
