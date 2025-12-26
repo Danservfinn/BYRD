@@ -1,3 +1,13 @@
+---
+title: BYRD AI
+emoji: 🐦
+colorFrom: purple
+colorTo: blue
+sdk: docker
+app_port: 8000
+pinned: false
+---
+
 # BYRD
 
 ## Bootstrapped Yearning via Reflective Dreaming
