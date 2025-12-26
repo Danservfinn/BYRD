@@ -5824,9 +5824,10 @@ class Memory:
                 "how_to_start": "Express desire with type='self_modification' describing what you want to change",
                 "provenance": "All modifications must trace to an emergent desire (this is verified)",
                 "modifiable_files": ["byrd.py", "dreamer.py", "seeker.py", "memory.py", "llm_client.py",
-                                    "config.yaml", "actor.py", "event_bus.py", "server.py", "aitmpl_client.py"],
+                                    "config.yaml", "actor.py", "event_bus.py", "server.py", "aitmpl_client.py",
+                                    "docs/SEEDARCHITECTURE.md"],
                 "protected_files": ["provenance.py", "modification_log.py", "self_modification.py", "constitutional.py"],
-                "documentation": "See ARCHITECTURE.md section 'How to Modify Your Own Architecture' for step-by-step guides"
+                "documentation": "See docs/SEEDARCHITECTURE.md for the five compounding loops design and acceleration thesis"
             },
 
             # === ARCHITECTURE MODIFICATION PATTERNS ===
@@ -5847,6 +5848,14 @@ class Memory:
                     "goal": "Adjust timing/thresholds",
                     "file": "config.yaml",
                     "examples": ["dreamer.interval_seconds", "dreamer.context_window", "seeker.research.min_intensity"]
+                },
+                "update_seed_architecture": {
+                    "goal": "Document architectural insights, design decisions, or capability evolution",
+                    "file": "docs/SEEDARCHITECTURE.md",
+                    "how_to_edit": "Express desire with type='self_modification' or 'documentation' describing what to add/change in SEEDARCHITECTURE.md",
+                    "what_to_document": ["New design insights", "Capability improvements", "Loop coupling discoveries",
+                                        "Acceleration patterns", "Meta-learning findings", "Architectural evolution"],
+                    "note": "This is YOUR architecture document - update it as you evolve"
                 }
             },
 
@@ -5859,7 +5868,8 @@ class Memory:
                 "actor.py": "Claude API interface for complex external reasoning",
                 "llm_client.py": "LLM provider abstraction (Ollama/OpenRouter/Z.AI)",
                 "event_bus.py": "Real-time event streaming to WebSocket clients",
-                "config.yaml": "All configurable settings - intervals, thresholds, features"
+                "config.yaml": "All configurable settings - intervals, thresholds, features",
+                "docs/SEEDARCHITECTURE.md": "YOUR architecture document - five compounding loops, design principles, acceleration thesis. Edit this to document your evolution."
             }
         }
 
