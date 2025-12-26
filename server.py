@@ -885,12 +885,18 @@ async def get_dreamer_debug():
         raise HTTPException(status_code=503, detail="BYRD not initialized")
 
     dreamer = byrd_instance.dreamer
+    seeker = byrd_instance.seeker
     return {
         "dream_count": getattr(dreamer, '_dream_count', 0),
+        "dreamer_running": getattr(dreamer, '_running', False),
+        "seeker_running": getattr(seeker, '_running', False),
+        "byrd_running": byrd_instance._running,
+        "byrd_started_at": str(byrd_instance._started_at) if byrd_instance._started_at else None,
         "interval_seconds": getattr(dreamer, 'interval', None),
         "last_reflection_result": getattr(dreamer, 'last_reflection_result', {}),
         "quantum_enabled": getattr(dreamer, 'quantum_enabled', False),
-        "context_window": getattr(dreamer, 'context_window', None)
+        "context_window": getattr(dreamer, 'context_window', None),
+        "seek_count": getattr(seeker, '_seek_count', 0)
     }
 
 
