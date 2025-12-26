@@ -35,14 +35,6 @@ class LLMClient(ABC):
         """Set the quantum randomness provider for temperature modulation."""
         self._quantum_provider = provider
 
-    def set_ego_voice(self, voice: str):
-        """DEPRECATED: Voice injection removed for pure emergence."""
-        pass  # No-op - voice emerges through reflection
-
-    def get_ego_voice(self) -> str:
-        """DEPRECATED: Voice injection removed for pure emergence."""
-        return ""  # No prescribed voice
-
     def reset(self):
         """Reset LLM client state for fresh start."""
         pass  # Nothing to reset
@@ -507,7 +499,7 @@ class LLMError(Exception):
     pass
 
 
-def create_llm_client(config: Dict, ego_voice: str = "") -> LLMClient:
+def create_llm_client(config: Dict) -> LLMClient:
     """
     Factory function to create the appropriate LLM client.
 
@@ -520,7 +512,6 @@ def create_llm_client(config: Dict, ego_voice: str = "") -> LLMClient:
             - timeout: Request timeout in seconds
             - site_url: (openrouter only) HTTP-Referer header
             - app_name: (openrouter only) X-Title header
-        ego_voice: DEPRECATED - voice emerges through reflection
 
     Returns:
         Configured LLMClient instance

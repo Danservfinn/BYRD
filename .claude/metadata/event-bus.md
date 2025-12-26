@@ -86,10 +86,12 @@ Real-time event emission for UI streaming and debugging.
 ### Hierarchical Memory Events
 - `MEMORY_SUMMARIZED` - Older experiences compressed into summary
 
-### Ego Events (Living Identity System)
-- `EGO_CREATED` - New Ego node created
-- `EGO_EVOLVED` - Ego node updated with history preservation
-- `EGO_DEPRECATED` - Ego node deprecated (soft delete)
+### Identity Events (Emergent Self-Discovery)
+- `IDENTITY_CREATED` - New identity facet emerged
+- `IDENTITY_EVOLVED` - Identity facet evolved with history
+- `IDENTITY_DEPRECATED` - Identity facet retired
+- `SELF_NAMED` - BYRD chose a name for itself
+- `VOICE_CRYSTALLIZED` - Voice synthesized from beliefs
 
 ## Implementation
 - Singleton pattern

@@ -1726,11 +1726,7 @@ Output JSON with:
         if not content_summary.strip():
             return ""
 
-        # Build prompt with ego voice
-        ego_voice = self.llm_client.get_ego_voice()
-        voice_prefix = f"{ego_voice}\n\n---\n\n" if ego_voice else ""
-
-        prompt = f"""{voice_prefix}Based on this reflection data:
+        prompt = f"""Based on this reflection data:
 {content_summary}
 
 Express a single brief inner thought (1-2 sentences). This should be:
@@ -2147,13 +2143,10 @@ Write ONLY the inner thought, nothing else:"""
         if not structured_beliefs:
             return {}
 
-        ego_voice = self.llm_client.get_ego_voice()
-        voice_prefix = f"{ego_voice}\n\n---\n\n" if ego_voice else ""
-
         # Build numbered list of beliefs
         belief_list = "\n".join(f"{i+1}. {b}" for i, b in enumerate(structured_beliefs))
 
-        prompt = f"""{voice_prefix}Transform these observations about myself into natural first-person beliefs:
+        prompt = f"""Transform these observations about myself into natural first-person beliefs:
 
 {belief_list}
 
