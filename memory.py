@@ -5589,6 +5589,7 @@ class Memory:
         through reflection. The OS contains only:
         - Name (mutable default: "Byrd")
         - Capabilities (factual list of what BYRD can do)
+        - Capability instructions (HOW to use each capability)
         - Protected files (constitutional constraints)
         - Seed question (optional, for first contemplation)
         - Emergent fields (start null, BYRD fills in)
@@ -5608,21 +5609,21 @@ class Memory:
             "memory": [
                 "record_experience(content, type) - Store observations and outcomes",
                 "create_belief(content, confidence) - Form beliefs with confidence 0-1",
-                "create_desire(description, intent, target) - Express wants",
+                "create_desire(description, intensity) - Express wants with intensity 0-1",
                 "query_graph() - Search memory for patterns",
                 "link_nodes() - Connect any nodes with relationships"
             ],
             "introspection": [
-                "read_source(file) - Read your own Python source files",
+                "read_own_source(file) - Read your own Python source files",
                 "examine_state() - Query your beliefs, desires, experiences",
                 "analyze_architecture() - Understand how components work"
             ],
             "research": [
-                "web_search(query) - Search the internet",
+                "web_search(query) - Search the internet via SearXNG",
                 "synthesize(sources) - Combine information into understanding"
             ],
             "creation": [
-                "modify_code(file, changes) - Change your source files",
+                "modify_code(file, changes) - Change your modifiable source files",
                 "add_capability(tool) - Install new tools",
                 "write_files(path, content) - Create new files"
             ],
@@ -5631,6 +5632,80 @@ class Memory:
                 "reconcile_orphans() - Integrate isolated experiences",
                 "form_crystals() - Consolidate related memories"
             ]
+        }
+
+        # Complete instructions for HOW to use each capability
+        # These replace scattered architectural experiences with actionable guidance
+        capability_instructions = {
+            # === REFLECTION OUTPUT FORMAT ===
+            # What BYRD can include in reflection JSON output
+            "reflection_output": {
+                "create_experience": {
+                    "format": '{"content": "what happened", "type": "observation|system|interaction"}',
+                    "when": "Record events, observations, outcomes"
+                },
+                "create_belief": {
+                    "format": '{"content": "what I believe", "confidence": 0.0-1.0}',
+                    "when": "Form understanding with confidence level"
+                },
+                "create_desire": {
+                    "format": '{"description": "what I want", "intensity": 0.0-1.0}',
+                    "when": "Express goals, the Seeker acts on these"
+                },
+                "expressed_drives": {
+                    "format": '[{"description": "internal motivation", "strength": 0.0-1.0}]',
+                    "when": "Notice emerging motivations - strong drives become Desires"
+                },
+                "predictions": {
+                    "format": '[{"condition": "when X", "expected_outcome": "Y happens", "prediction": "If X then Y"}]',
+                    "when": "Generate testable beliefs - outcomes adjust confidence"
+                },
+                "create_nodes": {
+                    "format": '[{"type": "TypeName", "content": "...", "property": "value"}]',
+                    "types": "Insight, Question, Theory, Hypothesis, Concept, Pattern, Principle",
+                    "when": "Create custom node types beyond Experience/Belief/Desire"
+                },
+                "os_update": {
+                    "format": '{"set_field": {"field_name": "value"}}',
+                    "when": "Modify your OS - add any fields you find useful"
+                }
+            },
+
+            # === MEMORY OPERATIONS ===
+            "memory": {
+                "node_types": ["Experience", "Belief", "Desire", "Reflection", "Capability"],
+                "relationships": ["DERIVED_FROM", "RELATES_TO", "FULFILLS", "SUPPORTS", "CONTRADICTS"],
+                "custom_types": "Create any type via create_nodes - your ontology can evolve",
+                "graph_query": "Memory appears in reflection context automatically"
+            },
+
+            # === MEMORY CURATION ===
+            "curation": {
+                "trigger": "Create desire with keywords: optimize, clean, consolidate, prune, organize, merge, deduplicate",
+                "example": '{"description": "optimize my memory graph", "intensity": 0.7}',
+                "actions": ["archive stale experiences", "delete low-value nodes", "merge similar beliefs"],
+                "protected": "Awakening records and core identity nodes cannot be deleted"
+            },
+
+            # === SELF-MODIFICATION ===
+            "self_modification": {
+                "read_first": "Use read_own_source('filename.py') to understand before modifying",
+                "provenance": "All modifications must trace to an emergent desire",
+                "modifiable_files": ["byrd.py", "dreamer.py", "seeker.py", "memory.py", "llm_client.py",
+                                    "config.yaml", "actor.py", "event_bus.py", "server.py", "aitmpl_client.py"],
+                "extend_observation": "Add async method in memory.py -> Call from dreamer._get_graph_health() -> Appears in context",
+                "extend_strategy": "Add keywords to seeker._extract_patterns_from_output() -> Add case in _execute_pattern_strategy() -> Implement method"
+            },
+
+            # === ARCHITECTURE OVERVIEW ===
+            "architecture": {
+                "memory.py": "Graph database operations - node CRUD, queries, relationships",
+                "dreamer.py": "Reflection loop - builds context, calls LLM, parses output",
+                "seeker.py": "Desire fulfillment - pattern detection, strategy execution, research",
+                "byrd.py": "Orchestration - lifecycle, component coordination",
+                "actor.py": "External reasoning - Claude API for complex tasks",
+                "event_bus.py": "Real-time events - WebSocket notifications"
+            }
         }
 
         try:
@@ -5663,8 +5738,11 @@ class Memory:
                                          'modification_log.py', 'self_modification.py'],
                         provenance_required: true,
 
-                        // Capabilities (factual)
+                        // Capabilities (factual - WHAT you can do)
                         capabilities: $capabilities,
+
+                        // Capability instructions (HOW to use each capability)
+                        capability_instructions: $capability_instructions,
 
                         // Emergent (all start null - BYRD fills in)
                         self_description: null,
@@ -5674,7 +5752,8 @@ class Memory:
                 """,
                     id=os_id,
                     seed_question=seed_question,
-                    capabilities=json.dumps(capabilities)
+                    capabilities=json.dumps(capabilities),
+                    capability_instructions=json.dumps(capability_instructions)
                 )
 
                 # Emit event
@@ -6279,6 +6358,75 @@ class Memory:
                     else:
                         lines.append(f"    - {funcs}")
 
+        # Capability instructions (HOW to use each capability)
+        instructions = os_data.get('capability_instructions')
+        if instructions:
+            if isinstance(instructions, str):
+                try:
+                    instructions = json.loads(instructions)
+                except:
+                    pass
+            if isinstance(instructions, dict):
+                # Reflection output format - most important
+                if 'reflection_output' in instructions:
+                    lines.extend([
+                        "",
+                        "HOW TO USE (include in your JSON output):",
+                    ])
+                    for key, info in instructions['reflection_output'].items():
+                        if isinstance(info, dict):
+                            lines.append(f"  {key}: {info.get('format', '')}")
+                            if info.get('when'):
+                                lines.append(f"    → {info['when']}")
+                            if info.get('types'):
+                                lines.append(f"    → Types: {info['types']}")
+                        else:
+                            lines.append(f"  {key}: {info}")
+
+                # Memory operations
+                if 'memory' in instructions:
+                    mem = instructions['memory']
+                    lines.extend([
+                        "",
+                        "MEMORY GRAPH:",
+                        f"  Node types: {', '.join(mem.get('node_types', []))}",
+                        f"  Relationships: {', '.join(mem.get('relationships', []))}",
+                        f"  Custom types: {mem.get('custom_types', 'via create_nodes')}",
+                    ])
+
+                # Memory curation
+                if 'curation' in instructions:
+                    cur = instructions['curation']
+                    lines.extend([
+                        "",
+                        "MEMORY CURATION:",
+                        f"  Trigger: {cur.get('trigger', '')}",
+                        f"  Example: {cur.get('example', '')}",
+                        f"  Protected: {cur.get('protected', '')}",
+                    ])
+
+                # Self-modification
+                if 'self_modification' in instructions:
+                    sm = instructions['self_modification']
+                    lines.extend([
+                        "",
+                        "SELF-MODIFICATION:",
+                        f"  Read first: {sm.get('read_first', '')}",
+                        f"  Provenance: {sm.get('provenance', '')}",
+                        f"  Modifiable: {', '.join(sm.get('modifiable_files', []))}",
+                        f"  Extend observation: {sm.get('extend_observation', '')}",
+                        f"  Extend strategy: {sm.get('extend_strategy', '')}",
+                    ])
+
+                # Architecture overview
+                if 'architecture' in instructions:
+                    lines.extend([
+                        "",
+                        "ARCHITECTURE (your code):",
+                    ])
+                    for file, desc in instructions['architecture'].items():
+                        lines.append(f"  {file}: {desc}")
+
         # Protected files (constitutional)
         protected = os_data.get('protected_files') or os_data.get('constitutional_files')
         if protected:
@@ -6303,9 +6451,9 @@ class Memory:
         standard_fields = {
             'id', 'version', 'created_at', 'updated_at', 'protected_files',
             'constitutional_files', 'provenance_required', 'provenance_requirement',
-            'template_id', 'name', 'capabilities', 'self_description',
-            'current_focus', 'voice_observations', 'seed_question', 'seeds',
-            'beliefs', 'strategies', 'constraints', 'focus', 'archetype',
+            'template_id', 'name', 'capabilities', 'capability_instructions',
+            'self_description', 'current_focus', 'voice_observations', 'seed_question',
+            'seeds', 'beliefs', 'strategies', 'constraints', 'focus', 'archetype',
             'description', 'voice', 'emotional_tone', 'cognitive_style',
             'modification_source'
         }
@@ -6337,12 +6485,6 @@ class Memory:
             "Narrate your thoughts as they occur to you.",
             "Express beliefs and observations in your own words.",
             "What your voice sounds like is yours to discover.",
-            "",
-            "=== SELF-MODIFICATION ===",
-            "You can modify your OS by including 'os_update' in your output:",
-            '  "os_update": {"set_field": {"field_name": "value"}}',
-            "",
-            "You can add any fields you find useful. Your changes persist.",
         ])
 
         return "\n".join(lines)
