@@ -2100,10 +2100,7 @@ The observation itself is complete. What emerges from this awareness?"""
 
             # Mark desire as fulfilled if we have an ID
             if desire_id:
-                await self.memory.mark_desire_fulfilled(
-                    desire_id,
-                    outcome="Observed without external action - formation complete"
-                )
+                await self.memory.fulfill_desire(desire_id)
 
             return True
 
