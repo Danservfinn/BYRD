@@ -723,78 +723,177 @@
       }
     }
 
-    function renderUI(data) {
+    async function fetchOmegaMetrics() {
+      try {
+        const response = await fetch(`${API_BASE}/api/omega/metrics`);
+        if (!response.ok) throw new Error('Failed to fetch omega metrics');
+        return await response.json();
+      } catch (e) {
+        console.error('Omega metrics fetch error:', e);
+        return null;
+      }
+    }
+
+    function updateModeIndicator(mode) {
+      const modeEl = document.getElementById('current-mode');
+      const modeColors = {
+        'AWAKE': { bg: 'bg-violet-400', border: 'border-violet-500/30', text: 'text-violet-300' },
+        'DREAMING': { bg: 'bg-amber-400', border: 'border-amber-500/30', text: 'text-amber-300' },
+        'EVOLVING': { bg: 'bg-green-400', border: 'border-green-500/30', text: 'text-green-300' },
+        'COMPILING': { bg: 'bg-rose-400', border: 'border-rose-500/30', text: 'text-rose-300' },
+        'disabled': { bg: 'bg-slate-400', border: 'border-slate-500/30', text: 'text-slate-300' },
+        'error': { bg: 'bg-red-400', border: 'border-red-500/30', text: 'text-red-300' }
+      };
+
+      const colors = modeColors[mode?.toUpperCase()] || modeColors['disabled'];
+      const displayMode = mode?.toUpperCase() || 'DISABLED';
+
+      modeEl.innerHTML = `
+        <span class="w-2 h-2 rounded-full ${colors.bg} animate-pulse"></span>
+        <span class="${colors.text} text-sm font-medium">${displayMode}</span>
+      `;
+      modeEl.className = `flex items-center gap-2 px-3 py-1.5 rounded-lg bg-opacity-20 ${colors.border}`;
+
+      // Update mode transition diagram
+      ['awake', 'dreaming', 'evolving', 'compiling'].forEach(m => {
+        const modeRect = document.getElementById(`mode-${m}`);
+        if (modeRect) {
+          modeRect.classList.toggle('active', m === mode?.toLowerCase());
+        }
+      });
+    }
+
+    function renderUI(statusData, omegaData) {
       // Loops list
       const loopsList = document.getElementById('loops-list');
       const loops = ['SelfCompiler', 'MemoryReasoner', 'GoalEvolver', 'DreamingMachine', 'IntegrationMind'];
 
       loopsList.innerHTML = loops.map(name => {
         const info = LOOP_INFO[name];
+        // Get loop health from Omega data if available
+        const loopData = omegaData?.loops?.[name] || {};
+        const isHealthy = loopData.is_healthy !== false; // Default to healthy if no data
+
         return `
           <div class="loop-card" data-module="${name}" onclick="selectModule('${name}')">
             <div class="flex items-center justify-between mb-1">
               <span class="font-medium text-sm" style="color: ${info.color}">${info.name}</span>
-              <span class="w-2 h-2 rounded-full bg-green-500"></span>
+              <span class="w-2 h-2 rounded-full ${isHealthy ? 'bg-green-500' : 'bg-red-500'}"></span>
             </div>
             <div class="text-xs text-slate-500">${info.successMetric}</div>
+            ${loopData.cycles_completed ? `<div class="text-xs text-slate-600 mt-1">${loopData.cycles_completed} cycles</div>` : ''}
           </div>
         `;
       }).join('');
 
-      // Metrics panel
+      // Metrics panel - use real Omega data if available
       const metricsPanel = document.getElementById('metrics-panel');
+      const improvementRate = omegaData?.growth_rate ?? 0;
+      const capabilityScore = omegaData?.capability_score ?? 0;
+      const criticalCoupling = omegaData?.critical_coupling ?? 0;
+      const totalCycles = omegaData?.total_cycles ?? 0;
+
+      // Format improvement rate as percentage
+      const improvementPct = (improvementRate * 100).toFixed(1);
+      const capabilityPct = (capabilityScore * 100).toFixed(0);
+      const couplingPct = (criticalCoupling * 100).toFixed(0);
+
       metricsPanel.innerHTML = `
         <div>
           <div class="flex justify-between text-xs mb-1">
             <span class="text-slate-400">Improvement Rate</span>
-            <span class="text-violet-400">+2.3%/day</span>
+            <span class="text-violet-400">${improvementPct > 0 ? '+' : ''}${improvementPct}%</span>
           </div>
           <div class="metric-bar">
-            <div class="metric-fill" style="width: 65%; background: #a78bfa"></div>
+            <div class="metric-fill" style="width: ${Math.min(100, Math.abs(improvementRate) * 100)}%; background: #a78bfa"></div>
           </div>
         </div>
         <div>
           <div class="flex justify-between text-xs mb-1">
-            <span class="text-slate-400">LLM Efficiency</span>
-            <span class="text-green-400">3.2x</span>
+            <span class="text-slate-400">Capability Score</span>
+            <span class="text-green-400">${capabilityPct}%</span>
           </div>
           <div class="metric-bar">
-            <div class="metric-fill" style="width: 72%; background: #22c55e"></div>
+            <div class="metric-fill" style="width: ${capabilityPct}%; background: #22c55e"></div>
           </div>
         </div>
         <div>
           <div class="flex justify-between text-xs mb-1">
-            <span class="text-slate-400">Memory Reasoning Ratio</span>
-            <span class="text-cyan-400">48%</span>
+            <span class="text-slate-400">Goal→Compiler Coupling</span>
+            <span class="text-amber-400">r=${(criticalCoupling).toFixed(2)}</span>
           </div>
           <div class="metric-bar">
-            <div class="metric-fill" style="width: 48%; background: #06b6d4"></div>
+            <div class="metric-fill" style="width: ${couplingPct}%; background: #fbbf24"></div>
           </div>
         </div>
         <div>
           <div class="flex justify-between text-xs mb-1">
-            <span class="text-slate-400">Goal→Compiler Correlation</span>
-            <span class="text-amber-400">r=0.34</span>
+            <span class="text-slate-400">Total Omega Cycles</span>
+            <span class="text-cyan-400">${totalCycles}</span>
           </div>
-          <div class="metric-bar">
-            <div class="metric-fill" style="width: 34%; background: #fbbf24"></div>
-          </div>
+          <div class="text-xs text-slate-600">${omegaData?.enabled ? 'Active' : 'Disabled'} ${omegaData?.improvement_trajectory ? `(${omegaData.improvement_trajectory})` : ''}</div>
         </div>
       `;
 
+      // Update mode indicator
+      if (omegaData) {
+        updateModeIndicator(omegaData.mode);
+      }
+
+      // Update loop health status dots in the SVG
+      loops.forEach(name => {
+        const loopData = omegaData?.loops?.[name] || {};
+        const isHealthy = loopData.is_healthy !== false;
+        const statusDot = document.querySelector(`[data-status="${name}"]`);
+        if (statusDot) {
+          statusDot.setAttribute('fill', isHealthy ? '#22c55e' : '#ef4444');
+        }
+      });
+
+      // Update Omega status dot
+      const omegaDot = document.querySelector('[data-status="Omega"]');
+      if (omegaDot) {
+        omegaDot.setAttribute('fill', omegaData?.enabled ? '#22c55e' : '#64748b');
+      }
+
       // System status
       const statusEl = document.getElementById('system-status');
-      const running = data?.running;
+      const running = statusData?.running;
       statusEl.innerHTML = `
         <span class="w-2 h-2 rounded-full ${running ? 'bg-green-500' : 'bg-yellow-500'} animate-pulse"></span>
-        <span class="text-slate-400">${running ? `Running (${data?.dream_count || 0} cycles)` : 'Stopped'}</span>
+        <span class="text-slate-400">${running ? `Running (${statusData?.dream_count || 0} dreams)` : 'Stopped'}</span>
+      `;
+
+      // Update kill criteria based on Omega trajectory
+      const killCriteria = document.getElementById('kill-criteria');
+      const trajectory = omegaData?.improvement_trajectory || 'unknown';
+      const trajectoryStatus = trajectory === 'improving' ? 'text-green-400' :
+                               trajectory === 'plateau' ? 'text-yellow-400' :
+                               trajectory === 'declining' ? 'text-red-400' : 'text-slate-400';
+
+      killCriteria.innerHTML = `
+        <div class="flex justify-between items-center">
+          <span class="text-slate-400">Zero growth</span>
+          <span class="${trajectoryStatus}">${trajectory === 'declining' ? 'WARNING' : 'OK'} (4 week limit)</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-slate-400">LLM efficiency</span>
+          <span class="${capabilityScore > 0.3 ? 'text-green-400' : 'text-yellow-400'}">${capabilityScore > 0.3 ? 'OK' : 'WARN'} (6 week limit)</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-slate-400">All loops failing</span>
+          <span class="text-green-400">OK (4 week limit)</span>
+        </div>
       `;
     }
 
     async function refresh() {
-      const data = await fetchStatus();
-      architectureData = data;
-      renderUI(data);
+      const [statusData, omegaData] = await Promise.all([
+        fetchStatus(),
+        fetchOmegaMetrics()
+      ]);
+      architectureData = statusData;
+      renderUI(statusData, omegaData);
     }
 
     // ========================================================================
@@ -803,8 +902,8 @@
     document.addEventListener('DOMContentLoaded', async () => {
       await refresh();
 
-      // Auto-refresh every 30 seconds
-      setInterval(refresh, 30000);
+      // Auto-refresh every 10 seconds for live metrics
+      setInterval(refresh, 10000);
 
       // Keyboard shortcuts
       document.addEventListener('keydown', (e) => {

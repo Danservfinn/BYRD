@@ -247,6 +247,30 @@ class BYRD:
         # Inject Coder into Seeker
         self.seeker.coder = self.coder
 
+        # Initialize Option B: Omega integration (five compounding loops)
+        self.omega = None
+        self.coupling_tracker = None
+        self.self_model = None
+
+        option_b_config = self.config.get("option_b", {})
+        if option_b_config.get("enabled", False):
+            try:
+                from omega import create_omega
+                from coupling_tracker import get_coupling_tracker
+                from self_model import SelfModel
+
+                self.omega = create_omega(self.memory, self.llm_client, self.config)
+                self.coupling_tracker = get_coupling_tracker()
+                self.self_model = SelfModel(self.memory, self.llm_client)
+
+                print("🔮 Option B (Omega): enabled - Five Compounding Loops active")
+            except ImportError as e:
+                print(f"⚠️ Option B (Omega): disabled - missing module: {e}")
+            except Exception as e:
+                print(f"⚠️ Option B (Omega): disabled - error: {e}")
+        else:
+            print("🔮 Option B (Omega): disabled")
+
         # State
         self._running = False
         self._started_at: Optional[datetime] = None
@@ -341,12 +365,20 @@ class BYRD:
         self._running = True
         self._started_at = datetime.now()
 
+        # Build task list
+        tasks = [
+            self.dreamer.run(),
+            self.seeker.run(),
+            self._narrator_loop()
+        ]
+
+        # Add Omega loop if enabled
+        if self.omega:
+            print("🔮 Starting Omega (integration mind orchestration)...")
+            tasks.append(self._omega_loop())
+
         try:
-            await asyncio.gather(
-                self.dreamer.run(),
-                self.seeker.run(),
-                self._narrator_loop()
-            )
+            await asyncio.gather(*tasks)
         except asyncio.CancelledError:
             pass
         finally:
@@ -374,6 +406,51 @@ class BYRD:
                     type=EventType.NARRATOR_UPDATE,
                     data={"text": inner_voice}
                 ))
+
+    async def _omega_loop(self):
+        """
+        Run Omega integration cycles for the five compounding loops.
+
+        The Omega orchestrator coordinates:
+        - Self-Compiler: Pattern recognition and lifting
+        - Memory Reasoner: Structured memory queries
+        - Goal Evolver: Goal lifecycle management
+        - Dreaming Machine: Counterfactual generation
+        - Integration Mind: Loop coordination and mode transitions
+
+        Mode transitions: AWAKE → DREAMING → EVOLVING → COMPILING
+        """
+        omega_config = self.config.get("option_b", {}).get("omega", {})
+        cycle_interval = omega_config.get("cycle_interval_seconds", 30)
+
+        last_mode = None
+
+        while self._running:
+            try:
+                # Run one Omega cycle
+                await self.omega.run_cycle()
+
+                # Get current metrics (includes mode)
+                metrics = self.omega.get_metrics()
+                current_mode = metrics.get("mode", "unknown")
+
+                # Only emit mode transition events when mode changes
+                if current_mode != last_mode:
+                    await event_bus.emit(Event(
+                        type=EventType.MODE_TRANSITION,
+                        data={
+                            "mode": current_mode,
+                            "previous_mode": last_mode,
+                            "total_cycles": metrics.get("total_cycles", 0)
+                        }
+                    ))
+                    last_mode = current_mode
+
+            except Exception as e:
+                print(f"🔮 Omega cycle error: {e}")
+                # Log but don't crash - Omega errors shouldn't stop BYRD
+
+            await asyncio.sleep(cycle_interval)
 
     async def _awaken(self, awakening_prompt: str = None):
         """

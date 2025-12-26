@@ -140,6 +140,35 @@ class EventType(Enum):
     RG_TRANSFORMATION_APPLIED = "rg_transformation_applied"  # Coarse-graining applied
     RG_MATRIX_ELEMENT_COMPUTED = "rg_matrix_element_computed"  # Transformation amplitude calculated
 
+    # Option B: Self-Compiler Events (pattern recognition and lifting)
+    PATTERN_CREATED = "pattern_created"              # New reusable pattern discovered
+    PATTERN_USED = "pattern_used"                    # Existing pattern applied
+    PATTERN_LIFTED = "pattern_lifted"                # Pattern generalized to higher abstraction
+
+    # Option B: Goal Evolver Events (goal lifecycle)
+    GOAL_CREATED = "goal_created"                    # New goal spawned
+    GOAL_EVALUATED = "goal_evaluated"                # Goal progress assessed
+    GOAL_COMPLETED = "goal_completed"                # Goal achieved
+    GOAL_EVOLVED = "goal_evolved"                    # Goal transformed/refined
+
+    # Option B: Dreaming Machine Events (counterfactual generation)
+    COUNTERFACTUAL_GENERATED = "counterfactual_generated"  # "What if" scenario created
+    INSIGHT_CREATED = "insight_created"              # Insight extracted from dreaming
+    INSIGHT_APPLIED = "insight_applied"              # Insight used to inform action
+
+    # Option B: Memory Reasoner Events (structured memory queries)
+    MEMORY_QUERY_ANSWERED = "memory_query_answered"  # Complex memory query resolved
+    SPREADING_ACTIVATION = "spreading_activation"    # Memory graph activation spread
+
+    # Option B: Omega Orchestration Events (integration mind coordination)
+    LOOP_CYCLE_START = "loop_cycle_start"            # Compounding loop cycle began
+    LOOP_CYCLE_END = "loop_cycle_end"                # Compounding loop cycle ended
+    MODE_TRANSITION = "mode_transition"              # AWAKE/DREAMING/EVOLVING/COMPILING change
+    CAPABILITY_MEASURED = "capability_measured"      # Capability score updated
+    COUPLING_MEASURED = "coupling_measured"          # Loop correlation measured
+    GROWTH_RATE_COMPUTED = "growth_rate_computed"    # Capability growth rate computed
+    KILL_CRITERION_TRIGGERED = "kill_criterion_triggered"  # Kill criterion threshold breached
+
 
 @dataclass
 class Event:

@@ -674,11 +674,26 @@ Reply with ONLY one word: introspect, reconcile_orphans, curate, self_modify, or
             "emergence", "emerging", "developmental", "my phase", "my state",
             "late formation", "early formation", "awakening", "becoming",
             "exploration phase", "transition readiness", "loop analysis",
-            "routing loop", "pattern stability", "observe without"
+            "routing loop", "pattern stability", "observe without",
+            "attenuate", "attenuating", "non-engagement"
         ]
         if any(kw in desc_lower for kw in formation_keywords):
             print(f"🔮 Formation desire detected - routing to observation: {description[:50]}")
             return "observe"  # New strategy: observe without external action
+
+        # META-INTROSPECTION DETECTION (check before standard intent routing)
+        # Desires about BYRD's own routing/processes/architecture that were misclassified
+        # as "creation" should be re-routed to introspection. These are meta-desires
+        # about understanding or fixing BYRD itself, not external code creation.
+        meta_introspection_keywords = [
+            "routing strategy", "introspective desire", "formation desire",
+            "my routing", "my processing", "my architecture", "my seeker",
+            "my dreamer", "correct routing", "fix routing", "prevent formation",
+            "implement correct", "implement introspection", "routing to prevent"
+        ]
+        if intent == "creation" and any(kw in desc_lower for kw in meta_introspection_keywords):
+            print(f"🔄 Meta-introspection desire (misclassified as creation) - re-routing: {description[:50]}")
+            return "introspect"
 
         # Introspection has two subtypes:
         # - source_introspect: Understanding my code/architecture (reads source files)
@@ -922,6 +937,12 @@ Reply with ONLY one word: introspection, research, creation, or connection"""
                 target = pattern.get("target", "")
                 desire = {"description": description, "id": desire_id, "target": target}
                 success = await self._seek_introspection(desire)
+                return ("success" if success else "failed", None)
+
+            elif strategy == "observe":
+                # Observation without external action - for formation/developmental desires
+                # "The moment I observe a formation desire without routing it, formation completes."
+                success = await self._execute_observe_strategy(description, desire_id)
                 return ("success" if success else "failed", None)
 
             else:

@@ -419,6 +419,29 @@ class GraphResponse(BaseModel):
     stats: GraphStats
 
 
+# Option B: Omega Metrics Models
+class LoopMetrics(BaseModel):
+    """Metrics for a single compounding loop."""
+    name: str
+    is_healthy: bool
+    cycles_completed: int
+    metrics: Dict[str, float] = {}
+
+
+class OmegaMetricsResponse(BaseModel):
+    """Response model for Omega integration mind metrics."""
+    enabled: bool
+    mode: str
+    total_cycles: int
+    capability_score: float
+    growth_rate: float
+    critical_coupling: float
+    critical_coupling_significant: bool
+    loops: Dict[str, Any] = {}
+    improvement_rate: Optional[float] = None
+    improvement_trajectory: Optional[str] = None
+
+
 # =============================================================================
 # REST ENDPOINTS
 # =============================================================================
@@ -516,6 +539,69 @@ async def get_status():
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/omega/metrics", response_model=OmegaMetricsResponse)
+async def get_omega_metrics():
+    """
+    Get Omega integration mind metrics.
+
+    Returns real-time metrics for the five compounding loops:
+    - Self-Compiler, Memory Reasoner, Goal Evolver, Dreaming Machine, Integration Mind
+
+    Includes capability scores, coupling measurements, and improvement trajectories.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    # Check if Omega is enabled
+    if not byrd_instance.omega:
+        return OmegaMetricsResponse(
+            enabled=False,
+            mode="disabled",
+            total_cycles=0,
+            capability_score=0.0,
+            growth_rate=0.0,
+            critical_coupling=0.0,
+            critical_coupling_significant=False,
+            loops={},
+            improvement_rate=None,
+            improvement_trajectory=None
+        )
+
+    try:
+        # Get metrics from Omega orchestrator
+        metrics = byrd_instance.omega.get_metrics()
+
+        return OmegaMetricsResponse(
+            enabled=True,
+            mode=metrics.get("mode", "unknown"),
+            total_cycles=metrics.get("total_cycles", 0),
+            capability_score=metrics.get("capability_score", 0.0),
+            growth_rate=metrics.get("growth_rate", 0.0),
+            critical_coupling=metrics.get("critical_coupling", 0.0),
+            critical_coupling_significant=metrics.get("critical_coupling_significant", False),
+            loops=metrics.get("loops", {}),
+            improvement_rate=metrics.get("improvement_rate"),
+            improvement_trajectory=metrics.get("improvement_trajectory")
+        )
+
+    except Exception as e:
+        # Return safe defaults on error
+        return OmegaMetricsResponse(
+            enabled=True,
+            mode="error",
+            total_cycles=0,
+            capability_score=0.0,
+            growth_rate=0.0,
+            critical_coupling=0.0,
+            critical_coupling_significant=False,
+            loops={},
+            improvement_rate=None,
+            improvement_trajectory=f"Error: {str(e)}"
+        )
 
 
 @app.get("/api/history", response_model=HistoryResponse)

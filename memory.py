@@ -389,6 +389,46 @@ class Memory:
                 CREATE INDEX IF NOT EXISTS FOR (st:Strategy) ON (st.id)
             """)
 
+            # Option B: Goal indexes
+            await session.run("""
+                CREATE INDEX IF NOT EXISTS FOR (g:Goal) ON (g.status)
+            """)
+            await session.run("""
+                CREATE INDEX IF NOT EXISTS FOR (g:Goal) ON (g.fitness)
+            """)
+            await session.run("""
+                CREATE INDEX IF NOT EXISTS FOR (g:Goal) ON (g.generation)
+            """)
+
+            # Option B: Pattern indexes
+            await session.run("""
+                CREATE INDEX IF NOT EXISTS FOR (p:Pattern) ON (p.abstraction_level)
+            """)
+            await session.run("""
+                CREATE INDEX IF NOT EXISTS FOR (p:Pattern) ON (p.success_count)
+            """)
+
+            # Option B: Insight indexes
+            await session.run("""
+                CREATE INDEX IF NOT EXISTS FOR (i:Insight) ON (i.source_type)
+            """)
+            await session.run("""
+                CREATE INDEX IF NOT EXISTS FOR (i:Insight) ON (i.confidence)
+            """)
+
+            # Option B: CapabilityScore indexes
+            await session.run("""
+                CREATE INDEX IF NOT EXISTS FOR (cs:CapabilityScore) ON (cs.domain)
+            """)
+            await session.run("""
+                CREATE INDEX IF NOT EXISTS FOR (cs:CapabilityScore) ON (cs.measured_at)
+            """)
+
+            # Option B: MetricSnapshot indexes
+            await session.run("""
+                CREATE INDEX IF NOT EXISTS FOR (ms:MetricSnapshot) ON (ms.timestamp)
+            """)
+
     def _generate_id(self, content: str) -> str:
         """Generate deterministic ID from content."""
         return hashlib.sha256(
@@ -6622,3 +6662,470 @@ class Memory:
         ])
 
         return "\n".join(lines)
+
+    # =========================================================================
+    # OPTION B: FIVE COMPOUNDING LOOPS
+    # =========================================================================
+    # Goal, Pattern, Insight, CapabilityScore, MetricSnapshot nodes
+    # Required by goal_evolver.py, accelerators.py, dreaming_machine.py
+    # =========================================================================
+
+    # -------------------------------------------------------------------------
+    # GOALS (Goal Evolver - Loop 3)
+    # -------------------------------------------------------------------------
+
+    async def create_goal(
+        self,
+        description: str,
+        fitness: float = 0.0,
+        generation: int = 0,
+        parent_goals: Optional[List[str]] = None,
+        success_criteria: Optional[Dict[str, Any]] = None,
+        resources_required: Optional[List[str]] = None
+    ) -> str:
+        """Create a new goal for evolutionary selection."""
+        goal_id = self._generate_id(description)
+
+        async with self.driver.session() as session:
+            await session.run("""
+                CREATE (g:Goal {
+                    id: $id,
+                    description: $description,
+                    fitness: $fitness,
+                    generation: $generation,
+                    parent_goals: $parent_goals,
+                    success_criteria: $success_criteria,
+                    resources_required: $resources_required,
+                    status: 'active',
+                    attempts: 0,
+                    capability_delta: 0.0,
+                    created_at: datetime()
+                })
+            """,
+            id=goal_id,
+            description=description,
+            fitness=fitness,
+            generation=generation,
+            parent_goals=parent_goals or [],
+            success_criteria=json.dumps(success_criteria) if success_criteria else "{}",
+            resources_required=resources_required or []
+            )
+
+            # Link to parent goals if provided
+            if parent_goals:
+                await session.run("""
+                    MATCH (g:Goal {id: $goal_id})
+                    MATCH (p:Goal)
+                    WHERE p.id IN $parent_ids
+                    CREATE (g)-[:GENERATED_BY]->(p)
+                """, goal_id=goal_id, parent_ids=parent_goals)
+
+        await event_bus.emit(Event(
+            type=EventType.GOAL_CREATED,
+            data={
+                "id": goal_id,
+                "description": description,
+                "fitness": fitness,
+                "generation": generation
+            }
+        ))
+
+        return goal_id
+
+    async def get_active_goals(self, limit: int = 20) -> List[Dict]:
+        """Get active goals sorted by fitness."""
+        query = """
+            MATCH (g:Goal)
+            WHERE g.status = 'active'
+            RETURN g
+            ORDER BY g.fitness DESC, g.created_at DESC
+            LIMIT $limit
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(query, limit=limit)
+            records = await result.data()
+            return [dict(r["g"]) for r in records]
+
+    async def get_best_goals(self, limit: int = 5) -> List[Dict]:
+        """Get highest-fitness goals regardless of status."""
+        query = """
+            MATCH (g:Goal)
+            WHERE g.status IN ['active', 'completed']
+            RETURN g
+            ORDER BY g.fitness DESC
+            LIMIT $limit
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(query, limit=limit)
+            records = await result.data()
+            return [dict(r["g"]) for r in records]
+
+    async def update_goal_fitness(
+        self,
+        goal_id: str,
+        fitness: float,
+        capability_delta: float = None
+    ) -> None:
+        """Update goal fitness after evaluation."""
+        async with self.driver.session() as session:
+            if capability_delta is not None:
+                await session.run("""
+                    MATCH (g:Goal {id: $id})
+                    SET g.fitness = $fitness,
+                        g.capability_delta = $capability_delta,
+                        g.attempts = g.attempts + 1,
+                        g.last_evaluated = datetime()
+                """, id=goal_id, fitness=fitness, capability_delta=capability_delta)
+            else:
+                await session.run("""
+                    MATCH (g:Goal {id: $id})
+                    SET g.fitness = $fitness,
+                        g.attempts = g.attempts + 1,
+                        g.last_evaluated = datetime()
+                """, id=goal_id, fitness=fitness)
+
+        await event_bus.emit(Event(
+            type=EventType.GOAL_EVALUATED,
+            data={"goal_id": goal_id, "fitness": fitness}
+        ))
+
+    async def complete_goal(self, goal_id: str) -> None:
+        """Mark goal as completed."""
+        async with self.driver.session() as session:
+            await session.run("""
+                MATCH (g:Goal {id: $id})
+                SET g.status = 'completed',
+                    g.completed_at = datetime()
+            """, id=goal_id)
+
+        await event_bus.emit(Event(
+            type=EventType.GOAL_COMPLETED,
+            data={"goal_id": goal_id}
+        ))
+
+    async def archive_goal(self, goal_id: str) -> None:
+        """Archive a goal (low fitness or no longer relevant)."""
+        async with self.driver.session() as session:
+            await session.run("""
+                MATCH (g:Goal {id: $id})
+                SET g.status = 'archived',
+                    g.archived_at = datetime()
+            """, id=goal_id)
+
+    # -------------------------------------------------------------------------
+    # PATTERNS (Self-Compiler - Loop 2)
+    # -------------------------------------------------------------------------
+
+    async def create_pattern(
+        self,
+        context_embedding: List[float],
+        solution_template: str,
+        abstraction_level: int = 0,
+        domains: Optional[List[str]] = None,
+        lifted_from: Optional[str] = None
+    ) -> str:
+        """Create a new pattern in the pattern library."""
+        pattern_id = self._generate_id(solution_template)
+
+        async with self.driver.session() as session:
+            await session.run("""
+                CREATE (p:Pattern {
+                    id: $id,
+                    context_embedding: $embedding,
+                    solution_template: $template,
+                    abstraction_level: $level,
+                    domains: $domains,
+                    success_count: 0,
+                    failure_count: 0,
+                    application_count: 0,
+                    created_at: datetime()
+                })
+            """,
+            id=pattern_id,
+            embedding=context_embedding,
+            template=solution_template,
+            level=abstraction_level,
+            domains=domains or []
+            )
+
+            # Link to source pattern if this was lifted
+            if lifted_from:
+                await session.run("""
+                    MATCH (p:Pattern {id: $pattern_id})
+                    MATCH (source:Pattern {id: $source_id})
+                    CREATE (source)-[:ABSTRACTED_TO]->(p)
+                """, pattern_id=pattern_id, source_id=lifted_from)
+
+        await event_bus.emit(Event(
+            type=EventType.PATTERN_CREATED,
+            data={
+                "id": pattern_id,
+                "abstraction_level": abstraction_level,
+                "domains": domains or []
+            }
+        ))
+
+        return pattern_id
+
+    async def get_similar_patterns(
+        self,
+        query_embedding: List[float],
+        min_similarity: float = 0.7,
+        limit: int = 5
+    ) -> List[Dict]:
+        """Get patterns similar to query embedding using cosine similarity."""
+        query = """
+            MATCH (p:Pattern)
+            WHERE p.application_count > 0 OR p.success_count > 0
+            RETURN p
+            ORDER BY p.success_count DESC
+            LIMIT 100
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(query)
+            records = await result.data()
+
+        # Compute similarities in Python (Neo4j doesn't have native vector similarity)
+        from embedding import cosine_similarity
+        patterns_with_similarity = []
+
+        for record in records:
+            pattern = dict(record["p"])
+            embedding = pattern.get("context_embedding")
+            if embedding and len(embedding) == len(query_embedding):
+                similarity = cosine_similarity(query_embedding, embedding)
+                if similarity >= min_similarity:
+                    pattern["similarity"] = similarity
+                    patterns_with_similarity.append(pattern)
+
+        patterns_with_similarity.sort(key=lambda p: p["similarity"], reverse=True)
+        return patterns_with_similarity[:limit]
+
+    async def get_patterns_for_lifting(
+        self,
+        min_success_count: int = 3,
+        min_domain_count: int = 2
+    ) -> List[Dict]:
+        """Get patterns ready for abstraction lifting."""
+        query = """
+            MATCH (p:Pattern)
+            WHERE p.success_count >= $min_success
+            AND size(p.domains) >= $min_domains
+            AND p.abstraction_level < 2
+            RETURN p
+            ORDER BY p.success_count DESC, size(p.domains) DESC
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(query, min_success=min_success_count, min_domains=min_domain_count)
+            records = await result.data()
+            return [dict(r["p"]) for r in records]
+
+    async def update_pattern_success(self, pattern_id: str, success: bool) -> None:
+        """Record pattern application success or failure."""
+        async with self.driver.session() as session:
+            if success:
+                await session.run("""
+                    MATCH (p:Pattern {id: $id})
+                    SET p.success_count = p.success_count + 1,
+                        p.application_count = p.application_count + 1,
+                        p.last_applied = datetime()
+                """, id=pattern_id)
+            else:
+                await session.run("""
+                    MATCH (p:Pattern {id: $id})
+                    SET p.failure_count = p.failure_count + 1,
+                        p.application_count = p.application_count + 1,
+                        p.last_applied = datetime()
+                """, id=pattern_id)
+
+        await event_bus.emit(Event(
+            type=EventType.PATTERN_USED,
+            data={"pattern_id": pattern_id, "success": success}
+        ))
+
+    # -------------------------------------------------------------------------
+    # INSIGHTS (Dreaming Machine - Loop 4)
+    # -------------------------------------------------------------------------
+
+    async def create_insight(
+        self,
+        content: str,
+        source_type: str,
+        confidence: float,
+        supporting_evidence: Optional[List[str]] = None,
+        embedding: Optional[List[float]] = None
+    ) -> str:
+        """Create a new insight from dreaming/reflection."""
+        insight_id = self._generate_id(content)
+
+        # Validate source type
+        valid_types = {"reflection", "counterfactual", "cross_pattern", "replay", "transfer"}
+        if source_type not in valid_types:
+            source_type = "reflection"
+
+        async with self.driver.session() as session:
+            await session.run("""
+                CREATE (i:Insight {
+                    id: $id,
+                    content: $content,
+                    source_type: $source_type,
+                    confidence: $confidence,
+                    embedding: $embedding,
+                    created_at: datetime()
+                })
+            """,
+            id=insight_id,
+            content=content,
+            source_type=source_type,
+            confidence=max(0.0, min(1.0, confidence)),
+            embedding=embedding
+            )
+
+            # Link to supporting evidence (experiences)
+            if supporting_evidence:
+                await session.run("""
+                    MATCH (i:Insight {id: $insight_id})
+                    MATCH (e:Experience)
+                    WHERE e.id IN $evidence_ids
+                    CREATE (e)-[:PRODUCED_INSIGHT]->(i)
+                """, insight_id=insight_id, evidence_ids=supporting_evidence[:20])
+
+        return insight_id
+
+    # -------------------------------------------------------------------------
+    # CAPABILITY SCORES (Meta-Learning, Omega)
+    # -------------------------------------------------------------------------
+
+    async def create_capability_score(
+        self,
+        domain: str,
+        score: float,
+        test_results: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """Record a capability score measurement."""
+        score_id = self._generate_id(f"{domain}_{datetime.now().isoformat()}")
+
+        async with self.driver.session() as session:
+            await session.run("""
+                CREATE (cs:CapabilityScore {
+                    id: $id,
+                    domain: $domain,
+                    score: $score,
+                    test_results: $results,
+                    measured_at: datetime()
+                })
+            """,
+            id=score_id,
+            domain=domain,
+            score=max(0.0, min(1.0, score)),
+            results=json.dumps(test_results) if test_results else "{}"
+            )
+
+        await event_bus.emit(Event(
+            type=EventType.CAPABILITY_MEASURED,
+            data={"domain": domain, "score": score}
+        ))
+
+        return score_id
+
+    async def record_capability_score(
+        self,
+        capability_name: str,
+        score: float,
+        measurement_source: str = "unknown"
+    ) -> str:
+        """Record a capability score (alias for Omega compatibility)."""
+        return await self.create_capability_score(
+            domain=capability_name,
+            score=score,
+            test_results={"source": measurement_source}
+        )
+
+    async def get_latest_capability_scores(self) -> Dict[str, float]:
+        """Get the most recent score for each capability domain."""
+        query = """
+            MATCH (cs:CapabilityScore)
+            WITH cs.domain AS domain, cs
+            ORDER BY cs.measured_at DESC
+            WITH domain, COLLECT(cs)[0] AS latest
+            RETURN domain, latest.score AS score
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(query)
+            records = await result.data()
+            return {r["domain"]: r["score"] for r in records}
+
+    async def get_capability_score_history(
+        self,
+        domain: str,
+        days: int = 30
+    ) -> List[Dict]:
+        """Get capability score history for trend analysis."""
+        query = """
+            MATCH (cs:CapabilityScore)
+            WHERE cs.domain = $domain
+            AND cs.measured_at > datetime() - duration({days: $days})
+            RETURN cs
+            ORDER BY cs.measured_at ASC
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(query, domain=domain, days=days)
+            records = await result.data()
+            return [dict(r["cs"]) for r in records]
+
+    # -------------------------------------------------------------------------
+    # METRIC SNAPSHOTS (Omega, Meta-Learning)
+    # -------------------------------------------------------------------------
+
+    async def create_metric_snapshot(
+        self,
+        capability_score: float,
+        llm_efficiency: float,
+        growth_rate: float,
+        coupling_correlation: float,
+        loop_health: Dict[str, bool]
+    ) -> str:
+        """Create a point-in-time metrics snapshot."""
+        snapshot_id = self._generate_id(f"snapshot_{datetime.now().isoformat()}")
+
+        async with self.driver.session() as session:
+            await session.run("""
+                CREATE (ms:MetricSnapshot {
+                    id: $id,
+                    capability_score: $capability,
+                    llm_efficiency: $efficiency,
+                    growth_rate: $growth,
+                    coupling_correlation: $coupling,
+                    loop_health: $health,
+                    timestamp: datetime()
+                })
+            """,
+            id=snapshot_id,
+            capability=capability_score,
+            efficiency=llm_efficiency,
+            growth=growth_rate,
+            coupling=coupling_correlation,
+            health=json.dumps(loop_health)
+            )
+
+        return snapshot_id
+
+    async def get_recent_snapshots(self, limit: int = 100) -> List[Dict]:
+        """Get recent metric snapshots for trend analysis."""
+        query = """
+            MATCH (ms:MetricSnapshot)
+            RETURN ms
+            ORDER BY ms.timestamp DESC
+            LIMIT $limit
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(query, limit=limit)
+            records = await result.data()
+            return [dict(r["ms"]) for r in records]

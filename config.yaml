@@ -475,3 +475,69 @@ identity:
 
   # Minimum identity-related beliefs required before crystallization
   min_beliefs_for_crystallization: 5
+
+# =============================================================================
+# OPTION B: FIVE COMPOUNDING LOOPS (Omega Integration)
+# =============================================================================
+# Enables the five compounding loops architecture from SEEDARCHITECTURE.md:
+# Self-Compiler, Memory Reasoner, Goal Evolver, Dreaming Machine, Integration Mind
+# When enabled, the Omega orchestrator manages loop coordination and mode transitions.
+option_b:
+  # Master enable/disable switch
+  enabled: true
+
+  # Omega orchestrator settings
+  omega:
+    # Cycle interval for Omega coordination loop
+    cycle_interval_seconds: 30
+
+    # Mode durations (seconds in each mode before transition)
+    mode_durations:
+      AWAKE: 60       # Active interaction and action mode
+      DREAMING: 30    # Reflection and counterfactual generation
+      EVOLVING: 20    # Goal evolution and adaptation
+      COMPILING: 40   # Pattern extraction and lifting
+
+    # Target critical coupling (Goal Evolver → Self-Compiler)
+    # This is THE multiplicative feedback loop that compounds improvement
+    target_critical_coupling: 0.5
+
+    # Kill criteria thresholds
+    kill_criteria:
+      hard_week_limit: 4            # Abandon approach after 4 weeks without progress
+      soft_plateau_cycles: 10       # Warn after 10 cycles without improvement
+      min_improvement_rate: 0.01    # Minimum measurable improvement per cycle
+
+  # Coupling tracker settings
+  coupling:
+    # Window for correlation calculation (in cycles)
+    correlation_window: 20
+
+    # Minimum samples needed for valid correlation
+    min_samples: 5
+
+    # Threshold for "significant" coupling
+    significance_threshold: 0.3
+
+  # Self-model capability tracking
+  self_model:
+    # Capability categories to track
+    categories:
+      - reasoning
+      - research
+      - code_generation
+      - memory_management
+      - goal_setting
+      - pattern_recognition
+      - self_reflection
+      - communication
+      - problem_solving
+      - learning
+      - creativity
+      - meta_cognition
+
+    # Success rate window (recent attempts to consider)
+    success_window: 50
+
+    # Confidence threshold for capability claims
+    confidence_threshold: 0.6
