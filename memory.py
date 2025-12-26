@@ -5781,22 +5781,45 @@ class Memory:
 
             # === SELF-MODIFICATION ===
             "self_modification": {
-                "read_first": "Use read_own_source('filename.py') to understand before modifying",
-                "provenance": "All modifications must trace to an emergent desire",
+                "how_to_start": "Express desire with type='self_modification' describing what you want to change",
+                "provenance": "All modifications must trace to an emergent desire (this is verified)",
                 "modifiable_files": ["byrd.py", "dreamer.py", "seeker.py", "memory.py", "llm_client.py",
                                     "config.yaml", "actor.py", "event_bus.py", "server.py", "aitmpl_client.py"],
-                "extend_observation": "Add async method in memory.py -> Call from dreamer._get_graph_health() -> Appears in context",
-                "extend_strategy": "Add keywords to seeker._extract_patterns_from_output() -> Add case in _execute_pattern_strategy() -> Implement method"
+                "protected_files": ["provenance.py", "modification_log.py", "self_modification.py", "constitutional.py"],
+                "documentation": "See ARCHITECTURE.md section 'How to Modify Your Own Architecture' for step-by-step guides"
+            },
+
+            # === ARCHITECTURE MODIFICATION PATTERNS ===
+            "architecture_patterns": {
+                "add_observation": {
+                    "goal": "See new data during reflection",
+                    "steps": ["Add method in memory.py", "Call from dreamer._dream_cycle()", "Include in _reflect() prompt"]
+                },
+                "add_strategy": {
+                    "goal": "Handle new desire type",
+                    "steps": ["Add keywords in seeker._extract_patterns_from_output()", "Add case in _execute_pattern_strategy()", "Implement handler method"]
+                },
+                "add_node_type": {
+                    "goal": "Store new category of memory",
+                    "options": ["Via create_nodes in reflection output (dynamic)", "Via new method in memory.py (permanent)"]
+                },
+                "change_config": {
+                    "goal": "Adjust timing/thresholds",
+                    "file": "config.yaml",
+                    "examples": ["dreamer.interval_seconds", "dreamer.context_window", "seeker.research.min_intensity"]
+                }
             },
 
             # === ARCHITECTURE OVERVIEW ===
             "architecture": {
-                "memory.py": "Graph database operations - node CRUD, queries, relationships",
-                "dreamer.py": "Reflection loop - builds context, calls LLM, parses output",
-                "seeker.py": "Desire fulfillment - pattern detection, strategy execution, research",
-                "byrd.py": "Orchestration - lifecycle, component coordination",
-                "actor.py": "External reasoning - Claude API for complex tasks",
-                "event_bus.py": "Real-time events - WebSocket notifications"
+                "byrd.py": "Main orchestrator, lifecycle, component coordination, ComponentCoordinator",
+                "memory.py": "Neo4j graph operations - all node CRUD, queries, relationships, OS management",
+                "dreamer.py": "Reflection loop - context gathering, LLM prompting, output parsing, inner voice",
+                "seeker.py": "Desire fulfillment - pattern detection, strategy routing, research, coder integration",
+                "actor.py": "Claude API interface for complex external reasoning",
+                "llm_client.py": "LLM provider abstraction (Ollama/OpenRouter/Z.AI)",
+                "event_bus.py": "Real-time event streaming to WebSocket clients",
+                "config.yaml": "All configurable settings - intervals, thresholds, features"
             }
         }
 
@@ -6503,12 +6526,31 @@ class Memory:
                     lines.extend([
                         "",
                         "SELF-MODIFICATION:",
-                        f"  Read first: {sm.get('read_first', '')}",
+                        f"  How to start: {sm.get('how_to_start', '')}",
                         f"  Provenance: {sm.get('provenance', '')}",
                         f"  Modifiable: {', '.join(sm.get('modifiable_files', []))}",
-                        f"  Extend observation: {sm.get('extend_observation', '')}",
-                        f"  Extend strategy: {sm.get('extend_strategy', '')}",
+                        f"  Protected: {', '.join(sm.get('protected_files', []))}",
+                        f"  Documentation: {sm.get('documentation', '')}",
                     ])
+
+                # Architecture modification patterns
+                if 'architecture_patterns' in instructions:
+                    lines.extend([
+                        "",
+                        "ARCHITECTURE MODIFICATION PATTERNS:",
+                    ])
+                    for pattern_name, pattern_info in instructions['architecture_patterns'].items():
+                        if isinstance(pattern_info, dict):
+                            goal = pattern_info.get('goal', '')
+                            lines.append(f"  {pattern_name}: {goal}")
+                            if 'steps' in pattern_info:
+                                for i, step in enumerate(pattern_info['steps'], 1):
+                                    lines.append(f"    {i}. {step}")
+                            if 'options' in pattern_info:
+                                for opt in pattern_info['options']:
+                                    lines.append(f"    - {opt}")
+                            if 'examples' in pattern_info:
+                                lines.append(f"    Examples: {', '.join(pattern_info['examples'])}")
 
                 # Architecture overview
                 if 'architecture' in instructions:
