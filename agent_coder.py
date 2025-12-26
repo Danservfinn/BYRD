@@ -561,6 +561,12 @@ Or to finish:
         """Check if agent coder is available."""
         return self._enabled
 
+    def reset(self):
+        """Reset agent coder state for fresh start."""
+        # AgentCoder is stateless between invocations, so nothing to reset
+        # This method exists for interface compatibility with Coder class
+        pass
+
     def _format_tool_descriptions(self) -> str:
         """Format tool descriptions for the system prompt."""
         lines = []
