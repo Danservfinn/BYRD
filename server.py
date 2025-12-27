@@ -1612,6 +1612,45 @@ async def get_document(path: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class StoreDocumentRequest(BaseModel):
+    path: str
+    doc_type: str = "architecture"
+
+
+@app.post("/api/documents")
+async def store_document(request: StoreDocumentRequest):
+    """
+    Store a local file as a Document node in BYRD's memory.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        # Read the file from disk
+        file_path = Path(BYRD_DIR) / request.path
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail=f"File not found: {request.path}")
+
+        content = file_path.read_text()
+
+        await byrd_instance.memory.connect()
+        doc_id = await byrd_instance.memory.store_document(
+            path=request.path,
+            content=content,
+            doc_type=request.doc_type
+        )
+
+        # Return the stored document
+        doc = await byrd_instance.memory.get_document(request.path)
+        return {"stored": True, "doc_id": doc_id, "document": doc}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/genesis")
 async def get_genesis():
     """

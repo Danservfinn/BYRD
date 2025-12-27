@@ -7053,6 +7053,9 @@ class Memory:
                 capabilities = json.loads(capabilities)
             except:
                 capabilities = {}
+        # Ensure capabilities is a dict, not a list
+        if isinstance(capabilities, list):
+            capabilities = {}
 
         lines.extend([
             "",
