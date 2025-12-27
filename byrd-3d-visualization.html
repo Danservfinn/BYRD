@@ -1514,6 +1514,22 @@
     let eyeMeshes = [];
     let catBreathPhase = 0;
     let catIdlePhase = 0;
+    let byrdGrowthFactor = 1.0; // Accumulates growth from feeding
+
+    // Grow BYRD by a percentage when fed
+    function growByrd(percent = 5) {
+      byrdGrowthFactor *= (1 + percent / 100);
+      console.log(`🍜 BYRD grew! Growth factor: ${byrdGrowthFactor.toFixed(2)}x`);
+
+      // Visual feedback - brief pulse
+      if (catModel) {
+        const currentScale = catModel.scale.clone();
+        catModel.scale.multiplyScalar(1.15); // Pulse up
+        setTimeout(() => {
+          // Return to new grown size (handled by animation loop)
+        }, 200);
+      }
+    }
 
     // Cat Animation System - Advanced state-driven animations
     let catAnimationController = null;
@@ -3254,9 +3270,10 @@
 
         // Apply body pose to cat model
         if (this.catModel) {
-          // Breathing
-          this.catModel.scale.y = 2.4 * bodyPose.breathScale;
-          this.catModel.scale.x = 3 * (1 + (bodyPose.breathScale - 1) * 0.3);
+          // Breathing + growth from feeding
+          this.catModel.scale.y = 2.4 * bodyPose.breathScale * byrdGrowthFactor;
+          this.catModel.scale.x = 3 * (1 + (bodyPose.breathScale - 1) * 0.3) * byrdGrowthFactor;
+          this.catModel.scale.z = 2.8 * byrdGrowthFactor; // Z also grows
 
           // Sway and lean
           this.catModel.rotation.y = bodyPose.swayRotation;
@@ -3654,8 +3671,9 @@
         const breathAmount = 0.03;
         catBreathPhase = Math.sin(elapsed * breathSpeed * Math.PI * 2);
 
-        catModel.scale.y = 2.4 + catBreathPhase * breathAmount;
-        catModel.scale.x = 3 + catBreathPhase * breathAmount * 0.3;
+        catModel.scale.y = (2.4 + catBreathPhase * breathAmount) * byrdGrowthFactor;
+        catModel.scale.x = (3 + catBreathPhase * breathAmount * 0.3) * byrdGrowthFactor;
+        catModel.scale.z = 2.8 * byrdGrowthFactor;
 
         catIdlePhase = elapsed * 0.2;
         catModel.rotation.y = Math.sin(catIdlePhase) * 0.03;
@@ -8432,12 +8450,15 @@
           btn.classList.remove('bg-amber-100', 'border-amber-300', 'text-amber-700');
           btn.classList.add('bg-green-100', 'border-green-300', 'text-green-700');
 
+          // BYRD grows 5% when fed
+          growByrd(5);
+
           // Add to event log
           handleEvent({
             type: 'feeding_received',
             timestamp: new Date().toISOString(),
             data: {
-              message: 'BYRD has been fed by its caretaker',
+              message: `BYRD has been fed! Now ${(byrdGrowthFactor * 100).toFixed(0)}% size`,
               source: 'human'
             }
           });
