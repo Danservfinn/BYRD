@@ -4239,24 +4239,19 @@ class Memory:
                     # Count by type
                     by_type[node_type] = by_type.get(node_type, 0) + 1
 
-                # Get all relationships between these nodes
+                # Get relationships between the nodes we actually loaded
+                # This ensures relationship endpoints are in our node set
+                node_ids = [n["id"] for n in nodes]
                 rels_result = await session.run("""
                     MATCH (a)-[r]->(b)
-                    WHERE (a:Experience OR a:Belief OR a:Desire OR a:Reflection OR a:Capability
-                           OR (a:OperatingSystem AND a.id = 'os_primary')
-                           OR a:OSTemplate OR a:Seed OR a:Strategy OR a:Constraint
-                           OR a:Crystal OR a:MemorySummary)
-                      AND (b:Experience OR b:Belief OR b:Desire OR b:Reflection OR b:Capability
-                           OR (b:OperatingSystem AND b.id = 'os_primary')
-                           OR b:OSTemplate OR b:Seed OR b:Strategy OR b:Constraint
-                           OR b:Crystal OR b:MemorySummary)
+                    WHERE a.id IN $node_ids AND b.id IN $node_ids
                     RETURN
                         id(r) as id,
                         type(r) as type,
                         a.id as source_id,
                         b.id as target_id
                     LIMIT $limit
-                """, limit=limit * 3)  # More relationships than nodes typically
+                """, node_ids=node_ids, limit=limit * 3)
 
                 relationships = []
                 async for record in rels_result:
