@@ -69,6 +69,7 @@ def main():
         "constitutional.py", "provenance.py", "modification_log.py",
         "self_modification.py", "quantum_randomness.py",
         "aitmpl_client.py", "coder.py", "graph_algorithms.py",
+        "elevenlabs_voice.py",  # Voice TTS
         # Option B - Five Compounding Loops
         "embedding.py", "coupling_tracker.py", "memory_reasoner.py",
         "goal_evolver.py", "dreaming_machine.py", "omega.py",

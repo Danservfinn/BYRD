@@ -1553,8 +1553,8 @@ async def get_narrator_summary():
         recent_reflections = await byrd_instance.memory.get_recent_reflections(limit=3)
 
         if not recent_reflections:
-            # No reflections yet - return a default state
-            return {"summary": "I rest in stillness, waiting for thoughts to emerge."}
+            # No reflections yet - no narration to show
+            return {"summary": None}
 
         # Extract key insights from recent reflections
         insights = []
@@ -1575,9 +1575,9 @@ async def get_narrator_summary():
             # Use the most recent insight as the narrator voice
             return {"summary": insights[0]}
         else:
-            # Generate a default based on reflection count
-            count = len(recent_reflections)
-            return {"summary": f"I have reflected {count} times recently, processing and integrating my experiences."}
+            # No actual inner voice available - return null
+            # Real narration comes through WebSocket inner_voice events each cycle
+            return {"summary": None}
 
     except Exception as e:
         return {"summary": None, "error": str(e)}

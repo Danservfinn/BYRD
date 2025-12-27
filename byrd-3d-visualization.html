@@ -1946,6 +1946,7 @@
         nodeData: nodeData,
         baseScale: 1,
         baseColor: colors.color,
+        baseEmissive: colors.emissive || colors.color,
         targetScale: new THREE.Vector3(1, 1, 1),
         velocity: new THREE.Vector3(0, 0, 0),
         force: new THREE.Vector3(0, 0, 0),
@@ -3811,7 +3812,7 @@
       updateNodeScaleByConnections(nodeId);
     }
 
-    // EMERGENT STRUCTURE: Node size determined by connection weight
+    // EMERGENT STRUCTURE: Node size, color, and position determined by connection weight
     function updateNodeScaleByConnections(nodeId) {
       const node = nodes3D.find(n => n.userData.id === nodeId);
       if (!node) return;
@@ -3830,18 +3831,55 @@
       if (node.material) {
         const targetOpacity = Math.min(1.0, 0.5 + connections * 0.05);
         node.material.opacity = targetOpacity;
+
+        // DARKEN color with more connections
+        // 0 connections = full brightness (1.0)
+        // 20+ connections = darkened to 30% brightness
+        const darkenFactor = Math.max(0.3, 1.0 - (connections * 0.035));
+
+        // Get base color and darken it
+        if (node.userData.baseColor) {
+          const baseColor = new THREE.Color(node.userData.baseColor);
+          const darkenedColor = baseColor.clone().multiplyScalar(darkenFactor);
+          node.material.color.copy(darkenedColor);
+        }
+
+        // Also darken emissive for consistency (only for materials that support it)
+        if (node.userData.baseEmissive && node.material.emissive) {
+          const baseEmissive = new THREE.Color(node.userData.baseEmissive);
+          const darkenedEmissive = baseEmissive.clone().multiplyScalar(darkenFactor);
+          node.material.emissive.copy(darkenedEmissive);
+        }
       }
 
       // Animate the scale change smoothly
       const targetScale = new THREE.Vector3(newScale, newScale, newScale);
       node.userData.targetScale = targetScale;
+
+      // MOVE toward center with more connections
+      // Calculate target position closer to center based on connection count
+      const normalizedConnections = Math.min(connections, 20);
+      const targetRadius = MIN_RADIUS + (MAX_RADIUS - MIN_RADIUS) * Math.pow(0.85, normalizedConnections);
+
+      // Get current angle/direction from center
+      const currentDistance = node.position.length();
+      if (currentDistance > 0.1) {
+        const direction = node.position.clone().normalize();
+        const targetPosition = direction.multiplyScalar(targetRadius);
+        node.userData.targetPosition = targetPosition;
+      }
     }
 
-    // Animate node scales in the main loop
+    // Animate node scales and positions in the main loop
     function updateNodeScales(delta) {
       nodes3D.forEach(node => {
+        // Animate scale
         if (node.userData.targetScale) {
           node.scale.lerp(node.userData.targetScale, 0.1);
+        }
+        // Animate position toward center based on connections
+        if (node.userData.targetPosition) {
+          node.position.lerp(node.userData.targetPosition, 0.02); // Slow, smooth movement
         }
       });
     }
@@ -3980,6 +4018,8 @@
         importance,
         nodeIndex,
         baseScale: 1,  // Base scale for connection-based growth
+        baseColor: colors.color,      // Store original color for darkening
+        baseEmissive: colors.emissive || colors.color,  // Store original emissive
         createdAt: Date.now(),
         targetScale: new THREE.Vector3(1, 1, 1),
         velocity: initialVelocity,

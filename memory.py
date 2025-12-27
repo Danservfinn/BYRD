@@ -6166,6 +6166,15 @@ class Memory:
                     if dt_field in os_node and os_node[dt_field]:
                         os_node[dt_field] = str(os_node[dt_field])
 
+                # Deserialize JSON fields that were stored as strings
+                json_fields = ["voice_config", "self_definition", "capabilities"]
+                for field in json_fields:
+                    if field in os_node and isinstance(os_node[field], str):
+                        try:
+                            os_node[field] = json.loads(os_node[field])
+                        except (json.JSONDecodeError, TypeError):
+                            pass  # Keep as string if not valid JSON
+
                 # Add related nodes
                 os_node["seeds"] = [
                     {"id": s["id"], "content": s["content"], "seed_type": s.get("seed_type", "foundation")}
