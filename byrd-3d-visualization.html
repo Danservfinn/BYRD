@@ -3874,10 +3874,12 @@
       const targetScale = new THREE.Vector3(newScale, newScale, newScale);
       node.userData.targetScale = targetScale;
 
-      // MOVE toward center with more connections
+      // MOVE toward center with more connections (mild effect to avoid overcrowding)
       // Calculate target position closer to center based on connection count
       const normalizedConnections = Math.min(connections, 20);
-      const targetRadius = MIN_RADIUS + (MAX_RADIUS - MIN_RADIUS) * Math.pow(0.85, normalizedConnections);
+      // Gentle decay (0.97) keeps nodes spread out; MIN 30 prevents center crowding
+      const minRadius = 30;  // Don't get closer than this
+      const targetRadius = minRadius + (MAX_RADIUS - minRadius) * Math.pow(0.97, normalizedConnections);
 
       // Get current angle/direction from center
       const currentDistance = node.position.length();
