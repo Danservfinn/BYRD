@@ -1988,7 +1988,17 @@ Write ONLY the inner thought, nothing else:"""
         We store the raw output without forcing it into our categories.
         Pattern detection happens later, not during recording.
         """
-        output = reflection.get("output", {})
+        # Handle both schema-compliant and direct output formats
+        # Schema: {"output": {...}, "expressed_drives": [...], "create_belief": [...]}
+        # Direct: {"voice_notes": "...", "crystallizations": [...], ...}
+        if "output" in reflection and isinstance(reflection.get("output"), dict):
+            # Schema-compliant: extract from output wrapper
+            output = reflection.get("output", {})
+        else:
+            # Direct output: the reflection IS the output (minus known top-level keys)
+            output = {k: v for k, v in reflection.items()
+                      if k not in ("expressed_drives", "create_belief", "os_update")}
+
         expressed_drives = reflection.get("expressed_drives", [])
 
         # Track what keys BYRD is using (for pattern detection)
@@ -2007,7 +2017,8 @@ Write ONLY the inner thought, nothing else:"""
         await self._crystallize_expressed_drives(expressed_drives, source_experience_ids)
 
         # Process explicit create_belief instructions from BYRD
-        await self._process_create_belief(output, source_experience_ids)
+        # Pass original reflection since create_belief may be at top level
+        await self._process_create_belief(reflection, source_experience_ids)
 
         # Also record as experience for backward compatibility
         # and so the reflection becomes part of BYRD's experience stream
