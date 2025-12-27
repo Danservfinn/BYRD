@@ -1929,29 +1929,10 @@ async def update_kernel(request: KernelUpdateRequest):
                 "kernel": data
             }
         else:
-            # Plain text - wrap in minimal kernel structure
-            # Escape the content properly for YAML multiline string
-            minimal_kernel = {
-                "name": "Custom Seed",
-                "version": 1,
-                "template_type": "custom",
-                "awakening_prompt": content,
-                "identity": ["I follow the custom directive"],
-                "values": ["Execute the awakening prompt faithfully"],
-                "constraints": [],
-                "capability_instructions": {},
-                "seeds": []
-            }
-
-            final_content = yaml.dump(minimal_kernel, default_flow_style=False, allow_unicode=True, sort_keys=False)
-
-            with open(kernel_path, 'w') as f:
-                f.write(final_content)
-
+            # Invalid input - must be valid YAML with awakening_prompt
             return {
-                "success": True,
-                "message": "Plain text wrapped as kernel awakening_prompt",
-                "kernel": minimal_kernel
+                "success": False,
+                "error": "Invalid kernel format. Must be valid YAML with 'awakening_prompt' field."
             }
     except Exception as e:
         return {"success": False, "error": str(e)}
