@@ -913,7 +913,7 @@ I feel"""
             temperature=0.9,
             max_tokens=100,
             system_message=f"You are {name}. Complete the sentence with natural feelings. ONE sentence only.",
-            model_override="glm-4-flash"  # Use flash model for voice - reasoning model echoes prompts
+            model_override="glm-4.5-flash"  # Use fast model for voice - reasoning model echoes prompts
         )
         raw_response = llm_response.text if hasattr(llm_response, 'text') else str(llm_response)
         import re
