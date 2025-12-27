@@ -921,6 +921,10 @@ class CoderResult:
     output: str
     files_modified: List[str] = field(default_factory=list)
     error: Optional[str] = None
+    cost_usd: float = 0.0  # AgentCoder has no cost tracking, always 0
+    session_id: Optional[str] = None
+    turns_used: int = 0
+    duration_ms: int = 0
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 
