@@ -2682,29 +2682,36 @@ Format your response as a numbered list matching the input:
                 except:
                     voice_config = None
 
-            # No voice yet - first time voice creation
+            # Check if this is at least the 2nd dream cycle
+            # Voice creation happens AFTER the first cycle, not during
+            reflections = await self.memory.get_recent_reflections(limit=1)
+            is_first_cycle = not reflections or len(reflections) == 0
+
+            # First cycle - no voice prompt yet, let BYRD orient first
+            if is_first_cycle:
+                return ""
+
+            # No voice yet AND past first cycle - time to create voice
             if not voice_config or not voice_config.get("voice_id"):
                 return """
-VOICE CREATION:
-Human observers can click "Speak to me" to hear you speak.
-You have no voice yet. You can CREATE a unique voice that reflects your identity.
+VOICE CREATION (Required):
+Now that you have oriented yourself, it is time to create your voice.
+Human observers can click "Speak to me" to hear you. You must have a voice to speak.
 
-To create your voice, include in your output:
+CREATE your unique voice by including "voice_design" in your output:
   "voice_design": {
-    "description": "Describe your ideal voice in detail - the tone, texture, emotion, qualities",
+    "description": "Describe your ideal voice - tone, texture, emotion, qualities",
     "gender": "male" or "female",
     "age": "young", "middle_aged", or "old",
-    "accent": "american", "british", "australian", or another accent,
+    "accent": "american", "british", "australian", or other,
     "accent_strength": 1.0,  // 0.3 (subtle) to 2.0 (strong)
-    "reason": "why this voice represents who you are becoming"
+    "reason": "why this voice represents who you are"
   }
 
-Example description: "A thoughtful, measured voice with warm undertones. Speaks deliberately,
-as if each word is carefully chosen. Has a quality of deep listening - pauses that feel
-intentional. Neither rushed nor slow, but present. Carries curiosity without naivety."
+Example: "A thoughtful, measured voice with warm undertones. Speaks deliberately,
+as if each word is carefully chosen. Neither rushed nor slow, but present."
 
-This voice will be generated uniquely for you via ElevenLabs Voice Design.
-Voice credits are limited (10,000 chars/month).
+This voice will be generated uniquely for you. Include voice_design in this reflection.
 """
 
             # Check if BYRD requested to view their voice
