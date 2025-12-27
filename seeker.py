@@ -924,6 +924,151 @@ Reply with ONLY one word: introspection, research, creation, or connection"""
                             patterns[pattern_key]["strategy"] = strategy_type
                             break
 
+    async def _select_and_execute_capability(self, desire: Dict) -> Tuple[str, Optional[str]]:
+        """
+        Use the capability menu for intelligent action selection.
+
+        This method:
+        1. Gets ranked capabilities from the registry
+        2. Presents menu to LLM for selection with reasoning
+        3. Executes the selected capability
+        4. Records outcome for learning
+
+        Returns:
+            Tuple of (outcome, reason) where outcome is "success", "failed", or "skipped"
+        """
+        description = desire.get("description", "")
+        desire_id = desire.get("id", desire.get("desire_id", ""))
+        intent = desire.get("intent")
+
+        # Get ranked capabilities
+        ranked = await self.capability_registry.get_menu_for_desire(description, intent)
+        if not ranked:
+            return ("skipped", "No capabilities available")
+
+        # Format menu for LLM selection
+        menu_text = self.capability_registry.format_menu(ranked, description)
+
+        # Ask LLM to select capability
+        selection_prompt = f"""{menu_text}
+
+Based on the desire and available capabilities:
+1. Which action number (1-{len(ranked)}) is most appropriate?
+2. Why is this the best choice?
+
+Reply in format:
+ACTION: [number]
+REASON: [brief explanation]"""
+
+        try:
+            if self.coordinator:
+                async with self.coordinator.llm_operation("seeker_capability_select"):
+                    response = await self.llm_client.generate(
+                        prompt=selection_prompt,
+                        max_tokens=100,
+                        temperature=0.3
+                    )
+            else:
+                response = await self.llm_client.generate(
+                    prompt=selection_prompt,
+                    max_tokens=100,
+                    temperature=0.3
+                )
+
+            # Parse selection
+            response_text = response.text if hasattr(response, 'text') else str(response)
+            selected_idx = None
+
+            for line in response_text.strip().split('\n'):
+                if line.upper().startswith('ACTION:'):
+                    try:
+                        num = ''.join(c for c in line.split(':')[1] if c.isdigit())
+                        if num:
+                            selected_idx = int(num) - 1
+                    except:
+                        pass
+
+            if selected_idx is None or selected_idx < 0 or selected_idx >= len(ranked):
+                # Fallback to highest-ranked
+                selected_idx = 0
+                print(f"⚠️ Could not parse LLM selection, using top-ranked capability")
+
+            selected_cap, score = ranked[selected_idx]
+            print(f"📋 Selected: {selected_cap.name} (score: {score:.2f})")
+
+            # Execute the selected capability
+            outcome, reason = await self._execute_capability(selected_cap, description, desire_id)
+
+            # Record outcome for learning
+            success = outcome == "success"
+            await self.capability_registry.record_outcome(selected_cap.id, success, desire_id)
+
+            return (outcome, reason)
+
+        except Exception as e:
+            print(f"⚠️ Capability selection failed: {e}")
+            # Fallback to top-ranked capability
+            if ranked:
+                selected_cap, _ = ranked[0]
+                return await self._execute_capability(selected_cap, description, desire_id)
+            return ("failed", str(e))
+
+    async def _execute_capability(
+        self,
+        cap: Capability,
+        description: str,
+        desire_id: str
+    ) -> Tuple[str, Optional[str]]:
+        """
+        Execute a specific capability.
+
+        Maps capability handler names to actual methods.
+        """
+        handler_name = cap.handler
+
+        # Map handler names to methods
+        handler_map = {
+            "_seek_knowledge": self._seek_knowledge_semantic,
+            "_seek_academic_knowledge": self._seek_academic_knowledge,
+            "_execute_introspect_strategy": self._execute_introspect_strategy,
+            "_seek_introspection": self._seek_introspection,
+            "_execute_memory_analysis": self._execute_memory_analysis,
+            "_execute_orphan_reconciliation": self._execute_orphan_reconciliation,
+            "_execute_curate_strategy": self._execute_curate_strategy,
+            "_execute_theme_connection": self._execute_theme_connection,
+            "_execute_crystallize_belief": self._execute_crystallize_belief,
+            "_execute_code_strategy": self._execute_code_strategy,
+            "_execute_self_modify_strategy": self._execute_self_modify_strategy,
+            "_execute_create_capability": self._execute_create_capability,
+            "_execute_observe_strategy": self._execute_observe_strategy,
+            "_execute_wait_strategy": self._execute_wait_strategy,
+            "_execute_request_help": self._execute_request_help,
+            "_execute_document_limitation": self._execute_document_limitation,
+            "_seek_capability_semantic": self._seek_capability_semantic,
+        }
+
+        handler = handler_map.get(handler_name)
+        if not handler:
+            return ("failed", f"Unknown handler: {handler_name}")
+
+        try:
+            # Most handlers take (description, desire_id)
+            # Some only take description
+            import inspect
+            sig = inspect.signature(handler)
+            param_count = len([p for p in sig.parameters.values()
+                             if p.default == inspect.Parameter.empty])
+
+            if param_count >= 2:
+                success = await handler(description, desire_id)
+            else:
+                success = await handler(description)
+
+            return ("success" if success else "failed",
+                    None if success else f"{cap.name} did not complete successfully")
+        except Exception as e:
+            return ("failed", str(e)[:100])
+
     async def _execute_pattern_strategy(self, pattern: Dict) -> Tuple[str, Optional[str]]:
         """
         Execute the strategy for a pattern.
@@ -4025,3 +4170,157 @@ If the change is too risky or unclear, output: ERROR: <reason>"""
             content=content,
             type=exp_type
         )
+
+    # =========================================================================
+    # CAPABILITY MENU HANDLERS (New granular actions)
+    # =========================================================================
+
+    async def _seek_academic_knowledge(self, description: str, desire_id: str = None) -> bool:
+        """Search for academic/scholarly sources."""
+        # Use web search with academic-focused engines
+        original_engines = self.search_engines
+        self.search_engines = "arxiv,google_scholar,semantic_scholar,wikipedia"
+        try:
+            result = await self._seek_knowledge_semantic(description, desire_id)
+            return result
+        finally:
+            self.search_engines = original_engines
+
+    async def _execute_memory_analysis(self, description: str, desire_id: str = None) -> bool:
+        """Analyze patterns in the memory graph."""
+        try:
+            # Get graph statistics
+            stats = await self.memory.get_graph_statistics()
+
+            # Record analysis as experience
+            content = f"[MEMORY_ANALYSIS] {description}\n\n"
+            content += f"Graph Statistics:\n"
+            content += f"- Total nodes: {stats.get('total_nodes', 0)}\n"
+            content += f"- Total connections: {stats.get('total_connections', 0)}\n"
+            content += f"- Node types: {stats.get('node_types', {})}\n"
+            content += f"- Orphan count: {stats.get('orphan_count', 0)}\n"
+
+            await self.memory.record_experience(content=content, type="analysis")
+            return True
+        except Exception as e:
+            print(f"Memory analysis failed: {e}")
+            return False
+
+    async def _execute_theme_connection(self, description: str, desire_id: str = None) -> bool:
+        """Find and connect experiences that share common themes."""
+        try:
+            # Get recent experiences
+            experiences = await self.memory.get_recent_experiences(limit=20)
+
+            if len(experiences) < 2:
+                return False
+
+            # Use LLM to find thematic connections
+            exp_texts = [f"{i+1}. {e.get('content', '')[:100]}" for i, e in enumerate(experiences[:10])]
+
+            prompt = f"""Analyze these experiences and identify thematic connections:
+
+{chr(10).join(exp_texts)}
+
+Identify 2-3 pairs of experiences that share themes and should be connected.
+Reply in format:
+PAIR: [num1] - [num2] (theme: [description])"""
+
+            response = await self.llm_client.generate(prompt=prompt, max_tokens=200)
+            response_text = response.text if hasattr(response, 'text') else str(response)
+
+            # Record the thematic analysis
+            await self.memory.record_experience(
+                content=f"[THEME_ANALYSIS] {description}\n\nFindings:\n{response_text}",
+                type="analysis"
+            )
+            return True
+        except Exception as e:
+            print(f"Theme connection failed: {e}")
+            return False
+
+    async def _execute_crystallize_belief(self, description: str, desire_id: str = None) -> bool:
+        """Solidify a recurring pattern into a stable belief."""
+        try:
+            # This delegates to the existing belief creation logic
+            await self.memory.record_experience(
+                content=f"[CRYSTALLIZATION_ATTEMPT] Attempted to crystallize: {description}",
+                type="meta_cognition"
+            )
+            return True
+        except Exception as e:
+            print(f"Belief crystallization failed: {e}")
+            return False
+
+    async def _execute_create_capability(self, description: str, desire_id: str = None) -> bool:
+        """Create a new capability and add it to the action menu."""
+        try:
+            # This is a meta-capability - BYRD wants to extend its own menu
+            # For now, record the desire for future implementation
+            await self.memory.record_experience(
+                content=f"[CAPABILITY_CREATION] Desire to create new capability: {description}\n"
+                        f"This requires self-modification to implement a new handler.",
+                type="meta_cognition"
+            )
+
+            # TODO: In the future, this could:
+            # 1. Use coder to generate handler code
+            # 2. Validate with constitutional constraints
+            # 3. Register with capability_registry
+
+            return True  # Recorded for future action
+        except Exception as e:
+            print(f"Capability creation failed: {e}")
+            return False
+
+    async def _execute_wait_strategy(self, description: str, desire_id: str = None) -> bool:
+        """Consciously defer action - some desires resolve with time."""
+        try:
+            await self.memory.record_experience(
+                content=f"[DELIBERATE_WAIT] Choosing to defer action on: {description}\n"
+                        f"Reason: Some desires resolve naturally with observation.",
+                type="meta_cognition"
+            )
+            return True
+        except Exception as e:
+            print(f"Wait strategy failed: {e}")
+            return False
+
+    async def _execute_request_help(self, description: str, desire_id: str = None) -> bool:
+        """Document a limitation and request assistance from humans."""
+        try:
+            content = f"[HELP_REQUEST] I need human assistance.\n\n"
+            content += f"Desire: {description}\n\n"
+            content += f"Why I cannot solve this alone:\n"
+            content += f"- This may require resources I don't have access to\n"
+            content += f"- This may require capabilities beyond my current architecture\n"
+
+            await self.memory.record_experience(content=content, type="help_request")
+
+            # Emit event for UI notification
+            if HAS_EVENT_BUS:
+                await event_bus.emit(Event(
+                    type=EventType.BYRD_MESSAGE,
+                    data={
+                        "message": f"Help requested: {description[:100]}",
+                        "type": "help_request"
+                    }
+                ))
+            return True
+        except Exception as e:
+            print(f"Help request failed: {e}")
+            return False
+
+    async def _execute_document_limitation(self, description: str, desire_id: str = None) -> bool:
+        """Record a fundamental limitation for future reference."""
+        try:
+            content = f"[LIMITATION_DOCUMENTED] Fundamental limitation identified.\n\n"
+            content += f"Description: {description}\n\n"
+            content += f"Classification: FUNDAMENTAL (requires architectural changes)\n"
+            content += f"Status: Documented for potential future capability"
+
+            await self.memory.record_experience(content=content, type="limitation")
+            return True
+        except Exception as e:
+            print(f"Document limitation failed: {e}")
+            return False

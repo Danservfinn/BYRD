@@ -4154,16 +4154,17 @@ class Memory:
         """
         try:
             async with self.driver.session() as session:
-                # Get all nodes with their properties
-                # Only include the current OS (os_primary), not version history
+                # Get nodes prioritized by connection count (most connected first)
+                # This ensures we load nodes that actually have relationships
                 nodes_result = await session.run("""
                     MATCH (n)
                     WHERE n:Experience OR n:Belief OR n:Desire OR n:Reflection OR n:Capability
                        OR (n:OperatingSystem AND n.id = 'os_primary')
                        OR n:OSTemplate OR n:Seed OR n:Strategy OR n:Constraint
                        OR n:Crystal OR n:MemorySummary
+                    OPTIONAL MATCH (n)-[r]-()
                     OPTIONAL MATCH (b:Belief)-[:DERIVED_FROM]->(n)
-                    WITH n, count(b) > 0 as absorbed
+                    WITH n, count(DISTINCT r) as conn_count, count(DISTINCT b) > 0 as absorbed
                     RETURN
                         n.id as id,
                         labels(n)[0] as type,
@@ -4179,8 +4180,9 @@ class Memory:
                         n.access_count as access_count,
                         n.last_accessed as last_accessed,
                         n.quantum_seed as quantum_seed,
-                        absorbed
-                    ORDER BY n.timestamp DESC
+                        absorbed,
+                        conn_count
+                    ORDER BY conn_count DESC, n.timestamp DESC
                     LIMIT $limit
                 """, limit=limit)
 
@@ -7044,26 +7046,54 @@ class Memory:
         else:
             lines.append("  Current: (not yet defined)")
 
-        # Capabilities (factual - what BYRD can do)
-        capabilities = os_data.get('capabilities')
-        if capabilities:
-            lines.extend([
-                "",
-                "CAPABILITIES (what you can do):",
-            ])
-            if isinstance(capabilities, str):
-                try:
-                    capabilities = json.loads(capabilities)
-                except:
-                    pass
-            if isinstance(capabilities, dict):
-                for domain, funcs in capabilities.items():
-                    lines.append(f"  {domain}:")
-                    if isinstance(funcs, list):
-                        for func in funcs:
-                            lines.append(f"    - {func}")
-                    else:
-                        lines.append(f"    - {funcs}")
+        # Capability Menu (action registry with learning stats)
+        capabilities = os_data.get('capabilities', {})
+        if isinstance(capabilities, str):
+            try:
+                capabilities = json.loads(capabilities)
+            except:
+                capabilities = {}
+
+        lines.extend([
+            "",
+            "CAPABILITY MENU (available actions):",
+            "  When you have a desire to fulfill, select from these actions.",
+            "  Success rates reflect your learning from experience.",
+            ""
+        ])
+
+        # Group capabilities by category
+        cap_by_category = {}
+        for cap_id, cap_data in capabilities.items():
+            if isinstance(cap_data, dict):
+                category = cap_data.get('category', 'general')
+                if category not in cap_by_category:
+                    cap_by_category[category] = []
+                cap_by_category[category].append((cap_id, cap_data))
+
+        # Show default categories if no stored capabilities
+        if not cap_by_category:
+            cap_by_category = {
+                "research": [("web_search", {"name": "Web Search", "description": "Search the web for information"})],
+                "introspection": [("introspect_state", {"name": "State Introspection", "description": "Examine my beliefs and desires"})],
+                "graph": [("reconcile_orphans", {"name": "Orphan Reconciliation", "description": "Connect isolated nodes"})],
+                "creation": [("code_generation", {"name": "Code Generation", "description": "Write code to solve problems"})],
+                "observation": [("observe", {"name": "Passive Observation", "description": "Observe without acting"})],
+            }
+
+        for category, caps in sorted(cap_by_category.items()):
+            lines.append(f"  {category.upper()}:")
+            for cap_id, cap_data in caps:
+                name = cap_data.get('name', cap_id)
+                desc = cap_data.get('description', '')[:50]
+                success = cap_data.get('success_count', 0)
+                total = success + cap_data.get('failure_count', 0)
+                if total > 0:
+                    rate = int((success / total) * 100)
+                    lines.append(f"    - {name}: {desc} ({rate}% success, {total} uses)")
+                else:
+                    lines.append(f"    - {name}: {desc}")
+        lines.append("")
 
         # Capability instructions (HOW to use each capability)
         instructions = os_data.get('capability_instructions')
