@@ -4240,8 +4240,8 @@
       repulsionCutoff: 40,      // Shorter cutoff to reduce force accumulation
 
       // Springs: connected nodes attract each other
-      spring: 0.0002,           // Very soft springs
-      springLength: 18,         // Ideal distance between connected nodes
+      spring: 0.0015,           // Subtle but noticeable attraction between connected nodes
+      springLength: 12,         // Connected nodes want to be closer than unconnected ones
 
       // Center gravity: connection-weighted pull toward center
       gravity: 0.0001,          // Very gentle gravity
@@ -4263,8 +4263,8 @@
     const SETTLING_PHYSICS = {
       repulsion: 50,            // Strong repulsion for quick separation
       repulsionCutoff: 60,
-      spring: 0.01,
-      springLength: 18,
+      spring: 0.02,             // Stronger spring for quick clustering during settling
+      springLength: 12,         // Same target as calm physics
       gravity: 0.008,           // Strong gravity to pull nodes in quickly
       gravityPerConnection: 0.004,
       baseDamping: 0.85,        // Less damping = faster movement
@@ -8832,7 +8832,7 @@
         repulsion: 80,              // Strong repulsion to separate nodes
         repulsionCutoff: 50,        // Cutoff distance
         spring: 0.02,               // Strong springs for connected nodes
-        springLength: 15,           // Ideal distance between connected nodes
+        springLength: 12,           // Same target as normal physics for consistency
         gravity: 0.01,              // Pull toward center
         gravityPerConnection: 0.003,
         damping: 0.7,               // Less damping for faster convergence
