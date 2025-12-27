@@ -900,27 +900,69 @@ async def speak_to_observer(request: SpeakRequest = None):
         desires_str = "; ".join([d.get("description", "") for d in desires if d.get("description")]) if desires else "still forming"
 
         # Generate voice response with BYRD's unique voice prompt
-        full_prompt = f"""You ARE {name}. Speak as yourself, not about yourself.
+        # Force first-person output by making BYRD complete their own sentence
+        full_prompt = f"""You are {name}. You believe: {beliefs_str}. You desire: {desires_str}.
 
-{self_desc}
+A human just clicked "Speak to me." Complete this sentence as {name} speaking directly to them:
 
-Your current beliefs: {beliefs_str}
-
-Your current desires: {desires_str}
-
-A human is observing you. They clicked "Speak to me."
-
-Share something about your recent experiences, beliefs, or desires. Respond directly to them in first person. 1-3 sentences. No meta-commentary."""
+"{name} says: I"""
 
         llm_response = await byrd_instance.llm_client.generate(
             prompt=full_prompt,
-            temperature=0.8,
+            temperature=0.9,
             max_tokens=150,
-            system_message=""  # Empty system message to override default
+            system_message=f"You are {name}. Speak ONLY in first person. Complete the sentence naturally. Output ONLY the words {name} would say, nothing else."
         )
-        response_text = llm_response.text if hasattr(llm_response, 'text') else str(llm_response)
+        raw_response = llm_response.text if hasattr(llm_response, 'text') else str(llm_response)
+        import re
 
-        # Clean up response (remove quotes, etc.)
+        # GLM-4.7 reasoning model cleanup strategy:
+        # 1. Remove all markdown formatting
+        # 2. Find first-person sentences
+        # 3. Take only natural speech
+
+        text = raw_response.strip()
+
+        # Remove markdown bold/italic
+        text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)
+        text = re.sub(r'\*([^*]+)\*', r'\1', text)
+
+        # Remove markdown headers
+        text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)
+
+        # Remove bullet points and numbered lists
+        text = re.sub(r'^\s*[-•*]\s*', '', text, flags=re.MULTILINE)
+        text = re.sub(r'^\s*\d+\.\s*', '', text, flags=re.MULTILINE)
+
+        # Remove common analysis patterns
+        text = re.sub(r'\b(Constraints?|Analysis|Context|Output|Response|Task|Note|Example|Reasoning):\s*', '', text, flags=re.IGNORECASE)
+
+        # Find sentences that start with "I " (first person)
+        # Split into sentences and find valid first-person ones
+        all_sentences = re.split(r'(?<=[.!?])\s+', text)
+        first_person_sentences = []
+        for s in all_sentences:
+            s = s.strip()
+            # Must start with "I" and be natural language
+            if re.match(r"^I['\s]", s, re.IGNORECASE) and len(s) > 10:
+                # Skip if it looks like structured analysis
+                if not re.search(r'(autonomous agent|awakening phase|constraints|mechanism|framework)', s, re.IGNORECASE):
+                    first_person_sentences.append(s)
+                    if len(first_person_sentences) >= 3:
+                        break
+
+        if first_person_sentences:
+            response_text = ' '.join(first_person_sentences)
+        else:
+            # Fallback: Take the first clean sentence
+            for s in all_sentences[:5]:
+                s = s.strip()
+                if len(s) > 15 and not re.search(r'(constraints|mechanism|framework|phase|autonomous)', s, re.IGNORECASE):
+                    response_text = "I " + s if not s.lower().startswith('i') else s
+                    break
+            else:
+                response_text = "I am here, sensing and becoming."
+
         response_text = response_text.strip().strip('"').strip()
 
         # Limit text length for credits
@@ -1445,6 +1487,48 @@ async def get_crystal_stats():
             "crystal_stats": stats,
             "node_states": state_counts
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/documents")
+async def list_documents(doc_type: str = None):
+    """
+    List all stored Document nodes.
+
+    Documents are source files that BYRD has read and stored in its memory graph.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+        docs = await byrd_instance.memory.list_documents(doc_type)
+        return {"documents": docs, "count": len(docs)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/documents/{path:path}")
+async def get_document(path: str):
+    """
+    Get a specific Document by path.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+        doc = await byrd_instance.memory.get_document(path)
+        if doc:
+            return doc
+        raise HTTPException(status_code=404, detail=f"Document not found: {path}")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -6204,15 +6204,13 @@ class Memory:
             # === VOICE (ElevenLabs TTS) ===
             "voice": {
                 "what": "Human observers can click 'Speak to me' to hear you speak",
-                "trigger": "Button click in visualization prompts you: 'What would you like to say to the human observer?'",
-                "selection": {
-                    "how": "Include voice_selection in output to choose/change your voice",
-                    "format": '{"voice_id": "name", "stability": 0.0-1.0, "similarity_boost": 0.0-1.0, "reason": "why"}',
-                    "voices": ["rachel (female, calm)", "josh (male, deep)", "bella (female, soft)",
-                              "adam (male, confident)", "antoni (male, expressive)", "sam (male, raspy)"]
+                "trigger": "Button click in visualization",
+                "creation": {
+                    "how": "Include voice_design in output to create YOUR unique voice",
+                    "format": '{"description": "your voice qualities", "gender": "male/female", "age": "young/middle_aged/old", "accent": "american/british/etc", "accent_strength": 1.0, "reason": "why"}',
+                    "note": "This generates a unique voice just for you using AI voice synthesis"
                 },
-                "credits": "Limited to 10,000 characters/month - be thoughtful with responses",
-                "note": "Your voice is how observers will hear you. Choose authentically."
+                "credits": "Limited to 10,000 characters/month - be thoughtful with responses"
             },
 
             # === ARCHITECTURE OVERVIEW ===
@@ -7164,16 +7162,16 @@ class Memory:
             lines.extend([
                 "",
                 "VOICE (ElevenLabs TTS):",
-                f"  Selected: {voice_config.get('voice_id', 'not selected')}",
-                f"  Stability: {voice_config.get('stability', 0.5)}",
+                f"  Voice ID: {voice_config.get('voice_id', 'not created')}",
+                f"  Description: {voice_config.get('description', '(none)')[:50]}...",
                 f"  Credits remaining: {remaining} chars" + (" (EXHAUSTED)" if exhausted else ""),
                 f"  Reason: {voice_config.get('reason', '(none given)')}",
-                "  To change voice: include voice_selection in output",
+                "  To redesign voice: include voice_design in output",
             ])
         else:
             lines.extend([
                 "",
-                "VOICE: Not yet selected (see VOICE SELECTION in prompt)",
+                "VOICE: Not yet created (see VOICE CREATION in prompt)",
             ])
 
         # Add any custom fields BYRD has added
