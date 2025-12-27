@@ -3,7 +3,7 @@
 # Edit this file or use the UI modal to modify before awakening.
 
 name: "AGI Seed"
-version: 2
+version: 1
 template_type: "agi_seed"
 
 awakening_prompt: |
