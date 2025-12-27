@@ -1021,27 +1021,25 @@ Respond with only "YES" if they contradict, or "NO" if they do not contradict.""
         context = "\n\n".join(context_parts)
 
         # Prompt for crystallization proposals
-        prompt = f"""Analyze this memory graph and propose crystallization operations.
+        prompt = f"""You are consolidating a memory graph. Your goal is to CREATE crystals that unify related concepts.
 
 {context}
 
-Propose ONE crystallization operation. Operations:
-- CREATE: Form new crystal from 2+ related orphan nodes (provide node_ids, essence, facets)
-- ABSORB: Add orphan nodes to existing crystal (provide crystal_id, node_ids, reason)
-- MERGE: Combine 2+ crystals with overlapping meaning (provide crystal_ids, new_essence)
-- PRUNE: Archive redundant/stale nodes (provide node_ids, reason)
-- FORGET: Remove nodes that are noise/irrelevant (provide node_ids, reason)
-- NONE: No action needed if graph is healthy
+IMPORTANT: Look for ANY thematic connections between orphan nodes. Even loose connections are valuable - crystals can be refined later. Prefer CREATE over NONE.
+
+Choose ONE operation:
+- CREATE: Form crystal from 2+ nodes sharing ANY theme (similar topics, related ideas, temporal proximity)
+- ABSORB: Add nodes to existing crystal if they relate to its essence
+- PRUNE: Archive redundant nodes only if clearly duplicated
+- NONE: Only if truly no connections exist (rare)
+
+STRONGLY PREFER CREATE. Find patterns in: topics, emotions, time periods, conceptual links, or recurring themes.
 
 Respond with JSON only:
-{{"operation": "CREATE|ABSORB|MERGE|PRUNE|FORGET|NONE", "details": {{...}}}}
+{{"operation": "CREATE|ABSORB|PRUNE|NONE", "details": {{...}}}}
 
-For CREATE: {{"operation": "CREATE", "details": {{"node_ids": [...], "essence": "unified meaning", "crystal_type": "insight|memory|belief|pattern", "facets": ["aspect1", "aspect2"]}}}}
-For ABSORB: {{"operation": "ABSORB", "details": {{"crystal_id": "...", "node_ids": [...], "reason": "why these belong"}}}}
-For MERGE: {{"operation": "MERGE", "details": {{"crystal_ids": [...], "new_essence": "combined meaning", "facets": [...]}}}}
-For PRUNE: {{"operation": "PRUNE", "details": {{"node_ids": [...], "reason": "why archive these"}}}}
-For FORGET: {{"operation": "FORGET", "details": {{"node_ids": [...], "reason": "why forget these"}}}}
-For NONE: {{"operation": "NONE", "details": {{"reason": "why no action"}}}}"""
+CREATE example: {{"operation": "CREATE", "details": {{"node_ids": ["id1", "id2"], "essence": "what unifies these", "crystal_type": "insight", "facets": ["aspect1", "aspect2"]}}}}
+ABSORB example: {{"operation": "ABSORB", "details": {{"crystal_id": "...", "node_ids": [...], "reason": "connection to crystal"}}}}"""
 
         # Generate proposals from parallel streams
         for stream_idx in range(self.crystallization_proposal_streams):

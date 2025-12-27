@@ -7426,6 +7426,36 @@
           <p>BYRD is in active exploration with ${dreamCount} dream cycles completed. It has formed ${beliefCount} beliefs and recorded ${reflectionCount} reflections.</p>`;
       }
 
+      // Show self-definition if BYRD has defined itself
+      const selfDef = data.os?.self_definition;
+      if (selfDef && Object.keys(selfDef).length > 0) {
+        narrativeHtml += `
+          <div class="mt-4 bg-gradient-to-r from-violet-50 to-fuchsia-50 border border-violet-200 rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-lg">🎭</span>
+              <span class="font-semibold text-violet-800">Self-Definition</span>
+              <span class="text-xs text-violet-500">(BYRD's self-authored identity)</span>
+            </div>
+            <div class="space-y-2 text-sm">
+              ${Object.entries(selfDef).map(([key, value]) => {
+                let displayValue = value;
+                if (Array.isArray(value)) {
+                  displayValue = value.join(', ');
+                } else if (typeof value === 'object') {
+                  displayValue = JSON.stringify(value);
+                }
+                return `
+                  <div class="flex">
+                    <span class="text-violet-600 font-medium min-w-[100px]">${key}:</span>
+                    <span class="text-violet-900">${displayValue}</span>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }
+
       // Show recent reflection insights if available
       if (reflections.length > 0) {
         narrativeHtml += '<div class="mt-4">';
