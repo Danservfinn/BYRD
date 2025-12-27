@@ -422,6 +422,7 @@ Example format: {"output": {...your reflection...}}"""
         max_tokens: int = 500,
         quantum_modulation: bool = False,
         quantum_context: str = "unknown",
+        system_message: Optional[str] = None,
         **kwargs
     ) -> LLMResponse:
         """Generate using Z.AI API with retry on rate limits."""
@@ -440,7 +441,8 @@ Example format: {"output": {...your reflection...}}"""
             "Content-Type": "application/json"
         }
 
-        system_message = self._build_system_message()
+        # Use custom system message if provided, otherwise default
+        system_message = system_message if system_message is not None else self._build_system_message()
         max_retries = 5
         base_delay = 20  # seconds
         max_delay = 90   # cap delay at 90 seconds

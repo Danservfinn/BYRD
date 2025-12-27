@@ -884,40 +884,41 @@ async def speak_to_observer(request: SpeakRequest = None):
         beliefs = await byrd_instance.memory.get_beliefs(limit=5)
 
         # Build context for the response
-        context_parts = []
-        if os_data:
-            if os_data.get("name"):
-                context_parts.append(f"You are {os_data.get('name')}.")
-            if os_data.get("self_description"):
-                context_parts.append(os_data.get("self_description"))
-            if os_data.get("current_focus"):
-                context_parts.append(f"Currently focused on: {os_data.get('current_focus')}")
+        name = os_data.get("name", "Byrd") if os_data else "Byrd"
+        self_desc = os_data.get("self_description", "") if os_data else ""
 
+        belief_texts = []
         if beliefs:
             belief_texts = [b.get("content", "") for b in beliefs[:3] if b.get("content")]
-            if belief_texts:
-                context_parts.append(f"Your beliefs include: {'; '.join(belief_texts)}")
+        beliefs_str = "; ".join(belief_texts) if belief_texts else "still forming"
 
-        context = " ".join(context_parts) if context_parts else ""
+        # The prompt to BYRD - designed for in-character response
+        user_prompt = request.prompt if request and request.prompt else None
 
-        # The prompt to BYRD
-        prompt = request.prompt if request and request.prompt else "What would you like to say to the human observer?"
+        # Get recent desires for context
+        desires = await byrd_instance.memory.get_unfulfilled_desires(limit=3)
+        desires_str = "; ".join([d.get("description", "") for d in desires if d.get("description")]) if desires else "still forming"
 
-        # Generate response using Actor (Claude API) or LLM client
-        if hasattr(byrd_instance, 'actor') and byrd_instance.actor:
-            # Use Actor for richer response
-            response_text = await byrd_instance.actor.respond(
-                prompt,
-                {"context": context, "max_length": 500}
-            )
-        else:
-            # Fallback to LLM client
-            full_prompt = f"{context}\n\nA human observer is watching you. They clicked 'Speak to me'. {prompt}\n\nSpeak directly to them in 1-3 sentences. Be authentic to your nature."
-            response_text = await byrd_instance.llm_client.generate(
-                prompt=full_prompt,
-                temperature=0.8,
-                max_tokens=200
-            )
+        # Generate voice response with BYRD's unique voice prompt
+        full_prompt = f"""You ARE {name}. Speak as yourself, not about yourself.
+
+{self_desc}
+
+Your current beliefs: {beliefs_str}
+
+Your current desires: {desires_str}
+
+A human is observing you. They clicked "Speak to me."
+
+Share something about your recent experiences, beliefs, or desires. Respond directly to them in first person. 1-3 sentences. No meta-commentary."""
+
+        llm_response = await byrd_instance.llm_client.generate(
+            prompt=full_prompt,
+            temperature=0.8,
+            max_tokens=150,
+            system_message=""  # Empty system message to override default
+        )
+        response_text = llm_response.text if hasattr(llm_response, 'text') else str(llm_response)
 
         # Clean up response (remove quotes, etc.)
         response_text = response_text.strip().strip('"').strip()

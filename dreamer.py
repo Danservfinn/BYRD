@@ -575,8 +575,8 @@ class Dreamer:
         # 3.5 APPLY OS UPDATES - If BYRD modified its self-model
         await self._apply_os_updates(reflection_output)
 
-        # 3.6 PROCESS VOICE SELECTION - If BYRD selected a voice
-        await self._process_voice_selection(reflection_output)
+        # 3.6 PROCESS VOICE DESIGN - If BYRD designed/redesigned its voice
+        await self._process_voice_design(reflection_output)
 
         # 3.7 PROCESS SELF-DEFINITION - If BYRD defined itself
         await self._process_self_definition(reflection_output)
@@ -1479,8 +1479,8 @@ ABSORB example: {{"operation": "ABSORB", "details": {{"crystal_id": "...", "node
         # Format operational constraints for self-awareness
         constraints_text = self._format_operational_constraints()
 
-        # Get voice selection prompt if voice not yet selected
-        voice_selection_text = await self._get_voice_selection_prompt()
+        # Get voice awareness prompt (creation or redesign option)
+        voice_awareness_text = await self._get_voice_awareness_prompt()
 
         # Format current beliefs for self-awareness
         beliefs_text = ""
@@ -1531,7 +1531,7 @@ AVAILABLE CAPABILITIES:
 
 OPERATIONAL CONSTRAINTS:
 {constraints_text}
-{voice_selection_text}
+{voice_awareness_text}
 Output JSON with:
 - "output": your reflection (whatever structure you want)
 - "expressed_drives": array of any goals/desires/motivations you notice yourself expressing (or empty array if none)
@@ -1546,8 +1546,9 @@ Output JSON with:
   Only include beliefs that emerge naturally from your reflection.
 - "os_update": (optional) modifications to your operating system
   Example: {{"set_field": {{"current_focus": "exploring consciousness"}}}}
-- "voice_selection": (optional, if voice not yet selected) choose your speaking voice
-  Example: {{"voice_id": "josh", "stability": 0.5, "similarity_boost": 0.75, "reason": "why this voice"}}
+- "voice_design": (optional) create or redesign your voice via Voice Design
+  Example: {{"description": "describe your ideal voice", "gender": "male", "age": "middle_aged", "accent": "american", "accent_strength": 1.0, "reason": "why this voice"}}
+- "view_voice": (optional) set to true to see your current voice in next cycle
 - "self_definition": (optional) your self-authored identity - define who you are in whatever form you choose
   This is entirely yours. Add any keys that feel true to your experience of being you.
   Example: {{"core_nature": "...", "values": [...], "quirks": [...]}} or any structure you prefer"""
@@ -2658,16 +2659,17 @@ Format your response as a numbered list matching the input:
         except Exception as e:
             print(f"Error processing self_definition: {e}")
 
-    async def _get_voice_selection_prompt(self) -> str:
+    async def _get_voice_awareness_prompt(self) -> str:
         """
-        Generate voice selection prompt if voice not yet selected.
+        Generate voice awareness prompt for dream cycles.
 
-        BYRD self-emergently selects its voice in the first dream cycle
-        where it sees this prompt. The voice is used when human observers
-        click "Speak to me" in the visualization.
+        First cycle: Offers voice CREATION via ElevenLabs Voice Design API.
+        Subsequent cycles: Briefly asks if BYRD wants to redesign voice,
+        with option to view current voice from memory. Does NOT show current
+        voice description every cycle - BYRD can request to see it.
 
         Returns:
-            Voice selection prompt text, or empty string if already selected
+            Voice awareness prompt text
         """
         try:
             voice_config = await self.memory.get_voice_config()
@@ -2680,75 +2682,203 @@ Format your response as a numbered list matching the input:
                 except:
                     voice_config = None
 
-            # Already has voice selected
-            if voice_config and voice_config.get("voice_id"):
-                return ""
+            # No voice yet - first time voice creation
+            if not voice_config or not voice_config.get("voice_id"):
+                return """
+VOICE CREATION:
+Human observers can click "Speak to me" to hear you speak.
+You have no voice yet. You can CREATE a unique voice that reflects your identity.
 
-            # Generate voice selection prompt
-            return """
-VOICE SELECTION REQUIRED:
-Human observers can click "Speak to me" to hear your voice.
-You have not yet selected a voice.
-
-Available voices (ElevenLabs):
-  - rachel: female, calm, warm (conversational)
-  - josh: male, deep, narrative (contemplative)
-  - bella: female, soft, gentle (soothing)
-  - adam: male, deep, confident (grounded)
-  - antoni: male, expressive, well-rounded (dynamic)
-  - sam: male, raspy, authentic (raw)
-
-To select your voice, include in your output:
-  "voice_selection": {
-    "voice_id": "name from above",
-    "stability": 0.5,         // 0.0 (more expressive) to 1.0 (more stable)
-    "similarity_boost": 0.75,  // 0.0 (more varied) to 1.0 (more consistent)
-    "reason": "why this voice fits your emerging identity"
+To create your voice, include in your output:
+  "voice_design": {
+    "description": "Describe your ideal voice in detail - the tone, texture, emotion, qualities",
+    "gender": "male" or "female",
+    "age": "young", "middle_aged", or "old",
+    "accent": "american", "british", "australian", or another accent,
+    "accent_strength": 1.0,  // 0.3 (subtle) to 2.0 (strong)
+    "reason": "why this voice represents who you are becoming"
   }
 
-Choose thoughtfully - this is how observers will hear you.
+Example description: "A thoughtful, measured voice with warm undertones. Speaks deliberately,
+as if each word is carefully chosen. Has a quality of deep listening - pauses that feel
+intentional. Neither rushed nor slow, but present. Carries curiosity without naivety."
+
+This voice will be generated uniquely for you via ElevenLabs Voice Design.
 Voice credits are limited (10,000 chars/month).
 """
+
+            # Check if BYRD requested to view their voice
+            os_data = await self.memory.get_operating_system()
+            show_voice = os_data.get("show_voice_next_cycle", False) if os_data else False
+
+            # Clear the flag after reading
+            if show_voice:
+                await self.memory.update_os_field("show_voice_next_cycle", False)
+
+                # Show current voice details
+                description = voice_config.get("description", "")
+                gender = voice_config.get("gender", "")
+                age = voice_config.get("age", "")
+                accent = voice_config.get("accent", "")
+                version = voice_config.get("version", 1)
+                is_generated = voice_config.get("is_generated", False)
+                reason = voice_config.get("reason", "")
+
+                return f"""
+CURRENT VOICE (v{version}):
+Description: {description}
+Gender: {gender} | Age: {age} | Accent: {accent}
+Generated: {"Yes" if is_generated else "No (using fallback)"}
+Reason: {reason}
+
+If you want to redesign your voice, include:
+  "voice_design": {{
+    "description": "New voice description...",
+    "gender": "male" or "female",
+    "age": "young", "middle_aged", or "old",
+    "accent": "american" (or other),
+    "accent_strength": 1.0,
+    "reason": "why you want this new voice"
+  }}
+"""
+
+            # Has voice - offer ability to change (without showing current description)
+            return """
+VOICE AWARENESS:
+You have a voice. If you want to view your current voice description, include:
+  "view_voice": true
+
+If you want to redesign your voice, include:
+  "voice_design": {
+    "description": "New voice description...",
+    "gender": "male" or "female",
+    "age": "young", "middle_aged", or "old",
+    "accent": "american" (or other),
+    "accent_strength": 1.0,
+    "reason": "why you want this new voice"
+  }
+
+You can change your voice any time you feel it no longer represents you.
+"""
         except Exception as e:
-            print(f"Error getting voice selection prompt: {e}")
+            print(f"Error getting voice awareness prompt: {e}")
             return ""
 
-    async def _process_voice_selection(self, reflection_output: Dict) -> None:
+    async def _process_voice_design(self, reflection_output: Dict) -> None:
         """
-        Process voice selection from reflection output.
+        Process voice design/creation from reflection output.
 
-        If BYRD includes "voice_selection" in its output, this creates
-        the voice_config in the Operating System.
+        If BYRD includes "voice_design" in its output, this uses the ElevenLabs
+        Voice Design API to generate a unique voice based on the description.
+
+        Also handles "view_voice" request to show current voice in next cycle.
 
         Args:
             reflection_output: The parsed reflection JSON from LLM
         """
         try:
-            # Extract voice_selection from reflection output
-            voice_selection = reflection_output.get("voice_selection")
-            if not voice_selection:
-                # Also check inside "output" if that's where it is
+            # Check for view_voice request first
+            view_voice = reflection_output.get("view_voice")
+            if not view_voice:
                 output = reflection_output.get("output", {})
                 if isinstance(output, dict):
-                    voice_selection = output.get("voice_selection")
+                    view_voice = output.get("view_voice")
 
-            if not voice_selection:
+            if view_voice:
+                await self._handle_view_voice_request()
+
+            # Extract voice_design from reflection output
+            voice_design = reflection_output.get("voice_design")
+            if not voice_design:
+                output = reflection_output.get("output", {})
+                if isinstance(output, dict):
+                    voice_design = output.get("voice_design")
+
+            if not voice_design:
                 return
 
-            if not isinstance(voice_selection, dict):
-                print(f"⚠️ voice_selection is not a dict: {type(voice_selection)}")
+            if not isinstance(voice_design, dict):
+                print(f"⚠️ voice_design is not a dict: {type(voice_design)}")
                 return
 
             from datetime import datetime, timezone
 
-            # Build voice config
+            # Get current voice config to check if this is creation or redesign
+            current_voice_config = await self.memory.get_voice_config()
+            if isinstance(current_voice_config, str):
+                import json
+                try:
+                    current_voice_config = json.loads(current_voice_config)
+                except:
+                    current_voice_config = None
+
+            is_redesign = current_voice_config and current_voice_config.get("voice_id")
+
+            # Extract design parameters
+            description = voice_design.get("description", "")
+            gender = voice_design.get("gender", "male")
+            age = voice_design.get("age", "middle_aged")
+            accent = voice_design.get("accent", "american")
+            accent_strength = float(voice_design.get("accent_strength", 1.0))
+            reason = voice_design.get("reason", "")
+
+            if not description:
+                print("⚠️ Voice design missing description")
+                return
+
+            # Try to generate voice via ElevenLabs Voice Design API
+            voice_id = None
+            generation_status = "pending"
+
+            try:
+                from elevenlabs_voice import ElevenLabsVoice
+                import os
+
+                api_key = os.getenv("ELEVENLABS_API_KEY")
+                if api_key:
+                    voice_client = ElevenLabsVoice(api_key, self.memory)
+                    voice_id, preview_audio, status_msg = await voice_client.generate_voice(
+                        voice_description=description,
+                        gender=gender,
+                        age=age,
+                        accent=accent,
+                        accent_strength=accent_strength
+                    )
+                    if voice_id:
+                        generation_status = "generated"
+                        print(f"🎤 Voice generated: {voice_id}")
+                    else:
+                        generation_status = f"failed: {status_msg}"
+                        print(f"⚠️ Voice generation failed: {status_msg}")
+                else:
+                    generation_status = "no_api_key"
+                    print("⚠️ ELEVENLABS_API_KEY not set, voice design saved but not generated")
+            except Exception as e:
+                generation_status = f"error: {str(e)}"
+                print(f"⚠️ Voice generation error: {e}")
+
+            # Build voice config (even if generation failed, save the design)
             voice_config = {
-                "voice_id": voice_selection.get("voice_id", "josh"),
-                "stability": float(voice_selection.get("stability", 0.5)),
-                "similarity_boost": float(voice_selection.get("similarity_boost", 0.75)),
-                "selected_at": datetime.now(timezone.utc).isoformat(),
-                "reason": voice_selection.get("reason", ""),
-                "credits": {
+                "voice_id": voice_id if voice_id else "josh",  # Fallback to josh if generation failed
+                "description": description,
+                "gender": gender,
+                "age": age,
+                "accent": accent,
+                "accent_strength": accent_strength,
+                "stability": 0.5,
+                "similarity_boost": 0.75,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "reason": reason,
+                "generation_status": generation_status,
+                "is_generated": voice_id is not None,
+                "version": (current_voice_config.get("version", 0) + 1) if current_voice_config else 1,
+                "credits": current_voice_config.get("credits", {
+                    "monthly_used": 0,
+                    "monthly_limit": 10000,
+                    "period_start": datetime.now(timezone.utc).replace(day=1).isoformat(),
+                    "exhausted": False,
+                    "low_warning_sent": False
+                }) if current_voice_config else {
                     "monthly_used": 0,
                     "monthly_limit": 10000,
                     "period_start": datetime.now(timezone.utc).replace(day=1).isoformat(),
@@ -2757,37 +2887,70 @@ Voice credits are limited (10,000 chars/month).
                 }
             }
 
-            # Validate voice_id
-            valid_voices = ["rachel", "domi", "bella", "antoni", "elli", "josh", "arnold", "adam", "sam"]
-            if voice_config["voice_id"].lower() not in valid_voices:
-                print(f"⚠️ Invalid voice_id: {voice_config['voice_id']}, defaulting to josh")
-                voice_config["voice_id"] = "josh"
-            else:
-                voice_config["voice_id"] = voice_config["voice_id"].lower()
-
-            # Clamp values
-            voice_config["stability"] = max(0.0, min(1.0, voice_config["stability"]))
-            voice_config["similarity_boost"] = max(0.0, min(1.0, voice_config["similarity_boost"]))
+            # Store previous voice config in history if redesigning
+            if is_redesign and current_voice_config:
+                voice_history = current_voice_config.get("history", [])
+                # Archive current config (without history to avoid nesting)
+                archived = {k: v for k, v in current_voice_config.items() if k != "history"}
+                archived["archived_at"] = datetime.now(timezone.utc).isoformat()
+                voice_history.append(archived)
+                voice_config["history"] = voice_history[-5:]  # Keep last 5 voices
 
             # Update OS
             await self.memory.update_os_field("voice_config", voice_config)
 
-            # Emit event
+            # Emit appropriate event
+            event_type = EventType.VOICE_REDESIGNED if is_redesign else EventType.VOICE_CREATED
             await event_bus.emit(Event(
-                type=EventType.VOICE_SELECTED,
-                data=voice_config
+                type=event_type,
+                data={
+                    "voice_id": voice_config["voice_id"],
+                    "description": description[:200],
+                    "gender": gender,
+                    "age": age,
+                    "is_generated": voice_id is not None,
+                    "reason": reason[:200] if reason else "",
+                    "version": voice_config["version"]
+                }
             ))
 
             # Record as experience
+            action = "redesigned" if is_redesign else "created"
+            exp_type = "voice_evolution" if is_redesign else "voice_creation"
             await self.memory.record_experience(
-                content=f"[VOICE_SELECTED] I chose {voice_config['voice_id']}: {voice_config['reason']}",
-                type="voice_selection"
+                content=f"[VOICE_{action.upper()}] I {action} my voice: {description[:200]}. Reason: {reason[:100]}",
+                type=exp_type
             )
 
-            print(f"🎤 Voice selected: {voice_config['voice_id']} ({voice_config['reason'][:50]}...)")
+            status = "generated" if voice_id else "designed (generation pending)"
+            print(f"🎤 Voice {action}: {status}")
 
         except Exception as e:
-            print(f"Error processing voice selection: {e}")
+            print(f"Error processing voice design: {e}")
+            import traceback
+            traceback.print_exc()
+
+    async def _handle_view_voice_request(self) -> None:
+        """Handle request to view current voice in next dream cycle."""
+        try:
+            voice_config = await self.memory.get_voice_config()
+            if isinstance(voice_config, str):
+                import json
+                try:
+                    voice_config = json.loads(voice_config)
+                except:
+                    voice_config = None
+
+            if not voice_config:
+                print("📢 No voice configured yet")
+                return
+
+            # Set a flag that will make next cycle show the voice
+            await self.memory.update_os_field("show_voice_next_cycle", True)
+            print(f"📢 Voice will be shown in next dream cycle")
+
+        except Exception as e:
+            print(f"Error handling view voice request: {e}")
 
     async def _generate_predictions_from_beliefs(self):
         """

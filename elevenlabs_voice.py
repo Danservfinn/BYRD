@@ -194,14 +194,21 @@ class ElevenLabsVoice:
         if credits.get("exhausted") or remaining < chars_needed:
             return None, f"Voice credits exhausted ({remaining} remaining, need {chars_needed})"
 
-        # Get voice ID
-        voice_name = voice_config.get("voice_id", "josh").lower()
-        voice_info = self.VOICES.get(voice_name)
-        if not voice_info:
-            voice_info = self.VOICES["josh"]  # Default fallback
-            voice_name = "josh"
+        # Get voice ID - supports both preset names and generated voice IDs
+        voice_id_or_name = voice_config.get("voice_id", "josh")
 
-        voice_id = voice_info["id"]
+        # Check if this is a generated voice ID (UUID format) or preset name
+        # Generated voice IDs are long alphanumeric strings
+        if len(voice_id_or_name) > 20 and voice_id_or_name.replace("-", "").isalnum():
+            # This looks like a generated voice ID, use directly
+            voice_id = voice_id_or_name
+        else:
+            # This is a preset voice name, look it up
+            voice_name = voice_id_or_name.lower()
+            voice_info = self.VOICES.get(voice_name)
+            if not voice_info:
+                voice_info = self.VOICES["josh"]  # Default fallback
+            voice_id = voice_info["id"]
 
         # Voice settings
         stability = float(voice_config.get("stability", 0.5))
@@ -287,3 +294,114 @@ class ElevenLabsVoice:
                 return response.status_code == 200
         except Exception:
             return False
+
+    async def generate_voice(
+        self,
+        voice_description: str,
+        gender: str = "male",
+        age: str = "middle_aged",
+        accent: str = "american",
+        accent_strength: float = 1.0,
+        sample_text: Optional[str] = None
+    ) -> Tuple[Optional[str], Optional[bytes], str]:
+        """
+        Generate a unique voice using ElevenLabs Voice Design API.
+
+        This allows BYRD to create its own voice from a text description,
+        rather than selecting from preset voices.
+
+        Args:
+            voice_description: Text description of desired voice characteristics
+            gender: "male" or "female"
+            age: "young", "middle_aged", or "old"
+            accent: Accent type (e.g., "american", "british", "australian")
+            accent_strength: How strong the accent should be (0.3-2.0)
+            sample_text: Optional text to generate preview audio
+
+        Returns:
+            Tuple of (voice_id or None, preview_audio_bytes or None, status_message)
+        """
+        if not voice_description or not voice_description.strip():
+            return None, None, "No voice description provided"
+
+        # Validate parameters
+        if gender not in ("male", "female"):
+            gender = "male"
+        if age not in ("young", "middle_aged", "old"):
+            age = "middle_aged"
+        accent_strength = max(0.3, min(2.0, accent_strength))
+
+        # Use default sample text if none provided
+        if not sample_text:
+            sample_text = "I am finding my voice. This is how I sound when I speak my thoughts."
+
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                response = await client.post(
+                    f"{self.API_URL}/voice-generation/generate-voice",
+                    headers={
+                        "xi-api-key": self.api_key,
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "voice_description": voice_description.strip(),
+                        "gender": gender,
+                        "age": age,
+                        "accent": accent,
+                        "accent_strength": accent_strength,
+                        "text": sample_text
+                    }
+                )
+
+                if response.status_code == 200:
+                    # Response contains voice_id and audio preview
+                    result = response.json()
+                    voice_id = result.get("voice_id")
+
+                    # Get the preview audio if available
+                    preview_audio = None
+                    if "audio" in result:
+                        import base64
+                        preview_audio = base64.b64decode(result["audio"])
+
+                    return voice_id, preview_audio, f"Voice created: {voice_id}"
+
+                elif response.status_code == 401:
+                    return None, None, "Invalid API key"
+
+                elif response.status_code == 422:
+                    error_detail = response.text[:300] if response.text else "Invalid parameters"
+                    return None, None, f"Invalid voice design parameters: {error_detail}"
+
+                elif response.status_code == 429:
+                    return None, None, "Rate limited - voice generation quota exceeded"
+
+                else:
+                    error_text = response.text[:300] if response.text else "Unknown error"
+                    return None, None, f"Voice generation failed ({response.status_code}): {error_text}"
+
+        except httpx.TimeoutException:
+            return None, None, "Voice generation timed out"
+        except httpx.ConnectError:
+            return None, None, "Could not connect to ElevenLabs"
+        except Exception as e:
+            return None, None, f"Voice generation error: {str(e)}"
+
+    async def get_voice_by_id(self, voice_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get information about a voice by its ID.
+
+        Useful for retrieving details about a generated voice.
+        """
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"{self.API_URL}/voices/{voice_id}",
+                    headers={"xi-api-key": self.api_key}
+                )
+
+                if response.status_code == 200:
+                    return response.json()
+                return None
+        except Exception:
+            return None

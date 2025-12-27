@@ -128,6 +128,8 @@ class EventType(Enum):
     VOICE_SPOKE = "voice_spoke"                      # BYRD spoke to an observer
     VOICE_CREDITS_LOW = "voice_credits_low"          # Voice credits below threshold
     VOICE_CREDITS_EXHAUSTED = "voice_credits_exhausted"  # Monthly credits used up
+    VOICE_CREATED = "voice_created"                  # BYRD generated a unique voice via Voice Design
+    VOICE_REDESIGNED = "voice_redesigned"            # BYRD redesigned their voice
 
     # Prediction events (belief validation loop)
     PREDICTION_CREATED = "prediction_created"          # Testable hypothesis from belief
