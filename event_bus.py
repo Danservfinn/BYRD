@@ -35,6 +35,7 @@ class EventType(Enum):
     # Dynamic ontology events (BYRD evolving its own node types)
     NODE_TYPE_DISCOVERED = "node_type_discovered"  # First use of a new node type
     CUSTOM_NODE_CREATED = "custom_node_created"    # Node of emergent type created
+    NODE_MODIFIED = "node_modified"                # Node field(s) updated
 
     # Desire lifecycle events (reflective failure processing)
     DESIRE_ATTEMPT_FAILED = "desire_attempt_failed"
