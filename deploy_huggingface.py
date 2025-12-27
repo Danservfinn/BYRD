@@ -15,7 +15,7 @@ from pathlib import Path
 from huggingface_hub import HfApi, create_repo, upload_folder
 
 # Configuration
-SPACE_NAME = "byrd-ai"  # Will create: huggingface.co/spaces/{username}/byrd-ai
+SPACE_NAME = "byrd"  # Will create: huggingface.co/spaces/{username}/byrd
 SPACE_SDK = "docker"
 
 def main():
