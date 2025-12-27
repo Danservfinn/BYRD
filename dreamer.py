@@ -2859,7 +2859,7 @@ You can change your voice any time you feel it no longer represents you.
 
             # Build voice config (even if generation failed, save the design)
             voice_config = {
-                "voice_id": voice_id if voice_id else "josh",  # Fallback to josh if generation failed
+                "voice_id": voice_id,  # None if generation failed - no fallback
                 "description": description,
                 "gender": gender,
                 "age": age,

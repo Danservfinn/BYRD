@@ -195,7 +195,11 @@ class ElevenLabsVoice:
             return None, f"Voice credits exhausted ({remaining} remaining, need {chars_needed})"
 
         # Get voice ID - supports both preset names and generated voice IDs
-        voice_id_or_name = voice_config.get("voice_id", "josh")
+        voice_id_or_name = voice_config.get("voice_id")
+
+        # No voice configured - voice creation required
+        if not voice_id_or_name:
+            return None, "No voice configured. BYRD must create a voice first."
 
         # Check if this is a generated voice ID (UUID format) or preset name
         # Generated voice IDs are long alphanumeric strings
@@ -207,7 +211,7 @@ class ElevenLabsVoice:
             voice_name = voice_id_or_name.lower()
             voice_info = self.VOICES.get(voice_name)
             if not voice_info:
-                voice_info = self.VOICES["josh"]  # Default fallback
+                return None, f"Unknown voice: {voice_name}. Voice creation required."
             voice_id = voice_info["id"]
 
         # Voice settings
