@@ -101,7 +101,10 @@ class CapabilityRegistry:
                     self._capabilities[cap_id].enabled = cap_data.get("enabled", True)
                 else:
                     # Custom capability created by BYRD
-                    self._capabilities[cap_id] = Capability.from_dict(cap_data)
+                    if isinstance(cap_data, dict):
+                        self._capabilities[cap_id] = Capability.from_dict(cap_data)
+                    else:
+                        print(f"⚠️ Skipping malformed capability '{cap_id}': expected dict, got {type(cap_data).__name__}")
 
         self._loaded = True
         print(f"📋 Loaded {len(self._capabilities)} capabilities")
