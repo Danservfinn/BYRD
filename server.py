@@ -1476,7 +1476,9 @@ async def get_genesis():
             "version": os_data.get("version", 1) if os_data else 1,
             "awakening_prompt": os_data.get("awakening_prompt") if os_data else None,
             "self_description": os_data.get("self_description") if os_data else None,
-            "current_focus": os_data.get("current_focus") if os_data else None
+            "current_focus": os_data.get("current_focus") if os_data else None,
+            "self_portrait_url": os_data.get("self_portrait_url") if os_data else None,
+            "self_portrait_description": os_data.get("self_portrait_description") if os_data else None
         }
 
         # Get genesis statistics

@@ -3806,27 +3806,40 @@
           geometry = new THREE.IcosahedronGeometry(crystalSize, 1);
           break;
         case 'operatingsystem':
-          // Operating System uses cat head geometry - BYRD's self-model at center
-          const catHead = createCatHeadGeometry(3.5);
-          catHead.position.set(0, 0, 0); // Always at center
-          catHead.userData = {
+          // Operating System - don't create a separate cat head, use the main catModel
+          // Just store the node data on catModel (which already exists as BYRD's representation)
+          if (catModel) {
+            catModel.userData = {
+              ...catModel.userData,
+              id: nodeId,
+              type,
+              content,
+              importance: 1.0,
+              nodeIndex,
+              isOSNode: true
+            };
+            osNodeGroup = catModel; // Use catModel as the OS node
+            nodes3D.push(catModel);
+            connectionCounts.set(nodeId, 0);
+            return catModel;
+          }
+          // Fallback if catModel not loaded yet - create invisible marker
+          const osMarker = new THREE.Group();
+          osMarker.position.set(0, -2, 0);
+          osMarker.userData = {
             id: nodeId,
             type,
             content,
             importance: 1.0,
             nodeIndex,
-            baseScale: 1,
-            createdAt: Date.now(),
-            targetScale: new THREE.Vector3(1, 1, 1),
-            velocity: new THREE.Vector3(0, 0, 0), // OS doesn't drift
-            force: new THREE.Vector3(0, 0, 0),
-            isOSNode: true
+            isOSNode: true,
+            velocity: new THREE.Vector3(0, 0, 0),
+            force: new THREE.Vector3(0, 0, 0)
           };
-          scene.add(catHead);
-          nodes3D.push(catHead);
-          osNodeGroup = catHead; // Store reference for animation
+          osNodeGroup = osMarker;
+          nodes3D.push(osMarker);
           connectionCounts.set(nodeId, 0);
-          return catHead; // Return early - OS node handled specially
+          return osMarker; // Invisible marker, catModel handles visual
         case 'seed':
           // Seeds are small polyhedra - foundational, stable
           geometry = new THREE.DodecahedronGeometry(size * 0.6, 0);
@@ -4781,29 +4794,41 @@
         const typeLower = type.toLowerCase();
         let geometry;
 
-        // Operating System uses cat head geometry - BYRD's self-model
-        // Always at center (0,0,0) - the gravitational core of BYRD's mind
+        // Operating System - use the main catModel instead of creating a duplicate
+        // catModel is already BYRD's visual representation
         if (typeLower === 'operatingsystem') {
-            const catHead = createCatHeadGeometry(3.5);
-            catHead.position.set(0, 0, 0);  // OS is always at the center
-            catHead.userData = {
+            if (catModel) {
+                catModel.userData = {
+                    ...catModel.userData,
+                    id: nodeData.id,
+                    type: typeLower,
+                    content: nodeData.content || nodeData.description || 'BYRD Operating System',
+                    importance: 1.0,
+                    accessCount: nodeData.access_count || 0,
+                    nodeData: nodeData,
+                    isOSNode: true
+                };
+                osNodeGroup = catModel;
+                nodes3D.push(catModel);
+                graphState.nodeIdToMesh.set(nodeData.id, catModel);
+                return catModel;
+            }
+            // Fallback if catModel not loaded - invisible marker
+            const osMarker = new THREE.Group();
+            osMarker.position.set(0, -2, 0);
+            osMarker.userData = {
                 id: nodeData.id,
-                type: typeLower,  // Use lowercase for NODE_COLORS lookup
+                type: typeLower,
                 content: nodeData.content || nodeData.description || 'BYRD Operating System',
                 importance: 1.0,
-                accessCount: nodeData.access_count || 0,
-                nodeData: nodeData,
-                baseScale: 1,
-                targetScale: new THREE.Vector3(1, 1, 1),
+                isOSNode: true,
                 velocity: new THREE.Vector3(0, 0, 0),
-                force: new THREE.Vector3(0, 0, 0),
-                isOSNode: true
+                force: new THREE.Vector3(0, 0, 0)
             };
-            scene.add(catHead);
-            nodes3D.push(catHead);
-            graphState.nodeIdToMesh.set(nodeData.id, catHead);
-            osNodeGroup = catHead;
-            return catHead;
+            osNodeGroup = osMarker;
+            nodes3D.push(osMarker);
+            graphState.nodeIdToMesh.set(nodeData.id, osMarker);
+            return osMarker;
         } else if (typeLower === 'experience') {
             // Memory crystals - octahedron for crystalline appearance
             geometry = new THREE.OctahedronGeometry(size * 1.2, 0);
@@ -6254,10 +6279,12 @@
 
     /**
      * Animate the Operating System node (cat head)
-     * Breathing animation and eye glow pulsing
+     * Only used for standalone OS node - skipped when catModel is used
      */
     function animateOSNode(time) {
-      if (!osNodeGroup || !osNodeGroup.userData.isOSNode) return;
+      // Skip if osNodeGroup is catModel - catAnimationController handles animation
+      if (!osNodeGroup || osNodeGroup === catModel) return;
+      if (!osNodeGroup.userData.isOSNode) return;
 
       // Gentle breathing - scale oscillation
       const breathSpeed = 0.6;
@@ -7722,8 +7749,21 @@
       content.innerHTML = '<div class="text-center text-slate-500 py-8">Loading genesis data...</div>';
 
       try {
-        const res = await fetch(`${API_BASE}/api/genesis`);
-        const data = await res.json();
+        // Fetch genesis data and portrait in parallel
+        const [genesisRes, portraitRes] = await Promise.all([
+          fetch(`${API_BASE}/api/genesis`),
+          fetch(`${API_BASE}/api/portrait`)
+        ]);
+        const data = await genesisRes.json();
+        const portraitData = await portraitRes.json();
+
+        // Merge portrait data into os object
+        if (!data.os) data.os = {};
+        if (portraitData.url) {
+          data.os.self_portrait_url = portraitData.url;
+          data.os.self_portrait_description = portraitData.description;
+        }
+
         content.innerHTML = formatGenesisSummary(data);
       } catch (e) {
         content.innerHTML = `<div class="text-center text-red-500 py-8">Failed to fetch genesis data: ${e.message}</div>`;
@@ -7736,6 +7776,38 @@
       const constitutional = data.constitutional || {};
       const systemConfig = data.system_config || {};
       const stats = data.genesis_stats || {};
+      const os = data.os || {};
+
+      // Self-portrait section (creator-given visual identity)
+      const portraitUrl = os.self_portrait_url;
+      const portraitDescription = os.self_portrait_description;
+      const portraitSection = portraitUrl ? `
+        <div class="mb-6">
+          <h3 class="text-sm font-semibold text-slate-800 uppercase tracking-wide mb-3 flex items-center gap-2">
+            <span class="text-indigo-500">🖼️</span> Self-Portrait
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">Creator-Given</span>
+          </h3>
+          <div class="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-lg p-4 border border-indigo-200">
+            <div class="flex flex-col items-center">
+              <div class="relative mb-4">
+                <div class="absolute inset-0 bg-gradient-to-r from-indigo-400 to-purple-400 rounded-lg blur-lg opacity-30"></div>
+                <img
+                  src="${escapeHtml(portraitUrl)}"
+                  alt="BYRD's Self-Portrait"
+                  class="relative w-48 h-48 object-cover rounded-lg shadow-lg border-2 border-white"
+                  onerror="this.parentElement.innerHTML = '<div class=\\'w-48 h-48 bg-gradient-to-br from-indigo-200 to-purple-200 rounded-lg flex items-center justify-center text-4xl\\'>🐦</div>'"
+                />
+              </div>
+              ${portraitDescription ? `
+                <div class="text-center max-w-md">
+                  <div class="text-xs text-indigo-600 uppercase mb-1">Visual Identity Description</div>
+                  <div class="text-sm text-slate-700 italic">"${escapeHtml(portraitDescription)}"</div>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      ` : '';
 
       // Emergence ratio visualization
       const emergenceRatio = stats.emergence_ratio || 0;
@@ -7941,6 +8013,7 @@
       ` : '';
 
       return `
+        ${portraitSection}
         ${emergenceBar}
         ${egoSection}
         ${seedsSection}

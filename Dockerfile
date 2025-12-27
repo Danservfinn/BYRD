@@ -26,7 +26,8 @@ ENV PORT=7860
 EXPOSE 7860
 
 # Environment variables are set via HuggingFace Secrets
-# Required secrets: NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, ZAI_API_KEY
+# Required: NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, ZAI_API_KEY
+# Optional: ELEVENLABS_API_KEY (for voice), ANTHROPIC_API_KEY (for Actor)
 
 # Start server
 CMD ["python", "server.py"]
