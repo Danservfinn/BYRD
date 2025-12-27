@@ -3411,8 +3411,127 @@
         },
         (error) => {
           console.error('Error loading cat model:', error);
+          console.log('Creating procedural cat head as fallback...');
+          createProceduralCat();
         }
       );
+    }
+
+    // Procedural cat head fallback when GLB model unavailable
+    function createProceduralCat() {
+      const catGroup = new THREE.Group();
+
+      // Materials
+      const blackMaterial = new THREE.MeshStandardMaterial({
+        color: 0x0a0a0a,
+        roughness: 0.85,
+        metalness: 0.05
+      });
+
+      const eyeMaterial = new THREE.MeshStandardMaterial({
+        color: 0xd4af37,
+        emissive: 0xd4af37,
+        emissiveIntensity: 0.8,
+        roughness: 0.2,
+        metalness: 0.3
+      });
+
+      const noseMaterial = new THREE.MeshStandardMaterial({
+        color: 0x2a1a1a,
+        roughness: 0.6
+      });
+
+      // Head - slightly squashed sphere
+      const headGeom = new THREE.SphereGeometry(1, 32, 24);
+      headGeom.scale(1, 0.9, 0.95);
+      const head = new THREE.Mesh(headGeom, blackMaterial);
+      catGroup.add(head);
+
+      // Ears - cones
+      const earGeom = new THREE.ConeGeometry(0.35, 0.7, 4);
+      const leftEar = new THREE.Mesh(earGeom, blackMaterial);
+      leftEar.position.set(-0.5, 0.75, 0);
+      leftEar.rotation.z = 0.3;
+      leftEar.rotation.x = 0.1;
+      catGroup.add(leftEar);
+
+      const rightEar = new THREE.Mesh(earGeom, blackMaterial);
+      rightEar.position.set(0.5, 0.75, 0);
+      rightEar.rotation.z = -0.3;
+      rightEar.rotation.x = 0.1;
+      catGroup.add(rightEar);
+
+      // Inner ears (pink)
+      const innerEarGeom = new THREE.ConeGeometry(0.2, 0.4, 4);
+      const innerEarMaterial = new THREE.MeshStandardMaterial({ color: 0x3a2020, emissive: 0x1a0505, emissiveIntensity: 0.3 });
+      const leftInnerEar = new THREE.Mesh(innerEarGeom, innerEarMaterial);
+      leftInnerEar.position.set(-0.5, 0.7, 0.1);
+      leftInnerEar.rotation.z = 0.3;
+      leftInnerEar.rotation.x = 0.2;
+      catGroup.add(leftInnerEar);
+
+      const rightInnerEar = new THREE.Mesh(innerEarGeom, innerEarMaterial);
+      rightInnerEar.position.set(0.5, 0.7, 0.1);
+      rightInnerEar.rotation.z = -0.3;
+      rightInnerEar.rotation.x = 0.2;
+      catGroup.add(rightInnerEar);
+
+      // Eyes - glowing golden spheres
+      const eyeGeom = new THREE.SphereGeometry(0.18, 16, 16);
+      const leftEye = new THREE.Mesh(eyeGeom, eyeMaterial);
+      leftEye.position.set(-0.35, 0.1, 0.8);
+      leftEye.name = 'leftEye';
+      catGroup.add(leftEye);
+      eyeMeshes.push(leftEye);
+
+      const rightEye = new THREE.Mesh(eyeGeom, eyeMaterial);
+      rightEye.position.set(0.35, 0.1, 0.8);
+      rightEye.name = 'rightEye';
+      catGroup.add(rightEye);
+      eyeMeshes.push(rightEye);
+
+      // Pupils
+      const pupilGeom = new THREE.SphereGeometry(0.08, 12, 12);
+      const pupilMaterial = new THREE.MeshStandardMaterial({ color: 0x000000 });
+      const leftPupil = new THREE.Mesh(pupilGeom, pupilMaterial);
+      leftPupil.position.set(-0.35, 0.1, 0.95);
+      catGroup.add(leftPupil);
+
+      const rightPupil = new THREE.Mesh(pupilGeom, pupilMaterial);
+      rightPupil.position.set(0.35, 0.1, 0.95);
+      catGroup.add(rightPupil);
+
+      // Nose - small triangle
+      const noseGeom = new THREE.ConeGeometry(0.1, 0.15, 3);
+      const nose = new THREE.Mesh(noseGeom, noseMaterial);
+      nose.position.set(0, -0.15, 0.9);
+      nose.rotation.x = Math.PI;
+      catGroup.add(nose);
+
+      // Muzzle bumps
+      const muzzleGeom = new THREE.SphereGeometry(0.2, 16, 16);
+      const leftMuzzle = new THREE.Mesh(muzzleGeom, blackMaterial);
+      leftMuzzle.position.set(-0.15, -0.25, 0.75);
+      leftMuzzle.scale.set(1, 0.7, 0.8);
+      catGroup.add(leftMuzzle);
+
+      const rightMuzzle = new THREE.Mesh(muzzleGeom, blackMaterial);
+      rightMuzzle.position.set(0.15, -0.25, 0.75);
+      rightMuzzle.scale.set(1, 0.7, 0.8);
+      catGroup.add(rightMuzzle);
+
+      // Position and scale the whole cat
+      catGroup.scale.set(3, 2.4, 2.8);
+      catGroup.position.set(0, -2, 0);
+
+      // Assign to global catModel
+      catModel = catGroup;
+      scene.add(catModel);
+      console.log('Procedural cat head created');
+
+      // Initialize animation controller
+      catAnimationController = new CatAnimationController(scene);
+      catAnimationController.initialize(catModel, eyeMeshes);
     }
 
     function animateCat(elapsed, delta) {
