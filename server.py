@@ -1009,6 +1009,8 @@ async def get_voice_status():
         return result
 
     result["enabled"] = True
+    result["api_key_present"] = bool(byrd_instance.voice.api_key) if hasattr(byrd_instance.voice, 'api_key') else False
+    result["api_key_length"] = len(byrd_instance.voice.api_key) if hasattr(byrd_instance.voice, 'api_key') and byrd_instance.voice.api_key else 0
 
     try:
         await byrd_instance.memory.connect()

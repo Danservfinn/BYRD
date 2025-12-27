@@ -222,7 +222,7 @@ class ElevenLabsVoice:
                     },
                     json={
                         "text": text,
-                        "model_id": "eleven_monolingual_v1",
+                        "model_id": "eleven_turbo_v2_5",  # Updated: v1 models deprecated on free tier
                         "voice_settings": {
                             "stability": stability,
                             "similarity_boost": similarity_boost,
@@ -245,7 +245,8 @@ class ElevenLabsVoice:
                     return audio_bytes, f"OK ({new_remaining} chars remaining)"
 
                 elif response.status_code == 401:
-                    return None, "Invalid API key"
+                    error_detail = response.text[:200] if response.text else "No details"
+                    return None, f"Invalid API key (401): {error_detail}"
 
                 elif response.status_code == 429:
                     return None, "Rate limited - try again later"
@@ -275,11 +276,12 @@ class ElevenLabsVoice:
         return cls.VOICES.get(voice_name.lower())
 
     async def check_api_key(self) -> bool:
-        """Verify the API key is valid."""
+        """Verify the API key is valid by checking voices endpoint."""
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
+                # Use /voices endpoint instead of /user (doesn't require user_read permission)
                 response = await client.get(
-                    f"{self.API_URL}/user",
+                    f"{self.API_URL}/voices",
                     headers={"xi-api-key": self.api_key}
                 )
                 return response.status_code == 200

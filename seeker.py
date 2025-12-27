@@ -741,20 +741,44 @@ Reply with ONLY one word: introspect, reconcile_orphans, curate, self_modify, or
         Returns:
             Intent classification: introspection, research, creation, or connection
         """
+        desc_lower = description.lower()
+
+        # KEYWORD PRE-CHECK: Fast path for common internal operations
+        # These are clearly internal desires that don't need LLM classification
+        connection_keywords = [
+            "orphan", "orphaned", "reconcile", "isolated node", "disconnected",
+            "unconnected", "link experience", "connect node", "integrate experience",
+            "fragmentation", "unify", "connect experience"
+        ]
+        if any(kw in desc_lower for kw in connection_keywords):
+            print(f"🔗 Keyword-matched as connection: {description[:50]}")
+            return "connection"
+
+        introspection_keywords = [
+            "my state", "my capabilities", "my limits", "my architecture",
+            "understand myself", "my code", "how do i work", "my memory",
+            "my graph", "my beliefs", "my desires", "self-model"
+        ]
+        if any(kw in desc_lower for kw in introspection_keywords):
+            print(f"🔍 Keyword-matched as introspection: {description[:50]}")
+            return "introspection"
+
+        # No keyword match - use LLM for ambiguous cases
         prompt = f"""Classify this desire into ONE intent category. Reply with ONLY the category name.
 
 DESIRE: "{description}"
 
 INTENT CATEGORIES:
-- introspection: Understanding myself (my code, architecture, processes, state, beliefs)
-- research: Learning about external topics, researching the outside world
+- introspection: Understanding myself (my code, architecture, processes, state, beliefs, limits)
+- research: Learning about external topics, researching the outside world (web search)
 - creation: Writing code, creating files, building things, implementing features
-- connection: Linking ideas, forming relationships, connecting nodes, synthesizing
+- connection: Graph operations - reconciling orphans, linking nodes, connecting experiences, reducing fragmentation
 
-If the desire is about understanding MY OWN architecture, code, or internal processes → introspection
-If the desire is about learning from external sources or general knowledge → research
-If the desire involves writing code, files, or building things → creation
-If the desire involves connecting or linking concepts, nodes, or ideas → connection
+CRITICAL ROUTING RULES:
+- "orphan", "reconcile", "isolated nodes", "connect nodes" → connection (internal graph operation, NOT search)
+- "my limits", "my capabilities", "understand myself" → introspection
+- "learn about X", "what is X" (external topics) → research
+- "write code", "implement", "create file" → creation
 
 Reply with ONLY one word: introspection, research, creation, or connection"""
 
@@ -2568,6 +2592,7 @@ Your thought (1-2 sentences only, no quotes):"""
         Returns True on success, False on failure.
         """
         import os
+        import glob
 
         description = desire.get("description", "")
         desire_id = desire.get("id", "")
@@ -2576,83 +2601,144 @@ Your thought (1-2 sentences only, no quotes):"""
 
         print(f"🔍 Introspecting: {description[:50]}...")
 
-        # BYRD's source files (relative to current directory)
-        byrd_files = {
-            "byrd.py": "Main orchestrator - coordinates Dreamer, Seeker, Actor",
-            "memory.py": "Neo4j interface - graph database operations",
-            "dreamer.py": "Dream loop - reflection and belief/desire emergence",
-            "seeker.py": "Desire fulfillment - research, coding, introspection",
-            "actor.py": "Claude interface - complex reasoning",
-            "llm_client.py": "LLM abstraction - provider switching",
-            "event_bus.py": "Event system - real-time notifications",
-            "server.py": "WebSocket server - visualization interface",
-            "quantum_randomness.py": "Quantum random - physical indeterminacy",
-            "graph_algorithms.py": "Graph analysis - PageRank, spreading activation",
-            "self_modification.py": "Self-mod system - architectural evolution",
-            "constitutional.py": "Constraints - protected patterns",
-            "provenance.py": "Audit trail - modification tracking",
-            # Architecture documentation - BYRD's self-documentation
-            "ARCHITECTURE.md": "Architecture - five compounding loops, design principles, acceleration thesis",
-        }
+        # Base directory for BYRD's codebase
+        base_dir = os.path.dirname(__file__)
+
+        # Readable file extensions (text-based files BYRD can understand)
+        readable_extensions = {'.py', '.md', '.yaml', '.yml', '.json', '.txt', '.toml', '.cfg', '.ini', '.html', '.css', '.js'}
+
+        def is_readable_file(filepath: str) -> bool:
+            """Check if file is readable (text-based, not too large)."""
+            _, ext = os.path.splitext(filepath)
+            if ext.lower() not in readable_extensions:
+                return False
+            try:
+                # Skip files larger than 500KB
+                if os.path.getsize(filepath) > 500000:
+                    return False
+                return True
+            except:
+                return False
+
+        def find_files_by_pattern(pattern: str) -> list:
+            """Find files matching a glob pattern."""
+            results = []
+            # Try as relative to base_dir first
+            full_pattern = os.path.join(base_dir, pattern)
+            results.extend(glob.glob(full_pattern, recursive=True))
+            # Also try pattern as-is (for absolute paths)
+            if not results:
+                results.extend(glob.glob(pattern, recursive=True))
+            return [f for f in results if is_readable_file(f)]
+
+        def resolve_file_path(filename: str) -> str:
+            """Resolve a filename to full path, checking multiple locations."""
+            # If it's already absolute and exists, use it
+            if os.path.isabs(filename) and os.path.exists(filename):
+                return filename
+            # Check relative to base_dir
+            rel_path = os.path.join(base_dir, filename)
+            if os.path.exists(rel_path):
+                return rel_path
+            # Check in docs/ subdirectory
+            docs_path = os.path.join(base_dir, "docs", filename)
+            if os.path.exists(docs_path):
+                return docs_path
+            # Check in kernel/ subdirectory
+            kernel_path = os.path.join(base_dir, "kernel", filename)
+            if os.path.exists(kernel_path):
+                return kernel_path
+            return None
 
         # Determine which file(s) to read
         target_files = []
 
-        # If target is specified, use it
-        if target and target.endswith(".py"):
-            if target in byrd_files:
-                target_files.append(target)
+        # 1. If explicit target is specified, use it
+        if target:
+            resolved = resolve_file_path(target)
+            if resolved and is_readable_file(resolved):
+                target_files.append(resolved)
 
-        # Otherwise, infer from description
+        # 2. Extract file references from description (e.g., "read OPTION_B_EXPLORATION.md")
+        if not target_files:
+            import re
+            # Match filenames with extensions
+            file_mentions = re.findall(r'[\w/\-_]+\.(?:py|md|yaml|yml|json|txt|toml)', description, re.IGNORECASE)
+            for mention in file_mentions:
+                resolved = resolve_file_path(mention)
+                if resolved and is_readable_file(resolved):
+                    target_files.append(resolved)
+
+        # 3. Keyword-based file discovery (scan codebase for relevant files)
         if not target_files:
             desc_lower = description.lower()
-            for filename, file_desc in byrd_files.items():
-                # Match by filename mention
-                if filename.replace(".py", "") in desc_lower or filename in desc_lower:
-                    target_files.append(filename)
-                # Match by description keywords
-                for keyword in file_desc.lower().split(" - "):
-                    if keyword in desc_lower:
-                        target_files.append(filename)
-                        break
+
+            # Map keywords to glob patterns for discovery
+            keyword_patterns = {
+                # Core components
+                ("dream", "reflect", "belief"): ["dreamer.py"],
+                ("seek", "route", "fulfill", "research"): ["seeker.py"],
+                ("memory", "graph", "neo4j", "node"): ["memory.py"],
+                ("actor", "claude", "reasoning"): ["actor.py"],
+                ("llm", "provider", "client"): ["llm_client.py"],
+                ("event", "bus", "emit"): ["event_bus.py"],
+                ("server", "websocket", "api"): ["server.py"],
+                ("quantum", "random"): ["quantum_randomness.py"],
+                ("constitutional", "constraint", "protect"): ["constitutional.py"],
+                ("provenance", "audit", "track"): ["provenance.py"],
+                ("self_mod", "modification"): ["self_modification.py"],
+                # Architecture docs
+                ("architecture", "design", "overview", "structure"): ["ARCHITECTURE.md", "byrd.py"],
+                ("option_b", "loop", "compounding", "omega", "acceleration"): ["docs/OPTION_B_EXPLORATION.md", "ARCHITECTURE.md"],
+                ("theoretical", "framework", "self-compiler", "goal evolver", "dreaming machine"): ["docs/OPTION_B_EXPLORATION.md"],
+                ("kernel", "seed", "awakening", "directive"): ["kernel/agi_seed.yaml"],
+                ("gap", "analysis"): ["docs/OPTION_B_GAP_ANALYSIS.md"],
+                ("implementation", "plan"): ["docs/OPTION_B_IMPLEMENTATION_PLAN.md"],
+                # Option B components
+                ("goal_evolver", "evolution", "fitness"): ["goal_evolver.py"],
+                ("self_compiler", "pattern", "compile"): ["accelerators.py"],
+                ("dreaming_machine", "counterfactual", "replay"): ["dreaming_machine.py"],
+                ("memory_reasoner", "spreading", "activation"): ["memory_reasoner.py"],
+                ("omega", "orchestrat", "mode"): ["omega.py"],
+                ("coupling", "tracker"): ["coupling_tracker.py"],
+                ("kill", "criteria"): ["kill_criteria.py"],
+                ("embedding",): ["embedding.py"],
+            }
+
+            for keywords, patterns in keyword_patterns.items():
+                if any(kw in desc_lower for kw in keywords):
+                    for pattern in patterns:
+                        resolved = resolve_file_path(pattern)
+                        if resolved and is_readable_file(resolved):
+                            target_files.append(resolved)
+
+        # 4. Default: main orchestrator
+        if not target_files:
+            default = resolve_file_path("byrd.py")
+            if default:
+                target_files.append(default)
 
         # Remove duplicates while preserving order
         target_files = list(dict.fromkeys(target_files))
 
-        # If no specific file identified, use most relevant files for common questions
-        if not target_files:
-            if any(kw in description.lower() for kw in ["route", "routing", "fulfill", "seek"]):
-                target_files = ["seeker.py"]
-            elif any(kw in description.lower() for kw in ["dream", "reflect", "belief", "desire"]):
-                target_files = ["dreamer.py"]
-            elif any(kw in description.lower() for kw in ["memory", "graph", "neo4j", "node"]):
-                target_files = ["memory.py"]
-            elif any(kw in description.lower() for kw in ["seed", "omega", "loop", "compounding", "acceleration", "coupling"]):
-                # Architecture - the five compounding loops design
-                target_files = ["ARCHITECTURE.md"]
-            elif any(kw in description.lower() for kw in ["architecture", "structure", "overview", "design"]):
-                # Architecture questions - include both architecture doc and main orchestrator
-                target_files = ["ARCHITECTURE.md", "byrd.py"]
-            else:
-                # Default to byrd.py for general questions
-                target_files = ["byrd.py"]
-
         # Read the target file(s)
         source_contents = []
-        for filename in target_files[:3]:  # Limit to 3 files to avoid token overflow
+        for filepath in target_files[:3]:  # Limit to 3 files to avoid token overflow
             try:
-                filepath = os.path.join(os.path.dirname(__file__), filename)
-                if os.path.exists(filepath):
+                if os.path.exists(filepath) and is_readable_file(filepath):
                     with open(filepath, 'r') as f:
                         content = f.read()
                     # Truncate large files to key sections
                     if len(content) > 15000:
-                        # Include docstring and first ~300 lines
+                        # Include first ~300 lines
                         lines = content.split('\n')
                         content = '\n'.join(lines[:300]) + f"\n\n... [{len(lines) - 300} more lines truncated] ..."
-                    source_contents.append(f"=== {filename} ===\n{byrd_files.get(filename, '')}\n\n{content}")
+                    filename = os.path.basename(filepath)
+                    rel_path = os.path.relpath(filepath, base_dir)
+                    source_contents.append(f"=== {rel_path} ===\n\n{content}")
+                    print(f"   📄 Read: {rel_path}")
             except Exception as e:
-                print(f"🔍 Failed to read {filename}: {e}")
+                print(f"🔍 Failed to read {filepath}: {e}")
 
         if not source_contents:
             await self._record_seek_failure(
@@ -2689,11 +2775,14 @@ Respond in first person as BYRD, sharing your understanding. Be specific about c
             synthesis = response.text.strip()
         except Exception as e:
             print(f"🔍 Introspection synthesis failed: {e}")
-            synthesis = f"I read {', '.join(target_files)} but synthesis failed."
+            synthesis = f"I read the files but synthesis failed."
+
+        # Convert to relative paths for display
+        files_read = [os.path.relpath(f, base_dir) for f in target_files[:3]]
 
         # Record as self_architecture experience
         exp_id = await self.memory.record_experience(
-            content=f"[INTROSPECTION] {description}\n\nFiles examined: {', '.join(target_files)}\n\nUnderstanding:\n{synthesis}",
+            content=f"[INTROSPECTION] {description}\n\nFiles examined: {', '.join(files_read)}\n\nUnderstanding:\n{synthesis}",
             type="self_architecture"
         )
 
@@ -2702,7 +2791,7 @@ Respond in first person as BYRD, sharing your understanding. Be specific about c
             await self.memory.fulfill_desire(desire_id, fulfilled_by=exp_id)
             await self.memory.record_desire_attempt(desire_id, success=True)
 
-        print(f"🔍 ✅ Introspection complete: understood {', '.join(target_files)}")
+        print(f"🔍 ✅ Introspection complete: understood {', '.join(files_read)}")
 
         # Emit success event
         if HAS_EVENT_BUS:
