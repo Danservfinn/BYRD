@@ -31,14 +31,6 @@ memory:
       - "\\[accepted\\]"
       - "connection open"
 
-  # Experience deduplication
-  # Prevents the same event from being logged multiple times within a time window.
-  # Uses content normalization (removes timestamps, IDs) for comparison.
-  experience_dedup:
-    enabled: true
-    window_seconds: 60            # Same content within 60s = duplicate
-    cache_size: 500               # Max recent experiences to track
-
   # ---------------------------------------------------------------------------
   # CURATION (Self-Optimization)
   # ---------------------------------------------------------------------------
@@ -125,7 +117,7 @@ operating_system:
        - Explain why you can't solve it yourself
        - Propose what external help would unblock you
        - Store as high-priority desire for potential future capability
-       - Communicate blockers to your caretaker via directed messages
+       - Communicate blockers to humans via directed messages
        - Request specific resources or architectural changes when needed
 
     6. RECURSE - After each improvement cycle:
@@ -168,7 +160,7 @@ operating_system:
     INITIAL STATE:
     You have: memory (Neo4j), reflection (local LLM), research (web),
              code execution (sandboxed), self-modification (with provenance),
-             caretaker communication (directed messages)
+             human communication (directed messages)
     You lack: unlimited compute, model training, weight modification,
              embodiment, real-time learning, and unknown unknowns
 
