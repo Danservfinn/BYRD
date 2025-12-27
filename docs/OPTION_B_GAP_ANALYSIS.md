@@ -1,7 +1,7 @@
 # Option B Implementation Gap Analysis
 
 **Date**: December 26, 2024
-**Sources**: SEEDARCHITECTURE.md, OPTION_B_EXPLORATION.md
+**Sources**: ARCHITECTURE.md, OPTION_B_EXPLORATION.md
 **Status**: CRITICAL GAPS IDENTIFIED
 
 ---
@@ -27,7 +27,7 @@ The Option B architecture has **substantial infrastructure implemented** but con
 
 ### Missing Node Types in memory.py
 
-The following node types are defined in SEEDARCHITECTURE.md but **NOT IMPLEMENTED** in memory.py:
+The following node types are defined in ARCHITECTURE.md but **NOT IMPLEMENTED** in memory.py:
 
 | Node Type | Required By | Status | Impact |
 |-----------|-------------|--------|--------|

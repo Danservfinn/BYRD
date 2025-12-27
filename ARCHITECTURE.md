@@ -697,8 +697,7 @@ byrd/
 │   └── docker-compose.yml
 │
 └── Documentation
-    ├── ARCHITECTURE.md      # Original architecture
-    ├── SEEDARCHITECTURE.md  # This document
+    ├── ARCHITECTURE.md      # This document - five compounding loops, design principles
     └── OPTION_B_EXPLORATION.md
 ```
 

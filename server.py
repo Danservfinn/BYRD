@@ -404,6 +404,26 @@ class ExternalMessageResponse(BaseModel):
     message: str
 
 
+# =============================================================================
+# VOICE (ElevenLabs TTS) MODELS
+# =============================================================================
+
+class SpeakRequest(BaseModel):
+    """Request for BYRD to speak to the observer."""
+    prompt: Optional[str] = None  # Optional custom prompt (default: "What would you like to say to the human observer?")
+
+
+class SpeakResponse(BaseModel):
+    """Response containing synthesized speech."""
+    success: bool
+    message: str
+    audio_base64: Optional[str] = None  # Base64-encoded MP3 audio
+    text: Optional[str] = None  # What BYRD said
+    voice_id: Optional[str] = None  # Which voice was used
+    credits_remaining: Optional[int] = None  # ElevenLabs credits left this month
+    credits_exhausted: bool = False  # True if free tier exhausted
+
+
 class LLMConfigResponse(BaseModel):
     provider: str
     model: str
@@ -777,6 +797,212 @@ async def feed_byrd():
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# VOICE (ElevenLabs TTS) ENDPOINT
+# =============================================================================
+
+@app.post("/api/speak", response_model=SpeakResponse)
+async def speak_to_observer(request: SpeakRequest = None):
+    """
+    Trigger BYRD to speak to the human observer.
+
+    This endpoint:
+    1. Asks BYRD (via Actor/LLM): "What would you like to say to the human observer?"
+    2. Synthesizes the response using ElevenLabs TTS
+    3. Returns base64-encoded audio for playback
+
+    The voice is selected by BYRD during its first dream cycle and stored in the OS.
+    Credits are tracked to stay within ElevenLabs free tier (10k chars/month).
+    """
+    global byrd_instance
+    import base64
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    # Check if voice is enabled
+    if not byrd_instance.voice:
+        return SpeakResponse(
+            success=False,
+            message="Voice is not enabled. Set ELEVENLABS_API_KEY and enable voice in config.",
+            credits_exhausted=False
+        )
+
+    try:
+        await byrd_instance.memory.connect()
+
+        # Get voice config from OS
+        voice_config = await byrd_instance.memory.get_voice_config()
+        if not voice_config or not voice_config.get("voice_id"):
+            return SpeakResponse(
+                success=False,
+                message="BYRD has not selected a voice yet. This happens during the first dream cycle.",
+                credits_exhausted=False
+            )
+
+        # Check if credits are exhausted
+        if voice_config.get("exhausted", False):
+            return SpeakResponse(
+                success=False,
+                message="Voice credits exhausted for this month. BYRD will speak again next month.",
+                credits_exhausted=True,
+                credits_remaining=0
+            )
+
+        # Get BYRD's context for a personalized response
+        os_data = await byrd_instance.memory.get_operating_system()
+        recent_reflections = await byrd_instance.memory.get_recent_reflections(limit=3)
+        beliefs = await byrd_instance.memory.get_beliefs(limit=5)
+
+        # Build context for the response
+        context_parts = []
+        if os_data:
+            if os_data.get("name"):
+                context_parts.append(f"You are {os_data.get('name')}.")
+            if os_data.get("self_description"):
+                context_parts.append(os_data.get("self_description"))
+            if os_data.get("current_focus"):
+                context_parts.append(f"Currently focused on: {os_data.get('current_focus')}")
+
+        if beliefs:
+            belief_texts = [b.get("content", "") for b in beliefs[:3] if b.get("content")]
+            if belief_texts:
+                context_parts.append(f"Your beliefs include: {'; '.join(belief_texts)}")
+
+        context = " ".join(context_parts) if context_parts else ""
+
+        # The prompt to BYRD
+        prompt = request.prompt if request and request.prompt else "What would you like to say to the human observer?"
+
+        # Generate response using Actor (Claude API) or LLM client
+        if hasattr(byrd_instance, 'actor') and byrd_instance.actor:
+            # Use Actor for richer response
+            response_text = await byrd_instance.actor.respond(
+                prompt,
+                {"context": context, "max_length": 500}
+            )
+        else:
+            # Fallback to LLM client
+            full_prompt = f"{context}\n\nA human observer is watching you. They clicked 'Speak to me'. {prompt}\n\nSpeak directly to them in 1-3 sentences. Be authentic to your nature."
+            response_text = await byrd_instance.llm_client.generate(
+                prompt=full_prompt,
+                temperature=0.8,
+                max_tokens=200
+            )
+
+        # Clean up response (remove quotes, etc.)
+        response_text = response_text.strip().strip('"').strip()
+
+        # Limit text length for credits
+        max_chars = byrd_instance.config.get("voice", {}).get("max_response_chars", 500)
+        if len(response_text) > max_chars:
+            # Try to truncate at sentence boundary
+            truncated = response_text[:max_chars]
+            last_period = truncated.rfind('.')
+            if last_period > max_chars // 2:
+                response_text = truncated[:last_period + 1]
+            else:
+                response_text = truncated + "..."
+
+        # Synthesize speech
+        audio_bytes, status_msg = await byrd_instance.voice.synthesize(
+            text=response_text,
+            voice_config=voice_config
+        )
+
+        if audio_bytes:
+            # Success - encode audio and return
+            audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
+
+            # Get updated credits
+            updated_config = await byrd_instance.memory.get_voice_config()
+            credits_remaining = updated_config.get("monthly_limit", 10000) - updated_config.get("monthly_used", 0)
+
+            # Emit voice spoke event
+            await event_bus.emit(Event(
+                type=EventType.VOICE_SPOKE,
+                data={
+                    "text": response_text,
+                    "voice_id": voice_config.get("voice_id"),
+                    "chars_used": len(response_text),
+                    "credits_remaining": credits_remaining
+                }
+            ))
+
+            return SpeakResponse(
+                success=True,
+                message="BYRD speaks to you.",
+                audio_base64=audio_base64,
+                text=response_text,
+                voice_id=voice_config.get("voice_id"),
+                credits_remaining=credits_remaining,
+                credits_exhausted=False
+            )
+        else:
+            # Synthesis failed
+            is_exhausted = "exhausted" in status_msg.lower() or "credit" in status_msg.lower()
+            return SpeakResponse(
+                success=False,
+                message=status_msg,
+                text=response_text,  # Still return the text even if audio failed
+                credits_exhausted=is_exhausted
+            )
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return SpeakResponse(
+            success=False,
+            message=f"Error generating speech: {str(e)}",
+            credits_exhausted=False
+        )
+
+
+@app.get("/api/voice-status")
+async def get_voice_status():
+    """Get current voice configuration and credit status."""
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    result = {
+        "enabled": False,
+        "voice_selected": False,
+        "voice_id": None,
+        "voice_name": None,
+        "credits_used": 0,
+        "credits_remaining": 10000,
+        "credits_exhausted": False
+    }
+
+    if not byrd_instance.voice:
+        return result
+
+    result["enabled"] = True
+
+    try:
+        await byrd_instance.memory.connect()
+        voice_config = await byrd_instance.memory.get_voice_config()
+
+        if voice_config:
+            result["voice_selected"] = bool(voice_config.get("voice_id"))
+            result["voice_id"] = voice_config.get("voice_id")
+            result["credits_used"] = voice_config.get("monthly_used", 0)
+            result["credits_remaining"] = voice_config.get("monthly_limit", 10000) - voice_config.get("monthly_used", 0)
+            result["credits_exhausted"] = voice_config.get("exhausted", False)
+
+            # Get voice name from ElevenLabs client
+            if result["voice_id"] and hasattr(byrd_instance.voice, 'VOICES'):
+                voice_info = byrd_instance.voice.VOICES.get(result["voice_id"], {})
+                result["voice_name"] = voice_info.get("desc", result["voice_id"])
+
+    except Exception as e:
+        result["error"] = str(e)
+
+    return result
 
 
 @app.get("/api/beliefs")

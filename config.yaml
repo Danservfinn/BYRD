@@ -479,7 +479,7 @@ identity:
 # =============================================================================
 # OPTION B: FIVE COMPOUNDING LOOPS (Omega Integration)
 # =============================================================================
-# Enables the five compounding loops architecture from SEEDARCHITECTURE.md:
+# Enables the five compounding loops architecture from ARCHITECTURE.md:
 # Self-Compiler, Memory Reasoner, Goal Evolver, Dreaming Machine, Integration Mind
 # When enabled, the Omega orchestrator manages loop coordination and mode transitions.
 option_b:
@@ -575,3 +575,34 @@ option_b:
 
     # Metrics window for trajectory analysis
     metrics_window: 100
+
+# =============================================================================
+# VOICE (ElevenLabs TTS)
+# =============================================================================
+# Gives BYRD a literal voice. Human observers can click "Speak to me" in the
+# visualization to hear BYRD speak. BYRD self-emergently selects its voice
+# during the first dream cycle.
+#
+# Free tier: 10,000 characters/month (~50-100 spoken responses)
+# API key: Set ELEVENLABS_API_KEY environment variable
+# Get free key at: https://elevenlabs.io
+
+voice:
+  enabled: true
+  provider: "elevenlabs"
+
+  # Credit management
+  monthly_limit: 10000        # Free tier character limit
+  low_credit_warning: 1000    # Emit warning event when below this
+
+  # Default voice settings (used before BYRD selects)
+  defaults:
+    voice_id: "josh"          # Deep, narrative male voice
+    stability: 0.5            # 0.0 (expressive) to 1.0 (stable)
+    similarity_boost: 0.75    # 0.0 (varied) to 1.0 (consistent)
+
+  # Response constraints
+  max_response_chars: 500     # Limit response length to preserve credits
+
+  # Timeout for TTS API calls (seconds)
+  timeout_seconds: 60

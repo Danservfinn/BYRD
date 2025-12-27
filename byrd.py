@@ -266,6 +266,23 @@ class BYRD:
         # Inject Coder into Seeker
         self.seeker.coder = self.coder
 
+        # Initialize Voice (ElevenLabs TTS)
+        self.voice = None
+        voice_config = self.config.get("voice", {})
+        if voice_config.get("enabled", False):
+            api_key = os.environ.get("ELEVENLABS_API_KEY")
+            if api_key:
+                try:
+                    from elevenlabs_voice import ElevenLabsVoice
+                    self.voice = ElevenLabsVoice(api_key, self.memory)
+                    print("🎤 Voice: ElevenLabs (enabled)")
+                except ImportError as e:
+                    print(f"⚠️ Voice: Could not import ElevenLabsVoice: {e}")
+            else:
+                print("⚠️ Voice: Enabled but ELEVENLABS_API_KEY not set")
+        else:
+            print("🎤 Voice: Disabled")
+
         # Initialize Option B: Omega integration (five compounding loops)
         self.omega = None
         self.coupling_tracker = None

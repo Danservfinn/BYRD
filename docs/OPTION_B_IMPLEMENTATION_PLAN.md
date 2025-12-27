@@ -2740,7 +2740,7 @@ After completing all phases:
 1. **Baseline measurement**: Run capability test suite, record initial scores
 2. **Weekly reviews**: Check metrics dashboard, evaluate kill criteria
 3. **Continuous monitoring**: Track coupling correlation, loop health
-4. **Documentation**: Update SEEDARCHITECTURE.md with learnings
+4. **Documentation**: Update ARCHITECTURE.md with learnings
 
 ---
 

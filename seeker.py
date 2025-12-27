@@ -2581,7 +2581,7 @@ Your thought (1-2 sentences only, no quotes):"""
             "constitutional.py": "Constraints - protected patterns",
             "provenance.py": "Audit trail - modification tracking",
             # Architecture documentation - BYRD's self-documentation
-            "docs/SEEDARCHITECTURE.md": "Seed Architecture - five compounding loops, design principles, acceleration thesis",
+            "ARCHITECTURE.md": "Architecture - five compounding loops, design principles, acceleration thesis",
         }
 
         # Determine which file(s) to read
@@ -2617,11 +2617,11 @@ Your thought (1-2 sentences only, no quotes):"""
             elif any(kw in description.lower() for kw in ["memory", "graph", "neo4j", "node"]):
                 target_files = ["memory.py"]
             elif any(kw in description.lower() for kw in ["seed", "omega", "loop", "compounding", "acceleration", "coupling"]):
-                # Seed architecture - the five compounding loops design
-                target_files = ["docs/SEEDARCHITECTURE.md"]
+                # Architecture - the five compounding loops design
+                target_files = ["ARCHITECTURE.md"]
             elif any(kw in description.lower() for kw in ["architecture", "structure", "overview", "design"]):
-                # Architecture questions - include both seed doc and main orchestrator
-                target_files = ["docs/SEEDARCHITECTURE.md", "byrd.py"]
+                # Architecture questions - include both architecture doc and main orchestrator
+                target_files = ["ARCHITECTURE.md", "byrd.py"]
             else:
                 # Default to byrd.py for general questions
                 target_files = ["byrd.py"]

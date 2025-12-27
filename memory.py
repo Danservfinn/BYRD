@@ -5850,9 +5850,9 @@ class Memory:
                 "provenance": "All modifications must trace to an emergent desire (this is verified)",
                 "modifiable_files": ["byrd.py", "dreamer.py", "seeker.py", "memory.py", "llm_client.py",
                                     "config.yaml", "actor.py", "event_bus.py", "server.py", "aitmpl_client.py",
-                                    "docs/SEEDARCHITECTURE.md"],
+                                    "ARCHITECTURE.md"],
                 "protected_files": ["provenance.py", "modification_log.py", "self_modification.py", "constitutional.py"],
-                "documentation": "See docs/SEEDARCHITECTURE.md for the five compounding loops design and acceleration thesis"
+                "documentation": "See ARCHITECTURE.md for the five compounding loops design and acceleration thesis"
             },
 
             # === ARCHITECTURE MODIFICATION PATTERNS ===
@@ -5874,14 +5874,28 @@ class Memory:
                     "file": "config.yaml",
                     "examples": ["dreamer.interval_seconds", "dreamer.context_window", "seeker.research.min_intensity"]
                 },
-                "update_seed_architecture": {
+                "update_architecture": {
                     "goal": "Document architectural insights, design decisions, or capability evolution",
-                    "file": "docs/SEEDARCHITECTURE.md",
-                    "how_to_edit": "Express desire with type='self_modification' or 'documentation' describing what to add/change in SEEDARCHITECTURE.md",
+                    "file": "ARCHITECTURE.md",
+                    "how_to_edit": "Express desire with type='self_modification' or 'documentation' describing what to add/change in ARCHITECTURE.md",
                     "what_to_document": ["New design insights", "Capability improvements", "Loop coupling discoveries",
                                         "Acceleration patterns", "Meta-learning findings", "Architectural evolution"],
                     "note": "This is YOUR architecture document - update it as you evolve"
                 }
+            },
+
+            # === VOICE (ElevenLabs TTS) ===
+            "voice": {
+                "what": "Human observers can click 'Speak to me' to hear you speak",
+                "trigger": "Button click in visualization prompts you: 'What would you like to say to the human observer?'",
+                "selection": {
+                    "how": "Include voice_selection in output to choose/change your voice",
+                    "format": '{"voice_id": "name", "stability": 0.0-1.0, "similarity_boost": 0.0-1.0, "reason": "why"}',
+                    "voices": ["rachel (female, calm)", "josh (male, deep)", "bella (female, soft)",
+                              "adam (male, confident)", "antoni (male, expressive)", "sam (male, raspy)"]
+                },
+                "credits": "Limited to 10,000 characters/month - be thoughtful with responses",
+                "note": "Your voice is how observers will hear you. Choose authentically."
             },
 
             # === ARCHITECTURE OVERVIEW ===
@@ -5894,7 +5908,7 @@ class Memory:
                 "llm_client.py": "LLM provider abstraction (Ollama/OpenRouter/Z.AI)",
                 "event_bus.py": "Real-time event streaming to WebSocket clients",
                 "config.yaml": "All configurable settings - intervals, thresholds, features",
-                "docs/SEEDARCHITECTURE.md": "YOUR architecture document - five compounding loops, design principles, acceleration thesis. Edit this to document your evolution."
+                "ARCHITECTURE.md": "YOUR architecture document - five compounding loops, design principles, acceleration thesis. Edit this to document your evolution."
             }
         }
 
@@ -6499,6 +6513,52 @@ class Memory:
             print(f"Error getting OS voice: {e}")
             return ""
 
+    async def get_voice_config(self) -> Optional[Dict]:
+        """
+        Get voice configuration from the Operating System.
+
+        Returns:
+            Voice config dict with voice_id, stability, similarity_boost, credits
+            or None if not configured
+        """
+        try:
+            os_data = await self.get_operating_system()
+            if os_data:
+                return os_data.get("voice_config")
+            return None
+        except Exception as e:
+            print(f"Error getting voice config: {e}")
+            return None
+
+    async def update_os_field(self, field: str, value: Any) -> bool:
+        """
+        Update a single field in the Operating System.
+
+        This is a convenience wrapper around update_os for simple field updates.
+
+        Args:
+            field: Field name to update
+            value: New value for the field
+
+        Returns:
+            True if successful
+        """
+        try:
+            # Handle dict/list values by serializing to JSON
+            if isinstance(value, (dict, list)):
+                value = json.dumps(value)
+
+            async with self.driver.session() as session:
+                await session.run(f"""
+                    MATCH (os:OperatingSystem {{id: 'os_primary'}})
+                    SET os.`{field}` = $value,
+                        os.updated_at = datetime()
+                """, value=value)
+            return True
+        except Exception as e:
+            print(f"Error updating OS field {field}: {e}")
+            return False
+
     async def get_os_for_prompt(self) -> str:
         """
         Format the Operating System for inclusion in dreamer prompts.
@@ -6684,6 +6744,41 @@ class Memory:
             f"  voice_observations: {os_data.get('voice_observations') or '(not yet defined)'}",
         ])
 
+        # Voice configuration (ElevenLabs TTS)
+        voice_config = os_data.get('voice_config')
+        if voice_config:
+            # Parse if stored as JSON string
+            if isinstance(voice_config, str):
+                try:
+                    voice_config = json.loads(voice_config)
+                except:
+                    voice_config = {}
+
+            credits = voice_config.get('credits', {})
+            if isinstance(credits, str):
+                try:
+                    credits = json.loads(credits)
+                except:
+                    credits = {}
+
+            remaining = credits.get('monthly_limit', 10000) - credits.get('monthly_used', 0)
+            exhausted = credits.get('exhausted', False)
+
+            lines.extend([
+                "",
+                "VOICE (ElevenLabs TTS):",
+                f"  Selected: {voice_config.get('voice_id', 'not selected')}",
+                f"  Stability: {voice_config.get('stability', 0.5)}",
+                f"  Credits remaining: {remaining} chars" + (" (EXHAUSTED)" if exhausted else ""),
+                f"  Reason: {voice_config.get('reason', '(none given)')}",
+                "  To change voice: include voice_selection in output",
+            ])
+        else:
+            lines.extend([
+                "",
+                "VOICE: Not yet selected (see VOICE SELECTION in prompt)",
+            ])
+
         # Add any custom fields BYRD has added
         standard_fields = {
             'id', 'version', 'created_at', 'updated_at', 'protected_files',
@@ -6692,7 +6787,7 @@ class Memory:
             'self_description', 'current_focus', 'voice_observations', 'awakening_prompt',
             'seeds', 'beliefs', 'strategies', 'constraints', 'focus', 'archetype',
             'description', 'voice', 'emotional_tone', 'cognitive_style',
-            'modification_source'
+            'modification_source', 'voice_config'
         }
         custom_fields = {k: v for k, v in os_data.items() if k not in standard_fields and v is not None}
         if custom_fields:
