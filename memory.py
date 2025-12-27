@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
 import json
 import re
+import time
 from neo4j import GraphDatabase, AsyncGraphDatabase
 import hashlib
 
@@ -297,6 +298,13 @@ class Memory:
             except re.error:
                 pass  # Skip invalid regex
 
+        # Experience deduplication
+        dedup_config = config.get("experience_dedup", {})
+        self.dedup_enabled = dedup_config.get("enabled", True)
+        self.dedup_window_seconds = dedup_config.get("window_seconds", 60)  # 1 minute
+        self._recent_experiences: Dict[str, float] = {}  # normalized_content -> timestamp
+        self._dedup_cache_max_size = dedup_config.get("cache_size", 500)
+
         # Salience-weighted retrieval configuration
         retrieval_config = config.get("retrieval", {})
         self.retrieval_strategy = retrieval_config.get("strategy", "recent")
@@ -440,6 +448,60 @@ class Memory:
     # EXPERIENCES
     # =========================================================================
 
+    def _normalize_experience(self, content: str) -> str:
+        """Normalize experience content for deduplication comparison."""
+        # Lowercase, collapse whitespace, strip
+        normalized = " ".join(content.lower().split())
+        # Remove common variable prefixes that don't affect meaning
+        # e.g., timestamps, IDs embedded in content
+        import re
+        # Remove ISO timestamps
+        normalized = re.sub(r'\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}[.\d]*Z?', '', normalized)
+        # Remove UUIDs
+        normalized = re.sub(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', '', normalized)
+        # Remove hex IDs (16+ chars)
+        normalized = re.sub(r'[0-9a-f]{16,}', '', normalized)
+        return normalized.strip()
+
+    def _is_duplicate_experience(self, content: str, type: str) -> bool:
+        """Check if this experience was recently recorded (deduplication)."""
+        if not self.dedup_enabled:
+            return False
+
+        # Don't deduplicate system or awakening events
+        if type in ("system", "awakening", "ego_seed"):
+            return False
+
+        normalized = self._normalize_experience(content)
+        if not normalized:  # Empty after normalization
+            return False
+
+        current_time = time.time()
+
+        # Clean expired entries from cache
+        expired = [k for k, v in self._recent_experiences.items()
+                   if current_time - v > self.dedup_window_seconds]
+        for k in expired:
+            del self._recent_experiences[k]
+
+        # Check if content was recently recorded
+        if normalized in self._recent_experiences:
+            last_time = self._recent_experiences[normalized]
+            if current_time - last_time < self.dedup_window_seconds:
+                return True  # Duplicate within window
+
+        # Not a duplicate - add to cache
+        self._recent_experiences[normalized] = current_time
+
+        # Trim cache if too large (keep most recent)
+        if len(self._recent_experiences) > self._dedup_cache_max_size:
+            # Remove oldest entries
+            sorted_items = sorted(self._recent_experiences.items(), key=lambda x: x[1])
+            for k, _ in sorted_items[:len(sorted_items) - self._dedup_cache_max_size]:
+                del self._recent_experiences[k]
+
+        return False
+
     def _is_noise(self, content: str) -> bool:
         """Check if content matches noise patterns that should be filtered."""
         if not self.filter_enabled or not self.exclude_patterns:
@@ -470,12 +532,16 @@ class Memory:
             link_on_acquisition: If True, immediately link to similar beliefs (reduces orphans)
 
         Returns:
-            Experience ID, or None if filtered as noise
+            Experience ID, or None if filtered as noise or duplicate
         """
         # Apply noise filtering (unless forced or system type)
         if not force and type not in ("system", "awakening", "action"):
             if self._is_noise(content):
                 return None  # Silently filter noise
+
+        # Apply deduplication (unless forced)
+        if not force and self._is_duplicate_experience(content, type):
+            return None  # Silently skip duplicate
 
         exp_id = self._generate_id(content)
 

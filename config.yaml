@@ -31,6 +31,14 @@ memory:
       - "\\[accepted\\]"
       - "connection open"
 
+  # Experience deduplication
+  # Prevents the same event from being logged multiple times within a time window.
+  # Uses content normalization (removes timestamps, IDs) for comparison.
+  experience_dedup:
+    enabled: true
+    window_seconds: 60            # Same content within 60s = duplicate
+    cache_size: 500               # Max recent experiences to track
+
   # ---------------------------------------------------------------------------
   # CURATION (Self-Optimization)
   # ---------------------------------------------------------------------------
@@ -281,13 +289,17 @@ seeker:
   skip_if_no_new_reflections: true
 
   # ---------------------------------------------------------------------------
-  # KNOWLEDGE ACQUISITION (Local LLM + SearXNG)
+  # KNOWLEDGE ACQUISITION (DuckDuckGo + SearXNG fallback)
   # ---------------------------------------------------------------------------
   research:
-    # SearXNG endpoint options (in priority order):
-    # 1. SEARXNG_URL env var (for custom instance)
-    # 2. Public instance: https://searx.be (reliable public SearXNG)
-    # 3. Local: http://localhost:8888
+    # Search provider priority:
+    # 1. DuckDuckGo API (primary - reliable, no setup required)
+    # 2. SearXNG (fallback - for when DDG returns no results)
+    #
+    # SearXNG fallback options:
+    # - SEARXNG_URL env var (for custom instance)
+    # - Public instance: https://searx.be
+    # - Local: http://localhost:8888
     searxng_url: "${SEARXNG_URL:-https://searx.be}"
 
     # Minimum desire intensity to trigger research (0-1)

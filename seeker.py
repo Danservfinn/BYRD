@@ -552,14 +552,16 @@ If no clear drives emerge, return {{"drives": []}}"""
 DESIRE: "{description}"
 
 CATEGORIES:
-- introspect: Questions about my own state, nature, existence, identity, or internal processes
+- introspect: Questions about MY OWN state, capabilities, limits, boundaries, nature, identity, or what I can/cannot do
 - reconcile_orphans: Connecting isolated nodes, linking experiences, reducing fragmentation
 - curate: Optimizing, cleaning, organizing my memory or graph structure
 - self_modify: Changing my own code, adding capabilities to myself
-- search: Learning about external topics, researching the outside world
+- search: Learning about EXTERNAL topics in the world (not about myself)
 
-If the desire is about understanding MYSELF (my graph, my state, my nature, my processes), choose an internal category.
-If the desire is about understanding something EXTERNAL (concepts, topics, the world), choose "search".
+CRITICAL DISTINCTION:
+- "What can I do?" / "My capabilities" / "My limits" → introspect (about MYSELF)
+- "What is machine learning?" / "How does X work?" → search (about EXTERNAL world)
+- Even if the desire mentions external concepts, if the CORE QUESTION is about MY abilities/limits/nature → introspect
 
 Reply with ONLY one word: introspect, reconcile_orphans, curate, self_modify, or search"""
 
@@ -901,53 +903,62 @@ Reply with ONLY one word: introspection, research, creation, or connection"""
             if strategy == "search":
                 # Use existing research capability
                 success = await self._seek_knowledge_semantic(description, desire_id)
-                return ("success" if success else "failed", None)
+                return ("success" if success else "failed",
+                        None if success else "Search returned no results or search service unavailable")
 
             elif strategy == "code":
                 # Use coder if available
                 if self.coder and self.coder.enabled:
                     success = await self._execute_code_strategy(description)
-                    return ("success" if success else "failed", None)
+                    return ("success" if success else "failed",
+                            None if success else "Code execution failed or produced no output")
                 else:
                     return ("skipped", "Coder not available")
 
             elif strategy == "install":
                 # Use capability installation
                 success = await self._seek_capability_semantic(description)
-                return ("success" if success else "failed", None)
+                return ("success" if success else "failed",
+                        None if success else "Capability installation failed or no matching capability found")
 
             elif strategy == "curate":
                 # Use graph curation capability
                 success = await self._execute_curate_strategy(description, desire_id)
-                return ("success" if success else "failed", None)
+                return ("success" if success else "failed",
+                        None if success else "Graph curation failed or no curation actions needed")
 
             elif strategy == "reconcile_orphans":
                 # Use orphan reconciliation to connect isolated experiences
                 success = await self._execute_orphan_reconciliation(description, desire_id)
-                return ("success" if success else "failed", None)
+                return ("success" if success else "failed",
+                        None if success else "Orphan reconciliation failed or no orphans to reconcile")
 
             elif strategy == "self_modify":
                 # Use self-modification capability
                 success = await self._execute_self_modify_strategy(description, desire_id)
-                return ("success" if success else "failed", None)
+                return ("success" if success else "failed",
+                        None if success else "Self-modification blocked or validation failed")
 
             elif strategy == "introspect":
                 # Pure self-observation - gather and report internal state
                 success = await self._execute_introspect_strategy(description, desire_id)
-                return ("success" if success else "failed", None)
+                return ("success" if success else "failed",
+                        None if success else "Introspection failed or no state to observe")
 
             elif strategy == "source_introspect":
                 # Source code introspection - read and understand own architecture
                 target = pattern.get("target", "")
                 desire = {"description": description, "id": desire_id, "target": target}
                 success = await self._seek_introspection(desire)
-                return ("success" if success else "failed", None)
+                return ("success" if success else "failed",
+                        None if success else "Source introspection failed or file not accessible")
 
             elif strategy == "observe":
                 # Observation without external action - for formation/developmental desires
                 # "The moment I observe a formation desire without routing it, formation completes."
                 success = await self._execute_observe_strategy(description, desire_id)
-                return ("success" if success else "failed", None)
+                return ("success" if success else "failed",
+                        None if success else "Observation strategy failed")
 
             else:
                 # No recognized strategy - record for BYRD to reflect on
