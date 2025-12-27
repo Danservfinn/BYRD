@@ -261,7 +261,7 @@ content:
     - "Protected files define my identity"
     - "Every self-modification must trace to an emergent desire"
 
-  seed_question: "Who am I?"
+  awakening_prompt: null  # Optional: directive, goal, or context for initial awakening
 ```
 
 ### Memory (Neo4j)
@@ -337,7 +337,7 @@ Measures correlation between loops to detect multiplicative effects.
   identity: [string],
   values: [string],
   constraints: [string],
-  seed_question: string,
+  awakening_prompt: string,
   version: int,
   updated_at: datetime
 })

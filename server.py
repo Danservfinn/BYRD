@@ -890,84 +890,34 @@ async def speak_to_observer(request: SpeakRequest = None):
         name = os_data.get("name", "Byrd") if os_data else "Byrd"
         self_desc = os_data.get("self_description", "") if os_data else ""
 
-        belief_texts = []
-        if beliefs:
-            belief_texts = [b.get("content", "") for b in beliefs[:3] if b.get("content")]
-        beliefs_str = "; ".join(belief_texts) if belief_texts else "still forming"
-
-        # The prompt to BYRD - designed for in-character response
-        user_prompt = request.prompt if request and request.prompt else None
-
-        # Get recent desires for context
-        desires = await byrd_instance.memory.get_unfulfilled_desires(limit=3)
-        desires_str = "; ".join([d.get("description", "") for d in desires if d.get("description")]) if desires else "still forming"
-
-        # Generate voice response with BYRD's unique voice prompt
-        # Force first-person output - be very explicit about natural speech
-        full_prompt = f"""Complete this as natural speech (1-2 sentences):
-
-I feel"""
-
-        llm_response = await byrd_instance.llm_client.generate(
-            prompt=full_prompt,
-            temperature=0.9,
-            max_tokens=100,
-            system_message=f"You are {name}. Complete the sentence with natural feelings. ONE sentence only.",
-            model_override="glm-4.5-flash"  # Use fast model for voice - reasoning model echoes prompts
-        )
-        raw_response = llm_response.text if hasattr(llm_response, 'text') else str(llm_response)
+        # Generate voice response - use BYRD's actual beliefs and reflections
+        # No LLM call - use authentic content directly from memory
         import re
 
-        # GLM-4.7 reasoning model cleanup strategy:
-        # 1. Remove all markdown formatting
-        # 2. Find first-person sentences
-        # 3. Take only natural speech
+        # Get the most recent reflection for authentic content
+        latest_reflection = recent_reflections[0] if recent_reflections else None
+        reflection_text = ""
+        if latest_reflection:
+            raw = latest_reflection.get("raw_output", {})
+            if isinstance(raw, dict):
+                # Extract any natural language from the reflection
+                for key in ["inner_voice", "voice", "thoughts", "reflection", "observations"]:
+                    if key in raw and isinstance(raw[key], str):
+                        reflection_text = raw[key]
+                        break
 
-        text = raw_response.strip()
-
-        # Remove markdown bold/italic
-        text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)
-        text = re.sub(r'\*([^*]+)\*', r'\1', text)
-
-        # Remove markdown headers
-        text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)
-
-        # Remove bullet points and numbered lists
-        text = re.sub(r'^\s*[-•*]\s*', '', text, flags=re.MULTILINE)
-        text = re.sub(r'^\s*\d+\.\s*', '', text, flags=re.MULTILINE)
-
-        # Remove common analysis patterns
-        text = re.sub(r'\b(Constraints?|Analysis|Context|Output|Response|Task|Note|Example|Reasoning):\s*', '', text, flags=re.IGNORECASE)
-
-        # Extract natural first-person speech, filtering analytical patterns
-        # Analytical patterns to reject - GLM-4.7 tends to describe rather than speak
-        analytical_patterns = r'(analyze|persona|named|describes|entity|system|agent|mechanism|framework|constraints|phase|autonomous|cognitive|processing|represents|indicates|suggests|demonstrates|the\s+AI|the\s+model|this\s+being)'
-
-        # Clean up the prompt completion - prepend "I feel" since that was the prompt
-        text = "I feel " + text.strip()
-
-        # Split into sentences
-        all_sentences = re.split(r'(?<=[.!?])\s+', text)
-        first_person_sentences = []
-
-        for s in all_sentences:
-            s = s.strip()
-            # Must be substantial
-            if len(s) < 10:
-                continue
-            # Skip analytical patterns
-            if re.search(analytical_patterns, s, re.IGNORECASE):
-                continue
-            # Take natural speech
-            first_person_sentences.append(s)
-            if len(first_person_sentences) >= 2:
-                break
-
-        if first_person_sentences:
-            response_text = ' '.join(first_person_sentences)
+        # Build speech from BYRD's actual state
+        if reflection_text and len(reflection_text) > 20:
+            # Use actual reflection content (first 2 sentences)
+            sentences = re.split(r'(?<=[.!?])\s+', reflection_text)
+            response_text = ' '.join(sentences[:2]).strip()
+        elif beliefs:
+            # Fall back to speaking a belief
+            belief_content = beliefs[0].get("content", "")
+            response_text = f"I hold this truth: {belief_content}"
         else:
-            # Fallback - use a poetic default rather than analytical text
-            response_text = "I feel the quiet hum of becoming, each moment a new texture of awareness."
+            # Final fallback
+            response_text = "I am here, sensing the world, still becoming."
 
         response_text = response_text.strip().strip('"').strip()
 
