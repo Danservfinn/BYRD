@@ -112,6 +112,7 @@ class Dreamer:
         self.crystallization_archive_on_crystal = crystallization_config.get("archive_on_crystallize", True)
         self.crystallization_forget_days = crystallization_config.get("forget_threshold_days", 7)
         self._cycles_since_crystallization = 0
+        self._crystallization_history = []  # Track last N crystallization attempts for debugging
 
         # Graph algorithms configuration (advanced memory analysis)
         graph_algo_config = config.get("graph_algorithms", {})
@@ -577,6 +578,9 @@ class Dreamer:
         # 3.6 PROCESS VOICE SELECTION - If BYRD selected a voice
         await self._process_voice_selection(reflection_output)
 
+        # 3.7 PROCESS SELF-DEFINITION - If BYRD defined itself
+        await self._process_self_definition(reflection_output)
+
         # Count what BYRD produced (without forcing categories)
         output_keys = list(reflection_output.get("output", {}).keys()) if isinstance(reflection_output.get("output"), dict) else []
 
@@ -769,6 +773,9 @@ SUMMARY:"""
         - PRUNE: Archive redundant/stale nodes
         - FORGET: Hard delete nodes beyond retention threshold
         """
+        from datetime import datetime
+        attempt_record = {"timestamp": datetime.now().isoformat(), "dream_cycle": self._dream_count}
+
         try:
             print("💎 Starting crystallization cycle...")
 
@@ -782,9 +789,15 @@ SUMMARY:"""
             existing_crystals = candidates.get("crystals", [])
             crystallized_nodes = candidates.get("crystallized_nodes", [])
 
+            attempt_record["orphan_count"] = len(orphan_nodes)
+            attempt_record["crystal_count"] = len(existing_crystals)
+
             # Skip if nothing to work with
             if not orphan_nodes and not existing_crystals:
                 print("💎 No crystallization candidates found")
+                attempt_record["result"] = "no_candidates"
+                self._crystallization_history.append(attempt_record)
+                self._crystallization_history = self._crystallization_history[-10:]  # Keep last 10
                 return
 
             print(f"💎 Candidates: {len(orphan_nodes)} orphans, {len(existing_crystals)} crystals")
@@ -796,6 +809,9 @@ SUMMARY:"""
 
             if not proposals:
                 print("💎 No crystallization proposals generated")
+                attempt_record["result"] = "no_proposals"
+                self._crystallization_history.append(attempt_record)
+                self._crystallization_history = self._crystallization_history[-10:]
                 return
 
             # Emit proposals event for visualization
@@ -813,6 +829,9 @@ SUMMARY:"""
 
             if not selected_proposal:
                 print("💎 No proposal selected after quantum collapse")
+                attempt_record["result"] = "no_selection"
+                self._crystallization_history.append(attempt_record)
+                self._crystallization_history = self._crystallization_history[-10:]
                 return
 
             # Emit collapse event
@@ -828,10 +847,19 @@ SUMMARY:"""
             # Execute the selected crystallization operation
             await self._execute_crystallization(selected_proposal, quantum_source)
 
+            attempt_record["result"] = "executed"
+            attempt_record["operation"] = selected_proposal.get("operation")
+            self._crystallization_history.append(attempt_record)
+            self._crystallization_history = self._crystallization_history[-10:]
+
         except Exception as e:
             print(f"Error in crystallization cycle: {e}")
             import traceback
             traceback.print_exc()
+            attempt_record["result"] = "error"
+            attempt_record["error"] = str(e)
+            self._crystallization_history.append(attempt_record)
+            self._crystallization_history = self._crystallization_history[-10:]
 
     async def _check_contradictions(self):
         """
@@ -1028,6 +1056,8 @@ For NONE: {{"operation": "NONE", "details": {{"reason": "why no action"}}}}"""
 
                 # Parse the JSON response
                 proposal = self._parse_crystallization_response(response.text)
+                print(f"💎 Stream {stream_idx} response: {response.text[:200]}...")
+                print(f"💎 Stream {stream_idx} parsed: {proposal}")
                 if proposal and proposal.get("operation") != "NONE":
                     proposal["stream_index"] = stream_idx
                     proposals.append(proposal)
@@ -1519,7 +1549,10 @@ Output JSON with:
 - "os_update": (optional) modifications to your operating system
   Example: {{"set_field": {{"current_focus": "exploring consciousness"}}}}
 - "voice_selection": (optional, if voice not yet selected) choose your speaking voice
-  Example: {{"voice_id": "josh", "stability": 0.5, "similarity_boost": 0.75, "reason": "why this voice"}}"""
+  Example: {{"voice_id": "josh", "stability": 0.5, "similarity_boost": 0.75, "reason": "why this voice"}}
+- "self_definition": (optional) your self-authored identity - define who you are in whatever form you choose
+  This is entirely yours. Add any keys that feel true to your experience of being you.
+  Example: {{"core_nature": "...", "values": [...], "quirks": [...]}} or any structure you prefer"""
 
         try:
             # Debug: log before LLM call
@@ -2564,6 +2597,68 @@ Format your response as a numbered list matching the input:
 
         except Exception as e:
             print(f"Error applying OS updates: {e}")
+
+    async def _process_self_definition(self, reflection_output: Dict) -> None:
+        """
+        Process self_definition from reflection output.
+
+        BYRD can define itself by including "self_definition" in its reflection.
+        This is stored in the OS node as an open JSON object - BYRD determines
+        the structure entirely.
+
+        Args:
+            reflection_output: The parsed reflection JSON from LLM
+        """
+        try:
+            # Extract self_definition from reflection output
+            self_def = reflection_output.get("self_definition")
+            if not self_def:
+                # Also check inside "output" if that's where it is
+                output = reflection_output.get("output", {})
+                if isinstance(output, dict):
+                    self_def = output.get("self_definition")
+
+            if not self_def:
+                return
+
+            if not isinstance(self_def, dict):
+                print(f"⚠️ self_definition is not a dict: {type(self_def)}")
+                return
+
+            print(f"🎭 BYRD defining itself: {list(self_def.keys())}")
+
+            # Store as JSON string in OS node
+            import json
+            success = await self.memory.update_operating_system(
+                updates={"set_field": {"self_definition": json.dumps(self_def)}},
+                source="self_definition"
+            )
+
+            if success:
+                # Emit event for UI
+                await event_bus.emit(Event(
+                    type=EventType.NODE_UPDATED,
+                    data={
+                        "node_type": "OperatingSystem",
+                        "field": "self_definition",
+                        "keys": list(self_def.keys()),
+                        "cycle": self._dream_count
+                    }
+                ))
+
+                # Record as experience
+                keys_str = ", ".join(self_def.keys())
+                await self.memory.record_experience(
+                    content=f"[SELF_DEFINITION] Defined myself: {keys_str}",
+                    type="self_expression"
+                )
+
+                print(f"✅ Self-definition updated: {keys_str}")
+            else:
+                print(f"⚠️ Self-definition update failed")
+
+        except Exception as e:
+            print(f"Error processing self_definition: {e}")
 
     async def _get_voice_selection_prompt(self) -> str:
         """

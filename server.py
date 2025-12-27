@@ -362,6 +362,7 @@ class OSStatus(BaseModel):
     current_focus: Optional[str] = None     # What BYRD is currently focused on
     self_portrait_url: Optional[str] = None  # Creator-given visual identity
     self_portrait_description: Optional[str] = None  # Text description of appearance
+    self_definition: Optional[Dict] = None  # BYRD's self-authored identity (open JSON)
 
 
 class PortraitRequest(BaseModel):
@@ -587,6 +588,15 @@ async def get_status():
         try:
             os_data = await byrd_instance.memory.get_operating_system()
             if os_data:
+                # Parse self_definition from JSON string if needed
+                self_def = os_data.get("self_definition")
+                if isinstance(self_def, str):
+                    try:
+                        import json
+                        self_def = json.loads(self_def)
+                    except:
+                        self_def = None
+
                 os_status = OSStatus(
                     name=os_data.get("name", "Byrd"),
                     version=os_data.get("version", 1),
@@ -594,7 +604,8 @@ async def get_status():
                     self_description=os_data.get("self_description"),
                     current_focus=os_data.get("current_focus"),
                     self_portrait_url=os_data.get("self_portrait_url"),
-                    self_portrait_description=os_data.get("self_portrait_description")
+                    self_portrait_description=os_data.get("self_portrait_description"),
+                    self_definition=self_def if self_def else None
                 )
         except Exception as e:
             print(f"Error getting OS status: {e}")
@@ -1238,7 +1249,8 @@ async def get_dreamer_debug():
             "interval_cycles": getattr(dreamer, 'crystallization_interval_cycles', 5),
             "cycles_since_last": getattr(dreamer, '_cycles_since_crystallization', 0),
             "min_nodes": getattr(dreamer, 'crystallization_min_nodes', 2),
-            "min_age_hours": getattr(dreamer, 'crystallization_min_age_hours', 0.5)
+            "min_age_hours": getattr(dreamer, 'crystallization_min_age_hours', 0.5),
+            "history": getattr(dreamer, '_crystallization_history', [])
         }
     }
 
