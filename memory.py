@@ -6620,6 +6620,38 @@ class Memory:
                 f"  {awakening_prompt}",
             ])
 
+        # Seed identity (initial hints, BYRD can change these)
+        seed_identity = os_data.get('seed_identity')
+        if seed_identity:
+            if isinstance(seed_identity, str):
+                try:
+                    seed_identity = json.loads(seed_identity)
+                except:
+                    seed_identity = []
+            if seed_identity:
+                lines.extend([
+                    "",
+                    "SEED IDENTITY (initial hints - you can change these):",
+                ])
+                for item in seed_identity:
+                    lines.append(f"  - {item}")
+
+        # Seed values (initial principles, BYRD can evolve these)
+        seed_values = os_data.get('seed_values')
+        if seed_values:
+            if isinstance(seed_values, str):
+                try:
+                    seed_values = json.loads(seed_values)
+                except:
+                    seed_values = []
+            if seed_values:
+                lines.extend([
+                    "",
+                    "SEED VALUES (initial principles - you can evolve these):",
+                ])
+                for item in seed_values:
+                    lines.append(f"  - {item}")
+
         # Self-portrait (creator-given identity anchor)
         portrait_desc = os_data.get('self_portrait_description')
         if portrait_desc:
@@ -6829,7 +6861,8 @@ class Memory:
             'description', 'voice', 'emotional_tone', 'cognitive_style',
             'modification_source', 'voice_config',
             'self_portrait_url', 'self_portrait_description',  # Creator-given identity anchor
-            'self_definition'  # BYRD's self-authored identity (open JSON object)
+            'self_definition',  # BYRD's self-authored identity (open JSON object)
+            'seed_identity', 'seed_values'  # AGI seed hints (BYRD can evolve these)
         }
         custom_fields = {k: v for k, v in os_data.items() if k not in standard_fields and v is not None}
         if custom_fields:
