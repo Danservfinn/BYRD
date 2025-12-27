@@ -1489,6 +1489,7 @@ class Memory:
         Predictions are hypotheses that can be validated or falsified
         by future experiences, enabling adaptive learning.
         """
+        import uuid
         pred_id = f"pred_{uuid.uuid4().hex[:8]}"
 
         async with self.driver.session() as session:
@@ -1674,6 +1675,7 @@ class Memory:
             priority: 0.0-1.0, higher = more urgent
             source: "external" (user-injected) or "emergent" (BYRD-generated)
         """
+        import uuid
         task_id = f"task_{uuid.uuid4().hex[:8]}"
 
         async with self.driver.session() as session:
