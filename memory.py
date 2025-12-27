@@ -1941,16 +1941,27 @@ class Memory:
         """Create a relationship between any two nodes."""
         props = properties or {}
         props["formed_at"] = datetime.now().isoformat()
-        
+
         query = f"""
             MATCH (a), (b)
             WHERE a.id = $from_id AND b.id = $to_id
             CREATE (a)-[r:{relationship}]->(b)
             SET r += $props
         """
-        
+
         async with self.driver.session() as session:
             await session.run(query, from_id=from_id, to_id=to_id, props=props)
+
+        # Emit event for real-time visualization
+        await event_bus.emit(Event(
+            type=EventType.CONNECTION_CREATED,
+            data={
+                "from_id": from_id,
+                "to_id": to_id,
+                "relationship": relationship,
+                "properties": props
+            }
+        ))
 
     # =========================================================================
     # CAUSAL RELATIONSHIPS

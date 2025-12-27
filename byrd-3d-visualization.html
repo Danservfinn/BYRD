@@ -3986,6 +3986,20 @@
       if (connection.material) connection.material.dispose();
     }
 
+    // Create connection by node IDs (wrapper for event handler)
+    function createConnection(fromId, toId, type) {
+      const nodeA = nodes3D.find(n => n.userData.id === fromId);
+      const nodeB = nodes3D.find(n => n.userData.id === toId);
+
+      if (nodeA && nodeB) {
+        return createConnection3D(nodeA, nodeB, type);
+      } else {
+        // Nodes not yet in visualization - queue for later
+        console.log(`Connection deferred: ${fromId} -> ${toId} (nodes not found)`);
+        return null;
+      }
+    }
+
     // Update connection positions when nodes move
     function updateConnectionPositions() {
       connections3D.forEach(conn => {
@@ -6658,6 +6672,19 @@
           updateStatus('New capability acquired', 'purple');
           break;
 
+        case 'connection_created':
+          // Real-time connection visualization
+          const fromId = event.data?.from_id;
+          const toId = event.data?.to_id;
+          const relType = event.data?.relationship || 'RELATES_TO';
+          if (fromId && toId) {
+            const conn = createConnection(fromId, toId, relType);
+            if (conn) {
+              updateStatus(`Connection: ${relType}`, 'amber');
+            }
+          }
+          break;
+
         case 'node_type_discovered':
           // BYRD created a new conceptual category
           const newTypeName = event.data?.node_type;
@@ -7365,7 +7392,8 @@
         system_started: 'text-green-600',
         system_reset: 'text-orange-600',
         external_input_received: 'text-pink-600',
-        feeding_received: 'text-amber-600'
+        feeding_received: 'text-amber-600',
+        connection_created: 'text-yellow-600'
       };
 
       const typeIcons = {
@@ -7386,7 +7414,8 @@
         system_started: '▶',
         system_reset: '🔄',
         external_input_received: '📨',
-        feeding_received: '🍜'
+        feeding_received: '🍜',
+        connection_created: '🔗'
       };
 
       eventList.innerHTML = events.slice(0, 50).map((e, idx) => {
@@ -7422,7 +7451,7 @@
         capability_created: '★', node_type_discovered: '🆕', custom_node_created: '✧',
         seek_started: '🔍', narrator_update: '🎙', inner_voice: '💭',
         awakening: '🌅', system_started: '▶', system_reset: '🔄',
-        external_input_received: '📨', feeding_received: '🍜'
+        external_input_received: '📨', feeding_received: '🍜', connection_created: '🔗'
       };
 
       document.getElementById('modal-icon').textContent = typeIcons[e.type] || '•';
