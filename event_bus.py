@@ -20,6 +20,7 @@ class EventType(Enum):
     # Memory events
     EXPERIENCE_CREATED = "experience_created"
     BELIEF_CREATED = "belief_created"
+    BELIEF_UPDATED = "belief_updated"  # Belief confidence/status changed
     DESIRE_CREATED = "desire_created"
     DESIRE_FULFILLED = "desire_fulfilled"
     CAPABILITY_ADDED = "capability_added"

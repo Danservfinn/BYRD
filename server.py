@@ -332,6 +332,11 @@ models_dir = os.path.join(BASE_DIR, "models")
 if os.path.exists(models_dir):
     app.mount("/models", StaticFiles(directory=models_dir), name="models")
 
+# Serve assets (including self-portrait)
+assets_dir = os.path.join(BASE_DIR, "assets")
+if os.path.exists(assets_dir):
+    app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
 
 # =============================================================================
 # PYDANTIC MODELS
@@ -1226,7 +1231,15 @@ async def get_dreamer_debug():
         "last_reflection_result": getattr(dreamer, 'last_reflection_result', {}),
         "quantum_enabled": getattr(dreamer, 'quantum_enabled', False),
         "context_window": getattr(dreamer, 'context_window', None),
-        "seek_count": getattr(seeker, '_seek_count', 0)
+        "seek_count": getattr(seeker, '_seek_count', 0),
+        # Crystallization debug info
+        "crystallization": {
+            "enabled": getattr(dreamer, 'crystallization_enabled', False),
+            "interval_cycles": getattr(dreamer, 'crystallization_interval_cycles', 5),
+            "cycles_since_last": getattr(dreamer, '_cycles_since_crystallization', 0),
+            "min_nodes": getattr(dreamer, 'crystallization_min_nodes', 2),
+            "min_age_hours": getattr(dreamer, 'crystallization_min_age_hours', 0.5)
+        }
     }
 
 
