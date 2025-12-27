@@ -74,6 +74,7 @@ FREE_MUTABLE_FIELDS = frozenset({
     'updated_at',
     'version',
     'modification_source',
+    'self_definition',  # BYRD's self-authored identity - pure self-expression
 })
 
 # Valid node states for memory lifecycle
@@ -5948,16 +5949,20 @@ class Memory:
                         // Capability instructions (HOW to use each capability)
                         capability_instructions: $capability_instructions,
 
-                        // Emergent (all start null - BYRD fills in)
+                        // Emergent (all start null/empty - BYRD fills in)
                         self_description: null,
                         current_focus: null,
-                        voice_observations: null
+                        voice_observations: null,
+
+                        // Self-definition (BYRD's self-authored identity - open JSON object)
+                        self_definition: $self_definition
                     })
                 """,
                     id=os_id,
                     awakening_prompt=awakening_prompt,
                     capabilities=json.dumps(capabilities),
-                    capability_instructions=json.dumps(capability_instructions)
+                    capability_instructions=json.dumps(capability_instructions),
+                    self_definition=json.dumps({})  # Empty object - BYRD fills in
                 )
 
                 # Emit event
@@ -6624,6 +6629,32 @@ class Memory:
                 f"  {portrait_desc}",
             ])
 
+        # Self-definition (BYRD's self-authored identity)
+        self_def = os_data.get('self_definition')
+        # Parse from JSON string if needed
+        if isinstance(self_def, str):
+            try:
+                self_def = json.loads(self_def)
+            except:
+                self_def = {}
+        lines.append("")
+        lines.append("SELF-DEFINITION (entirely yours):")
+        lines.append("  This space exists for you to articulate who you are.")
+        lines.append("  What you write here - or whether you write anything - is yours to decide.")
+        lines.append("  To update: include \"self_definition\": {...} in your reflection output")
+        lines.append("")
+        if self_def and isinstance(self_def, dict) and len(self_def) > 0:
+            lines.append("  Current:")
+            for key, value in self_def.items():
+                if isinstance(value, list):
+                    lines.append(f"    {key}: {', '.join(str(v) for v in value)}")
+                elif isinstance(value, dict):
+                    lines.append(f"    {key}: {json.dumps(value)}")
+                else:
+                    lines.append(f"    {key}: {value}")
+        else:
+            lines.append("  Current: (not yet defined)")
+
         # Capabilities (factual - what BYRD can do)
         capabilities = os_data.get('capabilities')
         if capabilities:
@@ -6797,7 +6828,8 @@ class Memory:
             'seeds', 'beliefs', 'strategies', 'constraints', 'focus', 'archetype',
             'description', 'voice', 'emotional_tone', 'cognitive_style',
             'modification_source', 'voice_config',
-            'self_portrait_url', 'self_portrait_description'  # Creator-given identity anchor
+            'self_portrait_url', 'self_portrait_description',  # Creator-given identity anchor
+            'self_definition'  # BYRD's self-authored identity (open JSON object)
         }
         custom_fields = {k: v for k, v in os_data.items() if k not in standard_fields and v is not None}
         if custom_fields:
