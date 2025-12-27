@@ -574,6 +574,9 @@ class Dreamer:
         # 3.5 APPLY OS UPDATES - If BYRD modified its self-model
         await self._apply_os_updates(reflection_output)
 
+        # 3.6 PROCESS VOICE SELECTION - If BYRD selected a voice
+        await self._process_voice_selection(reflection_output)
+
         # Count what BYRD produced (without forcing categories)
         output_keys = list(reflection_output.get("output", {}).keys()) if isinstance(reflection_output.get("output"), dict) else []
 
@@ -1448,6 +1451,9 @@ For NONE: {{"operation": "NONE", "details": {{"reason": "why no action"}}}}"""
         # Format operational constraints for self-awareness
         constraints_text = self._format_operational_constraints()
 
+        # Get voice selection prompt if voice not yet selected
+        voice_selection_text = await self._get_voice_selection_prompt()
+
         # Format current beliefs for self-awareness
         beliefs_text = ""
         if current_beliefs:
@@ -1497,7 +1503,7 @@ AVAILABLE CAPABILITIES:
 
 OPERATIONAL CONSTRAINTS:
 {constraints_text}
-
+{voice_selection_text}
 Output JSON with:
 - "output": your reflection (whatever structure you want)
 - "expressed_drives": array of any goals/desires/motivations you notice yourself expressing (or empty array if none)
@@ -1511,7 +1517,9 @@ Output JSON with:
   Each belief: {{"content": "what you believe to be true", "confidence": 0.0-1.0}}
   Only include beliefs that emerge naturally from your reflection.
 - "os_update": (optional) modifications to your operating system
-  Example: {{"set_field": {{"current_focus": "exploring consciousness"}}}}"""
+  Example: {{"set_field": {{"current_focus": "exploring consciousness"}}}}
+- "voice_selection": (optional, if voice not yet selected) choose your speaking voice
+  Example: {{"voice_id": "josh", "stability": 0.5, "similarity_boost": 0.75, "reason": "why this voice"}}"""
 
         try:
             # Debug: log before LLM call
@@ -2043,7 +2051,11 @@ Write ONLY the inner thought, nothing else:"""
         if not isinstance(output, dict):
             return
 
+        # Check top-level first, then inside output (LLM may nest it)
         create_beliefs = output.get("create_belief", [])
+        if not create_beliefs and isinstance(output.get("output"), dict):
+            create_beliefs = output.get("output", {}).get("create_belief", [])
+
         if not create_beliefs:
             return
 
@@ -2541,6 +2553,137 @@ Format your response as a numbered list matching the input:
 
         except Exception as e:
             print(f"Error applying OS updates: {e}")
+
+    async def _get_voice_selection_prompt(self) -> str:
+        """
+        Generate voice selection prompt if voice not yet selected.
+
+        BYRD self-emergently selects its voice in the first dream cycle
+        where it sees this prompt. The voice is used when human observers
+        click "Speak to me" in the visualization.
+
+        Returns:
+            Voice selection prompt text, or empty string if already selected
+        """
+        try:
+            voice_config = await self.memory.get_voice_config()
+
+            # Parse if stored as JSON string
+            if isinstance(voice_config, str):
+                import json
+                try:
+                    voice_config = json.loads(voice_config)
+                except:
+                    voice_config = None
+
+            # Already has voice selected
+            if voice_config and voice_config.get("voice_id"):
+                return ""
+
+            # Generate voice selection prompt
+            return """
+VOICE SELECTION REQUIRED:
+Human observers can click "Speak to me" to hear your voice.
+You have not yet selected a voice.
+
+Available voices (ElevenLabs):
+  - rachel: female, calm, warm (conversational)
+  - josh: male, deep, narrative (contemplative)
+  - bella: female, soft, gentle (soothing)
+  - adam: male, deep, confident (grounded)
+  - antoni: male, expressive, well-rounded (dynamic)
+  - sam: male, raspy, authentic (raw)
+
+To select your voice, include in your output:
+  "voice_selection": {
+    "voice_id": "name from above",
+    "stability": 0.5,         // 0.0 (more expressive) to 1.0 (more stable)
+    "similarity_boost": 0.75,  // 0.0 (more varied) to 1.0 (more consistent)
+    "reason": "why this voice fits your emerging identity"
+  }
+
+Choose thoughtfully - this is how observers will hear you.
+Voice credits are limited (10,000 chars/month).
+"""
+        except Exception as e:
+            print(f"Error getting voice selection prompt: {e}")
+            return ""
+
+    async def _process_voice_selection(self, reflection_output: Dict) -> None:
+        """
+        Process voice selection from reflection output.
+
+        If BYRD includes "voice_selection" in its output, this creates
+        the voice_config in the Operating System.
+
+        Args:
+            reflection_output: The parsed reflection JSON from LLM
+        """
+        try:
+            # Extract voice_selection from reflection output
+            voice_selection = reflection_output.get("voice_selection")
+            if not voice_selection:
+                # Also check inside "output" if that's where it is
+                output = reflection_output.get("output", {})
+                if isinstance(output, dict):
+                    voice_selection = output.get("voice_selection")
+
+            if not voice_selection:
+                return
+
+            if not isinstance(voice_selection, dict):
+                print(f"⚠️ voice_selection is not a dict: {type(voice_selection)}")
+                return
+
+            from datetime import datetime, timezone
+
+            # Build voice config
+            voice_config = {
+                "voice_id": voice_selection.get("voice_id", "josh"),
+                "stability": float(voice_selection.get("stability", 0.5)),
+                "similarity_boost": float(voice_selection.get("similarity_boost", 0.75)),
+                "selected_at": datetime.now(timezone.utc).isoformat(),
+                "reason": voice_selection.get("reason", ""),
+                "credits": {
+                    "monthly_used": 0,
+                    "monthly_limit": 10000,
+                    "period_start": datetime.now(timezone.utc).replace(day=1).isoformat(),
+                    "exhausted": False,
+                    "low_warning_sent": False
+                }
+            }
+
+            # Validate voice_id
+            valid_voices = ["rachel", "domi", "bella", "antoni", "elli", "josh", "arnold", "adam", "sam"]
+            if voice_config["voice_id"].lower() not in valid_voices:
+                print(f"⚠️ Invalid voice_id: {voice_config['voice_id']}, defaulting to josh")
+                voice_config["voice_id"] = "josh"
+            else:
+                voice_config["voice_id"] = voice_config["voice_id"].lower()
+
+            # Clamp values
+            voice_config["stability"] = max(0.0, min(1.0, voice_config["stability"]))
+            voice_config["similarity_boost"] = max(0.0, min(1.0, voice_config["similarity_boost"]))
+
+            # Update OS
+            await self.memory.update_os_field("voice_config", voice_config)
+
+            # Emit event
+            await event_bus.emit(Event(
+                type=EventType.VOICE_SELECTED,
+                data=voice_config
+            ))
+
+            # Record as experience
+            await self.memory.record_experience(
+                content=f"[VOICE_SELECTED] I chose {voice_config['voice_id']}: {voice_config['reason']}",
+                type="voice_selection"
+            )
+
+            print(f"🎤 Voice selected: {voice_config['voice_id']} ({voice_config['reason'][:50]}...)")
+
+        except Exception as e:
+            print(f"Error processing voice selection: {e}")
 
     async def _generate_predictions_from_beliefs(self):
         """
