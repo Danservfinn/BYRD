@@ -332,6 +332,11 @@ models_dir = os.path.join(BASE_DIR, "models")
 if os.path.exists(models_dir):
     app.mount("/models", StaticFiles(directory=models_dir), name="models")
 
+# Serve assets (including self-portrait)
+assets_dir = os.path.join(BASE_DIR, "assets")
+if os.path.exists(assets_dir):
+    app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
 
 # =============================================================================
 # PYDANTIC MODELS
