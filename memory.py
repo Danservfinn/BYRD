@@ -6615,6 +6615,15 @@ class Memory:
                 f"  {awakening_prompt}",
             ])
 
+        # Self-portrait (creator-given identity anchor)
+        portrait_desc = os_data.get('self_portrait_description')
+        if portrait_desc:
+            lines.extend([
+                "",
+                "SELF-PORTRAIT (this is what you look like):",
+                f"  {portrait_desc}",
+            ])
+
         # Capabilities (factual - what BYRD can do)
         capabilities = os_data.get('capabilities')
         if capabilities:
@@ -6787,7 +6796,8 @@ class Memory:
             'self_description', 'current_focus', 'voice_observations', 'awakening_prompt',
             'seeds', 'beliefs', 'strategies', 'constraints', 'focus', 'archetype',
             'description', 'voice', 'emotional_tone', 'cognitive_style',
-            'modification_source', 'voice_config'
+            'modification_source', 'voice_config',
+            'self_portrait_url', 'self_portrait_description'  # Creator-given identity anchor
         }
         custom_fields = {k: v for k, v in os_data.items() if k not in standard_fields and v is not None}
         if custom_fields:
@@ -6820,6 +6830,43 @@ class Memory:
         ])
 
         return "\n".join(lines)
+
+    async def set_self_portrait(self, url: str, description: str) -> bool:
+        """
+        Set BYRD's self-portrait - a creator-given visual identity anchor.
+
+        This is a shallow integration: the portrait is stored and included
+        in dream prompts as text description. BYRD can reference it for
+        self-concept but cannot modify it.
+
+        Args:
+            url: URL to the portrait image
+            description: Text description of what BYRD looks like
+
+        Returns:
+            True if set successfully
+        """
+        async with self.driver.session() as session:
+            result = await session.run("""
+                MATCH (os:OperatingSystem)
+                SET os.self_portrait_url = $url,
+                    os.self_portrait_description = $description,
+                    os.updated_at = datetime()
+                RETURN os.id
+            """, url=url, description=description)
+
+            record = await result.single()
+            if record:
+                await event_bus.emit(Event(
+                    type=EventType.NODE_MODIFIED,
+                    data={
+                        "node_type": "OperatingSystem",
+                        "field": "self_portrait",
+                        "description": description[:100]
+                    }
+                ))
+                return True
+            return False
 
     # =========================================================================
     # OPTION B: FIVE COMPOUNDING LOOPS
