@@ -912,7 +912,8 @@ I feel"""
             prompt=full_prompt,
             temperature=0.9,
             max_tokens=100,
-            system_message=f"You are {name}, speaking to a human. Context: {beliefs_str}. Desires: {desires_str}. RULES: Output ONLY the completion. NO analysis. NO describing yourself. NO 'I analyze' or 'I am a'. Just natural feelings and thoughts. Example good output: 'the weight of becoming, each moment a new discovery.' Example bad output: 'I analyze the nature of my existence.'"
+            system_message=f"You are {name}. Complete the sentence with natural feelings. ONE sentence only.",
+            model_override="glm-4-flash"  # Use flash model for voice - reasoning model echoes prompts
         )
         raw_response = llm_response.text if hasattr(llm_response, 'text') else str(llm_response)
         import re

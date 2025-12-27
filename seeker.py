@@ -26,6 +26,7 @@ from aitmpl_client import AitmplClient, AitmplTemplate
 from installers import get_installer
 from constitutional import ConstitutionalConstraints
 from llm_client import LLMClient
+from capability_registry import CapabilityRegistry, Capability
 
 # Try to import event_bus, but make it optional
 try:
@@ -133,11 +134,21 @@ class Seeker:
         self._observed_themes: Dict[str, int] = {}  # theme -> count
         self._pattern_threshold = 1  # Crystallize immediately (was 3)
         self._source_trust: Dict[str, float] = {}  # source -> trust (learned)
+
+        # Capability Registry - dynamic action menu
+        self.capability_registry = CapabilityRegistry(memory=memory, llm_client=llm_client)
+        self._registry_loaded = False
     
     async def run(self):
         """Main seek loop with skip-if-no-new-reflections optimization."""
         self._running = True
         print(f"🔍 Seeker starting (interval: {self.interval_seconds}s, concurrent: {self.max_concurrent_desires})...")
+
+        # Load capability registry
+        if not self._registry_loaded:
+            await self.capability_registry.load()
+            self._registry_loaded = True
+            print(f"📋 Capability menu ready ({len(self.capability_registry.get_all_capabilities())} actions)")
 
         # Load persistent seek count from database
         self._seek_count = await self.memory.get_system_counter("seek_count")

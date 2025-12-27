@@ -6882,6 +6882,45 @@ class Memory:
             print(f"Error updating OS field {field}: {e}")
             return False
 
+    async def get_os_capabilities(self) -> Dict[str, Any]:
+        """
+        Get the capability menu data from the OS node.
+
+        Returns:
+            Dictionary of capability_id -> capability_data, or empty dict
+        """
+        try:
+            os_data = await self.get_operating_system()
+            if os_data:
+                caps = os_data.get("capabilities", {})
+                if isinstance(caps, dict):
+                    return caps
+        except Exception as e:
+            print(f"Error getting OS capabilities: {e}")
+        return {}
+
+    async def update_os_capabilities(self, capabilities: Dict[str, Any]) -> bool:
+        """
+        Update the capability menu in the OS node.
+
+        This stores capability statistics and any BYRD-created capabilities.
+
+        Args:
+            capabilities: Dictionary of capability_id -> capability_data
+
+        Returns:
+            True if successful
+        """
+        return await self.update_os_field("capabilities", capabilities)
+
+    async def get_os_data(self) -> Optional[Dict[str, Any]]:
+        """
+        Get all OS data as a dictionary.
+
+        Alias for get_operating_system() for cleaner API.
+        """
+        return await self.get_operating_system()
+
     async def get_os_for_prompt(self) -> str:
         """
         Format the Operating System for inclusion in dreamer prompts.
