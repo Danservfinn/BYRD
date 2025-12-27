@@ -355,6 +355,15 @@ class OSStatus(BaseModel):
     awakening_prompt: Optional[str] = None
     self_description: Optional[str] = None  # BYRD's self-discovered description
     current_focus: Optional[str] = None     # What BYRD is currently focused on
+    self_portrait_url: Optional[str] = None  # Creator-given visual identity
+    self_portrait_description: Optional[str] = None  # Text description of appearance
+
+
+class PortraitRequest(BaseModel):
+    """Request to set BYRD's self-portrait."""
+    url: str  # URL to the portrait image
+    description: str  # Text description of what BYRD looks like
+
 
 class StatusResponse(BaseModel):
     running: bool
@@ -578,7 +587,9 @@ async def get_status():
                     version=os_data.get("version", 1),
                     awakening_prompt=os_data.get("awakening_prompt"),
                     self_description=os_data.get("self_description"),
-                    current_focus=os_data.get("current_focus")
+                    current_focus=os_data.get("current_focus"),
+                    self_portrait_url=os_data.get("self_portrait_url"),
+                    self_portrait_description=os_data.get("self_portrait_description")
                 )
         except Exception as e:
             print(f"Error getting OS status: {e}")
@@ -1766,6 +1777,69 @@ async def awaken_byrd(request: AwakenRequest = None):
             success=False,
             message=f"Awakening failed: {str(e)}"
         )
+
+
+# =============================================================================
+# SELF-PORTRAIT ENDPOINT
+# =============================================================================
+
+@app.post("/api/portrait")
+async def set_portrait(request: PortraitRequest):
+    """
+    Set BYRD's self-portrait - a creator-given visual identity anchor.
+
+    The portrait is stored in the OS node and included in dream prompts
+    as a text description. BYRD can reference it for self-concept.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        success = await byrd_instance.memory.set_self_portrait(
+            url=request.url,
+            description=request.description
+        )
+
+        if success:
+            return {
+                "success": True,
+                "message": "Self-portrait set successfully",
+                "url": request.url,
+                "description": request.description[:100] + "..." if len(request.description) > 100 else request.description
+            }
+        else:
+            return {
+                "success": False,
+                "message": "Failed to set portrait - OS node may not exist"
+            }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/portrait")
+async def get_portrait():
+    """Get BYRD's current self-portrait."""
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        os_data = await byrd_instance.memory.get_operating_system()
+        if not os_data:
+            return {"success": False, "message": "No OS node found"}
+
+        return {
+            "success": True,
+            "url": os_data.get("self_portrait_url"),
+            "description": os_data.get("self_portrait_description")
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # =============================================================================
