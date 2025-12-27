@@ -81,10 +81,12 @@ def main():
         "config.yaml", "requirements.txt",
         "byrd-3d-visualization.html",
         "byrd-architecture.html",
+        # Architecture documentation (for self-reading)
+        "ARCHITECTURE.md",
     ]
 
     # Copy directories
-    dirs_to_copy = ["installers", "kernel", "models"]
+    dirs_to_copy = ["installers", "kernel", "models", "docs"]
 
     for f in files_to_copy:
         src_file = src / f
