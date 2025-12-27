@@ -1078,6 +1078,243 @@ class Memory:
             """, hint=content_hint, boost=boost)
 
     # =========================================================================
+    # DOCUMENTS (Source files stored as persistent nodes)
+    # =========================================================================
+
+    async def store_document(
+        self,
+        path: str,
+        content: str,
+        doc_type: str = "source",
+        metadata: Optional[Dict] = None
+    ) -> str:
+        """
+        Store a document (source file) as a persistent node in the graph.
+
+        Documents are stored with their full content and can be linked to
+        experiences, beliefs, and other nodes that reference them.
+
+        Args:
+            path: File path (used as unique identifier)
+            content: Full file content
+            doc_type: Type of document (source, architecture, config, etc.)
+            metadata: Additional metadata (file size, line count, etc.)
+
+        Returns:
+            Document node ID
+        """
+        from datetime import datetime, timezone
+        import hashlib
+
+        # Use path hash as stable ID
+        doc_id = f"doc_{hashlib.sha256(path.encode()).hexdigest()[:16]}"
+
+        # Calculate content hash for change detection
+        content_hash = hashlib.sha256(content.encode()).hexdigest()[:32]
+
+        # Prepare metadata
+        meta = metadata or {}
+        line_count = content.count('\n') + 1
+        char_count = len(content)
+
+        async with self.driver.session() as session:
+            # Check if document already exists
+            existing = await session.run("""
+                MATCH (d:Document {id: $id})
+                RETURN d.content_hash as hash, d.version as version
+            """, id=doc_id)
+            record = await existing.single()
+
+            if record:
+                # Document exists - check if content changed
+                old_hash = record["hash"]
+                old_version = record["version"] or 1
+
+                if old_hash == content_hash:
+                    # Content unchanged, just update last_read
+                    await session.run("""
+                        MATCH (d:Document {id: $id})
+                        SET d.last_read = datetime()
+                    """, id=doc_id)
+                    return doc_id
+
+                # Content changed - update document
+                await session.run("""
+                    MATCH (d:Document {id: $id})
+                    SET d.content = $content,
+                        d.content_hash = $hash,
+                        d.updated_at = datetime(),
+                        d.last_read = datetime(),
+                        d.version = $version,
+                        d.line_count = $line_count,
+                        d.char_count = $char_count
+                """, id=doc_id, content=content, hash=content_hash,
+                    version=old_version + 1, line_count=line_count, char_count=char_count)
+
+                # Emit update event
+                await event_bus.emit(Event(
+                    type=EventType.NODE_UPDATED,
+                    data={
+                        "id": doc_id,
+                        "node_type": "Document",
+                        "path": path,
+                        "version": old_version + 1,
+                        "change": "content_updated"
+                    }
+                ))
+            else:
+                # Create new document
+                await session.run("""
+                    CREATE (d:Document {
+                        id: $id,
+                        path: $path,
+                        content: $content,
+                        content_hash: $hash,
+                        doc_type: $doc_type,
+                        created_at: datetime(),
+                        updated_at: datetime(),
+                        last_read: datetime(),
+                        version: 1,
+                        line_count: $line_count,
+                        char_count: $char_count
+                    })
+                """, id=doc_id, path=path, content=content, hash=content_hash,
+                    doc_type=doc_type, line_count=line_count, char_count=char_count)
+
+                # Emit creation event
+                await event_bus.emit(Event(
+                    type=EventType.NODE_CREATED,
+                    data={
+                        "id": doc_id,
+                        "node_type": "Document",
+                        "path": path,
+                        "doc_type": doc_type,
+                        "line_count": line_count
+                    }
+                ))
+
+        return doc_id
+
+    async def get_document(self, path: str) -> Optional[Dict]:
+        """
+        Get a document by its file path.
+
+        Args:
+            path: File path to look up
+
+        Returns:
+            Document node data or None
+        """
+        import hashlib
+        doc_id = f"doc_{hashlib.sha256(path.encode()).hexdigest()[:16]}"
+
+        async with self.driver.session() as session:
+            result = await session.run("""
+                MATCH (d:Document {id: $id})
+                RETURN d
+            """, id=doc_id)
+            record = await result.single()
+            if record:
+                return dict(record["d"])
+            return None
+
+    async def get_document_by_id(self, doc_id: str) -> Optional[Dict]:
+        """Get a document by its node ID."""
+        async with self.driver.session() as session:
+            result = await session.run("""
+                MATCH (d:Document {id: $id})
+                RETURN d
+            """, id=doc_id)
+            record = await result.single()
+            if record:
+                return dict(record["d"])
+            return None
+
+    async def list_documents(self, doc_type: Optional[str] = None) -> List[Dict]:
+        """
+        List all stored documents.
+
+        Args:
+            doc_type: Optional filter by document type
+
+        Returns:
+            List of document metadata (without full content)
+        """
+        if doc_type:
+            query = """
+                MATCH (d:Document {doc_type: $doc_type})
+                RETURN d.id as id, d.path as path, d.doc_type as doc_type,
+                       d.version as version, d.line_count as line_count,
+                       d.last_read as last_read, d.updated_at as updated_at
+                ORDER BY d.last_read DESC
+            """
+            params = {"doc_type": doc_type}
+        else:
+            query = """
+                MATCH (d:Document)
+                RETURN d.id as id, d.path as path, d.doc_type as doc_type,
+                       d.version as version, d.line_count as line_count,
+                       d.last_read as last_read, d.updated_at as updated_at
+                ORDER BY d.last_read DESC
+            """
+            params = {}
+
+        async with self.driver.session() as session:
+            result = await session.run(query, **params)
+            records = await result.data()
+            return records
+
+    async def search_documents(self, search_term: str, limit: int = 10) -> List[Dict]:
+        """
+        Search documents by content or path.
+
+        Args:
+            search_term: Text to search for
+            limit: Maximum results
+
+        Returns:
+            List of matching documents with relevance info
+        """
+        async with self.driver.session() as session:
+            result = await session.run("""
+                MATCH (d:Document)
+                WHERE toLower(d.content) CONTAINS toLower($term)
+                   OR toLower(d.path) CONTAINS toLower($term)
+                RETURN d.id as id, d.path as path, d.doc_type as doc_type,
+                       d.version as version, d.line_count as line_count
+                LIMIT $limit
+            """, term=search_term, limit=limit)
+            records = await result.data()
+            return records
+
+    async def link_document_to_node(
+        self,
+        doc_id: str,
+        node_id: str,
+        relationship: str = "REFERENCES"
+    ) -> bool:
+        """
+        Create a relationship between a document and another node.
+
+        Args:
+            doc_id: Document node ID
+            node_id: Target node ID
+            relationship: Relationship type (REFERENCES, DERIVED_FROM, etc.)
+
+        Returns:
+            True if link created successfully
+        """
+        async with self.driver.session() as session:
+            result = await session.run(f"""
+                MATCH (d:Document {{id: $doc_id}})
+                MATCH (n {{id: $node_id}})
+                MERGE (n)-[r:{relationship}]->(d)
+                RETURN count(r) as created
+            """, doc_id=doc_id, node_id=node_id)
+            record = await result.single()
+            return record and record["created"] > 0
+
+    # =========================================================================
     # DESIRES
     # =========================================================================
     

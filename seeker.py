@@ -2721,20 +2721,35 @@ Your thought (1-2 sentences only, no quotes):"""
         # Remove duplicates while preserving order
         target_files = list(dict.fromkeys(target_files))
 
-        # Read the target file(s)
+        # Read the target file(s) and store as Document nodes
         source_contents = []
+        stored_doc_ids = []
         for filepath in target_files[:3]:  # Limit to 3 files to avoid token overflow
             try:
                 if os.path.exists(filepath) and is_readable_file(filepath):
                     with open(filepath, 'r') as f:
-                        content = f.read()
-                    # Truncate large files to key sections
+                        full_content = f.read()
+
+                    # Store full document in graph (before any truncation)
+                    rel_path = os.path.relpath(filepath, base_dir)
+                    doc_type = "architecture" if rel_path.endswith('.md') else "source"
+                    try:
+                        doc_id = await self.memory.store_document(
+                            path=rel_path,
+                            content=full_content,
+                            doc_type=doc_type
+                        )
+                        stored_doc_ids.append(doc_id)
+                        print(f"   📄 Stored Document node: {rel_path}")
+                    except Exception as de:
+                        print(f"   ⚠️ Failed to store document {rel_path}: {de}")
+
+                    # Truncate for synthesis (context window limits)
+                    content = full_content
                     if len(content) > 15000:
-                        # Include first ~300 lines
                         lines = content.split('\n')
                         content = '\n'.join(lines[:300]) + f"\n\n... [{len(lines) - 300} more lines truncated] ..."
-                    filename = os.path.basename(filepath)
-                    rel_path = os.path.relpath(filepath, base_dir)
+
                     source_contents.append(f"=== {rel_path} ===\n\n{content}")
                     print(f"   📄 Read: {rel_path}")
             except Exception as e:
@@ -2785,6 +2800,13 @@ Respond in first person as BYRD, sharing your understanding. Be specific about c
             content=f"[INTROSPECTION] {description}\n\nFiles examined: {', '.join(files_read)}\n\nUnderstanding:\n{synthesis}",
             type="self_architecture"
         )
+
+        # Link experience to Document nodes it references
+        for doc_id in stored_doc_ids:
+            try:
+                await self.memory.link_document_to_node(doc_id, exp_id, "REFERENCES")
+            except Exception as le:
+                print(f"   ⚠️ Failed to link doc {doc_id} to experience: {le}")
 
         # Mark desire fulfilled
         if desire_id:
