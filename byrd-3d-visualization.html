@@ -1575,33 +1575,33 @@
     // Relationship visual styles - dark grey for sacred geometry aesthetic
     const RELATIONSHIP_STYLES = {
         DERIVED_FROM: {
-            color: 0x404040,    // Dark grey
-            opacity: 0.6,
+            color: 0x6366f1,    // Indigo - visible against light background
+            opacity: 0.7,
             width: 2
         },
         RELATES_TO: {
-            color: 0x404040,    // Dark grey
-            opacity: 0.4,
+            color: 0x8b5cf6,    // Purple
+            opacity: 0.5,
             width: 1
         },
         FULFILLS: {
-            color: 0x404040,    // Dark grey
+            color: 0x10b981,    // Emerald
             opacity: 0.7,
             width: 2
         },
         REFLECTS_ON: {
-            color: 0x404040,    // Dark grey
-            opacity: 0.5,
-            width: 1.5
-        },
-        EMERGES_FROM: {
-            color: 0x404040,    // Dark grey
+            color: 0x6366f1,    // Indigo
             opacity: 0.6,
             width: 1.5
         },
+        EMERGES_FROM: {
+            color: 0xf59e0b,    // Amber
+            opacity: 0.7,
+            width: 1.5
+        },
         default: {
-            color: 0x404040,    // Dark grey
-            opacity: 0.5,
+            color: 0x94a3b8,    // Slate grey - still visible
+            opacity: 0.6,
             width: 1
         }
     };
@@ -9181,7 +9181,11 @@
 
         // Create relationship lines (only for visible nodes)
         let relsCreated = 0;
+        let relsSkipped = 0;
+        let relsMissingNodes = 0;
         if (data.relationships) {
+          console.log(`Processing ${data.relationships.length} relationships...`);
+          console.log(`graphState.nodeIdToMesh has ${graphState.nodeIdToMesh.size} entries`);
           const visibleNodeIds = new Set(filteredNodes.map(n => n.id));
           data.relationships.forEach(rel => {
             // Backend returns source_id/target_id
@@ -9189,11 +9193,17 @@
             const targetId = rel.target_id;
             // Only create relationships where both nodes are visible
             if (visibleNodeIds.has(sourceId) && visibleNodeIds.has(targetId)) {
-              if (createRelationshipLine(rel)) {
+              const line = createRelationshipLine(rel);
+              if (line) {
                 relsCreated++;
+              } else {
+                relsMissingNodes++;
               }
+            } else {
+              relsSkipped++;
             }
           });
+          console.log(`Relationships: ${relsCreated} created, ${relsMissingNodes} missing nodes, ${relsSkipped} filtered`);
         }
 
         // Update all type counts to reflect rendered nodes
