@@ -638,13 +638,34 @@ websockets>=12.0      # WebSocket support
 ## Environment Variables
 
 ```bash
+# LLM Providers
 ANTHROPIC_API_KEY     # Required for Actor (Claude API)
-ZAI_API_KEY           # Required for Z.AI provider
+ZAI_API_KEY           # Required for Z.AI provider (primary LLM)
 OPENROUTER_API_KEY    # Required for OpenRouter provider
+
+# Neo4j Database
 NEO4J_URI             # Neo4j connection (default: bolt://localhost:7687)
 NEO4J_USER            # Neo4j username (default: neo4j)
 NEO4J_PASSWORD        # Neo4j password (default: prometheus)
+
+# Voice (ElevenLabs TTS)
+ELEVENLABS_API_KEY    # For BYRD's voice (10k chars/month free)
+
+# Other Services
 SEARXNG_URL           # SearXNG endpoint (default: https://searx.be)
+```
+
+### Cloud Deployment (Current)
+
+**Live instance**: https://omoplatapus-byrd.hf.space
+
+```bash
+# Production environment (HuggingFace Space secrets)
+NEO4J_URI=neo4j+s://9b21f7a8.databases.neo4j.io
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=<set in HF secrets>
+ZAI_API_KEY=<set in HF secrets>
+ELEVENLABS_API_KEY=<set in HF secrets>
 ```
 
 ## Git Workflow

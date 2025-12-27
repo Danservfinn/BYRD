@@ -5,9 +5,10 @@ Deploy BYRD online for free using free-tier cloud services.
 ## Live Instance
 
 **BYRD is currently deployed at:**
-- **Space**: https://huggingface.co/spaces/omoplatapus/byrd-ai
-- **Visualization**: https://omoplatapus-byrd-ai.hf.space/byrd-3d-visualization.html
-- **API**: https://omoplatapus-byrd-ai.hf.space/api/status
+- **Space**: https://huggingface.co/spaces/omoplatapus/byrd
+- **Visualization**: https://omoplatapus-byrd.hf.space/byrd-3d-visualization.html
+- **API**: https://omoplatapus-byrd.hf.space/api/status
+- **Neo4j Aura**: neo4j+s://9b21f7a8.databases.neo4j.io
 
 ## Architecture Overview
 

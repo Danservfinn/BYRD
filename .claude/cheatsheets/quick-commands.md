@@ -17,10 +17,10 @@ export HF_TOKEN="hf_your_token"
 python deploy_huggingface.py
 
 # Control live instance
-curl -X POST https://omoplatapus-byrd-ai.hf.space/api/start
-curl -X POST https://omoplatapus-byrd-ai.hf.space/api/stop
-curl -X POST https://omoplatapus-byrd-ai.hf.space/api/awaken
-curl https://omoplatapus-byrd-ai.hf.space/api/status
+curl -X POST https://omoplatapus-byrd.hf.space/api/start
+curl -X POST https://omoplatapus-byrd.hf.space/api/stop
+curl -X POST https://omoplatapus-byrd.hf.space/api/awaken
+curl https://omoplatapus-byrd.hf.space/api/status
 ```
 
 ## Setup
@@ -61,11 +61,11 @@ python server.py
 ### Cloud (Live Instance)
 | Service | URL | Purpose |
 |---------|-----|---------|
-| Visualization | https://omoplatapus-byrd-ai.hf.space/byrd-3d-visualization.html | 3D mind view |
-| Architecture | https://omoplatapus-byrd-ai.hf.space/byrd-architecture.html | System modules |
-| API | https://omoplatapus-byrd-ai.hf.space/api/status | REST API |
-| WebSocket | wss://omoplatapus-byrd-ai.hf.space/ws/events | Event streaming |
-| Neo4j Aura | neo4j+s://e67da195.databases.neo4j.io | Cloud graph DB |
+| Visualization | https://omoplatapus-byrd.hf.space/byrd-3d-visualization.html | 3D mind view |
+| Architecture | https://omoplatapus-byrd.hf.space/byrd-architecture.html | System modules |
+| API | https://omoplatapus-byrd.hf.space/api/status | REST API |
+| WebSocket | wss://omoplatapus-byrd.hf.space/ws/events | Event streaming |
+| Neo4j Aura | neo4j+s://9b21f7a8.databases.neo4j.io | Cloud graph DB |
 
 ### Local Development
 | Service | URL | Purpose |

@@ -164,7 +164,7 @@ Set these secrets in Space Settings:
 ⚙️  IMPORTANT: Configure secrets in Space Settings:
    1. Go to: https://huggingface.co/spaces/{repo_id}/settings
    2. Add these secrets:
-      - NEO4J_URI = neo4j+s://e67da195.databases.neo4j.io
+      - NEO4J_URI = neo4j+s://9b21f7a8.databases.neo4j.io
       - NEO4J_USER = neo4j
       - NEO4J_PASSWORD = <your-neo4j-password>
       - ZAI_API_KEY = <your-zai-api-key>
