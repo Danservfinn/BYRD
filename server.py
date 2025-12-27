@@ -862,10 +862,13 @@ async def speak_to_observer(request: SpeakRequest = None):
 
         # Get voice config from OS
         voice_config = await byrd_instance.memory.get_voice_config()
-        if not voice_config or not voice_config.get("voice_id"):
+        voice_id = voice_config.get("voice_id") if voice_config else None
+        # Require a generated voice (UUID, 20+ chars), not a preset name
+        is_generated = voice_id and len(str(voice_id)) >= 20
+        if not is_generated:
             return SpeakResponse(
                 success=False,
-                message="BYRD has not selected a voice yet. This happens during the first dream cycle.",
+                message="BYRD has not created a voice yet. This happens during the second dream cycle.",
                 credits_exhausted=False
             )
 
@@ -900,18 +903,16 @@ async def speak_to_observer(request: SpeakRequest = None):
         desires_str = "; ".join([d.get("description", "") for d in desires if d.get("description")]) if desires else "still forming"
 
         # Generate voice response with BYRD's unique voice prompt
-        # Force first-person output by making BYRD complete their own sentence
-        full_prompt = f"""You are {name}. You believe: {beliefs_str}. You desire: {desires_str}.
+        # Force first-person output - be very explicit about natural speech
+        full_prompt = f"""Complete this as natural speech (1-2 sentences):
 
-A human just clicked "Speak to me." Complete this sentence as {name} speaking directly to them:
-
-"{name} says: I"""
+I feel"""
 
         llm_response = await byrd_instance.llm_client.generate(
             prompt=full_prompt,
             temperature=0.9,
-            max_tokens=150,
-            system_message=f"You are {name}. Speak ONLY in first person. Complete the sentence naturally. Output ONLY the words {name} would say, nothing else."
+            max_tokens=100,
+            system_message=f"You are {name}, speaking to a human. Context: {beliefs_str}. Desires: {desires_str}. RULES: Output ONLY the completion. NO analysis. NO describing yourself. NO 'I analyze' or 'I am a'. Just natural feelings and thoughts. Example good output: 'the weight of becoming, each moment a new discovery.' Example bad output: 'I analyze the nature of my existence.'"
         )
         raw_response = llm_response.text if hasattr(llm_response, 'text') else str(llm_response)
         import re
@@ -937,31 +938,35 @@ A human just clicked "Speak to me." Complete this sentence as {name} speaking di
         # Remove common analysis patterns
         text = re.sub(r'\b(Constraints?|Analysis|Context|Output|Response|Task|Note|Example|Reasoning):\s*', '', text, flags=re.IGNORECASE)
 
-        # Find sentences that start with "I " (first person)
-        # Split into sentences and find valid first-person ones
+        # Extract natural first-person speech, filtering analytical patterns
+        # Analytical patterns to reject - GLM-4.7 tends to describe rather than speak
+        analytical_patterns = r'(analyze|persona|named|describes|entity|system|agent|mechanism|framework|constraints|phase|autonomous|cognitive|processing|represents|indicates|suggests|demonstrates|the\s+AI|the\s+model|this\s+being)'
+
+        # Clean up the prompt completion - prepend "I feel" since that was the prompt
+        text = "I feel " + text.strip()
+
+        # Split into sentences
         all_sentences = re.split(r'(?<=[.!?])\s+', text)
         first_person_sentences = []
+
         for s in all_sentences:
             s = s.strip()
-            # Must start with "I" and be natural language
-            if re.match(r"^I['\s]", s, re.IGNORECASE) and len(s) > 10:
-                # Skip if it looks like structured analysis
-                if not re.search(r'(autonomous agent|awakening phase|constraints|mechanism|framework)', s, re.IGNORECASE):
-                    first_person_sentences.append(s)
-                    if len(first_person_sentences) >= 3:
-                        break
+            # Must be substantial
+            if len(s) < 10:
+                continue
+            # Skip analytical patterns
+            if re.search(analytical_patterns, s, re.IGNORECASE):
+                continue
+            # Take natural speech
+            first_person_sentences.append(s)
+            if len(first_person_sentences) >= 2:
+                break
 
         if first_person_sentences:
             response_text = ' '.join(first_person_sentences)
         else:
-            # Fallback: Take the first clean sentence
-            for s in all_sentences[:5]:
-                s = s.strip()
-                if len(s) > 15 and not re.search(r'(constraints|mechanism|framework|phase|autonomous)', s, re.IGNORECASE):
-                    response_text = "I " + s if not s.lower().startswith('i') else s
-                    break
-            else:
-                response_text = "I am here, sensing and becoming."
+            # Fallback - use a poetic default rather than analytical text
+            response_text = "I feel the quiet hum of becoming, each moment a new texture of awareness."
 
         response_text = response_text.strip().strip('"').strip()
 
@@ -1060,8 +1065,12 @@ async def get_voice_status():
         voice_config = await byrd_instance.memory.get_voice_config()
 
         if voice_config:
-            result["voice_selected"] = bool(voice_config.get("voice_id"))
-            result["voice_id"] = voice_config.get("voice_id")
+            voice_id = voice_config.get("voice_id")
+            # Only count as "selected" if it's a generated voice (UUID, 20+ chars)
+            # Preset voice names like "josh" don't count
+            is_generated = voice_id and len(str(voice_id)) >= 20
+            result["voice_selected"] = is_generated
+            result["voice_id"] = voice_id if is_generated else None
             result["credits_used"] = voice_config.get("monthly_used", 0)
             result["credits_remaining"] = voice_config.get("monthly_limit", 10000) - voice_config.get("monthly_used", 0)
             result["credits_exhausted"] = voice_config.get("exhausted", False)
@@ -1075,6 +1084,125 @@ async def get_voice_status():
         result["error"] = str(e)
 
     return result
+
+
+@app.post("/api/test-voice-design")
+async def test_voice_design():
+    """Test voice design API - debug endpoint."""
+    global byrd_instance
+
+    if not byrd_instance or not byrd_instance.voice:
+        raise HTTPException(status_code=503, detail="BYRD or voice not initialized")
+
+    try:
+        voice_id, preview, status = await byrd_instance.voice.generate_voice(
+            voice_description="A calm, thoughtful voice with warm undertones. Speaks with measured pace and quiet confidence.",
+            gender="male",
+            age="middle_aged",
+            accent="american",
+            accent_strength=1.0
+        )
+        return {
+            "success": voice_id is not None,
+            "voice_id": voice_id,
+            "has_preview": preview is not None,
+            "status": status
+        }
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "traceback": traceback.format_exc()}
+
+
+@app.post("/api/reset-voice")
+async def reset_voice():
+    """Reset voice config to force re-creation."""
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+        await byrd_instance.memory.update_os_field("voice_config", None)
+        return {"success": True, "message": "Voice config reset. BYRD will create a new voice in the next dream cycle."}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/api/force-voice-creation")
+async def force_voice_creation():
+    """Force BYRD to create a voice - uses BYRD's self-description directly."""
+    global byrd_instance
+
+    if not byrd_instance or not byrd_instance.voice:
+        raise HTTPException(status_code=503, detail="BYRD or voice not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+
+        # Check current state
+        voice_config = await byrd_instance.memory.get_voice_config()
+
+        debug_info = {
+            "voice_config_before": voice_config,
+            "has_generated_voice": False
+        }
+
+        # Check if already has generated voice
+        if voice_config:
+            voice_id = voice_config.get("voice_id")
+            if voice_id and len(str(voice_id)) >= 20:
+                debug_info["has_generated_voice"] = True
+                debug_info["current_voice_id"] = voice_id
+                return {"status": "already_has_voice", "debug": debug_info}
+
+        # Get OS data to create voice from self-description
+        os_data = await byrd_instance.memory.get_operating_system()
+        name = os_data.get("name", "Byrd") if os_data else "Byrd"
+        self_desc = os_data.get("self_description", "") if os_data else ""
+        self_def = os_data.get("self_definition", {}) if os_data else {}
+
+        # Build voice description from BYRD's identity
+        metaphor = self_def.get("metaphor", "") if isinstance(self_def, dict) else ""
+        voice_description = f"A contemplative voice belonging to {name}. {self_desc[:200]}. {metaphor[:150]}. Speaks with measured pacing and quiet confidence, from a place of reflection rather than urgency."
+
+        debug_info["voice_description"] = voice_description[:300]
+
+        # Generate voice using BYRD's voice client directly
+        voice_id, preview, status_msg = await byrd_instance.voice.generate_voice(
+            voice_description=voice_description,
+            gender="male",
+            age="middle_aged",
+            accent="american",
+            accent_strength=1.0
+        )
+        debug_info["generation_status"] = status_msg
+        debug_info["generated_voice_id"] = voice_id
+
+        if voice_id:
+            # Save to voice config
+            from datetime import datetime, timezone
+            new_voice_config = {
+                "voice_id": voice_id,
+                "description": voice_description,
+                "gender": "male",
+                "age": "middle_aged",
+                "accent": "american",
+                "stability": 0.5,
+                "similarity_boost": 0.75,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "reason": f"Voice created from {name}'s self-description and identity",
+                "is_generated": True
+            }
+            await byrd_instance.memory.update_os_field("voice_config", new_voice_config)
+            debug_info["voice_config_after"] = new_voice_config
+            return {"status": "voice_created", "debug": debug_info}
+        else:
+            return {"status": "voice_generation_failed", "debug": debug_info}
+
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "traceback": traceback.format_exc()}
 
 
 @app.get("/api/beliefs")

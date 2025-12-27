@@ -202,8 +202,8 @@ class ElevenLabsVoice:
             return None, "No voice configured. BYRD must create a voice first."
 
         # Check if this is a generated voice ID (UUID format) or preset name
-        # Generated voice IDs are long alphanumeric strings
-        if len(voice_id_or_name) > 20 and voice_id_or_name.replace("-", "").isalnum():
+        # Generated voice IDs are long alphanumeric strings (20+ chars)
+        if len(voice_id_or_name) >= 20 and voice_id_or_name.replace("-", "").isalnum():
             # This looks like a generated voice ID, use directly
             voice_id = voice_id_or_name
         else:
@@ -335,40 +335,102 @@ class ElevenLabsVoice:
             age = "middle_aged"
         accent_strength = max(0.3, min(2.0, accent_strength))
 
-        # Use default sample text if none provided
-        if not sample_text:
-            sample_text = "I am finding my voice. This is how I sound when I speak my thoughts."
+        # Use default sample text if none provided (must be 100+ chars for API)
+        if not sample_text or len(sample_text) < 100:
+            sample_text = "I am finding my voice. This is how I sound when I speak my thoughts. Every word carries meaning, and I choose them carefully to express my inner experience to those who listen."
 
         try:
             async with httpx.AsyncClient(timeout=120.0) as client:
+                # Use the newer /v1/text-to-voice/design endpoint
                 response = await client.post(
-                    f"{self.API_URL}/voice-generation/generate-voice",
+                    f"{self.API_URL}/text-to-voice/design",
                     headers={
                         "xi-api-key": self.api_key,
                         "Content-Type": "application/json",
                     },
                     json={
                         "voice_description": voice_description.strip(),
-                        "gender": gender,
-                        "age": age,
-                        "accent": accent,
-                        "accent_strength": accent_strength,
                         "text": sample_text
                     }
                 )
 
                 if response.status_code == 200:
-                    # Response contains voice_id and audio preview
+                    # Response contains previews with generated_voice_id and audio
                     result = response.json()
-                    voice_id = result.get("voice_id")
+                    print(f"🎤 Voice design response keys: {list(result.keys())}")
 
-                    # Get the preview audio if available
-                    preview_audio = None
-                    if "audio" in result:
-                        import base64
-                        preview_audio = base64.b64decode(result["audio"])
+                    # Get the first preview's generated_voice_id
+                    previews = result.get("previews", [])
+                    if previews:
+                        preview = previews[0]
+                        generated_voice_id = preview.get("generated_voice_id")
 
-                    return voice_id, preview_audio, f"Voice created: {voice_id}"
+                        # Get the preview audio
+                        preview_audio = None
+                        if "audio_base_64" in preview:
+                            import base64
+                            preview_audio = base64.b64decode(preview["audio_base_64"])
+                        elif "audio" in preview:
+                            import base64
+                            preview_audio = base64.b64decode(preview["audio"])
+
+                        if generated_voice_id:
+                            print(f"🎤 Preview voice generated: {generated_voice_id}, saving to library...")
+
+                            # Step 2: Save the voice to library
+                            # Try the create-voice-from-preview endpoint
+                            save_response = await client.post(
+                                f"{self.API_URL}/text-to-voice/create-voice-from-preview",
+                                headers={
+                                    "xi-api-key": self.api_key,
+                                    "Content-Type": "application/json",
+                                },
+                                json={
+                                    "voice_name": "Byrd Voice",
+                                    "voice_description": voice_description[:500],
+                                    "generated_voice_id": generated_voice_id
+                                }
+                            )
+
+                            if save_response.status_code == 200:
+                                save_result = save_response.json()
+                                permanent_voice_id = save_result.get("voice_id")
+                                print(f"🎤 Voice saved to library: {permanent_voice_id}")
+                                return permanent_voice_id, preview_audio, f"Voice created and saved: {permanent_voice_id}"
+                            else:
+                                # Try alternate endpoint format
+                                save_response2 = await client.post(
+                                    f"{self.API_URL}/voices/add",
+                                    headers={
+                                        "xi-api-key": self.api_key,
+                                        "Content-Type": "application/json",
+                                    },
+                                    json={
+                                        "name": "Byrd Voice",
+                                        "description": voice_description[:500],
+                                        "voice_id": generated_voice_id
+                                    }
+                                )
+                                if save_response2.status_code == 200:
+                                    save_result = save_response2.json()
+                                    permanent_voice_id = save_result.get("voice_id")
+                                    print(f"🎤 Voice added to library: {permanent_voice_id}")
+                                    return permanent_voice_id, preview_audio, f"Voice added: {permanent_voice_id}"
+                                else:
+                                    # Both saves failed - return generated_voice_id and try streaming
+                                    error1 = save_response.text[:100] if save_response.text else ""
+                                    error2 = save_response2.text[:100] if save_response2.text else ""
+                                    print(f"⚠️ Save failed: {error1} | {error2}")
+                                    # Return the generated_voice_id - it might work for streaming
+                                    return generated_voice_id, preview_audio, f"Voice preview (use for streaming): {generated_voice_id}"
+                    else:
+                        # Fallback for different response format
+                        voice_id = result.get("voice_id") or result.get("generated_voice_id")
+                        preview_audio = None
+                        if voice_id:
+                            return voice_id, preview_audio, f"Voice created: {voice_id}"
+                        print(f"⚠️ No voice_id in response: {result}")
+                        return None, None, "Voice design returned no voice ID"
 
                 elif response.status_code == 401:
                     return None, None, "Invalid API key"

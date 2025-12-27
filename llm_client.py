@@ -423,6 +423,7 @@ Example format: {"output": {...your reflection...}}"""
         quantum_modulation: bool = False,
         quantum_context: str = "unknown",
         system_message: Optional[str] = None,
+        model_override: Optional[str] = None,
         **kwargs
     ) -> LLMResponse:
         """Generate using Z.AI API with retry on rate limits."""
@@ -443,6 +444,9 @@ Example format: {"output": {...your reflection...}}"""
 
         # Use custom system message if provided, otherwise default
         system_message = system_message if system_message is not None else self._build_system_message()
+
+        # Allow model override for specific use cases (e.g., voice uses glm-4-flash)
+        model_to_use = model_override or self.model
         max_retries = 5
         base_delay = 20  # seconds
         max_delay = 90   # cap delay at 90 seconds
@@ -453,7 +457,7 @@ Example format: {"output": {...your reflection...}}"""
                     self.endpoint,
                     headers=headers,
                     json={
-                        "model": self.model,
+                        "model": model_to_use,
                         "messages": [
                             {"role": "system", "content": system_message},
                             {"role": "user", "content": prompt}

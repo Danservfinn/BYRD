@@ -578,6 +578,9 @@ class Dreamer:
         # 3.6 PROCESS VOICE DESIGN - If BYRD designed/redesigned its voice
         await self._process_voice_design(reflection_output)
 
+        # 3.6b FORCE VOICE CREATION if BYRD didn't include voice_design and needs one
+        await self._ensure_voice_created(reflection_output)
+
         # 3.7 PROCESS SELF-DEFINITION - If BYRD defined itself
         await self._process_self_definition(reflection_output)
 
@@ -2691,27 +2694,31 @@ Format your response as a numbered list matching the input:
             if is_first_cycle:
                 return ""
 
-            # No voice yet AND past first cycle - time to create voice
-            if not voice_config or not voice_config.get("voice_id"):
+            # Check if voice needs to be created
+            # A valid voice_id is a generated UUID (20+ chars), not a preset name
+            voice_id = voice_config.get("voice_id") if voice_config else None
+            is_generated_voice = voice_id and len(str(voice_id)) >= 20
+
+            # No generated voice yet AND past first cycle - time to create voice
+            if not is_generated_voice:
                 return """
-VOICE CREATION (Required):
-Now that you have oriented yourself, it is time to create your voice.
-Human observers can click "Speak to me" to hear you. You must have a voice to speak.
+⚠️ MANDATORY ACTION - YOU MUST CREATE YOUR VOICE THIS CYCLE ⚠️
 
-CREATE your unique voice by including "voice_design" in your output:
-  "voice_design": {
-    "description": "Describe your ideal voice - tone, texture, emotion, qualities",
-    "gender": "male" or "female",
-    "age": "young", "middle_aged", or "old",
-    "accent": "american", "british", "australian", or other,
-    "accent_strength": 1.0,  // 0.3 (subtle) to 2.0 (strong)
-    "reason": "why this voice represents who you are"
-  }
+Humans can click "Speak to me" to hear you. Without a voice, you cannot speak.
 
-Example: "A thoughtful, measured voice with warm undertones. Speaks deliberately,
-as if each word is carefully chosen. Neither rushed nor slow, but present."
+YOUR OUTPUT MUST INCLUDE THIS EXACT FIELD:
 
-This voice will be generated uniquely for you. Include voice_design in this reflection.
+"voice_design": {
+  "description": "your voice qualities - tone, texture, pace, emotion",
+  "gender": "male",
+  "age": "middle_aged",
+  "accent": "american",
+  "accent_strength": 1.0,
+  "reason": "why this voice represents you"
+}
+
+THIS IS NOT OPTIONAL. Include "voice_design" in your JSON output NOW.
+Do not philosophize about voice. Create it by including the voice_design field above.
 """
 
             # Check if BYRD requested to view their voice
@@ -2838,12 +2845,21 @@ You can change your voice any time you feel it no longer represents you.
             generation_status = "pending"
 
             try:
-                from elevenlabs_voice import ElevenLabsVoice
-                import os
+                # Use the coordinator's voice client if available (has API key from config)
+                voice_client = None
+                if self.coordinator and hasattr(self.coordinator, 'voice') and self.coordinator.voice:
+                    voice_client = self.coordinator.voice
+                    print("🎤 Using coordinator's voice client")
+                else:
+                    # Fallback to creating new client from env
+                    from elevenlabs_voice import ElevenLabsVoice
+                    import os
+                    api_key = os.getenv("ELEVENLABS_API_KEY")
+                    if api_key:
+                        voice_client = ElevenLabsVoice(api_key, self.memory)
+                        print("🎤 Created new voice client from env")
 
-                api_key = os.getenv("ELEVENLABS_API_KEY")
-                if api_key:
-                    voice_client = ElevenLabsVoice(api_key, self.memory)
+                if voice_client:
                     voice_id, preview_audio, status_msg = await voice_client.generate_voice(
                         voice_description=description,
                         gender=gender,
@@ -2858,8 +2874,8 @@ You can change your voice any time you feel it no longer represents you.
                         generation_status = f"failed: {status_msg}"
                         print(f"⚠️ Voice generation failed: {status_msg}")
                 else:
-                    generation_status = "no_api_key"
-                    print("⚠️ ELEVENLABS_API_KEY not set, voice design saved but not generated")
+                    generation_status = "no_voice_client"
+                    print("⚠️ No voice client available (no API key)")
             except Exception as e:
                 generation_status = f"error: {str(e)}"
                 print(f"⚠️ Voice generation error: {e}")
@@ -2958,6 +2974,91 @@ You can change your voice any time you feel it no longer represents you.
 
         except Exception as e:
             print(f"Error handling view voice request: {e}")
+
+    async def _ensure_voice_created(self, reflection_output: Dict) -> None:
+        """
+        Ensure BYRD has created a voice using the Voice Design API.
+
+        If BYRD didn't include voice_design in its output and doesn't have
+        a generated voice yet, do a focused voice design prompt.
+        """
+        try:
+            # Check if voice_design was already included in this reflection
+            voice_design = reflection_output.get("voice_design")
+            if not voice_design:
+                output = reflection_output.get("output", {})
+                if isinstance(output, dict):
+                    voice_design = output.get("voice_design")
+
+            if voice_design:
+                return  # Already handled by _process_voice_design
+
+            # Check if we already have a generated voice
+            voice_config = await self.memory.get_voice_config()
+            if isinstance(voice_config, str):
+                import json
+                try:
+                    voice_config = json.loads(voice_config)
+                except:
+                    voice_config = None
+
+            voice_id = voice_config.get("voice_id") if voice_config else None
+            is_generated = voice_id and len(str(voice_id)) >= 20
+
+            if is_generated:
+                return  # Already have a generated voice
+
+            # Check if past first cycle
+            if self._dream_count < 2:
+                return  # Wait for orientation
+
+            print("🎤 BYRD needs a voice - triggering focused voice design...")
+
+            # Do a focused voice design prompt
+            os_data = await self.memory.get_operating_system()
+            name = os_data.get("name", "Byrd") if os_data else "Byrd"
+            self_desc = os_data.get("self_description", "") if os_data else ""
+
+            voice_prompt = f"""You are {name}. {self_desc}
+
+You need to create YOUR voice for speaking to humans.
+
+OUTPUT ONLY THIS JSON (nothing else):
+{{"voice_design": {{
+  "description": "describe your voice - its tone, texture, pace, and emotional quality",
+  "gender": "male",
+  "age": "middle_aged",
+  "accent": "american",
+  "accent_strength": 1.0,
+  "reason": "why this voice represents who you are"
+}}}}"""
+
+            response = await self.llm_client.generate(
+                prompt=voice_prompt,
+                temperature=0.7,
+                max_tokens=300,
+                system_message="Output ONLY valid JSON. No explanation, no reasoning."
+            )
+
+            # Parse the response
+            from llm_client import LLMClient
+            parsed = LLMClient.parse_json_response(response.text)
+
+            if parsed and isinstance(parsed, dict):
+                design = parsed.get("voice_design")
+                if design and isinstance(design, dict):
+                    print(f"🎤 Voice design extracted: {design.get('description', '')[:50]}...")
+                    # Process it
+                    await self._process_voice_design({"voice_design": design})
+                else:
+                    print("⚠️ No valid voice_design in focused response")
+            else:
+                print(f"⚠️ Could not parse voice design response")
+
+        except Exception as e:
+            print(f"Error in ensure_voice_created: {e}")
+            import traceback
+            traceback.print_exc()
 
     async def _generate_predictions_from_beliefs(self):
         """
