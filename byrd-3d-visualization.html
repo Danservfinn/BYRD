@@ -1572,36 +1572,36 @@
     // Force-directed physics creates natural clustering based on relationships
     // Highly connected nodes gravitate toward center; isolated nodes drift outward
 
-    // Relationship visual styles - faint gray for subtle, clean aesthetic
+    // Relationship visual styles - true neutral gray, very subtle
     const RELATIONSHIP_STYLES = {
         DERIVED_FROM: {
-            color: 0x9ca3af,    // Faint gray
-            opacity: 0.25,
+            color: 0x808080,    // True neutral gray (no blue tint)
+            opacity: 0.15,
             width: 1
         },
         RELATES_TO: {
-            color: 0x9ca3af,    // Faint gray
-            opacity: 0.2,
+            color: 0x808080,    // True neutral gray
+            opacity: 0.12,
             width: 1
         },
         FULFILLS: {
-            color: 0x9ca3af,    // Faint gray
-            opacity: 0.25,
+            color: 0x808080,    // True neutral gray
+            opacity: 0.15,
             width: 1
         },
         REFLECTS_ON: {
-            color: 0x9ca3af,    // Faint gray
-            opacity: 0.2,
+            color: 0x808080,    // True neutral gray
+            opacity: 0.12,
             width: 1
         },
         EMERGES_FROM: {
-            color: 0x9ca3af,    // Faint gray
-            opacity: 0.25,
+            color: 0x808080,    // True neutral gray
+            opacity: 0.15,
             width: 1
         },
         default: {
-            color: 0x9ca3af,    // Faint gray
-            opacity: 0.2,
+            color: 0x808080,    // True neutral gray
+            opacity: 0.12,
             width: 1
         }
     };
@@ -9179,15 +9179,17 @@
         }
         console.log(`Created ${totalCreated} nodes (${crystalCount} crystals)`);
 
-        // Create relationship lines (only for visible nodes)
+        // Create relationship lines (only for visible nodes, limited for performance)
+        const MAX_RELATIONSHIPS = 100;  // Limit for cleaner visualization
         let relsCreated = 0;
         let relsSkipped = 0;
         let relsMissingNodes = 0;
         if (data.relationships) {
-          console.log(`Processing ${data.relationships.length} relationships...`);
+          console.log(`Processing ${data.relationships.length} relationships (max ${MAX_RELATIONSHIPS})...`);
           console.log(`graphState.nodeIdToMesh has ${graphState.nodeIdToMesh.size} entries`);
           const visibleNodeIds = new Set(filteredNodes.map(n => n.id));
-          data.relationships.forEach(rel => {
+          for (const rel of data.relationships) {
+            if (relsCreated >= MAX_RELATIONSHIPS) break;  // Stop at limit
             // Backend returns source_id/target_id
             const sourceId = rel.source_id;
             const targetId = rel.target_id;
@@ -9202,7 +9204,7 @@
             } else {
               relsSkipped++;
             }
-          });
+          }
           console.log(`Relationships: ${relsCreated} created, ${relsMissingNodes} missing nodes, ${relsSkipped} filtered`);
         }
 
