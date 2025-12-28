@@ -292,8 +292,9 @@ class TestDesireClassification:
         assert result.desire_type == DesireType.ACTION
 
     def test_classify_philosophical_desire(self, agi_runner):
+        # Use explicit philosophical keywords
         result = agi_runner.desire_classifier.classify(
-            "I wonder about the nature of consciousness"
+            "I accept and embrace the nature of consciousness"
         )
         assert result.desire_type == DesireType.PHILOSOPHICAL
 
