@@ -519,7 +519,7 @@ class BYRDOmega:
                         GraphEdge(
                             source_id=e.get("source", ""),
                             target_id=e.get("target", ""),
-                            relation_type=e.get("rel_type", "RELATED_TO")
+                            relationship=e.get("rel_type", "RELATED_TO")
                         )
                         for e in edge_records
                     ]
