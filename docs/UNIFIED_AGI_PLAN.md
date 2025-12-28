@@ -11,26 +11,29 @@ This document unifies two complementary plans into a single coherent AGI archite
 
 **The Goal**: An elegant, minimal architecture where recursive self-improvement emerges from the interaction of execution and learning.
 
+**Codebase Audit Status**: This plan has been audited against the existing codebase. Several components already exist and will be *extended* rather than recreated.
+
 ---
 
-## The Problem
+## The Current State (Audited)
 
-BYRD currently has sophisticated components that exist as islands:
+BYRD already has substantial infrastructure. The audit reveals:
 
 ```
-Current State:
-┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
-│  Dreamer │  │  Seeker  │  │  Memory  │  │  Option B│
-└──────────┘  └──────────┘  └──────────┘  └──────────┘
-     ?              ?              ?              ?
-
-No execution engine connects them into improvement cycles.
-The LLM doesn't learn, so capability is bounded.
+EXISTING (extend these):                 MISSING (create these):
+┌──────────────────────┐                 ┌──────────────────────┐
+│ world_model.py       │ 684 lines      │ agi_runner.py        │ THE KEY
+│ self_model.py        │ 781 lines      │ intuition_network.py │
+│ graph_algorithms.py  │ 824 lines      │ learned_retriever.py │
+│ memory_reasoner.py   │ exists         │ code_learner.py      │
+│ goal_evolver.py      │ exists         │ hierarchical_memory  │
+│ dreaming_machine.py  │ exists         │ emergent_categories  │
+│ omega.py             │ exists         │ capability_evaluator │
+│ accelerators.py      │ exists         │ learned_strategies/  │
+└──────────────────────┘                 └──────────────────────┘
 ```
 
-**Two Missing Pieces**:
-1. An execution engine that drives improvement cycles (from V2)
-2. Learning mechanisms that work despite frozen LLM weights (from V3)
+**The Critical Missing Piece**: `agi_runner.py` - the execution engine that connects everything.
 
 ---
 
@@ -41,7 +44,7 @@ The LLM doesn't learn, so capability is bounded.
 │                           UNIFIED AGI SYSTEM                                 │
 │                                                                              │
 │  ┌────────────────────────────────────────────────────────────────────────┐ │
-│  │                         AGI RUNNER                                      │ │
+│  │                         AGI RUNNER (NEW)                                │ │
 │  │                    (The Execution Engine)                               │ │
 │  │                                                                         │ │
 │  │    ┌──────┐   ┌──────┐   ┌──────┐   ┌──────┐   ┌──────┐   ┌──────┐   │ │
@@ -61,6 +64,7 @@ The LLM doesn't learn, so capability is bounded.
 │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │ │
 │  │  │   WORLD     │  │  INTUITION  │  │   LEARNED   │  │    CODE     │   │ │
 │  │  │   MODEL     │  │   NETWORK   │  │  RETRIEVER  │  │   LEARNER   │   │ │
+│  │  │  (EXTEND)   │  │    (NEW)    │  │    (NEW)    │  │    (NEW)    │   │ │
 │  │  │             │  │             │  │             │  │             │   │ │
 │  │  │ Causality   │  │   Taste/    │  │  Relevance  │  │  Pattern→   │   │ │
 │  │  │ Prediction  │  │ Preference  │  │   Scoring   │  │    Code     │   │ │
@@ -69,16 +73,17 @@ The LLM doesn't learn, so capability is bounded.
 │  └─────────────────────────────────┬──────────────────────────────────────┘ │
 │                                    │                                         │
 │  ┌─────────────────────────────────▼──────────────────────────────────────┐ │
-│  │                         OPTION B LOOPS                                  │ │
+│  │                    OPTION B LOOPS (EXISTING)                            │ │
 │  │                                                                         │ │
 │  │  ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐           │ │
 │  │  │  MEMORY   │  │   SELF-   │  │   GOAL    │  │ DREAMING  │           │ │
 │  │  │ REASONER  │  │ COMPILER  │  │  EVOLVER  │  │  MACHINE  │           │ │
+│  │  │ (EXTEND)  │  │ (EXTEND)  │  │ (EXTEND)  │  │ (EXTEND)  │           │ │
 │  │  └─────┬─────┘  └─────┬─────┘  └─────┬─────┘  └─────┬─────┘           │ │
 │  │        └──────────────┴──────────────┴──────────────┘                  │ │
 │  │                              │                                          │ │
 │  │                     ┌────────▼────────┐                                │ │
-│  │                     │   BYRD OMEGA    │                                │ │
+│  │                     │   BYRD OMEGA    │ (EXTEND: add training hooks)   │ │
 │  │                     └─────────────────┘                                │ │
 │  └─────────────────────────────────┬──────────────────────────────────────┘ │
 │                                    │                                         │
@@ -86,7 +91,7 @@ The LLM doesn't learn, so capability is bounded.
 │  │                       ENHANCED MEMORY                                   │ │
 │  │                                                                         │ │
 │  │  ┌─────────────────────────────────────────────────────────────────┐   │ │
-│  │  │              HIERARCHICAL ABSTRACTION (L0-L4)                    │   │ │
+│  │  │              HIERARCHICAL ABSTRACTION (NEW)                      │   │ │
 │  │  │                                                                   │   │ │
 │  │  │  L0: Experience ─▶ L1: Pattern ─▶ L2: Principle ─▶ L3: Axiom    │   │ │
 │  │  │                                                         │        │   │ │
@@ -96,12 +101,12 @@ The LLM doesn't learn, so capability is bounded.
 │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │ │
 │  │  │    GRAPH    │  │  BAYESIAN   │  │  EMERGENT   │  │  CODE-AS-   │   │ │
 │  │  │ ALGORITHMS  │  │  TRACKING   │  │ CATEGORIES  │  │   MEMORY    │   │ │
-│  │  │   (GDS)     │  │             │  │             │  │             │   │ │
+│  │  │ (EXISTING)  │  │  (ENHANCE)  │  │    (NEW)    │  │    (NEW)    │   │ │
 │  │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘   │ │
 │  └─────────────────────────────────┬──────────────────────────────────────┘ │
 │                                    │                                         │
 │  ┌─────────────────────────────────▼──────────────────────────────────────┐ │
-│  │                      VERIFICATION LAYER                                 │ │
+│  │                      VERIFICATION LAYER (NEW)                           │ │
 │  │                                                                         │ │
 │  │  ┌─────────────────────┐        ┌─────────────────────┐                │ │
 │  │  │ CAPABILITY EVALUATOR│        │ INFORMATION THEORY  │                │ │
@@ -119,11 +124,17 @@ The LLM doesn't learn, so capability is bounded.
 
 ## Component Specifications
 
-### 1. AGI Runner (The Engine)
+### 1. AGI Runner (The Engine) - NEW
 
-The AGI Runner is the core execution engine that drives recursive self-improvement. Without it, all other components are islands.
+The AGI Runner is the core execution engine that drives recursive self-improvement. **This is the critical missing piece** that connects all existing components.
 
 ```python
+# agi_runner.py (NEW FILE)
+
+from world_model import WorldModel  # EXISTING - 684 lines
+from self_model import SelfModel    # EXISTING - 781 lines
+from rollback import RollbackSystem # EXISTING
+
 class AGIRunner:
     """
     The execution engine that drives recursive self-improvement.
@@ -135,11 +146,14 @@ class AGIRunner:
     def __init__(self, byrd):
         self.byrd = byrd
 
-        # Core dependencies
-        self.world_model = byrd.world_model
-        self.intuition = byrd.intuition
-        self.evaluator = byrd.evaluator
-        self.bayesian_tracker = byrd.bayesian_tracker
+        # Use EXISTING components
+        self.world_model = byrd.world_model      # world_model.py exists
+        self.self_model = byrd.self_model        # self_model.py exists
+        self.rollback = byrd.rollback            # rollback.py exists
+
+        # NEW components (injected)
+        self.intuition = None      # Will be IntuitionNetwork
+        self.evaluator = None      # Will be CapabilityEvaluator
 
         # Cycle tracking
         self._cycle_count = 0
@@ -149,8 +163,8 @@ class AGIRunner:
         """Execute one complete improvement cycle."""
         self._cycle_count += 1
 
-        # 1. ASSESS: Get current capability state
-        inventory = await self._assess_capabilities()
+        # 1. ASSESS: Use EXISTING self_model.assess_capabilities()
+        inventory = await self.self_model.assess_capabilities()
 
         # 2. IDENTIFY: Select improvement target
         target = await self._identify_target(inventory)
@@ -160,10 +174,10 @@ class AGIRunner:
         # 3. GENERATE: Create improvement hypotheses
         hypotheses = await self._generate_hypotheses(target, inventory)
 
-        # 4. PREDICT: Use world model to rank hypotheses
+        # 4. PREDICT: Use EXISTING world_model.predict_outcome()
         ranked = await self._predict_outcomes(hypotheses)
 
-        # 5. VERIFY: Safety check
+        # 5. VERIFY: Safety check using EXISTING safety_monitor
         best = ranked[0]
         if not await self._verify_safety(best):
             return CycleResult(success=False, reason="Safety check failed")
@@ -171,10 +185,10 @@ class AGIRunner:
         # 6. EXECUTE: Apply improvement
         await self._execute(best)
 
-        # 7. MEASURE: Evaluate outcome with held-out tests
+        # 7. MEASURE: Evaluate outcome
         measurement = await self._measure_improvement(target, inventory)
 
-        # 8. LEARN: Update all learning components
+        # 8. LEARN: Update all components
         await self._learn_from_outcome(best, measurement)
 
         return CycleResult(
@@ -188,95 +202,57 @@ class AGIRunner:
         """
         Select highest-value improvement target.
 
-        Priority:
-        1. Declining capabilities (urgent)
-        2. Capabilities with high uncertainty (epistemic value)
-        3. Weakest capabilities (highest potential)
-        4. Meta-capabilities (highest leverage)
+        Uses EXISTING self_model.identify_limitations() and
+        self_model.measure_improvement_rate()
         """
-        # Use Bayesian tracker for uncertainty-aware targeting
-        for cap_name, cap in inventory.capabilities.items():
-            mean, lower, upper = self.bayesian_tracker.get_estimate(cap_name)
-            uncertainty = upper - lower
+        # Get limitations from existing self_model
+        limitations = await self.self_model.identify_limitations()
+        metrics = await self.self_model.measure_improvement_rate()
 
-            # High uncertainty = high information value
-            if uncertainty > 0.4:
+        # Priority 1: Declining capabilities (urgent)
+        for cap_name, cap in inventory.capabilities.items():
+            if cap.trend == "declining":
                 return ImprovementTarget(
                     name=cap_name,
-                    current_level=mean,
-                    priority="high",
-                    reason=f"High uncertainty ({uncertainty:.2f})"
+                    current_level=cap.success_rate,
+                    priority="critical",
+                    reason="Declining capability"
                 )
 
-        # Fall back to weakest capability
+        # Priority 2: High-uncertainty capabilities (epistemic value)
+        for cap_name, cap in inventory.capabilities.items():
+            if cap.confidence < 0.3:
+                return ImprovementTarget(
+                    name=cap_name,
+                    current_level=cap.success_rate,
+                    priority="high",
+                    reason=f"High uncertainty (conf: {cap.confidence:.2f})"
+                )
+
+        # Priority 3: Weakest capability
         if inventory.weakest:
-            return ImprovementTarget(
-                name=inventory.weakest[0],
-                current_level=inventory.capabilities[inventory.weakest[0]].success_rate,
-                priority="medium",
-                reason="Weakest capability"
-            )
+            weak_cap = inventory.capabilities.get(inventory.weakest[0])
+            if weak_cap:
+                return ImprovementTarget(
+                    name=inventory.weakest[0],
+                    current_level=weak_cap.success_rate,
+                    priority="medium",
+                    reason="Weakest capability"
+                )
 
         return None
 
-    async def _generate_hypotheses(self, target, inventory) -> List[ImprovementHypothesis]:
-        """
-        Generate concrete improvement hypotheses.
-
-        Strategies:
-        1. Fix known limitations
-        2. Apply successful patterns (from Self-Compiler)
-        3. Compose with stronger capabilities
-        4. Use intuition network for novel approaches
-        """
-        hypotheses = []
-
-        # Strategy 1: Pattern application
-        patterns = await self.byrd.self_compiler.get_patterns_for(target.name)
-        for pattern in patterns[:3]:
-            hypotheses.append(ImprovementHypothesis(
-                description=f"Apply pattern: {pattern.name}",
-                target=target.name,
-                strategy="pattern_application",
-                code_change=await self._generate_pattern_code(pattern),
-                expected_improvement=pattern.avg_improvement
-            ))
-
-        # Strategy 2: Intuition-guided
-        intuition_score = await self.intuition.evaluate(target.name)
-        if intuition_score.suggested_action:
-            hypotheses.append(ImprovementHypothesis(
-                description=f"Intuition: {intuition_score.suggested_action}",
-                target=target.name,
-                strategy="intuition_guided",
-                code_change=await self._generate_intuition_code(intuition_score),
-                expected_improvement=0.1
-            ))
-
-        # Strategy 3: Composition
-        composable = await self._find_composable(target.name, inventory)
-        for comp in composable[:2]:
-            hypotheses.append(ImprovementHypothesis(
-                description=f"Compose with {comp.name}",
-                target=target.name,
-                strategy="composition",
-                code_change=await self._generate_composition_code(target, comp),
-                expected_improvement=0.05
-            ))
-
-        return hypotheses
-
     async def _predict_outcomes(self, hypotheses) -> List[ImprovementHypothesis]:
-        """Use world model to predict and rank hypotheses."""
+        """Use EXISTING world_model.predict_outcome() to rank hypotheses."""
         for hyp in hypotheses:
-            prediction = await self.world_model.predict(
+            # Use existing world model's predict_outcome method
+            prediction = await self.world_model.predict_outcome(
                 action=hyp.description,
                 context={"target": hyp.target, "strategy": hyp.strategy}
             )
             hyp.predicted_success = prediction.success_probability
             hyp.prediction_confidence = prediction.confidence
 
-        # Rank by expected value
         return sorted(
             hypotheses,
             key=lambda h: h.predicted_success * h.expected_improvement,
@@ -284,26 +260,22 @@ class AGIRunner:
         )
 
     async def _measure_improvement(self, target, before_inventory) -> MeasurementResult:
-        """
-        Measure improvement using held-out evaluation.
+        """Measure improvement using CapabilityEvaluator (NEW)."""
+        if self.evaluator:
+            before_score = await self.evaluator.evaluate_capability(target.name)
+            after_score = await self.evaluator.evaluate_capability(target.name)
+            delta = after_score.accuracy - before_score.accuracy
+        else:
+            # Fallback: use existing self_model
+            after_inventory = await self.self_model.assess_capabilities()
+            after_cap = after_inventory.capabilities.get(target.name)
+            before_cap = before_inventory.capabilities.get(target.name)
+            delta = (after_cap.success_rate - before_cap.success_rate) if after_cap and before_cap else 0
 
-        This is critical - without measurement, learning is impossible.
-        """
-        # Use CapabilityEvaluator for ground truth
-        before_score = await self.evaluator.evaluate_capability(target.name)
-
-        # Re-assess after change
-        after_inventory = await self._assess_capabilities()
-        after_score = await self.evaluator.evaluate_capability(target.name)
-
-        delta = after_score.accuracy - before_score.accuracy
-
-        # Bayesian update
-        self.bayesian_tracker.update(target.name, success=(delta > 0))
-
-        # Rollback on regression
+        # Rollback on regression using EXISTING rollback system
         if delta < -0.05:
-            await self.byrd.rollback.rollback_last(RollbackReason.CAPABILITY_REGRESSION)
+            from rollback import RollbackReason
+            await self.rollback.rollback_last(RollbackReason.CAPABILITY_REGRESSION)
             return MeasurementResult(improved=False, delta=delta, reason="Rolled back")
 
         return MeasurementResult(improved=(delta > 0.01), delta=delta)
@@ -311,22 +283,32 @@ class AGIRunner:
     async def _learn_from_outcome(self, hypothesis, measurement):
         """Update all learning components from outcome."""
 
-        # 1. World model: prediction error
-        await self.world_model.update(
-            action=hypothesis.description,
-            context={"strategy": hypothesis.strategy},
+        # 1. Update EXISTING world model
+        await self.world_model.update_from_prediction_error(
+            prediction=OutcomePrediction(
+                action=hypothesis.description,
+                context={"strategy": hypothesis.strategy},
+                predicted_outcome="success" if hypothesis.predicted_success > 0.5 else "failure",
+                success_probability=hypothesis.predicted_success,
+                confidence=hypothesis.prediction_confidence,
+                uncertainty_type=UncertaintyType.EPISTEMIC,
+                uncertainty_sources=[],
+                reasoning="AGI cycle prediction",
+                similar_past_cases=0
+            ),
             actual_outcome="improved" if measurement.improved else "not_improved",
-            predicted_success=hypothesis.predicted_success
+            actual_success=measurement.improved
         )
 
-        # 2. Intuition network: outcome feedback
-        await self.intuition.record_outcome(
-            situation=hypothesis.target,
-            action=hypothesis.strategy,
-            success=measurement.improved
-        )
+        # 2. Update intuition network (NEW - if available)
+        if self.intuition:
+            await self.intuition.record_outcome(
+                situation=hypothesis.target,
+                action=hypothesis.strategy,
+                success=measurement.improved
+            )
 
-        # 3. Record as experience for memory system
+        # 3. Record experience using EXISTING memory
         await self.byrd.memory.record_experience(
             content=f"[AGI_CYCLE] {'SUCCESS' if measurement.improved else 'FAILURE'}: "
                     f"{hypothesis.description} (delta: {measurement.delta:+.2%})",
@@ -343,101 +325,109 @@ class AGIRunner:
 
 ### 2. Learning Substrate
 
-#### 2.1 World Model
+#### 2.1 World Model - EXTEND EXISTING
+
+The existing `world_model.py` (684 lines) is **more complete than originally planned**. It already has:
+- `predict_outcome()` with empirical + causal prediction
+- `update_from_prediction_error()` with learning
+- `record_action_outcome()` for experience capture
+- `simulate_counterfactual()` for what-if analysis
+- `identify_knowledge_gaps()` for exploration targeting
+- CausalRelationship storage in Neo4j
+
+**Extensions needed:**
 
 ```python
-class WorldModel:
+# In existing world_model.py, add:
+
+async def consolidate(self):
     """
-    Learns causality from prediction errors.
-
-    Core insight: If we can predict what actions lead to what outcomes,
-    we can plan improvements without trial-and-error.
+    Prune weak causal rules, strengthen confident ones.
+    Called during DREAMING mode.
     """
+    # Get all causal relationships
+    result = await self.memory._run_query("""
+        MATCH (c:CausalFactor)-[r:CAUSES]->(e:CausalFactor)
+        WHERE r.evidence_count < 3 OR r.strength < 0.3
+        RETURN elementId(r) as rel_id
+    """)
 
-    def __init__(self):
-        self.causal_rules: Dict[Tuple[str, str], OutcomeDistribution] = {}
-        self.prediction_errors: List[PredictionError] = []
+    # Remove weak relationships
+    for record in (result or []):
+        await self.memory._run_query("""
+            MATCH ()-[r]->()
+            WHERE elementId(r) = $rel_id
+            DELETE r
+        """, {"rel_id": record["rel_id"]})
 
-    async def predict(self, action: str, context: Dict) -> Prediction:
-        """Predict outcome before acting."""
-        key = self._make_key(action, context)
-
-        if key in self.causal_rules:
-            distribution = self.causal_rules[key]
-            most_likely = max(distribution.outcomes, key=distribution.outcomes.get)
-            confidence = distribution.outcomes[most_likely] / distribution.total
-            return Prediction(
-                outcome=most_likely,
-                success_probability=confidence,
-                confidence=min(1.0, distribution.total / 10)  # Confidence grows with observations
-            )
-
-        return Prediction(outcome="unknown", success_probability=0.5, confidence=0.1)
-
-    async def update(self, action: str, context: Dict, actual_outcome: str, predicted_success: float):
-        """Learn from prediction error."""
-        key = self._make_key(action, context)
-
-        if key not in self.causal_rules:
-            self.causal_rules[key] = OutcomeDistribution()
-
-        distribution = self.causal_rules[key]
-        distribution.outcomes[actual_outcome] = distribution.outcomes.get(actual_outcome, 0) + 1
-        distribution.total += 1
-
-        # Track prediction error for meta-learning
-        prediction = await self.predict(action, context)
-        error = abs(predicted_success - (1.0 if actual_outcome == "improved" else 0.0))
-
-        if error > 0.3:
-            self.prediction_errors.append(PredictionError(
-                action=action,
-                context=context,
-                predicted=predicted_success,
-                actual=actual_outcome,
-                error=error
-            ))
-            print(f"🎯 World model corrected: {action} -> {actual_outcome}")
-
-    async def consolidate(self):
-        """Prune weak rules, strengthen confident ones."""
-        weak_keys = [
-            key for key, dist in self.causal_rules.items()
-            if dist.total < 3 or dist.get_entropy() > 0.9
-        ]
-        for key in weak_keys:
-            del self.causal_rules[key]
+    print(f"🎯 World model consolidated: removed {len(result or [])} weak rules")
 ```
 
-#### 2.2 Intuition Network
+#### 2.2 Intuition Network - NEW
 
 ```python
+# intuition_network.py (NEW FILE)
+
 class IntuitionNetwork:
     """
     Small trainable network for fast decision guidance.
 
-    This is the "taste" component - learns what goals are worth pursuing,
-    what actions feel right, without explicit reasoning.
+    Learns "taste" - what goals are worth pursuing, what actions feel right.
 
-    Size: ~80MB (sentence-transformers + small head)
+    Dependencies: sentence-transformers, torch (optional for training)
+    Size: ~80MB (encoder) + ~0.5MB (value head)
     """
 
-    def __init__(self):
-        self.encoder = SentenceTransformer('all-MiniLM-L6-v2')
-        self.value_head = nn.Sequential(
-            nn.Linear(384, 128),
-            nn.ReLU(),
-            nn.Linear(128, 1),
-            nn.Sigmoid()
-        )
+    def __init__(self, config: Dict = None):
+        self.config = config or {}
+        self._encoder = None  # Lazy load
+        self._value_head = None
         self.training_buffer: List[IntuitionExample] = []
-        self.optimizer = torch.optim.Adam(self.value_head.parameters(), lr=0.001)
+        self._trained = False
+
+    def _ensure_loaded(self):
+        """Lazy load to avoid startup cost."""
+        if self._encoder is None:
+            try:
+                from sentence_transformers import SentenceTransformer
+                self._encoder = SentenceTransformer('all-MiniLM-L6-v2')
+
+                # Only create trainable head if torch available
+                try:
+                    import torch.nn as nn
+                    self._value_head = nn.Sequential(
+                        nn.Linear(384, 128),
+                        nn.ReLU(),
+                        nn.Linear(128, 1),
+                        nn.Sigmoid()
+                    )
+                except ImportError:
+                    self._value_head = None
+
+            except ImportError:
+                print("Warning: sentence-transformers not available, IntuitionNetwork disabled")
+                self._encoder = "disabled"
 
     async def evaluate(self, situation: str) -> IntuitionScore:
         """Fast intuitive assessment of a situation/goal."""
+        self._ensure_loaded()
+
+        if self._encoder == "disabled":
+            return IntuitionScore(value=0.5, suggested_action="neutral")
+
+        # If no trained head, use embedding similarity to past successes
+        if self._value_head is None or not self._trained:
+            # Heuristic: longer, more specific situations are often more valuable
+            value = min(1.0, len(situation.split()) / 20.0)
+            return IntuitionScore(
+                value=value,
+                suggested_action="pursue" if value > 0.6 else "neutral"
+            )
+
+        import torch
         with torch.no_grad():
-            emb = torch.tensor(self.encoder.encode(situation))
-            value = self.value_head(emb).item()
+            emb = torch.tensor(self._encoder.encode(situation))
+            value = self._value_head(emb).item()
 
         return IntuitionScore(
             value=value,
@@ -453,57 +443,99 @@ class IntuitionNetwork:
         ))
 
     def should_train(self) -> bool:
-        return len(self.training_buffer) >= 50
+        return len(self.training_buffer) >= 50 and self._value_head is not None
 
     async def train_cycle(self):
         """Train on collected examples during DREAMING mode."""
-        if len(self.training_buffer) < 50:
+        if not self.should_train():
             return
 
-        # Simple supervised learning on value prediction
+        self._ensure_loaded()
+        if self._value_head is None:
+            return  # No torch available
+
+        import torch
+        import torch.nn as nn
+
+        optimizer = torch.optim.Adam(self._value_head.parameters(), lr=0.001)
+
         for example in self.training_buffer[-100:]:
-            emb = torch.tensor(self.encoder.encode(example.situation))
-            predicted = self.value_head(emb)
+            emb = torch.tensor(self._encoder.encode(example.situation))
+            predicted = self._value_head(emb)
             target = torch.tensor([example.reward])
 
             loss = nn.MSELoss()(predicted, target)
-            self.optimizer.zero_grad()
+            optimizer.zero_grad()
             loss.backward()
-            self.optimizer.step()
+            optimizer.step()
 
-        self.training_buffer = self.training_buffer[-50:]  # Keep recent
+        self.training_buffer = self.training_buffer[-50:]
+        self._trained = True
         print("🧠 Intuition network trained")
 ```
 
-#### 2.3 Learned Retriever
+#### 2.3 Learned Retriever - NEW
 
 ```python
+# learned_retriever.py (NEW FILE)
+
 class LearnedRetriever:
     """
     Learns what memories are actually relevant for a query.
 
     Standard embedding similarity often retrieves irrelevant context.
     This learns from feedback: which retrievals actually helped?
+
+    Can work without training (baseline similarity) or with training (learned projection).
     """
 
-    def __init__(self):
-        self.encoder = SentenceTransformer('all-MiniLM-L6-v2')
-        # Trainable projection layer
-        self.query_projection = nn.Linear(384, 384)
+    def __init__(self, config: Dict = None):
+        self.config = config or {}
+        self._encoder = None
+        self._projection = None
         self.feedback_buffer: List[RetrievalFeedback] = []
-        self.optimizer = torch.optim.Adam(self.query_projection.parameters(), lr=0.0001)
+
+    def _ensure_loaded(self):
+        if self._encoder is None:
+            try:
+                from sentence_transformers import SentenceTransformer
+                self._encoder = SentenceTransformer('all-MiniLM-L6-v2')
+
+                try:
+                    import torch.nn as nn
+                    self._projection = nn.Linear(384, 384)
+                except ImportError:
+                    self._projection = None
+
+            except ImportError:
+                self._encoder = "disabled"
 
     async def score(self, query: str, candidates: List[Dict]) -> List[ScoredCandidate]:
         """Score candidates with learned relevance."""
+        self._ensure_loaded()
+
+        if self._encoder == "disabled":
+            # Fallback: simple keyword overlap
+            query_words = set(query.lower().split())
+            return sorted([
+                ScoredCandidate(
+                    candidate=c,
+                    score=len(set(c.get('content', '').lower().split()) & query_words) / max(1, len(query_words))
+                )
+                for c in candidates
+            ], key=lambda x: x.score, reverse=True)
+
+        import torch
         with torch.no_grad():
-            # Project query through learned layer
-            query_emb = torch.tensor(self.encoder.encode(query))
-            projected_query = self.query_projection(query_emb)
+            query_emb = torch.tensor(self._encoder.encode(query))
+
+            if self._projection is not None:
+                query_emb = self._projection(query_emb)
 
             scores = []
             for candidate in candidates:
-                cand_emb = torch.tensor(self.encoder.encode(candidate['content']))
-                score = torch.cosine_similarity(projected_query, cand_emb, dim=0).item()
+                cand_emb = torch.tensor(self._encoder.encode(candidate.get('content', '')))
+                score = torch.cosine_similarity(query_emb, cand_emb, dim=0).item()
                 scores.append(ScoredCandidate(candidate=candidate, score=score))
 
         return sorted(scores, key=lambda x: x.score, reverse=True)
@@ -513,17 +545,22 @@ class LearnedRetriever:
         for item in retrieved:
             self.feedback_buffer.append(RetrievalFeedback(
                 query=query,
-                content=item['content'],
-                was_helpful=item['id'] in helpful_ids
+                content=item.get('content', ''),
+                was_helpful=item.get('id') in helpful_ids
             ))
 
     def should_train(self) -> bool:
-        return len(self.feedback_buffer) >= 100
+        return len(self.feedback_buffer) >= 100 and self._projection is not None
 
     async def train_cycle(self):
-        """Contrastive learning: pull helpful items closer, push unhelpful away."""
+        """Contrastive learning during DREAMING mode."""
         if not self.should_train():
             return
+
+        import torch
+        import random
+
+        optimizer = torch.optim.Adam(self._projection.parameters(), lr=0.0001)
 
         helpful = [f for f in self.feedback_buffer if f.was_helpful]
         unhelpful = [f for f in self.feedback_buffer if not f.was_helpful]
@@ -531,32 +568,36 @@ class LearnedRetriever:
         if not helpful or not unhelpful:
             return
 
-        # Contrastive loss
         for h in helpful[-50:]:
-            query_emb = torch.tensor(self.encoder.encode(h.query))
-            projected = self.query_projection(query_emb)
+            query_emb = torch.tensor(self._encoder.encode(h.query))
+            projected = self._projection(query_emb)
 
-            positive_emb = torch.tensor(self.encoder.encode(h.content))
+            positive_emb = torch.tensor(self._encoder.encode(h.content))
             negative = random.choice(unhelpful)
-            negative_emb = torch.tensor(self.encoder.encode(negative.content))
+            negative_emb = torch.tensor(self._encoder.encode(negative.content))
 
             pos_sim = torch.cosine_similarity(projected, positive_emb, dim=0)
             neg_sim = torch.cosine_similarity(projected, negative_emb, dim=0)
 
-            # Margin loss: positive should be closer by margin
             loss = torch.relu(0.2 - pos_sim + neg_sim)
 
-            self.optimizer.zero_grad()
+            optimizer.zero_grad()
             loss.backward()
-            self.optimizer.step()
+            optimizer.step()
 
         self.feedback_buffer = self.feedback_buffer[-100:]
         print("🔍 Learned retriever trained")
 ```
 
-#### 2.4 Code Learner
+#### 2.4 Code Learner - NEW
 
 ```python
+# code_learner.py (NEW FILE)
+
+import ast
+import os
+from pathlib import Path
+
 class CodeLearner:
     """
     Converts stable patterns into executable code.
@@ -566,31 +607,59 @@ class CodeLearner:
     - Fast (no inference cost)
     - Inspectable (can be reviewed/debugged)
     - Persistent (survives context limits)
+
+    NOTE: Uses existing LLM client, no additional dependencies.
     """
+
+    LEARNED_STRATEGIES_DIR = "learned_strategies"
 
     def __init__(self, memory, llm_client):
         self.memory = memory
         self.llm_client = llm_client
-        self.code_registry: Dict[str, str] = {}  # pattern_id -> file_path
+        self.code_registry: Dict[str, str] = {}
 
-    async def maybe_codify(self, pattern: Pattern):
-        """Codify pattern if stable enough."""
+        # Ensure directory structure exists
+        self._ensure_directories()
+
+    def _ensure_directories(self):
+        """Create learned_strategies directory structure."""
+        base = Path(self.LEARNED_STRATEGIES_DIR)
+        for subdir in ["desire_routing", "pattern_matching", "decision_making"]:
+            (base / subdir).mkdir(parents=True, exist_ok=True)
+
+        # Create __init__.py files
+        init_content = '"""Auto-generated learned strategies."""\n'
+        for root, dirs, files in os.walk(base):
+            init_path = Path(root) / "__init__.py"
+            if not init_path.exists():
+                init_path.write_text(init_content)
+
+    async def maybe_codify(self, pattern: Pattern) -> bool:
+        """
+        Codify pattern if stable enough.
+
+        Returns True if codified, False otherwise.
+        """
         # Thresholds for codification
         if pattern.usage_count < 10:
-            return  # Not enough evidence
+            return False  # Not enough evidence
         if pattern.success_rate < 0.8:
-            return  # Not reliable enough
+            return False  # Not reliable enough
         if pattern.id in self.code_registry:
-            return  # Already codified
+            return False  # Already codified
 
         code = await self._generate_code(pattern)
 
-        if code and await self._validate_code(code):
-            path = f"learned_strategies/{pattern.domain}/{pattern.id}.py"
-            await self._save_code(path, code)
+        if code and self._validate_code(code):
+            # Determine subdirectory based on pattern domain
+            subdir = self._classify_domain(pattern.domain)
+            path = f"{self.LEARNED_STRATEGIES_DIR}/{subdir}/{pattern.id}.py"
+
+            Path(path).parent.mkdir(parents=True, exist_ok=True)
+            Path(path).write_text(code)
+
             self.code_registry[pattern.id] = path
 
-            # Register as capability
             await self.memory.record_experience(
                 content=f"[CODE_LEARNER] Codified pattern: {pattern.description}",
                 type="codification",
@@ -598,9 +667,22 @@ class CodeLearner:
             )
 
             print(f"📝 Codified: {pattern.description[:50]}...")
+            return True
+
+        return False
+
+    def _classify_domain(self, domain: str) -> str:
+        """Classify pattern into subdirectory."""
+        domain_lower = domain.lower()
+        if "desire" in domain_lower or "want" in domain_lower or "goal" in domain_lower:
+            return "desire_routing"
+        elif "pattern" in domain_lower or "match" in domain_lower:
+            return "pattern_matching"
+        else:
+            return "decision_making"
 
     async def _generate_code(self, pattern: Pattern) -> Optional[str]:
-        """Use LLM to convert pattern to code."""
+        """Use existing LLM to convert pattern to code."""
         prompt = f"""Convert this learned pattern into a Python function.
 
 Pattern: {pattern.description}
@@ -609,43 +691,61 @@ Action: {pattern.action}
 Success rate: {pattern.success_rate:.0%}
 Usage count: {pattern.usage_count}
 
-Write a function that:
-1. Takes relevant context as input (Dict)
-2. Returns a decision or action (str or Dict)
-3. Is deterministic and testable
-4. Includes a docstring documenting its provenance
+Requirements:
+1. Function takes context: Dict as input
+2. Returns a decision string or Dict
+3. Is pure and deterministic
+4. Includes docstring with provenance
 
-Example format:
+Output format:
 ```python
-def {pattern.id}(context: Dict) -> str:
+from typing import Dict, Any
+
+def {pattern.id.replace('-', '_')}(context: Dict[str, Any]) -> str:
     \"\"\"
-    {pattern.description}
+    {pattern.description[:100]}
 
     Provenance: Learned from {pattern.usage_count} experiences.
     Success rate: {pattern.success_rate:.0%}
-    Codified: {{date}}
     \"\"\"
-    # Implementation
+    # Implementation based on pattern
+    ...
     return "action"
 ```
 
-Output only the Python code, no explanation."""
+Output only the Python code."""
 
         response = await self.llm_client.generate(prompt=prompt, max_tokens=500, temperature=0.1)
         return self._extract_code(response.text)
 
-    async def _validate_code(self, code: str) -> bool:
+    def _extract_code(self, text: str) -> Optional[str]:
+        """Extract Python code from LLM response."""
+        if "```python" in text:
+            code = text.split("```python")[1].split("```")[0]
+            return code.strip()
+        elif "```" in text:
+            code = text.split("```")[1].split("```")[0]
+            return code.strip()
+        return text.strip()
+
+    def _validate_code(self, code: str) -> bool:
         """Validate generated code is safe and syntactically correct."""
         # Syntax check
         try:
             ast.parse(code)
-        except SyntaxError:
+        except SyntaxError as e:
+            print(f"Code validation failed: {e}")
             return False
 
         # Safety check - no dangerous patterns
-        dangerous = ['os.system', 'subprocess', 'eval', 'exec', '__import__', 'open(']
+        dangerous = [
+            'os.system', 'subprocess', 'eval(', 'exec(',
+            '__import__', 'open(', 'write(', 'unlink',
+            'remove', 'rmdir', 'shutil'
+        ]
         for pattern in dangerous:
             if pattern in code:
+                print(f"Code contains dangerous pattern: {pattern}")
                 return False
 
         return True
@@ -656,20 +756,129 @@ Output only the Python code, no explanation."""
             return None
 
         path = self.code_registry[pattern_id]
-        # Dynamic import and execution
-        spec = importlib.util.spec_from_file_location(pattern_id, path)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
 
-        func = getattr(module, pattern_id)
-        return func(context)
+        try:
+            import importlib.util
+            spec = importlib.util.spec_from_file_location(pattern_id, path)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+
+            func_name = pattern_id.replace('-', '_')
+            func = getattr(module, func_name)
+            return func(context)
+        except Exception as e:
+            print(f"Error executing learned pattern {pattern_id}: {e}")
+            return None
 ```
 
 ### 3. Enhanced Memory
 
-#### 3.1 Hierarchical Abstraction
+#### 3.1 Graph Algorithms - USE EXISTING
+
+The existing `graph_algorithms.py` (824 lines) provides **Python-based implementations** that work with Neo4j Aura (which doesn't support GDS plugins).
+
+**Existing capabilities:**
+- `compute_pagerank()` - Power iteration PageRank
+- `spreading_activation()` - Associative memory retrieval
+- `detect_contradictions_structural()` - Belief conflict detection
+- `dream_walk()` - Quantum-influenced traversal
+- `get_causal_chain()` - Causal relationship tracing
+
+**Do NOT use Neo4j GDS** - it requires self-hosted Neo4j and is not compatible with Aura.
 
 ```python
+# Use existing graph_algorithms.py as-is
+from graph_algorithms import GraphAlgorithms, MemoryGraphAlgorithms
+
+# Example usage in AGIRunner:
+async def _find_related_context(self, target: str):
+    graph_algo = MemoryGraphAlgorithms(self.byrd.config)
+
+    # Use existing PageRank
+    important = await graph_algo.get_important_memories(
+        self.byrd.memory,
+        limit=10
+    )
+
+    # Use existing spreading activation
+    activated = await graph_algo.get_activated_memories(
+        self.byrd.memory,
+        seed_node_ids=[target],
+        initial_activation=1.0
+    )
+
+    return important, activated
+```
+
+#### 3.2 Bayesian Tracking - ENHANCE EXISTING SelfModel
+
+The existing `self_model.py` (781 lines) already has capability tracking with confidence. **Enhance it** with proper Beta distribution rather than creating a separate tracker.
+
+```python
+# In existing self_model.py, add these methods to SelfModel class:
+
+import scipy.stats
+import scipy.special
+
+class SelfModel:
+    # ... existing code ...
+
+    def __init__(self, memory, llm_client, config=None):
+        # ... existing init ...
+
+        # Add Beta distribution tracking
+        self._alpha: Dict[str, float] = {}  # successes + 1
+        self._beta: Dict[str, float] = {}   # failures + 1
+
+    def bayesian_update(self, capability: str, success: bool):
+        """Bayesian update after observation."""
+        if capability not in self._alpha:
+            self._alpha[capability] = 1.0
+            self._beta[capability] = 1.0
+
+        if success:
+            self._alpha[capability] += 1
+        else:
+            self._beta[capability] += 1
+
+    def get_bayesian_estimate(self, capability: str) -> Tuple[float, float, float]:
+        """
+        Get capability estimate with 95% credible interval.
+
+        Returns: (mean, lower_95, upper_95)
+        """
+        if capability not in self._alpha:
+            return (0.5, 0.0, 1.0)  # Maximum uncertainty
+
+        a, b = self._alpha[capability], self._beta[capability]
+
+        mean = a / (a + b)
+        lower = scipy.stats.beta.ppf(0.025, a, b)
+        upper = scipy.stats.beta.ppf(0.975, a, b)
+
+        return (mean, lower, upper)
+
+    def get_bayesian_uncertainty(self, capability: str) -> float:
+        """Get uncertainty (normalized entropy) of belief."""
+        if capability not in self._alpha:
+            return 1.0
+
+        a, b = self._alpha[capability], self._beta[capability]
+
+        # Use interval width as uncertainty proxy
+        _, lower, upper = self.get_bayesian_estimate(capability)
+        return upper - lower
+
+    def should_explore(self, capability: str, threshold: float = 0.4) -> bool:
+        """Recommend exploration if uncertainty is high."""
+        return self.get_bayesian_uncertainty(capability) > threshold
+```
+
+#### 3.3 Hierarchical Memory - NEW
+
+```python
+# hierarchical_memory.py (NEW FILE)
+
 class HierarchicalMemory:
     """
     Memory with abstraction hierarchy.
@@ -679,9 +888,6 @@ class HierarchicalMemory:
     L2: Principle   - Generalizations (3+ related patterns)
     L3: Axiom       - Fundamental truths (3+ connected principles)
     L4: Meta-Axiom  - Truths about truths (2+ meta-observations)
-
-    Higher levels are preferred for familiar situations.
-    Lower levels are used for novel situations.
     """
 
     PROMOTION_THRESHOLDS = {
@@ -691,21 +897,33 @@ class HierarchicalMemory:
         3: 2,   # 2 meta-observations -> meta-axiom
     }
 
-    async def maybe_promote(self, node_id: str, current_level: int) -> Optional[str]:
+    def __init__(self, memory):
+        self.memory = memory
+
+    async def get_abstraction_level(self, node_id: str) -> int:
+        """Get the abstraction level of a node."""
+        result = await self.memory._run_query("""
+            MATCH (n) WHERE elementId(n) = $node_id
+            RETURN n.abstraction_level as level
+        """, {"node_id": node_id})
+
+        if result:
+            return result[0].get("level", 0) or 0
+        return 0
+
+    async def maybe_promote(self, node_id: str) -> Optional[str]:
         """Check if node should be promoted to higher abstraction level."""
+        current_level = await self.get_abstraction_level(node_id)
+
         if current_level >= 4:
-            return None  # Already at max
+            return None
 
         threshold = self.PROMOTION_THRESHOLDS[current_level]
-
-        # Find similar nodes at same level
         similar = await self._find_similar_nodes(node_id, current_level)
 
         if len(similar) >= threshold:
-            # Promote: create higher-level node that generalizes
             promoted = await self._create_promoted_node(node_id, similar, current_level + 1)
 
-            # Link lower nodes to promoted node
             for similar_id in similar:
                 await self._create_relationship(similar_id, promoted, "PROMOTED_TO")
 
@@ -714,192 +932,48 @@ class HierarchicalMemory:
         return None
 
     async def retrieve_for_query(self, query: str, prefer_level: int = None) -> List[Dict]:
-        """
-        Retrieve relevant nodes, preferring higher abstraction for familiar queries.
-        """
-        # Check if query matches known patterns (familiar)
+        """Retrieve relevant nodes, preferring higher abstraction for familiar queries."""
         familiarity = await self._assess_familiarity(query)
 
         if prefer_level is None:
-            # Familiar queries -> prefer higher abstraction
-            # Novel queries -> prefer lower abstraction (raw experiences)
             prefer_level = 2 if familiarity > 0.7 else 0
 
-        results = await self._query_nodes(query, min_level=prefer_level)
+        results = await self.memory._run_query("""
+            MATCH (n)
+            WHERE n.abstraction_level >= $min_level
+            AND (n.content CONTAINS $query_fragment OR n.description CONTAINS $query_fragment)
+            RETURN n
+            ORDER BY n.abstraction_level DESC
+            LIMIT 20
+        """, {"min_level": prefer_level, "query_fragment": query[:50]})
 
         if not results and prefer_level > 0:
-            # Fall back to lower levels if nothing found
-            results = await self._query_nodes(query, min_level=0)
+            results = await self.memory._run_query("""
+                MATCH (n)
+                WHERE n.content CONTAINS $query_fragment OR n.description CONTAINS $query_fragment
+                RETURN n
+                LIMIT 20
+            """, {"query_fragment": query[:50]})
 
-        return results
+        return [dict(r["n"]) for r in (results or [])]
+
+    async def _assess_familiarity(self, query: str) -> float:
+        """Assess how familiar a query is based on similar past experiences."""
+        result = await self.memory._run_query("""
+            MATCH (e:Experience)
+            WHERE e.content CONTAINS $fragment
+            RETURN count(e) as count
+        """, {"fragment": query[:30]})
+
+        count = result[0]["count"] if result else 0
+        return min(1.0, count / 10.0)
 ```
 
-#### 3.2 Real Graph Algorithms (Neo4j GDS)
+#### 3.4 Emergent Category Discovery - NEW
 
 ```python
-class GraphAlgorithms:
-    """
-    Real graph algorithms using Neo4j Graph Data Science.
+# emergent_categories.py (NEW FILE)
 
-    Replaces fake "PageRank" (degree * weight) with actual algorithms.
-    """
-
-    async def ensure_projection(self):
-        """Create graph projection for GDS algorithms."""
-        await self.memory._execute_query("""
-            CALL gds.graph.drop('byrd-mind', false)
-        """)
-
-        await self.memory._execute_query("""
-            CALL gds.graph.project(
-                'byrd-mind',
-                ['Experience', 'Pattern', 'Principle', 'Axiom', 'Belief', 'Desire'],
-                {
-                    DERIVED_FROM: {orientation: 'UNDIRECTED'},
-                    SUPPORTS: {orientation: 'UNDIRECTED'},
-                    CONFLICTS_WITH: {orientation: 'UNDIRECTED'},
-                    PROMOTED_TO: {orientation: 'NATURAL'},
-                    LED_TO: {orientation: 'NATURAL'}
-                },
-                {nodeProperties: ['confidence', 'abstraction_level']}
-            )
-        """)
-
-    async def pagerank(self, limit: int = 20) -> List[Dict]:
-        """Find most important nodes by graph centrality."""
-        await self.ensure_projection()
-
-        result = await self.memory._execute_query("""
-            CALL gds.pageRank.stream('byrd-mind', {
-                maxIterations: 20,
-                dampingFactor: 0.85
-            })
-            YIELD nodeId, score
-            WITH gds.util.asNode(nodeId) AS node, score
-            RETURN
-                elementId(node) as id,
-                labels(node)[0] as type,
-                node.content as content,
-                node.abstraction_level as level,
-                score as importance
-            ORDER BY score DESC
-            LIMIT $limit
-        """, {"limit": limit})
-
-        return [dict(r) for r in result]
-
-    async def community_detection(self) -> Dict[str, List[str]]:
-        """Find communities of related concepts using Louvain."""
-        await self.ensure_projection()
-
-        result = await self.memory._execute_query("""
-            CALL gds.louvain.stream('byrd-mind')
-            YIELD nodeId, communityId
-            WITH gds.util.asNode(nodeId) AS node, communityId
-            RETURN
-                communityId,
-                collect(node.content)[..10] as members,
-                count(*) as size
-            ORDER BY size DESC
-            LIMIT 10
-        """)
-
-        return {f"community_{r['communityId']}": r['members'] for r in result}
-
-    async def betweenness_centrality(self, limit: int = 10) -> List[Dict]:
-        """Find bridge nodes between communities."""
-        await self.ensure_projection()
-
-        result = await self.memory._execute_query("""
-            CALL gds.betweennessCentrality.stream('byrd-mind')
-            YIELD nodeId, score
-            WITH gds.util.asNode(nodeId) AS node, score
-            WHERE score > 0
-            RETURN
-                elementId(node) as id,
-                node.content as content,
-                labels(node)[0] as type,
-                score as centrality
-            ORDER BY score DESC
-            LIMIT $limit
-        """, {"limit": limit})
-
-        return [dict(r) for r in result]
-```
-
-#### 3.3 Bayesian Capability Tracker
-
-```python
-class BayesianCapabilityTracker:
-    """
-    Track capabilities using proper Bayesian inference.
-
-    Replaces simple success/total with Beta distribution.
-    Provides uncertainty quantification and principled updates.
-    """
-
-    def __init__(self):
-        # Prior: Beta(1, 1) = uniform (maximum uncertainty)
-        self.alpha: Dict[str, float] = {}  # successes + 1
-        self.beta: Dict[str, float] = {}   # failures + 1
-
-    def update(self, capability: str, success: bool):
-        """Bayesian update after observation."""
-        if capability not in self.alpha:
-            self.alpha[capability] = 1.0
-            self.beta[capability] = 1.0
-
-        if success:
-            self.alpha[capability] += 1
-        else:
-            self.beta[capability] += 1
-
-    def get_estimate(self, capability: str) -> Tuple[float, float, float]:
-        """
-        Get capability estimate with 95% credible interval.
-
-        Returns: (mean, lower_95, upper_95)
-        """
-        if capability not in self.alpha:
-            return (0.5, 0.0, 1.0)  # Maximum uncertainty
-
-        a, b = self.alpha[capability], self.beta[capability]
-
-        # Mean of Beta distribution
-        mean = a / (a + b)
-
-        # 95% credible interval
-        lower = scipy.stats.beta.ppf(0.025, a, b)
-        upper = scipy.stats.beta.ppf(0.975, a, b)
-
-        return (mean, lower, upper)
-
-    def get_uncertainty(self, capability: str) -> float:
-        """Get uncertainty (normalized entropy) of belief."""
-        if capability not in self.alpha:
-            return 1.0
-
-        a, b = self.alpha[capability], self.beta[capability]
-
-        # Entropy of Beta distribution (normalized)
-        entropy = (
-            scipy.special.betaln(a, b)
-            - (a - 1) * scipy.special.psi(a)
-            - (b - 1) * scipy.special.psi(b)
-            + (a + b - 2) * scipy.special.psi(a + b)
-        )
-
-        max_entropy = scipy.special.betaln(1, 1)
-        return entropy / max_entropy if max_entropy > 0 else 1.0
-
-    def should_explore(self, capability: str, threshold: float = 0.4) -> bool:
-        """Recommend exploration if uncertainty is high."""
-        return self.get_uncertainty(capability) > threshold
-```
-
-#### 3.4 Emergent Category Discovery
-
-```python
 class EmergentCategoryDiscovery:
     """
     Discover capability categories from behavior, not prescription.
@@ -907,11 +981,23 @@ class EmergentCategoryDiscovery:
     Aligns with emergence principle: BYRD defines its own vocabulary.
     """
 
+    def __init__(self, memory, config: Dict = None):
+        self.memory = memory
+        self.config = config or {}
+        self._encoder = None
+
+    def _ensure_encoder(self):
+        if self._encoder is None:
+            try:
+                from sentence_transformers import SentenceTransformer
+                self._encoder = SentenceTransformer('all-MiniLM-L6-v2')
+            except ImportError:
+                self._encoder = "disabled"
+
     async def discover_categories(self, min_cluster_size: int = 5) -> Dict[str, DiscoveredCategory]:
         """Discover categories by clustering behavioral patterns."""
 
-        # Get recent capability attempts
-        attempts = await self.memory._execute_query("""
+        attempts = await self.memory._run_query("""
             MATCH (e:Experience)
             WHERE e.type IN ['capability_attempt', 'action_outcome', 'agi_cycle']
             RETURN e.content as content, e.capability as capability,
@@ -920,13 +1006,15 @@ class EmergentCategoryDiscovery:
             LIMIT 500
         """)
 
-        if len(attempts) < min_cluster_size:
+        if not attempts or len(attempts) < min_cluster_size:
             return {}
 
-        # Cluster by semantic similarity
-        clusters = await self._cluster_by_embedding(attempts)
+        self._ensure_encoder()
+        if self._encoder == "disabled":
+            return self._fallback_categorize(attempts, min_cluster_size)
 
-        # Name clusters (only LLM call - for naming, not structure)
+        clusters = await self._cluster_by_embedding([dict(a) for a in attempts])
+
         categories = {}
         for cluster_id, members in clusters.items():
             if len(members) >= min_cluster_size:
@@ -940,29 +1028,55 @@ class EmergentCategoryDiscovery:
                     description=description,
                     pattern_count=len(members),
                     success_rate=success_rate,
-                    examples=[m["content"][:100] for m in members[:5]],
+                    examples=[m.get("content", "")[:100] for m in members[:5]],
                     discovered_at=datetime.now()
                 )
 
         return categories
 
+    def _fallback_categorize(self, attempts: List, min_size: int) -> Dict:
+        """Fallback categorization using capability field."""
+        from collections import defaultdict
+
+        by_capability = defaultdict(list)
+        for a in attempts:
+            cap = dict(a).get("capability", "unknown")
+            by_capability[cap].append(dict(a))
+
+        return {
+            cap: DiscoveredCategory(
+                name=cap,
+                description=f"Activities related to {cap}",
+                pattern_count=len(items),
+                success_rate=sum(1 for i in items if i.get("success")) / len(items),
+                examples=[i.get("content", "")[:100] for i in items[:3]],
+                discovered_at=datetime.now()
+            )
+            for cap, items in by_capability.items()
+            if len(items) >= min_size
+        }
+
     async def _cluster_by_embedding(self, attempts: List[Dict]) -> Dict[str, List[Dict]]:
         """Cluster using sentence embeddings + k-means."""
-        encoder = SentenceTransformer('all-MiniLM-L6-v2')
+        from sklearn.cluster import KMeans
+        from sklearn.metrics import silhouette_score
+        from collections import defaultdict
 
-        embeddings = encoder.encode([a["content"] for a in attempts])
+        contents = [a.get("content", "") for a in attempts]
+        embeddings = self._encoder.encode(contents)
 
-        # Determine optimal k using silhouette score
+        # Find optimal k
         best_k, best_score = 3, -1
-        for k in range(3, min(10, len(attempts) // 5)):
-            kmeans = KMeans(n_clusters=k, random_state=42)
+        max_k = min(10, len(attempts) // 5)
+
+        for k in range(3, max_k + 1):
+            kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
             labels = kmeans.fit_predict(embeddings)
             score = silhouette_score(embeddings, labels)
             if score > best_score:
                 best_k, best_score = k, score
 
-        # Final clustering
-        kmeans = KMeans(n_clusters=best_k, random_state=42)
+        kmeans = KMeans(n_clusters=best_k, random_state=42, n_init=10)
         labels = kmeans.fit_predict(embeddings)
 
         clusters = defaultdict(list)
@@ -972,9 +1086,11 @@ class EmergentCategoryDiscovery:
         return dict(clusters)
 ```
 
-### 4. Verification Layer
+### 4. Verification Layer - NEW
 
 ```python
+# capability_evaluator.py (NEW FILE)
+
 class CapabilityEvaluator:
     """
     Held-out test suites for ground-truth capability measurement.
@@ -982,37 +1098,46 @@ class CapabilityEvaluator:
     Critical for training signal - without ground truth, learning is impossible.
     """
 
-    # Test suites per capability
     TEST_SUITES = {
         "reasoning": [
             {
                 "input": "If A implies B and B implies C, does A imply C?",
-                "expected_contains": "yes"
+                "expected_contains": ["yes", "transitiv"]
             },
             {
                 "input": "What is wrong with: All cats are animals. Fluffy is an animal. Therefore Fluffy is a cat.",
-                "expected_contains": "invalid"
+                "expected_contains": ["invalid", "fallacy", "affirming the consequent"]
             },
         ],
         "code_generation": [
             {
-                "input": "Write a function to check if a number is prime",
-                "validator": "contains_def_and_returns_bool"
+                "input": "Write a Python function to check if a number is prime",
+                "validator": "contains_def_and_loop"
             },
         ],
         "research": [
             {
                 "input": "What is the capital of France?",
-                "expected_contains": "Paris"
+                "expected_contains": ["paris"]
             },
         ],
         "introspection": [
             {
-                "input": "Describe your current capabilities",
-                "validator": "returns_structured_list"
+                "input": "List your current capabilities",
+                "validator": "returns_list"
+            },
+        ],
+        "memory_operations": [
+            {
+                "input": "What did you learn in the last reflection?",
+                "validator": "references_past"
             },
         ],
     }
+
+    def __init__(self, llm_client, memory):
+        self.llm_client = llm_client
+        self.memory = memory
 
     async def evaluate_capability(self, capability: str) -> EvaluationResult:
         """Run test suite for capability."""
@@ -1029,7 +1154,7 @@ class CapabilityEvaluator:
 
         for test in tests:
             result = await self._run_test(capability, test)
-            if result.passed:
+            if result:
                 passed += 1
 
         return EvaluationResult(
@@ -1039,148 +1164,193 @@ class CapabilityEvaluator:
             tests_run=len(tests)
         )
 
+    async def _run_test(self, capability: str, test: Dict) -> bool:
+        """Run a single test case."""
+        try:
+            response = await self.llm_client.generate(
+                prompt=test["input"],
+                max_tokens=200,
+                temperature=0.1
+            )
 
-class InformationTheory:
-    """Information-theoretic utilities for principled learning."""
+            text = response.text.lower()
 
-    @staticmethod
-    def entropy(probabilities: List[float]) -> float:
-        """Shannon entropy: H(X) = -Σ p(x) log₂ p(x)"""
-        return -sum(p * math.log2(p) for p in probabilities if p > 0)
+            if "expected_contains" in test:
+                return any(exp.lower() in text for exp in test["expected_contains"])
+            elif "validator" in test:
+                return self._run_validator(test["validator"], response.text)
 
-    @staticmethod
-    def information_gain(before_entropy: float, after_entropy: float) -> float:
-        """Information gained from observation: IG = H(before) - H(after)"""
-        return before_entropy - after_entropy
+            return False
+        except Exception as e:
+            print(f"Test failed with error: {e}")
+            return False
 
-    @staticmethod
-    def kl_divergence(p: List[float], q: List[float]) -> float:
-        """KL divergence: how different is q from p?"""
-        return sum(pi * math.log2(pi / qi) for pi, qi in zip(p, q) if pi > 0 and qi > 0)
+    def _run_validator(self, validator: str, text: str) -> bool:
+        """Run a custom validator."""
+        if validator == "contains_def_and_loop":
+            return "def " in text and ("for " in text or "while " in text)
+        elif validator == "returns_list":
+            return any(c in text for c in ["-", "*", "1.", "•"])
+        elif validator == "references_past":
+            return any(w in text.lower() for w in ["learned", "reflected", "believed", "experienced"])
+        return False
 ```
 
 ---
 
-## Integration
+## Dependencies
 
-### How Components Connect
-
+### Already Present
 ```
-User Query / Desire
-        │
-        ▼
-┌───────────────────────┐
-│    Learned Retriever  │ ◄── Trains on (query, helpful_items)
-└───────────┬───────────┘
-            │
-            ▼
-┌───────────────────────┐
-│    Memory Reasoner    │
-└───────────┬───────────┘
-            │
-            ▼
-┌───────────────────────┐
-│      World Model      │ ◄── Updates on (action, outcome)
-│    (predict outcome)  │
-└───────────┬───────────┘
-            │
-            ▼
-┌───────────────────────┐
-│   Intuition Network   │ ◄── Trains on (situation, success)
-│   (fast guidance)     │
-└───────────┬───────────┘
-            │
-            ▼
-┌───────────────────────┐
-│       Execute         │
-└───────────┬───────────┘
-            │
-            ▼
-┌───────────────────────┐
-│ Capability Evaluator  │ ──► Ground truth for training
-└───────────┬───────────┘
-            │
-            ▼
-┌───────────────────────┐
-│    Self-Compiler      │
-│  (extract patterns)   │
-└───────────┬───────────┘
-            │
-            ▼
-┌───────────────────────┐
-│     Code Learner      │ ──► learned_strategies/*.py
-│   (stable → code)     │
-└───────────────────────┘
+neo4j>=5.0.0
+httpx>=0.25.0
+numpy
+pyyaml
 ```
 
-### Training Schedule
+### Required Additions
+```
+scipy>=1.10.0              # For Beta distribution (lightweight)
+```
 
-| Mode | Activity | Frequency |
-|------|----------|-----------|
-| AWAKE | Collect training examples | Continuous |
-| AWAKE | World model predictions | Per action |
-| DREAMING | Intuition network training | Every 50 examples |
-| DREAMING | Learned retriever training | Every 100 examples |
-| DREAMING | World model consolidation | Per cycle |
-| DREAMING | Pattern codification | Per stable pattern |
-| EVOLVING | Goal fitness with intuition | Per generation |
-| COMPILING | Execute codified patterns | As matched |
+### Optional (for full training)
+```
+sentence-transformers>=2.2.0  # For IntuitionNetwork, LearnedRetriever
+torch>=2.0.0                   # For neural network training
+scikit-learn>=1.2.0            # For KMeans in category discovery
+```
+
+### Phased Introduction
+| Phase | Dependencies Added |
+|-------|-------------------|
+| 1 | scipy only |
+| 2 | sentence-transformers, scikit-learn |
+| 3 | torch (optional) |
 
 ---
 
-## Implementation Roadmap
+## Implementation Roadmap (Revised)
 
-### Phase 1: Foundation (Week 1-2)
+### Phase 1: AGI Runner + Foundation (Week 1)
 
-| Component | Effort | Dependencies |
-|-----------|--------|--------------|
-| AGIRunner skeleton | 2 days | None |
-| WorldModel | 2 days | None |
-| BayesianCapabilityTracker | 1 day | scipy |
-| CapabilityEvaluator | 2 days | None |
-| Integration tests | 2 days | Above |
+| Task | Effort | Notes |
+|------|--------|-------|
+| Create `agi_runner.py` skeleton | 2 days | The critical missing piece |
+| Create `learned_strategies/` directory structure | 1 hour | With `__init__.py` files |
+| Create `capability_evaluator.py` | 1 day | Test suites for ground truth |
+| Wire AGIRunner into `byrd.py` startup | 1 day | Integration point |
+| Add `scipy` to requirements.txt | - | For Beta distribution |
 
-**Milestone**: AGI cycle runs end-to-end (even if learning is minimal)
+**Milestone**: AGI cycle runs end-to-end
 
-### Phase 2: Graph & Memory (Week 3)
+### Phase 2: Code Learner + Memory Enhancements (Week 2)
 
-| Component | Effort | Dependencies |
-|-----------|--------|--------------|
-| Neo4j GDS setup | 1 day | Docker config |
-| GraphAlgorithms class | 2 days | GDS |
-| HierarchicalMemory | 2 days | None |
-| EmergentCategoryDiscovery | 1 day | sentence-transformers |
+| Task | Effort | Notes |
+|------|--------|-------|
+| Create `code_learner.py` | 2 days | Uses existing LLM, no new deps |
+| Enhance `self_model.py` with Beta distribution | 1 day | Add bayesian methods |
+| Extend `world_model.py` with consolidate() | 0.5 days | Simple addition |
+| Create `hierarchical_memory.py` | 2 days | L0-L4 abstraction |
+| Add training hooks to `omega.py` | 1 day | DREAMING mode training |
 
-**Milestone**: Real PageRank, communities, abstraction levels
+**Milestone**: Patterns can be codified, memory has hierarchy
 
-### Phase 3: Learning Components (Week 4-5)
+### Phase 3: Learning Components (Week 3-4)
 
-| Component | Effort | Dependencies |
-|-----------|--------|--------------|
-| IntuitionNetwork | 2 days | PyTorch, sentence-transformers |
-| LearnedRetriever | 2 days | PyTorch, sentence-transformers |
-| CodeLearner | 3 days | AST, importlib |
-| Integration with AGIRunner | 2 days | Above |
+| Task | Effort | Notes |
+|------|--------|-------|
+| Add `sentence-transformers` dependency | - | Optional but recommended |
+| Create `intuition_network.py` | 2 days | Works without torch |
+| Create `learned_retriever.py` | 2 days | Works without torch |
+| Create `emergent_categories.py` | 2 days | Uses sklearn |
+| Integrate into existing loops | 2 days | Extend existing files |
 
 **Milestone**: Learning components training during DREAMING
 
-### Phase 4: Full Integration (Week 6)
+### Phase 4: Integration + Testing (Week 5)
 
-| Component | Effort | Dependencies |
-|-----------|--------|--------------|
-| Wire all components into BYRD | 2 days | All above |
-| End-to-end testing | 2 days | All above |
-| Documentation | 1 day | All above |
+| Task | Effort | Notes |
+|------|--------|-------|
+| Full integration testing | 2 days | End-to-end cycles |
+| Update ARCHITECTURE.md | 1 day | Document new components |
+| Performance optimization | 2 days | Async, batching |
 
 **Milestone**: Full AGI cycle with learning demonstrated
+
+---
+
+## File Structure (Revised)
+
+```
+byrd/
+├── Core Components (EXISTING)
+│   ├── byrd.py              # EXTEND: wire AGIRunner
+│   ├── memory.py            # EXTEND: hierarchical hooks
+│   ├── dreamer.py           # No changes
+│   ├── seeker.py            # No changes
+│   ├── omega.py             # EXTEND: training orchestration
+│
+├── AGI Seed Components (EXISTING)
+│   ├── self_model.py        # EXTEND: add Bayesian methods
+│   ├── world_model.py       # EXTEND: add consolidate()
+│   ├── accelerators.py      # EXTEND: CodeLearner integration
+│   ├── graph_algorithms.py  # USE AS-IS (already complete)
+│
+├── Option B Components (EXISTING)
+│   ├── memory_reasoner.py   # EXTEND: LearnedRetriever injection
+│   ├── goal_evolver.py      # EXTEND: IntuitionNetwork scoring
+│   ├── dreaming_machine.py  # EXTEND: WorldModel predictions
+│   ├── coupling_tracker.py  # No changes
+│
+├── New Components (CREATE)
+│   ├── agi_runner.py              # THE critical missing piece
+│   ├── intuition_network.py       # Trainable taste
+│   ├── learned_retriever.py       # Trainable relevance
+│   ├── code_learner.py            # Pattern codification
+│   ├── hierarchical_memory.py     # L0-L4 abstraction
+│   ├── emergent_categories.py     # Category discovery
+│   └── capability_evaluator.py    # Held-out test suites
+│
+├── Learned Strategies (CREATE)
+│   └── learned_strategies/
+│       ├── __init__.py
+│       ├── desire_routing/
+│       │   └── __init__.py
+│       ├── pattern_matching/
+│       │   └── __init__.py
+│       └── decision_making/
+│           └── __init__.py
+│
+└── Tests (CREATE)
+    ├── test_agi_runner.py
+    └── test_integration.py
+```
+
+---
+
+## Hindsight Prevention
+
+Issues that could occur post-implementation and how to prevent them:
+
+| Issue | Prevention |
+|-------|------------|
+| **WorldModel duplication** | Import existing `world_model.py`, don't recreate |
+| **SelfModel vs BayesianTracker confusion** | Add methods to existing SelfModel, no separate class |
+| **Neo4j GDS calls failing** | Never use GDS - keep Python implementations in `graph_algorithms.py` |
+| **learned_strategies import failures** | Create `__init__.py` in all directories |
+| **Circular imports** | AGIRunner imports components, not vice versa |
+| **Training slowing operation** | Only train during DREAMING mode |
+| **Memory pressure from embeddings** | Lazy-load sentence-transformers |
+| **Code validation failures** | Use AST parse + dangerous pattern check |
+| **Rollback not working** | Use existing `rollback.py`, test before deploy |
+| **Missing dependencies at runtime** | Graceful degradation if optional deps missing |
+| **sentence-transformers not installed** | All learning components work without it (baseline mode) |
 
 ---
 
 ## Success Criteria
 
 ### Minimum Viable AGI Seed
-
-The system achieves "minimum viable" when:
 
 - [ ] AGI Runner executes complete improvement cycles
 - [ ] World Model prediction accuracy > 50%
@@ -1189,8 +1359,6 @@ The system achieves "minimum viable" when:
 - [ ] Bayesian tracker shows narrowing uncertainty
 
 ### Full Learning System
-
-The system demonstrates genuine learning when:
 
 - [ ] Abstraction hierarchy reaches L3 (axioms)
 - [ ] Cross-domain transfer observed
@@ -1207,75 +1375,24 @@ The system demonstrates genuine learning when:
 | Metric | Source | Healthy Range |
 |--------|--------|---------------|
 | Improvement rate | AGIRunner | > 0 |
-| World model accuracy | WorldModel | > 60% |
+| World model accuracy | WorldModel (existing) | > 60% |
 | Intuition agreement | IntuitionNetwork | > 70% |
 | Retrieval helpfulness | LearnedRetriever | > 50% |
 | Patterns codified | CodeLearner | Growing |
 | Max abstraction level | HierarchicalMemory | L2+ |
 | Category count | EmergentCategoryDiscovery | 5+ |
-| Capability uncertainty | BayesianTracker | Decreasing |
+| Capability uncertainty | SelfModel (enhanced) | Decreasing |
 | Evaluation accuracy | CapabilityEvaluator | > 70% |
-
----
-
-## Risk Mitigation
-
-| Risk | Mitigation |
-|------|------------|
-| AGI cycles too slow | Batch operations, async execution |
-| World model learns wrong rules | Confidence thresholds, validation |
-| Intuition overfits | Hold-out evaluation, regularization |
-| Code generation fails | Multiple attempts, fallback to patterns |
-| Retriever degrades | A/B test against embedding baseline |
-| Codified patterns buggy | AST validation, sandbox execution |
-| Graph algorithms slow | Projection caching, query optimization |
-| Training disrupts operation | Train only during DREAMING mode |
-
----
-
-## File Structure
-
-```
-byrd/
-├── agi_runner.py              # The execution engine (NEW)
-├── world_model.py             # Causal learning (NEW)
-├── intuition_network.py       # Trainable taste (NEW)
-├── learned_retriever.py       # Trainable relevance (NEW)
-├── code_learner.py            # Pattern codification (NEW)
-├── graph_algorithms.py        # Neo4j GDS integration (NEW)
-├── bayesian_tracker.py        # Bayesian capabilities (NEW)
-├── emergent_categories.py     # Category discovery (NEW)
-├── capability_evaluator.py    # Test suites (NEW)
-├── information_theory.py      # Math utilities (NEW)
-│
-├── memory.py                  # EXTEND: hierarchical abstraction
-├── memory_reasoner.py         # EXTEND: use learned retriever
-├── accelerators.py            # EXTEND: use code learner
-├── omega.py                   # EXTEND: orchestrate training
-├── goal_evolver.py            # EXTEND: use intuition
-├── dreaming_machine.py        # EXTEND: use world model
-│
-├── learned_strategies/        # Code-as-memory (NEW)
-│   ├── desire_routing/
-│   ├── pattern_matching/
-│   └── decision_making/
-│
-└── tests/
-    ├── test_agi_runner.py
-    ├── test_world_model.py
-    ├── test_intuition.py
-    └── test_integration.py
-```
 
 ---
 
 ## Conclusion
 
-This unified plan merges the execution engine from AGI_SEED_V2 with the learning substrate from ARCHITECTURE_V3_LEARNING. The result is a complete system where:
+This unified plan merges the execution engine from AGI_SEED_V2 with the learning substrate from ARCHITECTURE_V3_LEARNING, while respecting the existing codebase:
 
-1. **The AGIRunner drives improvement cycles** - No more islands, everything connects
-2. **Learning components enable genuine growth** - Despite frozen LLM weights
-3. **Verification provides ground truth** - Training has signal to learn from
+1. **The AGIRunner drives improvement cycles** - The critical missing piece
+2. **Existing components are extended, not replaced** - WorldModel, SelfModel, GraphAlgorithms
+3. **Learning components work with graceful degradation** - Optional dependencies
 4. **Memory becomes hierarchical** - Knowledge compresses into abstractions
 5. **Categories emerge from behavior** - No prescribed vocabulary
 6. **Stable patterns become code** - Knowledge externalizes permanently
@@ -1284,7 +1401,8 @@ The elegant insight: **Intelligence emerges from the interaction of execution an
 
 ---
 
-*Document version: 1.0*
+*Document version: 2.0 (Audited)*
 *Created: December 28, 2024*
-*Status: Unified AGI architecture plan*
+*Audited: December 28, 2024*
+*Status: Unified AGI architecture plan - AUDITED AGAINST CODEBASE*
 *Supersedes: AGI_SEED_V2_PLAN.md, ARCHITECTURE_V3_LEARNING.md*
