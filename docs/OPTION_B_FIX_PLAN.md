@@ -9,8 +9,9 @@
 
 **Root Causes Addressed**:
 1. ✅ No initial goal population (Goal Evolver can't evolve from nothing)
-2. ✅ Search service dependency broken (switched to DuckDuckGo)
-3. ⚠️ Remaining issues identified below
+2. ✅ Search service dependency broken (switched to DuckDuckGo → `ddgs` package)
+3. ✅ Philosophical desires routed to introspection (no longer failing on web search)
+4. ⚠️ Remaining issues identified below
 
 ---
 
@@ -36,30 +37,17 @@
 
 ## Remaining Issues & Fixes Needed
 
-### Issue 1: Introspective Desires Route to Web Search
+### Issue 1: Introspective Desires Route to Web Search → ✅ FIXED
 
 **Problem**: BYRD generates philosophical desires like "To integrate the understanding that behavior IS understanding..." which get routed to web search and return no results.
 
-**Fix Required**:
-```python
-# In seeker.py, add introspection routing logic
-async def _route_desire(self, desire: Dict) -> str:
-    description = desire.get("description", "")
+**Fix Implemented**:
+- Added `philosophical_introspection_keywords` check in `_intent_to_strategy()`
+- Override "research" intent to "introspect" when desires contain BYRD's philosophical vocabulary
+- Keywords include: "search loop", "behavior is understanding", "persistence of the", "recognition", "completeness", "circulating", "witnessing", etc.
+- Also expanded `introspection_keywords` in `_classify_intent_on_demand()` for new desires
 
-    # Route introspective desires to source introspection, not web search
-    introspection_keywords = [
-        "understand myself", "my own", "my architecture",
-        "integrate", "behavior", "consciousness",
-        "reflection", "awareness", "identity"
-    ]
-
-    if any(kw in description.lower() for kw in introspection_keywords):
-        return "introspect"  # Route to _seek_introspection
-
-    return "search"  # Default to web search
-```
-
-**Files to Modify**: `seeker.py` - `_route_desire()` method
+**Result**: All philosophical self-understanding desires now route to introspection and complete successfully (✅ Introspection complete: ~16K nodes)
 
 ### Issue 2: No Pattern Creation (Self-Compiler Dormant)
 
@@ -178,13 +166,18 @@ curl -s http://localhost:8000/api/status | jq '.seeker'
 
 | File | Change |
 |------|--------|
-| `requirements.txt` | Added `duckduckgo-search>=6.0.0` |
-| `seeker.py` | Replaced SearXNG with DuckDuckGo search |
+| `requirements.txt` | Updated to `ddgs>=6.0.0` (renamed from duckduckgo-search) |
+| `seeker.py` | Replaced SearXNG with DuckDuckGo, added philosophical desire routing |
 | `config.yaml` | Removed SearXNG config, simplified research section |
 | `kernel/agi_seed.yaml` | Added 14 initial goals |
 | `kernel/__init__.py` | Added InitialGoal class, parsing, get_goal_descriptions() |
 | `omega.py` | Added seed_initial_goals() method |
 | `byrd.py` | Added goal seeding call at startup |
+
+### Detailed Changes to seeker.py (Phase 2):
+1. Updated import from `duckduckgo_search` to `ddgs` (new package name)
+2. Added `philosophical_introspection_keywords` in `_intent_to_strategy()` to catch BYRD's emergent vocabulary
+3. Expanded `introspection_keywords` in `_classify_intent_on_demand()` for comprehensive routing
 
 ---
 

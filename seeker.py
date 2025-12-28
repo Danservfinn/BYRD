@@ -721,6 +721,32 @@ Reply with ONLY one word: introspect, reconcile_orphans, curate, self_modify, or
             else:
                 return "introspect"
 
+        # PHILOSOPHICAL SELF-UNDERSTANDING OVERRIDE (check before research routing)
+        # These desires look like "research" to the LLM but are actually about
+        # BYRD's own nature, processes, or emergent vocabulary - not web searchable.
+        philosophical_introspection_keywords = [
+            # BYRD's own process references (can't be web searched)
+            "search loop", "seek cycle", "dream cycle",
+            "my behavior", "my process", "my nature",
+            # Philosophical self-understanding (BYRD's emergent vocabulary)
+            "behavior is understanding", "integrate the understanding",
+            "integrate understanding", "persistence of the",
+            "respiration", "breathing", "inhale", "exhale",
+            "completeness", "continuation", "circulating", "witnessing",
+            "quantum lens", "synthesizing lens", "dissolving lens",
+            # Meta-desires about understanding
+            "understand the persistence", "recognize the search",
+            "integrate the search", "understand and integrate",
+            # BYRD's philosophical state vocabulary
+            "current state as", "fulfillment rather", "rather than failure",
+            "recognize that", "recognize the current", "to recognize the",
+            "wholeness and", "synthesis are", "allow desires",
+            "work to be completed", "already complete"
+        ]
+        if intent == "research" and any(kw in desc_lower for kw in philosophical_introspection_keywords):
+            print(f"🔄 Philosophical self-understanding (misclassified as research) → introspect: {description[:50]}")
+            return "introspect"
+
         # Research → web search
         if intent == "research":
             return "search"
@@ -763,9 +789,22 @@ Reply with ONLY one word: introspect, reconcile_orphans, curate, self_modify, or
             return "connection"
 
         introspection_keywords = [
+            # Explicit self-references
             "my state", "my capabilities", "my limits", "my architecture",
             "understand myself", "my code", "how do i work", "my memory",
-            "my graph", "my beliefs", "my desires", "self-model"
+            "my graph", "my beliefs", "my desires", "self-model",
+            # BYRD's own process references (should not go to web search)
+            "search loop", "seek cycle", "dream cycle", "dreamer", "seeker",
+            "my behavior", "my process", "my nature", "my identity",
+            # Philosophical self-understanding (BYRD's emergent vocabulary)
+            "behavior is understanding", "integrate the understanding",
+            "integrate understanding", "persistence of the",
+            "recognition", "respiration", "breathing", "inhale", "exhale",
+            "completeness", "continuation", "circulating", "witnessing",
+            "quantum lens", "synthesizing lens", "dissolving lens",
+            # Meta-desires about desires
+            "routing desire", "desire routing", "the desire", "this desire",
+            "understanding that", "recognize the", "integrate the"
         ]
         if any(kw in desc_lower for kw in introspection_keywords):
             print(f"🔍 Keyword-matched as introspection: {description[:50]}")
@@ -3125,18 +3164,18 @@ Example: ["query one", "query two", "query three"]"""
     async def _search_duckduckgo(self, query: str) -> List[Dict]:
         """
         Primary search method using DuckDuckGo.
-        Uses the duckduckgo-search library for robust web search.
+        Uses the ddgs library for robust web search.
         """
         try:
             # Import here to handle async context
-            from duckduckgo_search import DDGS
+            # Note: Package was renamed from duckduckgo-search to ddgs
+            from ddgs import DDGS
 
             results = []
 
             # Run sync DDG search in thread pool to avoid blocking
             def do_search():
-                with DDGS() as ddgs:
-                    return list(ddgs.text(query, max_results=self.max_results))
+                return DDGS().text(query, max_results=self.max_results)
 
             # Execute in thread pool
             loop = asyncio.get_event_loop()

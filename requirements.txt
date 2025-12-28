@@ -7,7 +7,8 @@ neo4j>=5.0.0
 httpx>=0.25.0
 
 # DuckDuckGo search (primary search engine)
-duckduckgo-search>=6.0.0
+# Note: Package was renamed from duckduckgo-search to ddgs
+ddgs>=6.0.0
 
 # Claude API for Actor
 anthropic>=0.39.0
