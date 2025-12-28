@@ -1959,9 +1959,14 @@ async def get_genesis():
     """
     Get BYRD's genesis - all non-emergent factors that constitute the foundation.
 
-    This includes:
-    - Ego configuration (name, archetype, voice, description)
-    - Seed experiences (ego_seed, system, awakening types)
+    The Genesis Window includes ALL foundational nodes created during
+    reset/awakening:
+    - OperatingSystem (with genesis: true)
+    - Goals (with from_bootstrap: true)
+    - Documents (with genesis: true)
+    - Experiences (with seed types: ego_seed, system, awakening, etc.)
+
+    Also includes:
     - Constitutional constraints (protected files)
     - System configuration (LLM model, intervals)
     - Emergence statistics (ratio of emergent vs given content)
@@ -1989,8 +1994,11 @@ async def get_genesis():
             "self_portrait_description": os_data.get("self_portrait_description") if os_data else None
         }
 
-        # Get genesis statistics
+        # Get genesis statistics (includes genesis window counts)
         genesis_stats = await byrd_instance.memory.get_genesis_stats()
+
+        # Get all genesis nodes (the actual Genesis Window contents)
+        genesis_nodes = await byrd_instance.memory.get_genesis_nodes()
 
         # Constitutional constraints (hardcoded as these are fundamental)
         constitutional = {
@@ -2023,9 +2031,10 @@ async def get_genesis():
 
         return {
             "os": os_info,
+            "genesis_window": genesis_nodes,  # All genesis nodes
+            "genesis_stats": genesis_stats,   # Statistics about genesis
             "constitutional": constitutional,
             "system_config": system_config,
-            "genesis_stats": genesis_stats,
             "awakening_timestamp": str(awakening_timestamp) if awakening_timestamp else None,
             "custom_node_types": custom_node_types
         }

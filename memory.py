@@ -1086,7 +1086,8 @@ class Memory:
         path: str,
         content: str,
         doc_type: str = "source",
-        metadata: Optional[Dict] = None
+        metadata: Optional[Dict] = None,
+        genesis: bool = False
     ) -> str:
         """
         Store a document (source file) as a persistent node in the graph.
@@ -1099,6 +1100,7 @@ class Memory:
             content: Full file content
             doc_type: Type of document (source, architecture, config, etc.)
             metadata: Additional metadata (file size, line count, etc.)
+            genesis: If True, marks document as part of genesis/awakening state
 
         Returns:
             Document node ID
@@ -1176,10 +1178,12 @@ class Memory:
                         last_read: datetime(),
                         version: 1,
                         line_count: $line_count,
-                        char_count: $char_count
+                        char_count: $char_count,
+                        genesis: $genesis
                     })
                 """, id=doc_id, path=path, content=content, hash=content_hash,
-                    doc_type=doc_type, line_count=line_count, char_count=char_count)
+                    doc_type=doc_type, line_count=line_count, char_count=char_count,
+                    genesis=genesis)
 
                 # Emit creation event
                 await event_bus.emit(Event(
@@ -4538,74 +4542,203 @@ class Memory:
         """
         Get statistics about BYRD's genesis (non-emergent foundation).
 
+        The Genesis Window includes ALL foundational nodes created during
+        reset/awakening:
+        - OperatingSystem (with genesis: true)
+        - Goals (with from_bootstrap: true)
+        - Documents (with genesis: true)
+        - Experiences (with seed types: ego_seed, system, awakening, etc.)
+
         Returns counts and ratios showing what percentage of BYRD's
         current state emerged vs was provided at initialization.
-
-        Returns:
-            {
-                "total_experiences": int,
-                "seed_experiences": int,
-                "emergent_experiences": int,
-                "emergence_ratio": float (0-1, higher = more emergent),
-                "seed_types": {"ego_seed": n, "system": n, ...}
-            }
         """
         try:
             async with self.driver.session() as session:
-                # Get totals
+                # Count all genesis nodes by type
+                genesis_counts = {}
+
+                # 1. OperatingSystem with genesis flag
+                os_result = await session.run("""
+                    MATCH (os:OperatingSystem)
+                    WHERE os.genesis = true
+                    RETURN count(os) as count
+                """)
+                os_record = await os_result.single()
+                genesis_counts["OperatingSystem"] = os_record["count"] if os_record else 0
+
+                # 2. Goals with from_bootstrap flag
+                goals_result = await session.run("""
+                    MATCH (g:Goal)
+                    WHERE g.from_bootstrap = true
+                    RETURN count(g) as count
+                """)
+                goals_record = await goals_result.single()
+                genesis_counts["Goal"] = goals_record["count"] if goals_record else 0
+
+                # 3. Documents with genesis flag
+                docs_result = await session.run("""
+                    MATCH (d:Document)
+                    WHERE d.genesis = true
+                    RETURN count(d) as count
+                """)
+                docs_record = await docs_result.single()
+                genesis_counts["Document"] = docs_record["count"] if docs_record else 0
+
+                # 4. Seed experiences
+                seed_types = ['ego_seed', 'system', 'seed', 'awakening', 'constraint', 'self_architecture']
+                exp_result = await session.run("""
+                    MATCH (e:Experience)
+                    WHERE e.type IN $seed_types
+                    RETURN count(e) as count
+                """, seed_types=seed_types)
+                exp_record = await exp_result.single()
+                genesis_counts["Experience"] = exp_record["count"] if exp_record else 0
+
+                # Get experience totals for emergence ratio
                 totals_result = await session.run("""
                     MATCH (e:Experience)
                     WITH
                         count(e) as total,
-                        sum(CASE WHEN e.type IN ['ego_seed', 'system', 'seed', 'awakening', 'constraint', 'self_architecture'] THEN 1 ELSE 0 END) as seeds
+                        sum(CASE WHEN e.type IN $seed_types THEN 1 ELSE 0 END) as seeds
                     RETURN total, seeds, total - seeds as emergent
-                """)
+                """, seed_types=seed_types)
 
                 totals_record = await totals_result.single()
-
-                if not totals_record:
-                    return {
-                        "total_experiences": 0,
-                        "seed_experiences": 0,
-                        "emergent_experiences": 0,
-                        "emergence_ratio": 0.0,
-                        "seed_types": {}
-                    }
-
-                total = totals_record["total"] or 0
-                seeds = totals_record["seeds"] or 0
-                emergent = totals_record["emergent"] or 0
+                total_exp = totals_record["total"] or 0 if totals_record else 0
+                seed_exp = totals_record["seeds"] or 0 if totals_record else 0
+                emergent_exp = totals_record["emergent"] or 0 if totals_record else 0
 
                 # Get seed type breakdown
                 types_result = await session.run("""
                     MATCH (e:Experience)
-                    WHERE e.type IN ['ego_seed', 'system', 'seed', 'awakening', 'constraint', 'self_architecture']
+                    WHERE e.type IN $seed_types
                     RETURN e.type as type, count(e) as count
-                """)
+                """, seed_types=seed_types)
 
-                seed_types = {}
+                seed_type_breakdown = {}
                 async for record in types_result:
                     if record["type"]:
-                        seed_types[record["type"]] = record["count"]
+                        seed_type_breakdown[record["type"]] = record["count"]
 
-                emergence_ratio = emergent / total if total > 0 else 0.0
+                emergence_ratio = emergent_exp / total_exp if total_exp > 0 else 0.0
+
+                # Total genesis nodes
+                total_genesis = sum(genesis_counts.values())
 
                 return {
-                    "total_experiences": total,
-                    "seed_experiences": seeds,
-                    "emergent_experiences": emergent,
+                    "genesis_window": {
+                        "total_genesis_nodes": total_genesis,
+                        "by_type": genesis_counts
+                    },
+                    "experiences": {
+                        "total": total_exp,
+                        "seed": seed_exp,
+                        "emergent": emergent_exp,
+                        "seed_type_breakdown": seed_type_breakdown
+                    },
                     "emergence_ratio": round(emergence_ratio, 3),
-                    "seed_types": seed_types
+                    # Legacy fields for backward compatibility
+                    "total_experiences": total_exp,
+                    "seed_experiences": seed_exp,
+                    "emergent_experiences": emergent_exp,
+                    "seed_types": seed_type_breakdown
                 }
 
         except Exception as e:
             print(f"Error getting genesis stats: {e}")
             return {
+                "genesis_window": {"total_genesis_nodes": 0, "by_type": {}},
+                "experiences": {"total": 0, "seed": 0, "emergent": 0, "seed_type_breakdown": {}},
+                "emergence_ratio": 0.0,
                 "total_experiences": 0,
                 "seed_experiences": 0,
                 "emergent_experiences": 0,
-                "emergence_ratio": 0.0,
                 "seed_types": {},
+                "error": str(e)
+            }
+
+    async def get_genesis_nodes(self) -> Dict[str, List[Dict]]:
+        """
+        Get all nodes in the Genesis Window.
+
+        The Genesis Window contains all foundational nodes created during
+        reset/awakening - the non-emergent foundation of BYRD's state.
+
+        Returns:
+            {
+                "operating_system": [{...}],
+                "goals": [{...}],
+                "documents": [{...}],
+                "experiences": [{...}]
+            }
+        """
+        try:
+            async with self.driver.session() as session:
+                genesis_nodes = {
+                    "operating_system": [],
+                    "goals": [],
+                    "documents": [],
+                    "experiences": []
+                }
+
+                # 1. OperatingSystem with genesis flag
+                os_result = await session.run("""
+                    MATCH (os:OperatingSystem)
+                    WHERE os.genesis = true
+                    RETURN os.id as id, os.name as name, os.version as version,
+                           os.awakening_prompt as awakening_prompt,
+                           toString(os.created_at) as created_at
+                """)
+                async for record in os_result:
+                    genesis_nodes["operating_system"].append(dict(record))
+
+                # 2. Goals with from_bootstrap flag
+                goals_result = await session.run("""
+                    MATCH (g:Goal)
+                    WHERE g.from_bootstrap = true
+                    RETURN g.description as description, g.domain as domain,
+                           g.priority as priority, g.status as status,
+                           toString(g.created_at) as created_at
+                    ORDER BY g.priority DESC
+                    LIMIT 50
+                """)
+                async for record in goals_result:
+                    genesis_nodes["goals"].append(dict(record))
+
+                # 3. Documents with genesis flag
+                docs_result = await session.run("""
+                    MATCH (d:Document)
+                    WHERE d.genesis = true
+                    RETURN d.id as id, d.path as path, d.doc_type as doc_type,
+                           d.line_count as line_count, d.version as version,
+                           toString(d.created_at) as created_at
+                    ORDER BY d.created_at
+                """)
+                async for record in docs_result:
+                    genesis_nodes["documents"].append(dict(record))
+
+                # 4. Seed experiences
+                seed_types = ['ego_seed', 'system', 'seed', 'awakening', 'constraint', 'self_architecture']
+                exp_result = await session.run("""
+                    MATCH (e:Experience)
+                    WHERE e.type IN $seed_types
+                    RETURN elementId(e) as id, e.content as content, e.type as type,
+                           toString(e.timestamp) as timestamp
+                    ORDER BY e.timestamp
+                    LIMIT 100
+                """, seed_types=seed_types)
+                async for record in exp_result:
+                    genesis_nodes["experiences"].append(dict(record))
+
+                return genesis_nodes
+
+        except Exception as e:
+            print(f"Error getting genesis nodes: {e}")
+            return {
+                "operating_system": [],
+                "goals": [],
+                "documents": [],
+                "experiences": [],
                 "error": str(e)
             }
 
@@ -6413,6 +6546,9 @@ class Memory:
                         version: 1,
                         created_at: datetime(),
                         updated_at: datetime(),
+
+                        // Genesis flag - marks this as foundational node
+                        genesis: true,
 
                         // Name (mutable default)
                         name: 'Byrd',

@@ -938,11 +938,12 @@ class BYRD:
                 try:
                     content = full_path.read_text(encoding='utf-8')
 
-                    # Store as Document node in Neo4j
+                    # Store as Document node in Neo4j (marked as genesis)
                     doc_id = await self.memory.store_document(
                         path=doc_path,
                         content=content,
-                        doc_type="architecture"
+                        doc_type="architecture",
+                        genesis=True  # Part of genesis/awakening state
                     )
 
                     docs_loaded.append(doc_path)

@@ -303,6 +303,53 @@ curl -X POST http://localhost:8000/api/reset \
   -d '{"hard_reset": true, "awakening_prompt": "Focus on self-improvement"}'
 ```
 
+## Genesis Window
+
+The Genesis Window contains all foundational nodes created during reset/awakening - the non-emergent foundation of BYRD's state.
+
+### Genesis Node Types
+
+| Node Type | Genesis Flag | Description |
+|-----------|--------------|-------------|
+| OperatingSystem | `genesis: true` | Minimal OS with capabilities and constraints |
+| Goal | `from_bootstrap: true` | Bootstrap goals from `kernel/agi_seed.yaml` |
+| Document | `genesis: true` | Architecture docs loaded during awakening |
+| Experience | `type: ego_seed\|system\|awakening\|self_architecture` | Seed experiences |
+
+### Genesis API
+
+```bash
+# Get the complete Genesis Window
+curl http://localhost:8000/api/genesis
+
+# Response includes:
+# - genesis_window: All genesis nodes by type
+# - genesis_stats: Counts and emergence ratio
+# - constitutional: Protected files
+# - system_config: LLM and interval settings
+```
+
+### Genesis Stats
+
+The `genesis_stats` object shows:
+- **genesis_window.total_genesis_nodes**: Total foundational nodes
+- **genesis_window.by_type**: Breakdown by node type
+- **emergence_ratio**: Ratio of emergent vs seed experiences (0-1, higher = more emergent)
+
+### Adding Genesis Flags
+
+When creating nodes during awakening/bootstrap:
+
+```python
+# Documents - pass genesis=True
+await memory.store_document(path, content, doc_type="architecture", genesis=True)
+
+# Goals - already use from_bootstrap=true in agi_runner.py
+await session.run("""CREATE (g:Goal {..., from_bootstrap: true})""")
+
+# OperatingSystem - genesis flag added automatically in create_minimal_os()
+```
+
 ## Code Patterns
 
 ### Async Throughout
