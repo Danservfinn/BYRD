@@ -74,6 +74,8 @@ class CycleResult:
     reason: Optional[str] = None
     duration_seconds: float = 0.0
     hypotheses_tried: int = 0
+    strategy: Optional[str] = None
+    measurement_method: str = "unknown"
 
 
 class AGIRunner:
@@ -122,6 +124,35 @@ class AGIRunner:
             'counterfactuals_seeded': 0
         }
 
+        # Strategy effectiveness tracking
+        self._strategy_stats: Dict[str, Dict[str, float]] = {}
+        # Format: {"research": {"attempts": 10, "successes": 7, "total_delta": 0.15}}
+
+        # Session tracking for multi-timescale metrics
+        self._session_start = datetime.now()
+        self._session_capabilities_improved: Set[str] = set()
+
+    # Capability name mapping: AGIRunner → CapabilityEvaluator
+    CAPABILITY_MAP = {
+        "general_reasoning": "reasoning",
+        "reasoning": "reasoning",
+        "code_generation": "code_generation",
+        "coding": "code_generation",
+        "research": "research",
+        "introspection": "introspection",
+        "self_knowledge": "introspection",
+        "memory": "memory_operations",
+        "memory_operations": "memory_operations",
+        "pattern_recognition": "pattern_recognition",
+        "synthesis": "synthesis",
+        "meta_cognition": "introspection",
+        "learning": "pattern_recognition",
+    }
+
+    def _normalize_capability_name(self, name: str) -> str:
+        """Map capability name to evaluator-compatible name."""
+        return self.CAPABILITY_MAP.get(name, name)
+
     def reset(self):
         """
         Reset AGI Runner state for system reset.
@@ -139,6 +170,10 @@ class AGIRunner:
             'patterns_seeded': 0,
             'counterfactuals_seeded': 0
         }
+        # Reset strategy and session tracking
+        self._strategy_stats.clear()
+        self._session_start = datetime.now()
+        self._session_capabilities_improved.clear()
         # Also reset sub-components if they exist
         if self.desire_classifier:
             self.desire_classifier.reset()
@@ -543,6 +578,16 @@ class AGIRunner:
                 )
             print(f"         Target: {target.name} ({target.priority} priority)")
 
+            # 2.5. CAPTURE BEFORE SCORE (critical for real measurement)
+            before_eval = None
+            if self.evaluator:
+                try:
+                    eval_name = self._normalize_capability_name(target.name)
+                    before_eval = await self.evaluator.evaluate_capability(eval_name)
+                    print(f"         Before score: {before_eval.accuracy:.1%} ({eval_name})")
+                except Exception as e:
+                    print(f"         Before eval skipped: {e}")
+
             # 3. GENERATE: Create improvement hypotheses
             print("   [3/8] Generating hypotheses...")
             hypotheses = await self._generate_hypotheses(target, inventory)
@@ -575,10 +620,10 @@ class AGIRunner:
             print("   [6/8] Executing improvement...")
             await self._execute(best)
 
-            # 7. MEASURE: Evaluate outcome
+            # 7. MEASURE: Evaluate outcome (pass before_eval for real measurement)
             print("   [7/8] Measuring improvement...")
-            measurement = await self._measure_improvement(target, inventory)
-            print(f"         Delta: {measurement.delta:+.2%}")
+            measurement = await self._measure_improvement(target, inventory, before_eval)
+            print(f"         Delta: {measurement.delta:+.2%} ({measurement.measurement_method})")
 
             # 8. LEARN: Update all components
             print("   [8/8] Learning from outcome...")
@@ -592,10 +637,19 @@ class AGIRunner:
                 delta=measurement.delta,
                 cycle=self._cycle_count,
                 duration_seconds=duration,
-                hypotheses_tried=1
+                hypotheses_tried=1,
+                strategy=best.strategy,
+                measurement_method=measurement.measurement_method
             )
 
             self._cycle_history.append(result)
+
+            # Update strategy effectiveness stats
+            self._update_strategy_stats(best.strategy, measurement)
+
+            # Track improved capabilities for session metrics
+            if measurement.improved:
+                self._session_capabilities_improved.add(target.name)
 
             status = "✅ SUCCESS" if result.success else "➖ No improvement"
             print(f"\n{status}: Cycle #{self._cycle_count} ({duration:.1f}s)")
@@ -844,26 +898,37 @@ class AGIRunner:
                 "success": hypothesis.strategy == "success_analysis"
             })
 
-    async def _measure_improvement(self, target: ImprovementTarget, before_inventory) -> MeasurementResult:
-        """Measure improvement using available evaluation methods."""
+    async def _measure_improvement(
+        self,
+        target: ImprovementTarget,
+        before_inventory,
+        before_eval: Optional[Any] = None
+    ) -> MeasurementResult:
+        """
+        Measure improvement using available evaluation methods.
 
-        # Method 1: Use CapabilityEvaluator if available
-        if self.evaluator:
+        Args:
+            target: The improvement target
+            before_inventory: Capability inventory from before execution
+            before_eval: Pre-captured evaluation result (from step 2.5)
+        """
+
+        # Method 1: Use CapabilityEvaluator with pre-captured before_eval
+        if self.evaluator and before_eval is not None:
             try:
-                before_score = await self.evaluator.evaluate_capability(target.name)
-                # Execute some test tasks...
-                after_score = await self.evaluator.evaluate_capability(target.name)
-                delta = after_score.accuracy - before_score.accuracy
+                eval_name = self._normalize_capability_name(target.name)
+                after_eval = await self.evaluator.evaluate_capability(eval_name)
+                delta = after_eval.accuracy - before_eval.accuracy
 
                 return MeasurementResult(
                     improved=(delta > 0.01),
                     delta=delta,
-                    before_score=before_score.accuracy,
-                    after_score=after_score.accuracy,
+                    before_score=before_eval.accuracy,
+                    after_score=after_eval.accuracy,
                     measurement_method="capability_evaluator"
                 )
-            except:
-                pass
+            except Exception as e:
+                print(f"   Warning: Evaluator measurement failed: {e}")
 
         # Method 2: Use self_model comparison
         if self.self_model:
@@ -882,8 +947,8 @@ class AGIRunner:
                         after_score=after_cap.success_rate,
                         measurement_method="self_model_comparison"
                     )
-            except:
-                pass
+            except Exception as e:
+                print(f"   Warning: Self-model measurement failed: {e}")
 
         # Method 3: Heuristic - assume small improvement from any action
         return MeasurementResult(
@@ -954,6 +1019,21 @@ class AGIRunner:
             except Exception as e:
                 print(f"   Warning: Could not rollback: {e}")
 
+    def _update_strategy_stats(self, strategy: str, measurement: MeasurementResult):
+        """Track strategy effectiveness over time."""
+        if strategy not in self._strategy_stats:
+            self._strategy_stats[strategy] = {
+                "attempts": 0,
+                "successes": 0,
+                "total_delta": 0.0
+            }
+
+        stats = self._strategy_stats[strategy]
+        stats["attempts"] += 1
+        stats["total_delta"] += measurement.delta
+        if measurement.improved:
+            stats["successes"] += 1
+
     def get_metrics(self) -> Dict[str, Any]:
         """Get current AGI Runner metrics."""
         return {
@@ -966,10 +1046,64 @@ class AGIRunner:
                     "cycle": c.cycle,
                     "success": c.success,
                     "target": c.target,
-                    "delta": c.delta
+                    "delta": c.delta,
+                    "strategy": c.strategy,
+                    "measurement_method": c.measurement_method
                 }
                 for c in self._cycle_history[-10:]
-            ]
+            ],
+            "strategy_effectiveness": {
+                strategy: {
+                    "attempts": stats["attempts"],
+                    "success_rate": stats["successes"] / stats["attempts"] if stats["attempts"] > 0 else 0,
+                    "avg_delta": stats["total_delta"] / stats["attempts"] if stats["attempts"] > 0 else 0
+                }
+                for strategy, stats in self._strategy_stats.items()
+            }
+        }
+
+    def get_comprehensive_metrics(self) -> Dict[str, Any]:
+        """Get multi-timescale AGI metrics for detailed analysis."""
+        now = datetime.now()
+        session_duration = (now - self._session_start).total_seconds()
+
+        return {
+            "instantaneous": {
+                "last_cycle": self._cycle_count,
+                "last_delta": self._cycle_history[-1].delta if self._cycle_history else 0,
+                "last_target": self._cycle_history[-1].target if self._cycle_history else None,
+                "last_strategy": self._cycle_history[-1].strategy if self._cycle_history else None,
+                "measurement_method": self._cycle_history[-1].measurement_method if self._cycle_history else "none"
+            },
+            "session": {
+                "duration_seconds": session_duration,
+                "cycles_completed": self._cycle_count,
+                "improvement_rate": self._calculate_improvement_rate(),
+                "capabilities_improved": list(self._session_capabilities_improved),
+                "total_delta": sum(c.delta for c in self._cycle_history),
+                "strategy_breakdown": self._strategy_stats
+            },
+            "trends": {
+                "recent_5_cycles": self._calculate_window_stats(5),
+                "recent_10_cycles": self._calculate_window_stats(10),
+                "recent_20_cycles": self._calculate_window_stats(20)
+            },
+            "bootstrap": self._bootstrap_metrics,
+            "evaluator_available": self.evaluator is not None
+        }
+
+    def _calculate_window_stats(self, window: int) -> Dict[str, Any]:
+        """Calculate stats for a window of recent cycles."""
+        recent = self._cycle_history[-window:] if self._cycle_history else []
+        if not recent:
+            return {"cycles": 0, "success_rate": 0, "avg_delta": 0, "targets": []}
+
+        successes = sum(1 for c in recent if c.success)
+        return {
+            "cycles": len(recent),
+            "success_rate": successes / len(recent),
+            "avg_delta": sum(c.delta for c in recent) / len(recent),
+            "targets": list(set(c.target for c in recent if c.target))
         }
 
     def _calculate_improvement_rate(self) -> float:
