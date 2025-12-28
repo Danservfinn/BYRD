@@ -373,6 +373,20 @@ class BYRD:
                 if self.omega:
                     self.omega.compute_introspector = self.compute_introspector
 
+                # Wire LLM usage callback to ComputeIntrospector for token tracking
+                self.llm_client.set_usage_callback(self.compute_introspector.record_llm_usage)
+
+                # Re-initialize SelfModificationSystem with safety_monitor for pattern observation
+                # This enables emergence-preserving learning from modification outcomes
+                self.self_mod = SelfModificationSystem(
+                    memory=self.memory,
+                    config=self_mod_config,
+                    project_root=".",
+                    safety_monitor=self.safety_monitor
+                )
+                # Update Seeker's reference
+                self.seeker.self_mod = self.self_mod
+
                 print("🔮 Option B (Omega): enabled - Five Compounding Loops active")
                 print("   WorldModel: initialized")
                 print("   SafetyMonitor: pending async init")
