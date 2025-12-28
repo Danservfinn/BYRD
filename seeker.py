@@ -9,7 +9,7 @@ EMERGENCE PRINCIPLE:
 - Trust emerges from experience, not hardcoded lists
 - Inner voice is neutral (no prescribed style)
 
-Uses Local LLM + SearXNG for autonomous research.
+Uses Local LLM + DuckDuckGo for autonomous research.
 Integrates with aitmpl.com for curated Claude Code templates.
 """
 
@@ -62,15 +62,12 @@ class Seeker:
         self.interval_seconds = config.get("interval_seconds", 10)
         self.skip_if_no_new_reflections = config.get("skip_if_no_new_reflections", True)
 
-        # Research configuration
+        # Research configuration (DuckDuckGo only)
         research_config = config.get("research", {})
-        self.searxng_url = research_config.get("searxng_url", "http://localhost:8888")
         self.min_research_intensity = research_config.get("min_intensity", 0.3)
         self.max_queries = research_config.get("max_queries", 5)
         self.max_results = research_config.get("max_results", 15)
         self.max_concurrent_desires = research_config.get("max_concurrent_desires", 3)
-        self.search_language = research_config.get("language", "en")
-        self.search_engines = research_config.get("engines", "google,duckduckgo,bing,wikipedia,arxiv")
         self.prefer_domains = research_config.get("prefer_domains", [])
         self.exclude_domains = research_config.get("exclude_domains", [])
 

@@ -16,5 +16,9 @@ build/
 .DS_Store
 *.md
 !README.md
+!ARCHITECTURE.md
+!CLAUDE.md
+!EMERGENCE_PRINCIPLES.md
+!docs/
 docker-compose.yml
 searxng/

@@ -6,6 +6,9 @@ neo4j>=5.0.0
 # HTTP client for LLM and search
 httpx>=0.25.0
 
+# DuckDuckGo search (primary search engine)
+duckduckgo-search>=6.0.0
+
 # Claude API for Actor
 anthropic>=0.39.0
 
