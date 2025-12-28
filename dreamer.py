@@ -905,8 +905,8 @@ SUMMARY:"""
                     data={
                         "belief1_id": contradiction.node1_id,
                         "belief2_id": contradiction.node2_id,
-                        "belief1_content": contradiction.node1_content[:100],
-                        "belief2_content": contradiction.node2_content[:100],
+                        "belief1_content": contradiction.node1_content,
+                        "belief2_content": contradiction.node2_content,
                         "confidence": contradiction.confidence,
                         "method": "structural"
                     }
@@ -2941,7 +2941,7 @@ You can change your voice any time you feel it no longer represents you.
             action = "redesigned" if is_redesign else "created"
             exp_type = "voice_evolution" if is_redesign else "voice_creation"
             await self.memory.record_experience(
-                content=f"[VOICE_{action.upper()}] I {action} my voice: {description[:200]}. Reason: {reason[:100]}",
+                content=f"[VOICE_{action.upper()}] I {action} my voice: {description}. Reason: {reason}",
                 type=exp_type
             )
 

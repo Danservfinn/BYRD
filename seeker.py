@@ -525,7 +525,7 @@ If no clear drives emerge, return {{"drives": []}}"""
         if stable_patterns:
             debug_lines = []
             for p in stable_patterns[:3]:  # Limit to 3
-                desc = p.get("description", "")[:40]
+                desc = p.get("description", "")
                 strat = p.get("strategy", "None")
                 debug_lines.append(f"{strat}:{desc}")
                 print(f"📊 Pattern: strategy={strat} | {desc}")

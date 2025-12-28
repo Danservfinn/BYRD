@@ -3530,9 +3530,9 @@ class Memory:
 
                     connection_detail = {
                         "experience_id": orphan["id"],
-                        "experience_content": orphan["content"][:100] + "..." if len(orphan["content"]) > 100 else orphan["content"],
+                        "experience_content": orphan["content"],
                         "belief_id": belief["id"],
-                        "belief_content": belief["content"][:100] + "..." if len(belief["content"]) > 100 else belief["content"],
+                        "belief_content": belief["content"],
                         "similarity_score": belief["similarity_score"]
                     }
 
