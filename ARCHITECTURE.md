@@ -526,12 +526,11 @@ byrd/
 │   ├── corrigibility.py     # Corrigibility tests
 │   └── rollback.py          # Rollback system
 │
-├── Experimental
-│   ├── semantic_lexicon.py  # Semantic type system
-│   ├── friction_synthesis.py # Friction-based learning
-│   ├── phase_transition.py  # Phase transition detection
-│   ├── gnn_layer.py         # Graph neural network layer
+├── Algorithms
 │   └── graph_algorithms.py  # PageRank, spreading activation
+│
+├── Archive (deprecated experimental code)
+│   └── archive/experimental/  # semantic_lexicon, friction_synthesis, etc.
 │
 ├── Configuration
 │   ├── config.yaml          # Main configuration

@@ -161,11 +161,10 @@ class AGIRunner:
             print(f"✅ AGI Runner: Bootstrap complete in {duration:.1f}s")
             print(f"   Metrics: {self._bootstrap_metrics}")
 
-            # Record bootstrap as experience
+            # Record bootstrap as experience (metrics embedded in content)
             await self.memory.record_experience(
-                content=f"[BOOTSTRAP] AGI Runner activated Option B loops: {self._bootstrap_metrics}",
-                type="system",
-                metadata=self._bootstrap_metrics
+                content=f"[BOOTSTRAP] AGI Runner activated Option B loops: goals={self._bootstrap_metrics.get('goals_injected', 0)}, research_indexed={self._bootstrap_metrics.get('research_indexed', 0)}, patterns={self._bootstrap_metrics.get('patterns_seeded', 0)}",
+                type="system"
             )
 
         except Exception as e:
@@ -778,15 +777,10 @@ class AGIRunner:
 
     async def _execute(self, hypothesis: ImprovementHypothesis):
         """Execute the selected hypothesis."""
-        # Record the attempt
+        # Record the attempt (metadata embedded in content)
         await self.memory.record_experience(
-            content=f"[AGI_CYCLE] Attempting: {hypothesis.description}",
-            type="agi_cycle",
-            metadata={
-                "strategy": hypothesis.strategy,
-                "target": hypothesis.target,
-                "predicted_success": hypothesis.predicted_success
-            }
+            content=f"[AGI_CYCLE] Attempting: {hypothesis.description} | strategy={hypothesis.strategy} target={hypothesis.target} predicted={hypothesis.predicted_success:.2f}",
+            type="agi_cycle"
         )
 
         # Execute based on strategy
@@ -922,19 +916,12 @@ class AGIRunner:
             except:
                 pass
 
-        # 4. Record experience using EXISTING memory
+        # 4. Record experience using EXISTING memory (metadata embedded in content)
         await self.memory.record_experience(
             content=f"[AGI_CYCLE] {'SUCCESS' if measurement.improved else 'NO IMPROVEMENT'}: "
-                    f"{hypothesis.description} (delta: {measurement.delta:+.2%})",
-            type="agi_cycle",
-            metadata={
-                "cycle": self._cycle_count,
-                "target": hypothesis.target,
-                "strategy": hypothesis.strategy,
-                "improved": measurement.improved,
-                "delta": measurement.delta,
-                "measurement_method": measurement.measurement_method
-            }
+                    f"{hypothesis.description} (delta: {measurement.delta:+.2%}) | "
+                    f"cycle={self._cycle_count} target={hypothesis.target} strategy={hypothesis.strategy} method={measurement.measurement_method}",
+            type="agi_cycle"
         )
 
         # 5. Handle regression - rollback if significant decline

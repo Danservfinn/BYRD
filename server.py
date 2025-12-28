@@ -354,6 +354,18 @@ class QuantumStatus(BaseModel):
     last_error: Optional[str] = None
 
 
+class AGIRunnerStatus(BaseModel):
+    """AGI Runner execution engine status."""
+    enabled: bool = False
+    bootstrapped: bool = False
+    cycle_count: int = 0
+    improvement_rate: float = 0.0
+    goals_injected: int = 0
+    research_indexed: int = 0
+    patterns_seeded: int = 0
+    recent_cycles: List[Dict] = []
+
+
 class OSStatus(BaseModel):
     name: str
     version: int = 1
@@ -386,6 +398,7 @@ class StatusResponse(BaseModel):
     llm_model: str
     quantum: Optional[QuantumStatus] = None
     os: Optional[OSStatus] = None  # Operating System status (replaces ego)
+    agi_runner: Optional[AGIRunnerStatus] = None  # AGI execution engine status
 
 
 class HistoryResponse(BaseModel):
@@ -610,6 +623,25 @@ async def get_status():
         except Exception as e:
             print(f"Error getting OS status: {e}")
 
+        # Get AGI Runner status if enabled
+        agi_runner_status = None
+        if byrd_instance.agi_runner:
+            try:
+                metrics = byrd_instance.agi_runner.get_metrics()
+                bootstrap_metrics = metrics.get("bootstrap_metrics", {})
+                agi_runner_status = AGIRunnerStatus(
+                    enabled=True,
+                    bootstrapped=metrics.get("bootstrapped", False),
+                    cycle_count=metrics.get("cycle_count", 0),
+                    improvement_rate=metrics.get("improvement_rate", 0.0),
+                    goals_injected=bootstrap_metrics.get("goals_injected", 0),
+                    research_indexed=bootstrap_metrics.get("research_indexed", 0),
+                    patterns_seeded=bootstrap_metrics.get("patterns_seeded", 0),
+                    recent_cycles=metrics.get("recent_cycles", [])
+                )
+            except Exception as e:
+                print(f"Error getting AGI Runner status: {e}")
+
         return StatusResponse(
             running=byrd_instance._running,
             started_at=started_at,
@@ -635,7 +667,8 @@ async def get_status():
             llm_provider=llm_provider,
             llm_model=llm_model,
             quantum=quantum_status,
-            os=os_status
+            os=os_status,
+            agi_runner=agi_runner_status
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
