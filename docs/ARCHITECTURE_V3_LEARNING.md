@@ -1,5 +1,8 @@
 # BYRD Architecture V3: Learning-Enabled AGI System
 
+> **⚠️ SUPERSEDED**: This document has been merged into [UNIFIED_AGI_PLAN.md](./UNIFIED_AGI_PLAN.md).
+> The unified plan combines this document's learning components with AGI_SEED_V2's execution engine.
+
 ## Overview
 
 This document describes the target architecture after implementing both:

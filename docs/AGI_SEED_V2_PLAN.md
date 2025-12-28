@@ -1,5 +1,8 @@
 # BYRD AGI Seed v2: Closing the Loop
 
+> **⚠️ SUPERSEDED**: This document has been merged into [UNIFIED_AGI_PLAN.md](./UNIFIED_AGI_PLAN.md).
+> The unified plan combines this document's execution engine with ARCHITECTURE_V3_LEARNING's learning components.
+
 ## Overview
 
 Transform the AGI Seed architecture from a design document into a functioning recursive self-improvement engine. The current implementation has the right concepts but lacks the mechanisms that make it actually work.
