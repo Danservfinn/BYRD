@@ -562,6 +562,57 @@ summaries = await memory.get_memory_summaries(limit=10)
 await dreamer._maybe_summarize()
 ```
 
+## Learning Components
+
+BYRD implements a learning substrate that enables genuine capability improvement over time. These components are initialized in `byrd.py` and run during Omega cycles.
+
+### Component Overview
+
+| Component | Constructor | Training |
+|-----------|-------------|----------|
+| **HierarchicalMemory** | `(memory, llm_client, config)` | Every 10 cycles |
+| **CodeLearner** | `(memory, llm_client, config)` | Every 20 cycles |
+| **IntuitionNetwork** | `(memory, config)` | Every cycle |
+| **StructuralLearner** | `(embedding_dim, num_heads, ...)` | Every cycle |
+
+### What Each Component Does
+
+1. **HierarchicalMemory** (`hierarchical_memory.py`)
+   - Promotes recurring patterns to higher abstraction levels
+   - L0 (Experience) → L1 (Pattern) → L2 (Principle) → L3 (Axiom) → L4 (MetaAxiom)
+   - Method: `await hierarchical_memory.consolidation_cycle()`
+
+2. **CodeLearner** (`code_learner.py`)
+   - Converts stable patterns (10+ uses, 80%+ success) to executable Python
+   - Outputs to `learned_strategies/` directory
+   - Method: `await code_learner.codification_cycle()`
+
+3. **IntuitionNetwork** (`intuition_network.py`)
+   - Learns which actions succeed in which contexts
+   - Uses semantic similarity for generalization
+   - Method: `await intuition_network.record_outcome(situation, action, success)`
+
+4. **StructuralLearner/GNN** (`gnn_layer.py`)
+   - Graph Neural Network for learning memory topology patterns
+   - Uses multi-head attention with message passing
+   - Method: `gnn_layer.train_epoch(nodes, edges)`
+
+### Checking Training Status
+
+After 20+ Omega cycles, check `/api/metrics`:
+```json
+{
+  "training": {
+    "gnn": {"loss": 0.x, "accuracy": 0.x},
+    "hierarchical_memory": {"consolidation_run": true},
+    "code_learner": {"patterns_checked": N, "patterns_codified": M},
+    "intuition": {"outcomes_processed": K}
+  }
+}
+```
+
+---
+
 ## Dynamic Ontology
 
 BYRD can create custom node types beyond the core five (Experience, Belief, Desire, Capability, Reflection).

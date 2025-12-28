@@ -363,13 +363,25 @@ Provides ground-truth measurement with held-out test suites for 7 capabilities:
 
 ### Learning Components
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| **Hierarchical Memory** | `hierarchical_memory.py` | L0-L4 abstraction (Experience→Pattern→Principle→Axiom→MetaAxiom) |
-| **Intuition Network** | `intuition_network.py` | Trainable "taste" using semantic similarity |
-| **Learned Retriever** | `learned_retriever.py` | Learns relevance from query-result feedback |
-| **Emergent Categories** | `emergent_categories.py` | Discovers categories from behavior clustering |
-| **Code Learner** | `code_learner.py` | Converts stable patterns (10+ uses, 80%+ success) to Python |
+These components are initialized in `byrd.py` and injected into Omega for training during dream cycles.
+
+| Component | File | Purpose | Training Frequency |
+|-----------|------|---------|-------------------|
+| **Hierarchical Memory** | `hierarchical_memory.py` | L0-L4 abstraction (Experience→Pattern→Principle→Axiom→MetaAxiom) | Every 10 cycles |
+| **Code Learner** | `code_learner.py` | Converts stable patterns (10+ uses, 80%+ success) to Python in `learned_strategies/` | Every 20 cycles |
+| **Intuition Network** | `intuition_network.py` | Trainable "taste" - learns which actions succeed in which contexts | Every cycle |
+| **Structural Learner (GNN)** | `gnn_layer.py` | Graph Neural Network for learning memory topology patterns | Every cycle |
+| **Learned Retriever** | `learned_retriever.py` | Learns relevance from query-result feedback | On demand |
+| **Emergent Categories** | `emergent_categories.py` | Discovers categories from behavior clustering | Periodic |
+
+**Initialization** (`byrd.py` lines 390-443):
+```python
+# Learning components are initialized with graceful fallback
+self.omega.hierarchical_memory = HierarchicalMemory(memory, llm_client, config)
+self.omega.code_learner = CodeLearner(memory, llm_client, config)
+self.omega.intuition_network = IntuitionNetwork(memory, config)
+self.omega.gnn_layer = StructuralLearner(embedding_dim=64, num_heads=4)
+```
 
 ### Bayesian Capability Tracking (`self_model.py`)
 
