@@ -287,6 +287,7 @@ class OllamaClient(LLMClient):
         max_tokens: int = 500,
         quantum_modulation: bool = False,
         quantum_context: str = "unknown",
+        system_message: Optional[str] = None,
         **kwargs
     ) -> LLMResponse:
         """Generate using Ollama API."""
@@ -298,13 +299,18 @@ class OllamaClient(LLMClient):
                 temperature, quantum_context
             )
 
+        # Prepend system message to prompt if provided
+        full_prompt = prompt
+        if system_message:
+            full_prompt = f"{system_message}\n\n{prompt}"
+
         timeout_config = httpx.Timeout(self.timeout, connect=60.0)
         async with httpx.AsyncClient(timeout=timeout_config) as client:
             response = await client.post(
                 self.endpoint,
                 json={
                     "model": self.model,
-                    "prompt": prompt,
+                    "prompt": full_prompt,
                     "stream": False,
                     "options": {
                         "temperature": temperature,
@@ -369,6 +375,7 @@ class OpenRouterClient(LLMClient):
         max_tokens: int = 500,
         quantum_modulation: bool = False,
         quantum_context: str = "unknown",
+        system_message: Optional[str] = None,
         **kwargs
     ) -> LLMResponse:
         """Generate using OpenRouter API."""
@@ -389,13 +396,19 @@ class OpenRouterClient(LLMClient):
         if self.app_name:
             headers["X-Title"] = self.app_name
 
+        # Build messages with optional system message
+        messages = []
+        if system_message:
+            messages.append({"role": "system", "content": system_message})
+        messages.append({"role": "user", "content": prompt})
+
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
                 self.ENDPOINT,
                 headers=headers,
                 json={
                     "model": self.model,
-                    "messages": [{"role": "user", "content": prompt}],
+                    "messages": messages,
                     "temperature": temperature,
                     "max_tokens": max_tokens
                 }

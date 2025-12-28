@@ -677,13 +677,14 @@ Or to finish:
         user = self._format_history(state)
 
         # Get LLM response
-        full_prompt = f"{system}\n\n{user}"
-
+        # Pass system prompt as system_message to override Z.AI's default
+        # This ensures the LLM outputs {"thinking", "tool", "args"} format
         try:
             response = await self.llm_client.generate(
-                prompt=full_prompt,
+                prompt=user,
                 temperature=self.temperature,
-                max_tokens=1500
+                max_tokens=1500,
+                system_message=system  # Override default reflection format
             )
 
             response_text = response.text if hasattr(response, 'text') else str(response)
