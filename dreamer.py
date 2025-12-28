@@ -422,6 +422,18 @@ class Dreamer:
         if not recent:
             return  # Nothing to dream about yet
 
+        # PRIORITY: Include any recent received_messages that might have been pushed out
+        # This ensures viewer messages are seen even during high activity
+        viewer_messages = await self.memory.get_recent_experiences(
+            limit=5, type="received_message"
+        )
+        if viewer_messages:
+            existing_ids = {e["id"] for e in recent}
+            for msg in viewer_messages:
+                if msg["id"] not in existing_ids:
+                    recent.insert(0, msg)  # Add at start (most important)
+                    print(f"📩 Prioritized viewer message: {msg.get('content', '')[:40]}...")
+
         recent_ids = [e["id"] for e in recent]
         related = await self.memory.get_related_memories(recent_ids, depth=2, limit=50)
         capabilities = await self.memory.get_capabilities()
@@ -592,14 +604,21 @@ class Dreamer:
 
         # 4. NARRATE - Generate inner voice as the LAST action before cycle end
         inner_voice = self._extract_inner_voice(reflection_output)
+        print(f"🔍 Inner voice extracted: {len(inner_voice) if inner_voice else 0} chars")
 
         # If no explicit inner voice, generate one from the reflection
         if not inner_voice:
             inner_voice = await self._generate_inner_voice(reflection_output)
+            print(f"🔍 Inner voice generated: {len(inner_voice) if inner_voice else 0} chars")
 
         # Add to narrator queue if we got something
         if inner_voice:
             self._inner_voice_queue.append(inner_voice)
+
+            # Debug: check for received_messages in recent
+            rm_count = len([e for e in recent if e.get("type") == "received_message"])
+            if rm_count > 0:
+                print(f"🔍 DEBUG: {rm_count} received_message(s) in recent, inner_voice len={len(inner_voice)}")
 
             # Check if addressing viewer input (emergent response)
             addressing_exp_id = self._detects_viewer_addressing(inner_voice, recent)
@@ -1972,7 +1991,7 @@ Write ONLY the inner thought, nothing else:"""
 
         inner_voice_lower = inner_voice.lower()
 
-        # Get recent received_message experiences
+        # Get recent received_message experiences (scan all recent experiences)
         received_messages = [
             exp for exp in recent_experiences
             if exp.get("type") == "received_message"
@@ -1981,28 +2000,43 @@ Write ONLY the inner thought, nothing else:"""
         if not received_messages:
             return None
 
+        latest = received_messages[0]
+
+        # Find the index of the latest received_message in recent_experiences
+        # If it's in the first 15 experiences, it's "recent enough" to warrant sharing thoughts
+        message_index = next(
+            (i for i, exp in enumerate(recent_experiences)
+             if exp.get("id") == latest.get("id")),
+            999
+        )
+
+        # If message is very recent (in first 15 experiences), share inner voice as response
+        # This is the "thinking out loud in response to viewer presence" behavior
+        if message_index < 15:
+            return latest.get("id")
+
+        # For older messages, require explicit addressing signals
         # Heuristic 1: Second-person pronouns
-        second_person = [" you ", " your ", " yours ", "you're", "you've"]
+        second_person = [" you ", " your ", " yours ", "you're", "you've", "someone"]
         has_second_person = any(m in f" {inner_voice_lower} " for m in second_person)
 
         # Heuristic 2: Addressing patterns
         patterns = [
             "to answer", "in response", "regarding your", "about your",
             "you asked", "you mentioned", "you said", "your question",
-            "thank you", "i hear", "i understand", "interesting question"
+            "thank you", "i hear", "i understand", "interesting question",
+            "the message", "this message", "their message", "that message",
+            "was asked", "been asked", "they asked", "they said",
+            "someone said", "was said", "input", "inquiry", "question"
         ]
         has_addressing = any(p in inner_voice_lower for p in patterns)
 
-        # Heuristic 3: Content overlap with latest message
-        latest = received_messages[0] if received_messages else None
-        content_overlap = False
-        if latest:
-            msg_words = [w for w in latest.get("content", "").lower().split() if len(w) > 4]
-            overlap = [w for w in msg_words if w in inner_voice_lower]
-            content_overlap = len(overlap) >= 2
+        # Heuristic 3: Content overlap with message
+        msg_words = [w for w in latest.get("content", "").lower().split() if len(w) > 3]
+        overlap = [w for w in msg_words if w in inner_voice_lower]
+        content_overlap = len(overlap) >= 1
 
-        # Require 2+ signals
-        if sum([has_second_person, has_addressing, content_overlap]) >= 2 and latest:
+        if has_second_person or has_addressing or content_overlap:
             return latest.get("id")
 
         return None

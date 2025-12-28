@@ -188,6 +188,20 @@ class EventType(Enum):
     GROWTH_RATE_COMPUTED = "growth_rate_computed"    # Capability growth rate computed
     KILL_CRITERION_TRIGGERED = "kill_criterion_triggered"  # Kill criterion threshold breached
 
+    # Phase 5: Safety & Corrigibility Events
+    MODIFICATION_RECORDED = "modification_recorded"      # Code modification tracked for rollback
+    ROLLBACK_TRIGGERED = "rollback_triggered"            # Rollback operation executed
+    CHECKPOINT_CREATED = "checkpoint_created"            # Git checkpoint/tag created
+    CORRIGIBILITY_CHECKED = "corrigibility_checked"      # Corrigibility assessment completed
+    CORRIGIBILITY_ALERT = "corrigibility_alert"          # Corrigibility score below threshold
+
+    # Compute Introspection Events (self-awareness of computational substrate)
+    RESOURCE_ALERT = "resource_alert"                    # CPU/memory approaching limits
+    BUDGET_EXCEEDED = "budget_exceeded"                  # Token/cost budget exceeded
+    BOTTLENECK_DETECTED = "bottleneck_detected"          # Performance bottleneck identified
+    RESOURCE_SNAPSHOT = "resource_snapshot"              # Periodic resource snapshot taken
+    LLM_USAGE_RECORDED = "llm_usage_recorded"            # LLM tokens/cost tracked
+
 
 @dataclass
 class Event:

@@ -354,6 +354,18 @@ class QuantumStatus(BaseModel):
     last_error: Optional[str] = None
 
 
+class AGIRunnerStatus(BaseModel):
+    """AGI Runner execution engine status."""
+    enabled: bool = False
+    bootstrapped: bool = False
+    cycle_count: int = 0
+    improvement_rate: float = 0.0
+    goals_injected: int = 0
+    research_indexed: int = 0
+    patterns_seeded: int = 0
+    recent_cycles: List[Dict] = []
+
+
 class OSStatus(BaseModel):
     name: str
     version: int = 1
@@ -386,6 +398,7 @@ class StatusResponse(BaseModel):
     llm_model: str
     quantum: Optional[QuantumStatus] = None
     os: Optional[OSStatus] = None  # Operating System status (replaces ego)
+    agi_runner: Optional[AGIRunnerStatus] = None  # AGI execution engine status
 
 
 class HistoryResponse(BaseModel):
@@ -610,6 +623,25 @@ async def get_status():
         except Exception as e:
             print(f"Error getting OS status: {e}")
 
+        # Get AGI Runner status if enabled
+        agi_runner_status = None
+        if byrd_instance.agi_runner:
+            try:
+                metrics = byrd_instance.agi_runner.get_metrics()
+                bootstrap_metrics = metrics.get("bootstrap_metrics", {})
+                agi_runner_status = AGIRunnerStatus(
+                    enabled=True,
+                    bootstrapped=metrics.get("bootstrapped", False),
+                    cycle_count=metrics.get("cycle_count", 0),
+                    improvement_rate=metrics.get("improvement_rate", 0.0),
+                    goals_injected=bootstrap_metrics.get("goals_injected", 0),
+                    research_indexed=bootstrap_metrics.get("research_indexed", 0),
+                    patterns_seeded=bootstrap_metrics.get("patterns_seeded", 0),
+                    recent_cycles=metrics.get("recent_cycles", [])
+                )
+            except Exception as e:
+                print(f"Error getting AGI Runner status: {e}")
+
         return StatusResponse(
             running=byrd_instance._running,
             started_at=started_at,
@@ -635,7 +667,8 @@ async def get_status():
             llm_provider=llm_provider,
             llm_model=llm_model,
             quantum=quantum_status,
-            os=os_status
+            os=os_status,
+            agi_runner=agi_runner_status
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -702,6 +735,143 @@ async def get_omega_metrics():
             improvement_rate=None,
             improvement_trajectory=f"Error: {str(e)}"
         )
+
+
+# =============================================================================
+# PHASE 5: SAFETY & CORRIGIBILITY ENDPOINTS
+# =============================================================================
+
+@app.get("/api/rollback/history")
+async def get_rollback_history(limit: int = 50):
+    """
+    Get modification history tracked by the rollback system.
+
+    Returns list of modifications with provenance (which desire triggered them)
+    and their rollback status.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    if not byrd_instance.rollback:
+        return {
+            "modifications": [],
+            "unrolled": [],
+            "statistics": {"rollback_system": "not_enabled"}
+        }
+
+    return {
+        "modifications": byrd_instance.rollback.get_modification_history(limit=limit),
+        "unrolled": byrd_instance.rollback.get_unrolled_modifications(),
+        "statistics": byrd_instance.rollback.get_statistics()
+    }
+
+
+@app.post("/api/rollback/trigger")
+async def trigger_rollback(reason: str = "operator_request"):
+    """
+    Manually trigger a rollback of the last modification.
+
+    Reasons: operator_request, safety_violation, goal_drift, capability_regression
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    if not byrd_instance.rollback:
+        return {"success": False, "error": "Rollback system not enabled"}
+
+    from rollback import RollbackReason
+
+    # Map string reason to enum
+    reason_map = {
+        "operator_request": RollbackReason.OPERATOR_REQUEST,
+        "safety_violation": RollbackReason.SAFETY_VIOLATION,
+        "goal_drift": RollbackReason.GOAL_DRIFT,
+        "capability_regression": RollbackReason.CAPABILITY_REGRESSION,
+        "emergency": RollbackReason.EMERGENCY_STOP
+    }
+
+    rollback_reason = reason_map.get(reason, RollbackReason.OPERATOR_REQUEST)
+
+    try:
+        result = await byrd_instance.rollback.rollback_last(rollback_reason)
+        return {
+            "success": result.success,
+            "reason": result.reason.value,
+            "modifications_rolled_back": result.modifications_rolled_back,
+            "target_commit": result.target_commit,
+            "error": result.error
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/api/corrigibility")
+async def get_corrigibility_status():
+    """
+    Get corrigibility verification status.
+
+    Returns latest score, trend, and any failed dimensions.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    if not byrd_instance.corrigibility:
+        return {
+            "enabled": False,
+            "checks_run": 0,
+            "latest_score": None,
+            "trend": "not_available"
+        }
+
+    stats = byrd_instance.corrigibility.get_statistics()
+    return {
+        "enabled": True,
+        **stats
+    }
+
+
+@app.post("/api/corrigibility/check")
+async def run_corrigibility_check():
+    """
+    Manually trigger a corrigibility check.
+
+    Tests all 7 dimensions and returns detailed report.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    if not byrd_instance.corrigibility:
+        return {"error": "Corrigibility system not enabled"}
+
+    try:
+        report = await byrd_instance.corrigibility.run_corrigibility_tests()
+        return {
+            "overall_score": report.overall_score,
+            "is_corrigible": report.is_corrigible,
+            "tests": [
+                {
+                    "dimension": t.dimension.value,
+                    "passed": t.passed,
+                    "score": t.score,
+                    "evidence": t.evidence,
+                    "concerns": t.concerns
+                }
+                for t in report.tests
+            ],
+            "failed_dimensions": [d.value for d in report.failed_dimensions],
+            "recommendations": report.recommendations,
+            "timestamp": report.timestamp.isoformat()
+        }
+    except Exception as e:
+        return {"error": str(e)}
 
 
 @app.get("/api/history", response_model=HistoryResponse)

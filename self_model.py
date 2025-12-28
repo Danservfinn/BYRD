@@ -236,6 +236,158 @@ class SelfModel:
         # Improvement tracking
         self._improvement_history: List[Dict] = []
 
+        # Bayesian tracking: Beta distribution parameters (alpha = successes + 1, beta = failures + 1)
+        self._alpha: Dict[str, float] = {}  # Prior successes + 1
+        self._beta: Dict[str, float] = {}   # Prior failures + 1
+
+    # =========================================================================
+    # BAYESIAN CAPABILITY TRACKING
+    # =========================================================================
+
+    def bayesian_update(self, capability: str, success: bool):
+        """
+        Update Bayesian estimate after observing an outcome.
+
+        Uses Beta distribution: Beta(alpha, beta) where:
+        - alpha = number of successes + 1 (prior)
+        - beta = number of failures + 1 (prior)
+
+        Args:
+            capability: Name of capability observed
+            success: Whether the observation was successful
+        """
+        if capability not in self._alpha:
+            # Initialize with uniform prior (Beta(1, 1))
+            self._alpha[capability] = 1.0
+            self._beta[capability] = 1.0
+
+        if success:
+            self._alpha[capability] += 1
+        else:
+            self._beta[capability] += 1
+
+    def get_bayesian_estimate(self, capability: str) -> Tuple[float, float, float]:
+        """
+        Get capability estimate with 95% credible interval.
+
+        Uses Beta distribution to compute point estimate and uncertainty.
+
+        Args:
+            capability: Name of capability
+
+        Returns:
+            Tuple of (mean, lower_95, upper_95)
+        """
+        if capability not in self._alpha:
+            return (0.5, 0.0, 1.0)  # Maximum uncertainty
+
+        a = self._alpha[capability]
+        b = self._beta[capability]
+
+        # Mean of Beta(a, b) = a / (a + b)
+        mean = a / (a + b)
+
+        # For credible interval, use Beta quantiles
+        # Approximation using Wilson score interval when scipy not available
+        try:
+            from scipy import stats
+            lower = stats.beta.ppf(0.025, a, b)
+            upper = stats.beta.ppf(0.975, a, b)
+        except ImportError:
+            # Wilson score interval approximation
+            n = a + b - 2  # Total observations
+            if n < 1:
+                return (0.5, 0.0, 1.0)
+
+            z = 1.96  # 95% confidence
+            p = (a - 1) / n if n > 0 else 0.5
+
+            denom = 1 + z**2 / n
+            center = (p + z**2 / (2 * n)) / denom
+            spread = z * ((p * (1 - p) + z**2 / (4 * n)) / n) ** 0.5 / denom
+
+            lower = max(0, center - spread)
+            upper = min(1, center + spread)
+
+        return (mean, lower, upper)
+
+    def get_bayesian_uncertainty(self, capability: str) -> float:
+        """
+        Get uncertainty (normalized interval width) of capability belief.
+
+        Higher uncertainty = less confident in estimate.
+
+        Args:
+            capability: Name of capability
+
+        Returns:
+            Uncertainty score from 0.0 (certain) to 1.0 (maximum uncertainty)
+        """
+        if capability not in self._alpha:
+            return 1.0
+
+        _, lower, upper = self.get_bayesian_estimate(capability)
+        return upper - lower
+
+    def should_explore(self, capability: str, threshold: float = 0.4) -> bool:
+        """
+        Recommend exploration if uncertainty is high.
+
+        High uncertainty means we don't know the true capability level,
+        so exploration (more observations) would be valuable.
+
+        Args:
+            capability: Name of capability
+            threshold: Uncertainty threshold for recommending exploration
+
+        Returns:
+            True if exploration recommended
+        """
+        return self.get_bayesian_uncertainty(capability) > threshold
+
+    def get_all_bayesian_estimates(self) -> Dict[str, Dict[str, float]]:
+        """
+        Get Bayesian estimates for all tracked capabilities.
+
+        Returns:
+            Dict mapping capability name to {mean, lower, upper, uncertainty}
+        """
+        estimates = {}
+        for cap in self._alpha.keys():
+            mean, lower, upper = self.get_bayesian_estimate(cap)
+            estimates[cap] = {
+                'mean': mean,
+                'lower': lower,
+                'upper': upper,
+                'uncertainty': upper - lower,
+                'observations': int(self._alpha[cap] + self._beta[cap] - 2)
+            }
+        return estimates
+
+    def get_exploration_candidates(self, top_n: int = 3) -> List[str]:
+        """
+        Get capabilities with highest exploration value.
+
+        These are capabilities where more observations would most
+        reduce our uncertainty about true capability level.
+
+        Args:
+            top_n: Number of candidates to return
+
+        Returns:
+            List of capability names sorted by exploration value
+        """
+        candidates = []
+        for cap in self._alpha.keys():
+            uncertainty = self.get_bayesian_uncertainty(cap)
+            observations = self._alpha[cap] + self._beta[cap] - 2
+            # Prefer high uncertainty AND low observations
+            exploration_value = uncertainty * (1.0 / (1 + observations * 0.1))
+            candidates.append((cap, exploration_value))
+
+        candidates.sort(key=lambda x: x[1], reverse=True)
+        return [cap for cap, _ in candidates[:top_n]]
+
     async def assess_capabilities(self, force_refresh: bool = False) -> CapabilityInventory:
         """
         Generate comprehensive inventory of current capabilities.

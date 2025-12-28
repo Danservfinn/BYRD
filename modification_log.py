@@ -55,16 +55,20 @@ class ModificationLog:
     - Chained hashes for integrity verification
     - Checkpoint management for rollback
     - Export/import for persistence
+    - Outcome tracking for BYRD's learning (async)
 
     This class is PROTECTED and cannot be modified by BYRD.
     """
 
-    def __init__(self, log_dir: str = "./modification_logs"):
+    def __init__(self, log_dir: str = "./modification_logs", memory=None):
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(parents=True, exist_ok=True)
 
         self._entries: List[ModificationEntry] = []
         self._checkpoints: List[CheckpointEntry] = []
+
+        # Optional memory for Neo4j integration
+        self.memory = memory
 
         # Load existing log if present
         self._load()
@@ -301,6 +305,125 @@ class ModificationLog:
             "checkpoints": [asdict(c) for c in self._checkpoints],
             "statistics": self.get_statistics(),
             "exported_at": datetime.utcnow().isoformat(),
+        }
+
+    async def record_outcome(
+        self,
+        modification_id: str,
+        success: bool,
+        error: Optional[str] = None
+    ) -> bool:
+        """
+        Record modification outcome for BYRD's learning.
+
+        EMERGENCE PRINCIPLE:
+        This feeds into the Bayesian learning system - BYRD can reflect on
+        which modifications succeed/fail and form its own beliefs about
+        what makes modifications successful.
+
+        Args:
+            modification_id: The ID of the modification
+            success: Whether the modification succeeded
+            error: Optional error message if failed
+
+        Returns:
+            True if outcome was recorded successfully
+        """
+        # Update local entry
+        for entry in self._entries:
+            if entry.id == modification_id:
+                entry.success = success
+                if error:
+                    entry.error_message = error
+                break
+        self._save()
+
+        # If memory is available, create Experience node for learning
+        if self.memory:
+            try:
+                content = f"Modification {'succeeded' if success else 'failed'}"
+                if error:
+                    content += f": {error}"
+
+                await self.memory.record_experience(
+                    content=content,
+                    type="modification_outcome",
+                    metadata={
+                        "modification_id": modification_id,
+                        "success": success,
+                        "error": error,
+                        "timestamp": datetime.utcnow().isoformat()
+                    }
+                )
+            except Exception as e:
+                print(f"ModificationLog: Failed to record outcome to memory: {e}")
+                return False
+
+        return True
+
+    def get_outcome_statistics(self) -> Dict:
+        """
+        Get outcome statistics for BYRD's reflection.
+
+        EMERGENCE PRINCIPLE:
+        BYRD can query this to form beliefs about which types of
+        modifications tend to succeed or fail. This enables learning
+        from experience rather than imposed rules.
+
+        Returns:
+            Dictionary with success/failure rates by file and component
+        """
+        if not self._entries:
+            return {
+                "total": 0,
+                "success_rate": 0.0,
+                "by_file": {},
+                "by_component": {}
+            }
+
+        total = len(self._entries)
+        successful = len([e for e in self._entries if e.success])
+        failed = len([e for e in self._entries if not e.success])
+
+        # Group by file
+        by_file: Dict[str, Dict] = {}
+        for entry in self._entries:
+            filename = Path(entry.target_file).name
+            if filename not in by_file:
+                by_file[filename] = {"success": 0, "failed": 0}
+            if entry.success:
+                by_file[filename]["success"] += 1
+            else:
+                by_file[filename]["failed"] += 1
+
+        # Calculate success rates per file
+        for filename in by_file:
+            total_file = by_file[filename]["success"] + by_file[filename]["failed"]
+            by_file[filename]["success_rate"] = by_file[filename]["success"] / total_file if total_file > 0 else 0
+
+        # Group by component
+        by_component: Dict[str, Dict] = {}
+        for entry in self._entries:
+            component = entry.target_component
+            if component not in by_component:
+                by_component[component] = {"success": 0, "failed": 0}
+            if entry.success:
+                by_component[component]["success"] += 1
+            else:
+                by_component[component]["failed"] += 1
+
+        # Calculate success rates per component
+        for component in by_component:
+            total_comp = by_component[component]["success"] + by_component[component]["failed"]
+            by_component[component]["success_rate"] = by_component[component]["success"] / total_comp if total_comp > 0 else 0
+
+        return {
+            "total": total,
+            "successful": successful,
+            "failed": failed,
+            "success_rate": successful / total if total > 0 else 0,
+            "by_file": by_file,
+            "by_component": by_component
         }
 
 

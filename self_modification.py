@@ -54,16 +54,21 @@ class SelfModificationSystem:
         self,
         memory: Memory,
         config: Dict,
-        project_root: str = "."
+        project_root: str = ".",
+        safety_monitor=None
     ):
         self.memory = memory
         self.config = config
         self.project_root = Path(project_root)
 
+        # Safety monitor for pattern observation (emergence-preserving)
+        self.safety_monitor = safety_monitor
+
         # Initialize subsystems
         self.provenance = ProvenanceTracer(memory)
         self.log = ModificationLog(
-            config.get("checkpoint_dir", "./modification_logs")
+            config.get("checkpoint_dir", "./modification_logs"),
+            memory=memory  # Enable async outcome recording
         )
 
         # Configuration
@@ -191,6 +196,21 @@ class SelfModificationSystem:
 
         proposal.provenance = record
 
+        # EMERGENCE-PRESERVING: Observe patterns without blocking
+        # This logs patterns for learning, but does NOT prevent modification
+        if self.safety_monitor:
+            try:
+                observations = await self.safety_monitor.observe_patterns(
+                    proposal.proposed_code,
+                    proposal.target_file
+                )
+                # Store observations in proposal for later correlation
+                proposal.pattern_observations = observations
+            except Exception as e:
+                # Pattern observation failure = LOG and continue
+                print(f"Warning: Pattern observation failed: {e}")
+                # Modification proceeds - observation is for learning, not blocking
+
         return True, None
 
     async def execute_proposal(
@@ -247,6 +267,13 @@ class SelfModificationSystem:
             self._daily_count += 1
             self._last_modification_time = datetime.utcnow()
 
+            # EMERGENCE-PRESERVING: Record outcome for BYRD's learning
+            # This feeds the Bayesian learning system - BYRD reflects on success/failure
+            await self.log.record_outcome(
+                modification_id=proposal.id,
+                success=True
+            )
+
             # Record in memory
             await self.memory.record_experience(
                 content=f"Self-modification executed: {proposal.description} on {proposal.target_file}",
@@ -273,6 +300,14 @@ class SelfModificationSystem:
 
             proposal.status = "failed"
             proposal.error = str(e)
+
+            # EMERGENCE-PRESERVING: Record failure outcome for BYRD's learning
+            # BYRD can reflect: "What patterns correlate with failed modifications?"
+            await self.log.record_outcome(
+                modification_id=proposal.id,
+                success=False,
+                error=str(e)
+            )
 
             return False, f"Modification failed: {e}"
 

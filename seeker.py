@@ -36,6 +36,13 @@ try:
 except ImportError:
     HAS_EVENT_BUS = False
 
+# Try to import DesireClassifier for routing
+try:
+    from desire_classifier import DesireClassifier, DesireType
+    HAS_DESIRE_CLASSIFIER = True
+except ImportError:
+    HAS_DESIRE_CLASSIFIER = False
+
 
 class Seeker:
     """
@@ -104,6 +111,14 @@ class Seeker:
         # AGI Seed components (injected later by BYRD if Option B enabled)
         self.world_model = None
         self.safety_monitor = None
+
+        # AGI Runner (injected later by BYRD for capability improvement cycles)
+        self.agi_runner = None
+
+        # Desire Classifier for routing desires to appropriate handlers
+        self.desire_classifier = None
+        if HAS_DESIRE_CLASSIFIER:
+            self.desire_classifier = DesireClassifier(config)
 
         # aitmpl.com integration
         aitmpl_config = config.get("aitmpl", {})
@@ -762,6 +777,18 @@ Reply with ONLY one word: introspect, reconcile_orphans, curate, self_modify, or
         if intent == "creation":
             return "code"
 
+        # Capability improvement → AGI Runner
+        # Desires about learning, improving, developing skills
+        if intent == "capability":
+            return "agi_cycle"
+
+        # NEW: Use DesireClassifier for additional routing if available
+        if self.desire_classifier:
+            result = self.desire_classifier.classify(description)
+            if result.desire_type == DesireType.CAPABILITY and result.confidence > 0.5:
+                print(f"🎯 DesireClassifier routed to capability: {description[:50]}")
+                return "capability"
+
         # Connection → orphan reconciliation
         if intent == "connection":
             return "reconcile_orphans"
@@ -1195,6 +1222,31 @@ REASON: [brief explanation]"""
                 success = await self._execute_edit_document_strategy(description, desire_id)
                 return ("success" if success else "failed",
                         None if success else "Document editing failed or no valid document path")
+
+            elif strategy == "agi_cycle":
+                # AGI Runner capability improvement cycle
+                if self.agi_runner:
+                    desire = {"description": description, "id": desire_id}
+                    result = await self.agi_runner.process_capability_desire(desire)
+                    success = result.success if result else False
+                    return ("success" if success else "failed",
+                            None if success else "AGI improvement cycle failed or no improvement measured")
+                else:
+                    return ("skipped", "AGI Runner not available")
+
+            elif strategy == "capability":
+                # Capability improvement via AGI Runner (alias for agi_cycle)
+                if self.agi_runner:
+                    desire = {"description": description, "id": desire_id}
+                    result = await self.agi_runner.process_capability_desire(desire)
+                    success = result.success if result else False
+                    return ("success" if success else "failed",
+                            None if success else "Capability improvement failed")
+                else:
+                    # Fallback to search if AGI Runner not available
+                    success = await self._seek_knowledge_semantic(description, desire_id)
+                    return ("success" if success else "failed",
+                            None if success else "Fallback search returned no results")
 
             else:
                 # No recognized strategy - record for BYRD to reflect on
@@ -4049,6 +4101,25 @@ If the change is too risky or unclear, output: ERROR: <reason>"""
                 await self.memory.fulfill_desire(desire_id)
                 await self.memory.update_desire_status(desire_id, "fulfilled")
                 await self.memory.record_desire_attempt(desire_id, success=True)
+
+                # 8. Record modifications for rollback tracking (Phase 5)
+                if hasattr(self, 'rollback') and self.rollback and result.files_modified:
+                    for file_path in result.files_modified:
+                        await self.rollback.record_modification(
+                            file_path=file_path,
+                            description=description,
+                            desire_id=desire_id
+                        )
+                    if HAS_EVENT_BUS:
+                        await event_bus.emit(Event(
+                            type=EventType.MODIFICATION_RECORDED,
+                            data={
+                                "desire_id": desire_id,
+                                "files": result.files_modified,
+                                "description": description
+                            }
+                        ))
+
                 print(f"✅ Coder complete: {description[:50]}")
                 return True
             else:

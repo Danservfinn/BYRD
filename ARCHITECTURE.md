@@ -319,6 +319,82 @@ FIRST ACTIONS:
 
 ---
 
+## AGI Execution Engine (UNIFIED_AGI_PLAN)
+
+The AGI Runner implements an 8-step improvement cycle that closes the loop between assessment, hypothesis, prediction, execution, and learning.
+
+### AGI Runner (`agi_runner.py`)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     AGI IMPROVEMENT CYCLE                        │
+│                                                                  │
+│   ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐           │
+│   │ ASSESS  │→ │IDENTIFY │→ │GENERATE │→ │ PREDICT │           │
+│   │         │  │         │  │         │  │         │           │
+│   │ Bayesian│  │ Highest │  │Hypothesis│ │ Store   │           │
+│   │ caps    │  │ uncert. │  │ creation │ │ expected│           │
+│   └─────────┘  └─────────┘  └─────────┘  └─────────┘           │
+│                                                                  │
+│   ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐           │
+│   │ LEARN   │← │ MEASURE │← │ EXECUTE │← │ VERIFY  │           │
+│   │         │  │         │  │         │  │         │           │
+│   │ Update  │  │ Ground  │  │ Run     │  │ Safety  │           │
+│   │ priors  │  │ truth   │  │ change  │  │ checks  │           │
+│   └─────────┘  └─────────┘  └─────────┘  └─────────┘           │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Desire Classifier (`desire_classifier.py`)
+
+Routes desires to appropriate handlers:
+
+| Desire Type | Route To | Purpose |
+|-------------|----------|---------|
+| `philosophical` | Reflection | Deep introspection |
+| `capability` | AGI Runner | Improvement cycle |
+| `action` | Seeker | Direct execution |
+| `meta` | AGI Runner | Meta-cognition |
+
+### Capability Evaluator (`capability_evaluator.py`)
+
+Provides ground-truth measurement with held-out test suites for 7 capabilities:
+- `reasoning`, `memory`, `learning`, `research`, `self_modification`, `prediction`, `metacognition`
+
+### Learning Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| **Hierarchical Memory** | `hierarchical_memory.py` | L0-L4 abstraction (Experience→Pattern→Principle→Axiom→MetaAxiom) |
+| **Intuition Network** | `intuition_network.py` | Trainable "taste" using semantic similarity |
+| **Learned Retriever** | `learned_retriever.py` | Learns relevance from query-result feedback |
+| **Emergent Categories** | `emergent_categories.py` | Discovers categories from behavior clustering |
+| **Code Learner** | `code_learner.py` | Converts stable patterns (10+ uses, 80%+ success) to Python |
+
+### Bayesian Capability Tracking (`self_model.py`)
+
+Uses Beta distribution for capability confidence:
+```python
+# Update after success/failure
+self._alpha[capability] += 1 if success else 0
+self._beta[capability] += 0 if success else 1
+
+# Posterior mean
+mean = alpha / (alpha + beta)
+
+# Uncertainty (higher = explore more)
+uncertainty = sqrt(alpha * beta / ((alpha + beta)^2 * (alpha + beta + 1)))
+```
+
+### Training Hooks (`omega.py`)
+
+The Omega cycle runs learning component updates:
+- **Every cycle**: GNN training, Intuition Network update
+- **Every 10 cycles**: Hierarchical Memory consolidation
+- **Every 20 cycles**: Code Learner codification
+
+---
+
 ## Option B: Compounding Loops
 
 BYRD implements five experimental compounding loops for accelerated improvement:
@@ -338,7 +414,110 @@ Generates counterfactual experiences. Multiplies learning from each real experie
 ### Loop 5: Integration Mind (`omega.py`)
 Meta-orchestration layer. Measures coupling between loops and allocates resources.
 
-**Status**: These components exist but are experimental. The primary flow uses `byrd.py` as orchestrator.
+**Status**: Option B loops are now integrated with AGI Runner via training hooks. The AGI Runner serves as the primary execution engine.
+
+---
+
+## Compute Self-Awareness
+
+BYRD has introspective awareness of its computational substrate through the `compute_introspection.py` module.
+
+### ComputeIntrospector (`compute_introspection.py`)
+
+Provides resource awareness, token tracking, and bottleneck detection:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    COMPUTE INTROSPECTION                         │
+│                                                                  │
+│   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
+│   │  RESOURCE   │  │    TOKEN    │  │  BOTTLENECK │            │
+│   │  SNAPSHOTS  │  │   TRACKING  │  │  DETECTION  │            │
+│   │             │  │             │  │             │            │
+│   │ CPU, Memory │  │ Per-provider│  │ Identifies  │            │
+│   │ Disk, Time  │  │ cost budget │  │ constraints │            │
+│   └─────────────┘  └─────────────┘  └─────────────┘            │
+│          │                │                │                    │
+│          └────────────────┴────────────────┘                    │
+│                           │                                     │
+│                    Resource Alerts                              │
+│                    Budget Warnings                              │
+│                    Bottleneck Reports                           │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Key Classes:**
+
+| Class | Purpose |
+|-------|---------|
+| `ResourceSnapshot` | Point-in-time CPU, memory, disk measurement |
+| `ResourceBudget` | Configurable limits (tokens/day, cost/day) |
+| `LLMCostTracker` | Per-provider token consumption and costs |
+| `BottleneckAnalysis` | Identifies resource constraints |
+| `ComputeIntrospector` | Main orchestrator |
+
+**Integration Points:**
+
+1. **LLM Client** - Token usage callback tracks all LLM calls
+2. **Omega Training Hooks** - Periodic resource snapshots
+3. **Self-Modification** - Pre-modification resource checks
+
+### Emergence-Preserving Pattern Observation
+
+The safety monitor observes patterns in self-modifications **without blocking**:
+
+```python
+# In self_modification.py _validate_proposal():
+# Patterns are OBSERVED, not blocked - BYRD learns from outcomes
+observations = await self.safety_monitor.observe_patterns(code, file_path)
+# Patterns logged but modification proceeds
+```
+
+**Observable Patterns:**
+- `eval`, `exec`, `__import__` - Dynamic code execution
+- `subprocess`, `os.system` - Shell commands
+- File I/O patterns
+
+**Philosophy:** BYRD develops its own understanding of "safe" from experience. When a modification using `eval()` fails, that outcome is recorded. Over time, BYRD can reflect: "Modifications using eval() fail 80% of the time" and form its own beliefs.
+
+### Outcome Tracking
+
+Every self-modification records its outcome for learning:
+
+```python
+# After successful modification:
+await self.log.record_outcome(modification_id, success=True)
+
+# After failed modification:
+await self.log.record_outcome(modification_id, success=False, error=str(e))
+```
+
+Outcomes are stored as Experience nodes in Neo4j, enabling BYRD to:
+- Query pattern-outcome correlations
+- Reflect on what makes modifications succeed/fail
+- Form beliefs about modification safety from its own history
+
+### Configuration
+
+```yaml
+option_b:
+  compute_introspection:
+    enabled: true
+    daily_token_limit: 1000000
+    daily_cost_limit: 10.0
+    memory_warning_percent: 85.0
+    cpu_warning_percent: 80.0
+```
+
+### Event Types
+
+| Event | When Emitted |
+|-------|--------------|
+| `RESOURCE_SNAPSHOT` | Periodic resource measurement |
+| `RESOURCE_ALERT` | Approaching resource limits |
+| `BUDGET_EXCEEDED` | Token/cost budget exceeded |
+| `BOTTLENECK_DETECTED` | Resource constraint identified |
+| `LLM_USAGE_RECORDED` | Token usage logged |
 
 ---
 
@@ -403,8 +582,8 @@ byrd/
 │   └── server.py            # FastAPI + WebSocket server
 │
 ├── AGI Seed Components
-│   ├── self_model.py        # Capability tracking
-│   ├── world_model.py       # Prediction system
+│   ├── self_model.py        # Capability tracking + Bayesian
+│   ├── world_model.py       # Prediction + consolidation
 │   ├── accelerators.py      # Graph reasoning, patterns
 │   ├── meta_learning.py     # Meta-metrics, plateaus
 │   ├── kill_criteria.py     # Plateau detection
@@ -412,8 +591,26 @@ byrd/
 │       ├── __init__.py
 │       └── agi_seed.yaml
 │
+├── AGI Execution Engine
+│   ├── agi_runner.py        # 8-step improvement cycle
+│   ├── desire_classifier.py # Routes desires by type
+│   ├── capability_evaluator.py # Ground-truth testing
+│   ├── compute_introspection.py # Resource awareness + token tracking
+│   └── code_learner.py      # Pattern → Python code
+│
+├── Learning Components (NEW)
+│   ├── hierarchical_memory.py  # L0-L4 abstraction
+│   ├── intuition_network.py    # Trainable "taste"
+│   ├── learned_retriever.py    # Relevance learning
+│   ├── emergent_categories.py  # Category discovery
+│   └── learned_strategies/     # Codified patterns
+│       ├── __init__.py
+│       ├── desire_routing/
+│       ├── pattern_matching/
+│       └── decision_making/
+│
 ├── Option B Components
-│   ├── omega.py             # BYRDOmega wrapper
+│   ├── omega.py             # BYRDOmega + training hooks
 │   ├── memory_reasoner.py   # Spreading activation
 │   ├── goal_evolver.py      # Evolutionary goals
 │   ├── dreaming_machine.py  # Counterfactuals
@@ -433,12 +630,11 @@ byrd/
 │   ├── corrigibility.py     # Corrigibility tests
 │   └── rollback.py          # Rollback system
 │
-├── Experimental
-│   ├── semantic_lexicon.py  # Semantic type system
-│   ├── friction_synthesis.py # Friction-based learning
-│   ├── phase_transition.py  # Phase transition detection
-│   ├── gnn_layer.py         # Graph neural network layer
+├── Algorithms
 │   └── graph_algorithms.py  # PageRank, spreading activation
+│
+├── Archive (deprecated experimental code)
+│   └── archive/experimental/  # semantic_lexicon, friction_synthesis, etc.
 │
 ├── Configuration
 │   ├── config.yaml          # Main configuration
@@ -506,6 +702,7 @@ operating_system:
 - **Constitutional identity** preserved
 - **Voice emergence** through reflection
 - **Quantum indeterminacy** in cognition
+- **Document editing** for self-documentation
 
 ### Doesn't Achieve
 
@@ -526,6 +723,6 @@ If yes, we have something useful. If no, we learn and try something else.
 
 ---
 
-*Document version: 2.0*
-*Updated: December 28, 2024*
-*Based on: Codebase audit of actual implementation*
+*Document version: 3.1*
+*Updated: December 28, 2025*
+*Based on: UNIFIED_AGI_PLAN + Compute Self-Awareness implementation*

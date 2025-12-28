@@ -107,9 +107,8 @@ class RollbackSystem:
         baseline = self._get_current_commit()
         if baseline:
             await self.memory.record_experience(
-                content=f"Rollback system initialized at commit {baseline[:8]}",
-                type="system",
-                metadata={"baseline_commit": baseline}
+                content=f"[ROLLBACK_INIT] Rollback system initialized at commit {baseline[:8]} (full: {baseline})",
+                type="system"
             )
 
     def _git_available(self) -> bool:
@@ -191,14 +190,8 @@ class RollbackSystem:
 
         # Also record in memory for persistence
         await self.memory.record_experience(
-            content=f"[MODIFICATION] {file_path}: {description}",
-            type="modification",
-            metadata={
-                "mod_id": mod_id,
-                "file_path": file_path,
-                "git_commit": git_commit,
-                "desire_id": desire_id
-            }
+            content=f"[MODIFICATION] {file_path}: {description} | mod_id={mod_id} commit={git_commit[:8] if git_commit else 'none'} desire={desire_id or 'none'}",
+            type="modification"
         )
 
         # Check if we should create a checkpoint
@@ -224,9 +217,8 @@ class RollbackSystem:
             )
 
             await self.memory.record_experience(
-                content=f"Created checkpoint: {tag_name}",
-                type="checkpoint",
-                metadata={"tag": tag_name}
+                content=f"[CHECKPOINT] Created git tag: {tag_name}",
+                type="checkpoint"
             )
 
         except Exception as e:
@@ -314,15 +306,8 @@ class RollbackSystem:
 
             # Record the rollback
             await self.memory.record_experience(
-                content=f"[ROLLBACK] {reason.value}: Reset to {target_commit[:8]}, "
-                        f"rolled back {rolled_back} modifications",
-                type="rollback",
-                metadata={
-                    "reason": reason.value,
-                    "target_commit": target_commit,
-                    "backup_branch": backup_branch,
-                    "rolled_back": rolled_back
-                }
+                content=f"[ROLLBACK] {reason.value}: Reset to {target_commit[:8]}, rolled back {rolled_back} modifications. Backup branch: {backup_branch}",
+                type="rollback"
             )
 
             rollback_result = RollbackResult(
@@ -408,13 +393,8 @@ class RollbackSystem:
 
             # Record the rollback
             await self.memory.record_experience(
-                content=f"[ROLLBACK] {mod.file_path}: {reason.value}",
-                type="rollback",
-                metadata={
-                    "mod_id": mod.id,
-                    "reason": reason.value,
-                    "target_commit": target_commit
-                }
+                content=f"[ROLLBACK] {mod.file_path}: {reason.value} | mod_id={mod.id} target={target_commit[:8] if target_commit else 'none'}",
+                type="rollback"
             )
 
             rollback_result = RollbackResult(

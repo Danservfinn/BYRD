@@ -31,9 +31,55 @@ class LLMClient(ABC):
     # Quantum provider reference (set via set_quantum_provider)
     _quantum_provider = None
 
+    # Usage callback for compute introspection (set via set_usage_callback)
+    _usage_callback = None
+
     def set_quantum_provider(self, provider):
         """Set the quantum randomness provider for temperature modulation."""
         self._quantum_provider = provider
+
+    def set_usage_callback(self, callback):
+        """
+        Set callback for tracking LLM token usage.
+
+        Callback signature: callback(provider: str, tokens: int, operation: str, model: str)
+        This enables ComputeIntrospector to track token consumption across all providers.
+        """
+        self._usage_callback = callback
+
+    def _track_usage(
+        self,
+        prompt: str,
+        response_text: str,
+        raw_result: Dict,
+        operation: str = "generate"
+    ):
+        """
+        Track token usage via callback if set.
+
+        Tries to extract usage from API response, falls back to estimation.
+        """
+        if not self._usage_callback:
+            return
+
+        # Try to get actual token count from API response
+        usage = raw_result.get("usage", {})
+        tokens = usage.get("total_tokens")
+
+        if tokens is None:
+            # Fallback: estimate ~4 characters per token
+            tokens = (len(prompt) + len(response_text)) // 4
+
+        try:
+            self._usage_callback(
+                provider=self.model_name.split("/")[0],  # e.g., "ollama", "openrouter"
+                tokens=tokens,
+                operation=operation,
+                model=self.model_name.split("/")[-1]  # e.g., "gemma2:27b"
+            )
+        except Exception as e:
+            # Usage tracking failure should never break generation
+            print(f"Warning: Usage tracking failed: {e}")
 
     def reset(self):
         """Reset LLM client state for fresh start."""
@@ -270,8 +316,13 @@ class OllamaClient(LLMClient):
                 raise LLMError(f"Ollama error: {response.status_code}")
 
             result = response.json()
+            response_text = result.get("response", "")
+
+            # Track usage for compute introspection
+            self._track_usage(prompt, response_text, result, "generate")
+
             return LLMResponse(
-                text=result.get("response", ""),
+                text=response_text,
                 raw=result,
                 model=self.model,
                 provider="ollama",
@@ -354,8 +405,13 @@ class OpenRouterClient(LLMClient):
                 raise LLMError(f"OpenRouter error: {response.status_code} - {response.text}")
 
             result = response.json()
+            response_text = result["choices"][0]["message"]["content"]
+
+            # Track usage for compute introspection (OpenRouter returns usage data)
+            self._track_usage(prompt, response_text, result, "generate")
+
             return LLMResponse(
-                text=result["choices"][0]["message"]["content"],
+                text=response_text,
                 raw=result,
                 model=self.model,
                 provider="openrouter",
@@ -488,6 +544,10 @@ Example format: {"output": {...your reflection...}}"""
                 if not text and "reasoning_content" in message:
                     # If content is empty but reasoning exists, use reasoning
                     text = message.get("reasoning_content", "")
+
+                # Track usage for compute introspection (Z.AI returns usage data)
+                self._track_usage(prompt, text, result, "generate")
+
                 return LLMResponse(
                     text=text,
                     raw=result,

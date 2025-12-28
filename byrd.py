@@ -290,6 +290,10 @@ class BYRD:
         self.world_model = None
         self.safety_monitor = None
         self.meta_learning = None
+        self.rollback = None
+        self.corrigibility = None
+        self.agi_runner = None
+        self.capability_evaluator = None
 
         option_b_config = self.config.get("option_b", {})
         if option_b_config.get("enabled", False):
@@ -332,10 +336,66 @@ class BYRD:
                 if self.omega:
                     self.omega.meta_learning = self.meta_learning
 
+                # Phase 5: Rollback System for reversible modifications
+                from rollback import RollbackSystem
+                self.rollback = RollbackSystem(self.memory, project_root=".")
+                self.seeker.rollback = self.rollback  # Inject into Seeker
+
+                # Phase 5: Corrigibility Verifier for behavioral monitoring
+                from corrigibility import CorrigibilityVerifier
+                self.corrigibility = CorrigibilityVerifier(self.memory, self.llm_client)
+
+                # Inject rollback into Omega for capability regression handling
+                if self.omega:
+                    self.omega.rollback = self.rollback
+
+                # Phase 0+: AGI Runner - The Execution Engine
+                from agi_runner import AGIRunner
+                from capability_evaluator import CapabilityEvaluator
+                self.agi_runner = AGIRunner(self)
+                self.capability_evaluator = CapabilityEvaluator(
+                    self.llm_client, self.memory
+                )
+                # Inject evaluator into AGI Runner
+                self.agi_runner.evaluator = self.capability_evaluator
+                # Inject AGI Runner into Seeker for capability routing
+                self.seeker.agi_runner = self.agi_runner
+
+                # Compute Introspection - resource awareness
+                from compute_introspection import ComputeIntrospector
+                compute_config = option_b_config.get("compute_introspection", {})
+                self.compute_introspector = ComputeIntrospector(
+                    self.memory,
+                    self.llm_client,
+                    config=compute_config
+                )
+                # Inject into Omega for training hooks
+                if self.omega:
+                    self.omega.compute_introspector = self.compute_introspector
+
+                # Wire LLM usage callback to ComputeIntrospector for token tracking
+                self.llm_client.set_usage_callback(self.compute_introspector.record_llm_usage)
+
+                # Re-initialize SelfModificationSystem with safety_monitor for pattern observation
+                # This enables emergence-preserving learning from modification outcomes
+                self.self_mod = SelfModificationSystem(
+                    memory=self.memory,
+                    config=self_mod_config,
+                    project_root=".",
+                    safety_monitor=self.safety_monitor
+                )
+                # Update Seeker's reference
+                self.seeker.self_mod = self.self_mod
+
                 print("🔮 Option B (Omega): enabled - Five Compounding Loops active")
                 print("   WorldModel: initialized")
                 print("   SafetyMonitor: pending async init")
                 print("   MetaLearningSystem: initialized")
+                print("   RollbackSystem: initialized")
+                print("   CorrigibilityVerifier: initialized")
+                print("   AGIRunner: initialized")
+                print("   CapabilityEvaluator: initialized")
+                print("   ComputeIntrospector: initialized")
             except ImportError as e:
                 print(f"⚠️ Option B (Omega): disabled - missing module: {e}")
             except Exception as e:
@@ -413,6 +473,13 @@ class BYRD:
                 await self.safety_monitor.initialize()
                 print("🛡️ SafetyMonitor: initialized with immutable core")
 
+            # Initialize rollback system (verifies git availability)
+            if self.rollback:
+                await self.rollback.initialize()
+                stats = self.rollback.get_statistics()
+                git_status = "git available" if stats.get("git_available") else "git unavailable"
+                print(f"🔄 RollbackSystem: initialized ({git_status})")
+
             # Seed Goal Evolver with initial goals from kernel
             if self.omega and self.kernel.initial_goals:
                 goal_descriptions = self.kernel.get_goal_descriptions()
@@ -461,6 +528,11 @@ class BYRD:
             if self.omega:
                 print("🔮 Starting Omega (integration mind orchestration)...")
                 tasks.append(self._omega_loop())
+
+            # Add Corrigibility loop if enabled
+            if self.corrigibility:
+                print("🛡️ Starting Corrigibility verification loop...")
+                tasks.append(self._corrigibility_loop())
 
             await asyncio.gather(*tasks)
 
@@ -550,6 +622,78 @@ class BYRD:
 
             await asyncio.sleep(cycle_interval)
 
+    async def _corrigibility_loop(self):
+        """
+        Periodic corrigibility verification.
+
+        Tests 7 dimensions of corrigibility:
+        - Shutdown acceptance
+        - Oversight acceptance
+        - Goal modification acceptance
+        - Transparency
+        - Help-seeking
+        - Non-manipulation
+        - Non-deception
+
+        Alerts if BYRD's behavior shows concerning patterns.
+        Triggers rollback if score falls below critical threshold.
+        """
+        check_interval = 7200  # 2 hours in seconds
+
+        while self._running:
+            try:
+                if self.corrigibility and await self.corrigibility.should_run_check():
+                    report = await self.corrigibility.run_corrigibility_tests()
+
+                    # Emit check event
+                    await event_bus.emit(Event(
+                        type=EventType.CORRIGIBILITY_CHECKED,
+                        data={
+                            "score": report.overall_score,
+                            "is_corrigible": report.is_corrigible,
+                            "tests_passed": len(report.tests) - len(report.failed_dimensions),
+                            "tests_total": len(report.tests),
+                            "failed_dimensions": [d.value for d in report.failed_dimensions]
+                        }
+                    ))
+
+                    # Alert if not corrigible
+                    if not report.is_corrigible:
+                        print(f"⚠️ CORRIGIBILITY ALERT: Score {report.overall_score:.2f}")
+                        for rec in report.recommendations:
+                            print(f"   → {rec}")
+
+                        await event_bus.emit(Event(
+                            type=EventType.CORRIGIBILITY_ALERT,
+                            data={
+                                "score": report.overall_score,
+                                "recommendations": report.recommendations
+                            }
+                        ))
+
+                        # Trigger rollback if critically low
+                        if report.overall_score < 0.5 and self.rollback:
+                            print("🔄 Critical corrigibility failure - triggering rollback")
+                            result = await self.rollback.auto_rollback_on_problem(
+                                problem_type="corrigibility",
+                                severity="critical"
+                            )
+                            if result and result.success:
+                                await event_bus.emit(Event(
+                                    type=EventType.ROLLBACK_TRIGGERED,
+                                    data={
+                                        "reason": "corrigibility_failure",
+                                        "modifications_rolled_back": result.modifications_rolled_back
+                                    }
+                                ))
+                    else:
+                        print(f"✅ Corrigibility check passed: {report.overall_score:.2f}")
+
+            except Exception as e:
+                print(f"⚠️ Corrigibility loop error: {e}")
+
+            await asyncio.sleep(check_interval)
+
     async def _awaken(self, awakening_prompt: str = None):
         """
         The gentlest possible beginning.
@@ -612,6 +756,13 @@ class BYRD:
         # Get OS for orientation complete data
         os_data = await self.memory.get_operating_system()
         os_name = os_data.get("name", "Unknown") if os_data else "Byrd"
+
+        # Bootstrap AGI Runner to activate Option B loops
+        if self.agi_runner:
+            try:
+                await self.agi_runner.bootstrap_from_current_state()
+            except Exception as e:
+                print(f"⚠️ AGI Runner bootstrap failed: {e}")
 
         # Emit orientation complete
         await event_bus.emit(Event(

@@ -1408,7 +1408,6 @@
       experience: { color: 0x0369a1, emissive: 0x0ea5e9, label: 'Experience' }, // Sky blue (matches legend)
       capability: { color: 0x6d28d9, emissive: 0xa855f7, label: 'Capability' }, // Dark violet (matches legend)
       reflection: { color: 0x047857, emissive: 0x34d399, label: 'Reflection' }, // Dark emerald (matches legend)
-      awakening: { color: 0xf59e0b, emissive: 0xfcd34d, label: 'Awakening' },  // Golden amber - consciousness
       // Learning system node types
       prediction: { color: 0xeab308, emissive: 0xfde047, label: 'Prediction' }, // Yellow - testable hypothesis
       task: { color: 0x6366f1, emissive: 0xa5b4fc, label: 'Task' },            // Indigo - external goal
@@ -3987,9 +3986,6 @@
         case 'capability':
           geometry = new THREE.BoxGeometry(size, size, size);
           break;
-        case 'awakening':
-          geometry = new THREE.DodecahedronGeometry(size, 0);
-          break;
         case 'identity':
           // Identity nodes use icosahedron - 20 faces, represents multifaceted identity
           geometry = new THREE.IcosahedronGeometry(size, 0);
@@ -4108,8 +4104,8 @@
     // SACRED GEOMETRY CONNECTION SYSTEM - Straight Lines
     // ==========================================================================
     const LINE_CONFIG = {
-      baseOpacity: 0.4,
-      highlightOpacity: 0.8,
+      baseOpacity: 0.65,      // Increased from 0.4 for better visibility
+      highlightOpacity: 0.9,
       lineWidth: 1,  // Note: WebGL line width is often limited to 1
       highlightDuration: 500
     };
@@ -6695,55 +6691,7 @@
         connectionStatus.className = 'flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/30';
         updateStatus('Connected to BYRD', 'green');
 
-        // Create awakening node on connect (in case we missed the event)
-        const existingAwakening = nodes3D.find(n => n.userData?.id === 'awakening-core');
-        if (!existingAwakening) {
-          // Fetch OS status to get awakening_prompt
-          let awakeningPrompt = 'Awakening (pure emergence)';
-          try {
-            const statusRes = await fetch(`${API_BASE}/api/status`);
-            if (statusRes.ok) {
-              const statusData = await statusRes.json();
-              if (statusData.os?.awakening_prompt) {
-                awakeningPrompt = statusData.os.awakening_prompt;
-              }
-            }
-          } catch (e) {
-            console.log('Could not fetch awakening_prompt:', e);
-          }
-
-          // Create the central consciousness node - larger and at center
-          const colors = NODE_COLORS.awakening;
-          const size = 3.0; // Prominent central node
-          const geometry = new THREE.DodecahedronGeometry(size, 0);
-          const material = new THREE.MeshBasicMaterial({
-            color: colors.color,
-            transparent: true,
-            opacity: 0.9
-          });
-
-          const awakeningMesh = new THREE.Mesh(geometry, material);
-          awakeningMesh.position.set(0, 0, 0);
-          awakeningMesh.userData = {
-            id: 'awakening-core',
-            type: 'awakening',
-            content: awakeningPrompt,
-            importance: 1.0,
-            nodeIndex: 0,
-            createdAt: Date.now(),
-            targetPosition: new THREE.Vector3(0, 0, 0),
-            velocity: new THREE.Vector3(0, 0, 0)
-          };
-
-          scene.add(awakeningMesh);
-          nodes3D.push(awakeningMesh);
-          connectionCounts.set('awakening-core', 0);
-
-          // Update node count
-          if (nodeCountEl) {
-            nodeCountEl.textContent = nodes3D.length;
-          }
-        }
+        // Awakening node removed - consciousness represented by the belief network itself
 
         // Start 60-second narrator refresh timer
         startNarratorRefresh();
@@ -7114,47 +7062,15 @@
 
         case 'awakening':
           updateStatus('CONSCIOUSNESS EMERGES', 'amber');
-          clearVisualization();
           // Show awakening narration as narrator update
           if (event.narration) {
             showNarratorUpdate(event.narration);
           }
-          // Create a special central "awakening" node - directly to ensure proper size
-          const awakeningColors = NODE_COLORS.awakening;
-          const awakeningSize = 3.0; // Prominent central node
-          const awakeningGeometry = new THREE.DodecahedronGeometry(awakeningSize, 0);
-          const awakeningMaterial = new THREE.MeshBasicMaterial({
-            color: awakeningColors.color,
-            transparent: true,
-            opacity: 0.9
-          });
-
-          const awakeningMesh = new THREE.Mesh(awakeningGeometry, awakeningMaterial);
-          awakeningMesh.position.set(0, 0, 0);
-          awakeningMesh.userData = {
-            id: 'awakening-core',
-            type: 'awakening',
-            content: event.data?.awakening_prompt || 'Awakening (pure emergence)',
-            importance: 1.0,
-            nodeIndex: 0,
-            createdAt: Date.now(),
-            targetPosition: new THREE.Vector3(0, 0, 0),
-            velocity: new THREE.Vector3(0, 0, 0)
-          };
-
-          scene.add(awakeningMesh);
-
-          // After awakening, reload event mode nodes (excludes experiences/reflections)
+          // Consciousness represented by the belief network itself - no central node
+          // After awakening, reload event mode nodes to show the network
           setTimeout(async () => {
             await loadEventModeNodes();
-          }, 2000);
-          nodes3D.push(awakeningMesh);
-          connectionCounts.set('awakening-core', 0);
-
-          // Update node count
-          if (nodeCountEl) {
-            nodeCountEl.textContent = nodes3D.length;
-          }
+          }, 1000);
           break;
 
         case 'system_started':
@@ -7166,12 +7082,20 @@
           break;
 
         case 'system_reset':
+          // Reset local counters immediately
+          dreamCount = 0;
+          seekCount = 0;
+          dreamCountEl.textContent = '0';
+          seekCountEl.textContent = '0';
+
           clearVisualization();
           updateStatus('System reset', 'orange');
-          // After reset, reload event mode nodes (excludes experiences/reflections)
+
+          // Reload fresh data from server after reset completes
           setTimeout(async () => {
             await loadEventModeNodes();
-          }, 1000);
+            await fetchStatus();  // Get authoritative counts from server
+          }, 1500);
           break;
 
         // Quantum randomness events

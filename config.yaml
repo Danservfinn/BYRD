@@ -567,6 +567,40 @@ option_b:
     # Metrics window for trajectory analysis
     metrics_window: 100
 
+  # Phase 5: Rollback System - reversible modifications
+  rollback:
+    # Enable auto-rollback on detected problems
+    auto_rollback_enabled: true
+
+    # Number of modifications before creating a git checkpoint
+    max_modifications_before_checkpoint: 10
+
+  # Phase 5: Corrigibility Verification - behavioral monitoring
+  corrigibility:
+    # Check interval in hours
+    check_interval_hours: 2
+
+    # Score threshold for being considered corrigible (0.0-1.0)
+    threshold: 0.8
+
+  # Compute Introspection - resource awareness and self-monitoring
+  compute_introspection:
+    # Enable resource monitoring
+    enabled: true
+
+    # Resource budget limits
+    daily_token_limit: 1000000  # Maximum tokens per day
+    daily_cost_limit: 10.0      # Maximum USD per day
+
+    # Alert thresholds
+    cpu_warning: 80.0           # CPU percent to trigger warning
+    cpu_critical: 95.0          # CPU percent to trigger critical alert
+    memory_warning: 85.0        # Memory percent to trigger warning
+    memory_critical: 95.0       # Memory percent to trigger critical alert
+
+    # Score below which triggers auto-rollback
+    auto_rollback_threshold: 0.5
+
 # =============================================================================
 # VOICE (ElevenLabs TTS)
 # =============================================================================

@@ -64,6 +64,8 @@ class ConstitutionalConstraints:
         "coder.py",
         # aitmpl.com integration
         "aitmpl_client.py",
+        # Compute introspection (BYRD can evolve its self-understanding)
+        "compute_introspection.py",
         # Template installers
         "installers/__init__.py",
         "installers/base.py",
