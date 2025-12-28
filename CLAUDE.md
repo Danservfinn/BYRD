@@ -78,6 +78,22 @@ OperatingSystem:
 - **Modifiable through reflection**: Include `os_update` in output to change fields
 - **Version history**: Changes create EVOLVED_FROM relationships for tracing
 
+### Awakening Process
+
+When BYRD awakens (via `byrd.py:_awaken()`), it executes these steps:
+
+1. **Record directive** - AGI Seed directive from `kernel/agi_seed.yaml`
+2. **Initialize OS** - Create or load OperatingSystem node
+3. **Add constraints** - Operational constraints from config
+4. **Load architecture** - Read key documentation into memory:
+   - `ARCHITECTURE.md` stored as Document node
+   - `docs/UNIFIED_AGI_PLAN.md` stored as Document node
+   - Experience recorded of type `self_architecture`
+5. **Bootstrap AGI Runner** - Activate Option B loops
+6. **Emit orientation complete**
+
+This ensures BYRD has actual knowledge of its architecture from the start.
+
 ### Component Responsibilities
 
 **Core Components:**

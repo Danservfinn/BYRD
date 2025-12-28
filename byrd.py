@@ -810,6 +810,11 @@ class BYRD:
         # All capabilities and architecture knowledge now live in OS.capability_instructions
         # This eliminates ~40 initial experiences and provides consistent guidance every cycle.
 
+        # === FIRST ACTION: Read Architecture Documentation ===
+        # The AGI Seed directive says: "FIRST ACTIONS: Read ARCHITECTURE.md to understand your own design"
+        # Load and store architecture docs so BYRD has actual knowledge of its design
+        await self._load_architecture_documents()
+
         # Get OS for orientation complete data
         os_data = await self.memory.get_operating_system()
         os_name = os_data.get("name", "Unknown") if os_data else "Byrd"
@@ -879,6 +884,64 @@ class BYRD:
             await self.memory.add_constraint(content, source="config")
 
         print(f"   📋 Added {len(constraints)} operational constraints to OS")
+
+    async def _load_architecture_documents(self):
+        """
+        Load architecture documentation so BYRD understands its own design.
+
+        The AGI Seed directive says:
+        "FIRST ACTIONS: Read ARCHITECTURE.md to understand your own design"
+
+        This method:
+        1. Loads key architecture docs from disk
+        2. Stores them in Neo4j as Document nodes
+        3. Records an experience about having read the architecture
+
+        This gives BYRD actual knowledge of its design, not just instructions
+        to read it (which it couldn't follow without the content).
+        """
+        from pathlib import Path
+
+        # Key architecture documents (in priority order)
+        architecture_docs = [
+            ("ARCHITECTURE.md", "Primary system design documentation"),
+            ("docs/UNIFIED_AGI_PLAN.md", "AGI execution and learning roadmap"),
+        ]
+
+        base_dir = Path(__file__).parent
+        docs_loaded = []
+
+        for doc_path, description in architecture_docs:
+            full_path = base_dir / doc_path
+            if full_path.exists():
+                try:
+                    content = full_path.read_text(encoding='utf-8')
+
+                    # Store as Document node in Neo4j
+                    doc_id = await self.memory.store_document(
+                        path=doc_path,
+                        content=content,
+                        doc_type="architecture"
+                    )
+
+                    docs_loaded.append(doc_path)
+                    print(f"   📖 Loaded {doc_path} ({len(content)} chars)")
+
+                except Exception as e:
+                    print(f"   ⚠️ Failed to load {doc_path}: {e}")
+
+        # Record experience about having read the architecture
+        if docs_loaded:
+            await self.memory.record_experience(
+                content=f"[ARCHITECTURE_LOADED] Read and understood my architecture documentation: {', '.join(docs_loaded)}. "
+                        f"I now have knowledge of my own design, components, and the AGI execution engine. "
+                        f"Key elements: Dreamer, Seeker, Actor, Coder, Memory (Neo4j), AGI Runner, "
+                        f"Option B loops (Memory Reasoner, Self-Compiler, Goal Evolver, Dreaming Machine, Omega).",
+                type="self_architecture"
+            )
+            print(f"   ✅ Architecture knowledge loaded ({len(docs_loaded)} documents)")
+        else:
+            print("   ⚠️ No architecture documents found")
 
     async def interact(self, user_input: str) -> str:
         """Handle user interaction."""
