@@ -389,17 +389,11 @@ Output JSON:
         error = abs(prediction.success_probability - (1.0 if actual_success else 0.0))
 
         if error > 0.3:
-            # Significant prediction error - record for learning
+            # Significant prediction error - record for learning (metadata embedded in content)
             await self.memory.record_experience(
-                content=f"Prediction error: expected {prediction.predicted_outcome}, got {actual_outcome}",
-                type="prediction_error",
-                metadata={
-                    "action": prediction.action,
-                    "predicted": prediction.predicted_outcome,
-                    "actual": actual_outcome,
-                    "error_magnitude": error,
-                    "context": prediction.context
-                }
+                content=f"[PREDICTION_ERROR] expected={prediction.predicted_outcome} actual={actual_outcome} | "
+                        f"action={prediction.action} error={error:.2f} context={prediction.context}",
+                type="prediction_error"
             )
 
             # Try to learn causal factor

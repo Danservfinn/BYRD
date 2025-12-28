@@ -85,6 +85,14 @@ class LLMClient(ABC):
         """Reset LLM client state for fresh start."""
         pass  # Nothing to reset
 
+    async def query(self, prompt: str, max_tokens: int = 500, temperature: float = 0.7) -> str:
+        """
+        Simple query interface for AGI Runner components.
+        Returns just the text response (not the full LLMResponse).
+        """
+        response = await self.generate(prompt, temperature=temperature, max_tokens=max_tokens)
+        return response.text
+
     @abstractmethod
     async def generate(
         self,
