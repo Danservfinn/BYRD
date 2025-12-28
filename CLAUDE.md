@@ -88,7 +88,8 @@ OperatingSystem:
 | **Dreamer** | `dreamer.py` | Local | Pure data presentation → meta-schema output |
 | **Seeker** | `seeker.py` | Local | Pattern detection → execute BYRD's strategies |
 | **Actor** | `actor.py` | Claude API | Complex reasoning, user interaction |
-| **Coder** | `coder.py` | Claude Code CLI | Autonomous coding for features and self-modification |
+| **Coder** | `coder.py` | Claude Code CLI | Autonomous coding (legacy, deprecated) |
+| **Agent Coder** | `agent_coder.py` | Z.AI/Local | Autonomous multi-step coding agent with tool use |
 | **Self-Modifier** | `self_modification.py` | - | Safe architectural evolution |
 | **Event Bus** | `event_bus.py` | - | Real-time event streaming to visualization |
 | **Server** | `server.py` | - | WebSocket + REST API for clients |
@@ -102,6 +103,19 @@ OperatingSystem:
 | **Desire Classifier** | `desire_classifier.py` | Routes desires by type (philosophical→reflection, capability→AGI Runner, action→Seeker, meta→AGI Runner) |
 | **Capability Evaluator** | `capability_evaluator.py` | Ground-truth measurement with held-out test suites |
 | **Code Learner** | `code_learner.py` | Converts stable patterns (10+ uses, 80%+ success) to Python code |
+| **Compute Introspector** | `compute_introspection.py` | Resource monitoring, token tracking, bottleneck detection |
+
+**Agent Coder (Multi-Step Coding):**
+
+The Agent Coder (`agent_coder.py`) is BYRD's autonomous coding system. It uses a tool-calling loop to explore codebases and make changes.
+
+| Feature | Description |
+|---------|-------------|
+| **Tools** | `read_file`, `write_file`, `edit_file`, `list_files`, `search_code`, `finish` |
+| **Safeguards** | Loop detection (primary), 100-step limit (fallback), file change limit |
+| **Loop Detection** | Detects repeated tool+args (3x) or ping-pong patterns (A-B-A-B) |
+| **Constitutional** | Cannot modify protected files; dangerous patterns blocked |
+| **Provenance** | All changes traced to originating desire |
 
 **Learning Components:**
 
@@ -215,6 +229,7 @@ All stateful components implement `reset()` to clear in-memory state:
 | Dreamer | `dreamer.py` | `_dream_count`, `_observed_keys`, `_belief_cache` |
 | Seeker | `seeker.py` | `_seek_count`, `_installs_today`, `_observed_themes` |
 | Coder | `coder.py` | `_generation_count` |
+| Agent Coder | `agent_coder.py` | Stateless (resets between invocations) |
 | LLM Client | `llm_client.py` | `_request_count`, `_failure_count` |
 | Quantum Provider | `quantum_randomness.py` | `_usage_count`, `_pool` |
 | World Model | `world_model.py` | `_prediction_count`, `_pending_predictions` |
@@ -764,7 +779,8 @@ byrd/
 │   ├── dreamer.py              # Dream loop
 │   ├── seeker.py               # Desire fulfillment + research
 │   ├── actor.py                # Claude interface
-│   ├── coder.py                # Claude Code CLI wrapper
+│   ├── coder.py                # Claude Code CLI wrapper (legacy)
+│   ├── agent_coder.py          # Multi-step coding agent with tools
 │   ├── llm_client.py           # LLM provider abstraction
 │   ├── quantum_randomness.py   # ANU QRNG integration
 │   ├── narrator.py             # Inner voice generation
@@ -774,7 +790,8 @@ byrd/
 │   ├── agi_runner.py           # 8-step improvement cycle
 │   ├── desire_classifier.py    # Routes desires by type
 │   ├── capability_evaluator.py # Ground-truth testing
-│   └── code_learner.py         # Pattern → Python code
+│   ├── code_learner.py         # Pattern → Python code
+│   └── compute_introspection.py # Resource/token/bottleneck tracking
 │
 ├── Learning Components
 │   ├── hierarchical_memory.py  # L0-L4 abstraction layers
