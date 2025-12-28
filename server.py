@@ -364,6 +364,7 @@ class AGIRunnerStatus(BaseModel):
     research_indexed: int = 0
     patterns_seeded: int = 0
     recent_cycles: List[Dict] = []
+    strategy_effectiveness: Dict = {}  # P1: Strategy tracking
 
 
 class OSStatus(BaseModel):
@@ -637,7 +638,8 @@ async def get_status():
                     goals_injected=bootstrap_metrics.get("goals_injected", 0),
                     research_indexed=bootstrap_metrics.get("research_indexed", 0),
                     patterns_seeded=bootstrap_metrics.get("patterns_seeded", 0),
-                    recent_cycles=metrics.get("recent_cycles", [])
+                    recent_cycles=metrics.get("recent_cycles", []),
+                    strategy_effectiveness=metrics.get("strategy_effectiveness", {})
                 )
             except Exception as e:
                 print(f"Error getting AGI Runner status: {e}")

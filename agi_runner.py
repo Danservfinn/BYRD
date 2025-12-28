@@ -992,15 +992,15 @@ class AGIRunner:
                     action=hypothesis.strategy,
                     success=measurement.improved
                 )
-            except:
-                pass
+            except Exception as e:
+                print(f"   Note: Intuition network update skipped: {e}")
 
         # 3. Update self_model with Bayesian update (if enhanced)
         if self.self_model and hasattr(self.self_model, 'bayesian_update'):
             try:
                 self.self_model.bayesian_update(hypothesis.target, measurement.improved)
-            except:
-                pass
+            except Exception as e:
+                print(f"   Note: Bayesian update skipped: {e}")
 
         # 4. Record experience using EXISTING memory (metadata embedded in content)
         await self.memory.record_experience(
