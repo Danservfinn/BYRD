@@ -1606,35 +1606,35 @@
     // Force-directed physics creates natural clustering based on relationships
     // Highly connected nodes gravitate toward center; isolated nodes drift outward
 
-    // Relationship visual styles - yellow, fully opaque
+    // Relationship visual styles - bright yellow, fully opaque
     const RELATIONSHIP_STYLES = {
         DERIVED_FROM: {
-            color: 0xFFD700,    // Gold yellow
+            color: 0xFFFF00,    // Pure bright yellow
             opacity: 1.0,
             width: 1
         },
         RELATES_TO: {
-            color: 0xFFD700,    // Gold yellow
+            color: 0xFFFF00,    // Pure bright yellow
             opacity: 1.0,
             width: 1
         },
         FULFILLS: {
-            color: 0xFFD700,    // Gold yellow
+            color: 0xFFFF00,    // Pure bright yellow
             opacity: 1.0,
             width: 1
         },
         REFLECTS_ON: {
-            color: 0xFFD700,    // Gold yellow
+            color: 0xFFFF00,    // Pure bright yellow
             opacity: 1.0,
             width: 1
         },
         EMERGES_FROM: {
-            color: 0xFFD700,    // Gold yellow
+            color: 0xFFFF00,    // Pure bright yellow
             opacity: 1.0,
             width: 1
         },
         default: {
-            color: 0xFFD700,    // Gold yellow
+            color: 0xFFFF00,    // Pure bright yellow
             opacity: 1.0,
             width: 1
         }
@@ -4123,9 +4123,9 @@
 
       const geometry = new THREE.BufferGeometry().setFromPoints(points);
 
-      // Yellow line material for visibility
+      // Bright yellow line material for visibility
       const material = new THREE.LineBasicMaterial({
-        color: 0xFFD700, // Gold yellow
+        color: 0xFFFF00, // Pure bright yellow
         transparent: false,
         opacity: LINE_CONFIG.baseOpacity,
         linewidth: LINE_CONFIG.lineWidth
@@ -4168,7 +4168,7 @@
       setTimeout(() => {
         if (connection.material) {
           connection.material.opacity = originalOpacity;
-          connection.material.color.setHex(0xFFD700); // Back to yellow
+          connection.material.color.setHex(0xFFFF00); // Back to bright yellow
         }
       }, duration);
     }
