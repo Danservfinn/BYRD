@@ -571,7 +571,7 @@ async def get_status():
         if "/" in model_name:
             llm_provider, llm_model = model_name.split("/", 1)
         else:
-            llm_provider = "ollama"  # Default for local models
+            llm_provider = "zai"  # Default provider
             llm_model = model_name
 
         # Format started_at timestamp
@@ -2189,9 +2189,9 @@ async def reset_byrd(request: ResetRequest = None):
 
         # Reset Option B / AGI components
         if hasattr(byrd_instance, 'world_model') and byrd_instance.world_model:
-            byrd_instance.world_model.reset()
+            await byrd_instance.world_model.reset()
         if hasattr(byrd_instance, 'self_model') and byrd_instance.self_model:
-            byrd_instance.self_model.reset()
+            await byrd_instance.self_model.reset()
         if hasattr(byrd_instance, 'agi_runner') and byrd_instance.agi_runner:
             byrd_instance.agi_runner.reset()  # Also resets desire_classifier
         if hasattr(byrd_instance, 'rollback') and byrd_instance.rollback:
@@ -2464,7 +2464,7 @@ async def get_llm_config():
     return LLMConfigResponse(
         provider=provider,
         model=model,
-        available_providers=["ollama", "openrouter"]
+        available_providers=["zai", "openrouter"]
     )
 
 
@@ -2485,9 +2485,7 @@ async def update_llm_config(config: LLMConfigUpdate):
         }
 
         # Add provider-specific settings
-        if config.provider == "ollama":
-            new_config["endpoint"] = "http://localhost:11434/api/generate"
-        # OpenRouter uses env var for API key
+        # ZAI and OpenRouter use env vars for API keys
 
         # Create new client
         new_client = create_llm_client(new_config)
@@ -2508,7 +2506,7 @@ async def update_llm_config(config: LLMConfigUpdate):
         return LLMConfigResponse(
             provider=config.provider,
             model=config.model,
-            available_providers=["ollama", "openrouter"]
+            available_providers=["zai", "openrouter"]
         )
 
     except LLMError as e:

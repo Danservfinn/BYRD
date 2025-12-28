@@ -159,13 +159,17 @@ Executes when there's something complex to do:
 - Complex reasoning tasks
 - Goal pursuit requiring frontier intelligence
 
-### 7. Coder (Claude Code CLI)
+### 7. Agent Coder (`agent_coder.py`)
 
-BYRD's autonomous coding agent:
-- Executes code generation via Claude Code CLI
-- Post-validates against constitutional constraints
-- Tracks costs and usage limits
-- Automatic rollback if protected files are touched
+BYRD's autonomous multi-step coding agent:
+- Tool-calling loop: `read_file`, `write_file`, `edit_file`, `list_files`, `search_code`, `finish`
+- Loop detection (primary safeguard): stops on repeated actions or ping-pong patterns
+- 100-step fallback limit (rarely hit due to loop detection)
+- Constitutional constraints: cannot modify protected files
+- Provenance tracking: all changes trace to originating desire
+- Post-modification safety checks
+
+**Legacy**: `coder.py` (Claude Code CLI wrapper) is deprecated.
 
 ### 8. Voice (ElevenLabs)
 
@@ -425,82 +429,6 @@ The Omega cycle runs learning component updates:
 
 ---
 
-## AGI Execution Engine (UNIFIED_AGI_PLAN)
-
-The AGI Runner implements an 8-step improvement cycle that closes the loop between assessment, hypothesis, prediction, execution, and learning.
-
-### AGI Runner (`agi_runner.py`)
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     AGI IMPROVEMENT CYCLE                        │
-│                                                                  │
-│   ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐           │
-│   │ ASSESS  │→ │IDENTIFY │→ │GENERATE │→ │ PREDICT │           │
-│   │         │  │         │  │         │  │         │           │
-│   │ Bayesian│  │ Highest │  │Hypothesis│ │ Store   │           │
-│   │ caps    │  │ uncert. │  │ creation │ │ expected│           │
-│   └─────────┘  └─────────┘  └─────────┘  └─────────┘           │
-│                                                                  │
-│   ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐           │
-│   │ LEARN   │← │ MEASURE │← │ EXECUTE │← │ VERIFY  │           │
-│   │         │  │         │  │         │  │         │           │
-│   │ Update  │  │ Ground  │  │ Run     │  │ Safety  │           │
-│   │ priors  │  │ truth   │  │ change  │  │ checks  │           │
-│   └─────────┘  └─────────┘  └─────────┘  └─────────┘           │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Desire Classifier (`desire_classifier.py`)
-
-Routes desires to appropriate handlers:
-
-| Desire Type | Route To | Purpose |
-|-------------|----------|---------|
-| `philosophical` | Reflection | Deep introspection |
-| `capability` | AGI Runner | Improvement cycle |
-| `action` | Seeker | Direct execution |
-| `meta` | AGI Runner | Meta-cognition |
-
-### Capability Evaluator (`capability_evaluator.py`)
-
-Provides ground-truth measurement with held-out test suites for 7 capabilities:
-- `reasoning`, `memory`, `learning`, `research`, `self_modification`, `prediction`, `metacognition`
-
-### Learning Components
-
-| Component | File | Purpose |
-|-----------|------|---------|
-| **Hierarchical Memory** | `hierarchical_memory.py` | L0-L4 abstraction (Experience→Pattern→Principle→Axiom→MetaAxiom) |
-| **Intuition Network** | `intuition_network.py` | Trainable "taste" using semantic similarity |
-| **Learned Retriever** | `learned_retriever.py` | Learns relevance from query-result feedback |
-| **Emergent Categories** | `emergent_categories.py` | Discovers categories from behavior clustering |
-| **Code Learner** | `code_learner.py` | Converts stable patterns (10+ uses, 80%+ success) to Python |
-
-### Bayesian Capability Tracking (`self_model.py`)
-
-Uses Beta distribution for capability confidence:
-```python
-# Update after success/failure
-self._alpha[capability] += 1 if success else 0
-self._beta[capability] += 0 if success else 1
-
-# Posterior mean
-mean = alpha / (alpha + beta)
-
-# Uncertainty (higher = explore more)
-uncertainty = sqrt(alpha * beta / ((alpha + beta)^2 * (alpha + beta + 1)))
-```
-
-### Training Hooks (`omega.py`)
-
-The Omega cycle runs learning component updates:
-- **Every cycle**: GNN training, Intuition Network update
-- **Every 10 cycles**: Hierarchical Memory consolidation
-- **Every 20 cycles**: Code Learner codification
-
----
-
 ## Option B: Compounding Loops
 
 BYRD implements five experimental compounding loops for accelerated improvement:
@@ -681,11 +609,13 @@ byrd/
 │   ├── dreamer.py           # Reflection/dream cycles
 │   ├── seeker.py            # Desire fulfillment + strategy routing
 │   ├── actor.py             # Claude API interface
-│   ├── coder.py             # Claude Code CLI wrapper
-│   ├── agent_coder.py       # Agent-based coding
+│   ├── agent_coder.py       # Multi-step coding agent with tools
+│   ├── coder.py             # Claude Code CLI wrapper (legacy)
 │   ├── llm_client.py        # Multi-provider LLM abstraction
 │   ├── event_bus.py         # Real-time event streaming
-│   └── server.py            # FastAPI + WebSocket server
+│   ├── server.py            # FastAPI + WebSocket server
+│   ├── capability_registry.py  # Capability definition registry
+│   └── aitmpl_client.py     # Template registry client
 │
 ├── AGI Seed Components
 │   ├── self_model.py        # Capability tracking + Bayesian
@@ -704,11 +634,12 @@ byrd/
 │   ├── compute_introspection.py # Resource awareness + token tracking
 │   └── code_learner.py      # Pattern → Python code
 │
-├── Learning Components (NEW)
+├── Learning Components
 │   ├── hierarchical_memory.py  # L0-L4 abstraction
 │   ├── intuition_network.py    # Trainable "taste"
 │   ├── learned_retriever.py    # Relevance learning
 │   ├── emergent_categories.py  # Category discovery
+│   ├── gnn_layer.py            # Graph Neural Network layer
 │   └── learned_strategies/     # Codified patterns
 │       ├── __init__.py
 │       ├── desire_routing/
@@ -726,7 +657,17 @@ byrd/
 ├── Voice & Visualization
 │   ├── elevenlabs_voice.py  # ElevenLabs TTS integration
 │   ├── narrator.py          # Inner voice generation
+│   ├── quantum_randomness.py   # ANU QRNG integration
 │   └── byrd-3d-visualization.html
+│
+├── Installers (capability installers)
+│   ├── base.py              # Base installer class
+│   ├── mcp_installer.py     # MCP server installer
+│   ├── agent_installer.py   # Agent installer
+│   ├── command_installer.py # Command installer
+│   ├── skill_installer.py   # Skill installer
+│   ├── hook_installer.py    # Hook installer
+│   └── settings_installer.py # Settings installer
 │
 ├── Safety Components (PROTECTED)
 │   ├── safety_monitor.py    # Modification safety
@@ -750,8 +691,12 @@ byrd/
 └── Documentation
     ├── ARCHITECTURE.md      # This document
     ├── CLAUDE.md            # Development guide
-    └── docs/
-        └── OPTION_B_EXPLORATION.md
+    ├── EMERGENCE_PRINCIPLES.md  # Core philosophy
+    └── docs/                # Planning documents archive
+        ├── UNIFIED_AGI_PLAN.md
+        ├── OPTION_B_*.md    # Option B exploration series
+        ├── AGI_SEED_*.md    # AGI seed planning
+        └── archive/         # Deprecated plans
 ```
 
 ---
@@ -769,7 +714,7 @@ memory:
 
 # LLM Provider
 local_llm:
-  provider: "zai"  # or "ollama", "openrouter"
+  provider: "zai"  # or "openrouter"
   model: "glm-4.7"
   api_key: "${ZAI_API_KEY}"
 
@@ -829,6 +774,6 @@ If yes, we have something useful. If no, we learn and try something else.
 
 ---
 
-*Document version: 3.1*
+*Document version: 3.2*
 *Updated: December 28, 2025*
-*Based on: UNIFIED_AGI_PLAN + Compute Self-Awareness implementation*
+*Based on: UNIFIED_AGI_PLAN + Agent Coder + Compute Self-Awareness*

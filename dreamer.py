@@ -3153,7 +3153,8 @@ Output JSON:
 Only generate predictions for beliefs that are actually testable. If no beliefs are testable, return empty array.
 """
 
-            response = await self._query_local_llm(prompt, max_tokens=800)
+            llm_response = await self.llm_client.generate(prompt, max_tokens=800)
+            response = llm_response.text
 
             # Parse response
             try:

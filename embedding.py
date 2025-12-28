@@ -1,6 +1,6 @@
 """
 Embedding provider abstraction for BYRD.
-Supports Ollama (local) and OpenAI (cloud) backends.
+Supports OpenAI (cloud) embeddings with graceful fallback.
 
 Part of Option B implementation - provides embeddings for:
 - Pattern matching in Self-Compiler
@@ -50,63 +50,31 @@ class EmbeddingProvider(ABC):
         pass
 
 
-class OllamaEmbedding(EmbeddingProvider):
-    """Ollama-based embedding provider (local, free)."""
+class NoOpEmbedding(EmbeddingProvider):
+    """
+    Fallback embedding provider that returns zero vectors.
+    Used when no real embedding provider is available.
+    """
 
-    # Known embedding dimensions for common models
-    MODEL_DIMENSIONS = {
-        "nomic-embed-text": 768,
-        "mxbai-embed-large": 1024,
-        "all-minilm": 384,
-        "snowflake-arctic-embed": 1024,
-    }
-
-    def __init__(
-        self,
-        model: str = "nomic-embed-text",
-        endpoint: str = "http://localhost:11434"
-    ):
-        self.model = model
-        self.endpoint = endpoint
-        self._dimensions = self.MODEL_DIMENSIONS.get(model, 768)
+    def __init__(self, dimensions: int = 768):
+        self._dimensions = dimensions
 
     @property
     def dimensions(self) -> int:
         return self._dimensions
 
     async def embed(self, text: str) -> EmbeddingResult:
-        """Embed a single text using Ollama."""
-        try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.post(
-                    f"{self.endpoint}/api/embeddings",
-                    json={"model": self.model, "prompt": text}
-                )
-                response.raise_for_status()
-                data = response.json()
-
-                embedding = data.get("embedding", [])
-
-                return EmbeddingResult(
-                    embedding=embedding,
-                    model=self.model,
-                    tokens=len(text.split()),  # Approximate
-                    dimensions=len(embedding)
-                )
-        except httpx.HTTPError as e:
-            logger.error(f"Ollama embedding failed: {e}")
-            raise
-        except Exception as e:
-            logger.error(f"Unexpected embedding error: {e}")
-            raise
+        """Return a zero vector embedding."""
+        return EmbeddingResult(
+            embedding=[0.0] * self._dimensions,
+            model="noop",
+            tokens=len(text.split()),
+            dimensions=self._dimensions
+        )
 
     async def embed_batch(self, texts: List[str]) -> List[EmbeddingResult]:
-        """Embed multiple texts (sequential for Ollama)."""
-        results = []
-        for text in texts:
-            result = await self.embed(text)
-            results.append(result)
-        return results
+        """Return zero vector embeddings for all texts."""
+        return [await self.embed(text) for text in texts]
 
 
 class OpenAIEmbedding(EmbeddingProvider):
@@ -286,25 +254,27 @@ def get_embedding_provider(config: dict) -> EmbeddingProvider:
 
     Config example:
     {
-        "provider": "ollama",  # or "openai"
-        "model": "nomic-embed-text",
-        "endpoint": "http://localhost:11434",
+        "provider": "openai",  # or "noop" for fallback
+        "model": "text-embedding-3-small",
+        "api_key": "sk-...",
         "cache": True,
         "cache_size": 10000
     }
     """
-    provider_type = config.get("provider", "ollama")
+    provider_type = config.get("provider", "openai")
 
-    if provider_type == "ollama":
-        provider = OllamaEmbedding(
-            model=config.get("model", "nomic-embed-text"),
-            endpoint=config.get("endpoint", "http://localhost:11434")
-        )
-    elif provider_type == "openai":
-        provider = OpenAIEmbedding(
-            model=config.get("model", "text-embedding-3-small"),
-            api_key=config.get("api_key")
-        )
+    if provider_type == "openai":
+        api_key = config.get("api_key") or os.environ.get("OPENAI_API_KEY")
+        if api_key:
+            provider = OpenAIEmbedding(
+                model=config.get("model", "text-embedding-3-small"),
+                api_key=api_key
+            )
+        else:
+            logger.warning("No OpenAI API key found, using NoOp embeddings")
+            provider = NoOpEmbedding()
+    elif provider_type == "noop":
+        provider = NoOpEmbedding(dimensions=config.get("dimensions", 768))
     else:
         raise ValueError(f"Unknown embedding provider: {provider_type}")
 
@@ -328,10 +298,10 @@ def get_global_embedder(config: Optional[dict] = None) -> EmbeddingProvider:
 
     if _embedding_provider is None:
         if config is None:
-            # Default config
+            # Default config - uses OpenAI if key available, else NoOp
             config = {
-                "provider": "ollama",
-                "model": "nomic-embed-text",
+                "provider": "openai",
+                "model": "text-embedding-3-small",
                 "cache": True
             }
         _embedding_provider = get_embedding_provider(config)

@@ -489,26 +489,46 @@ class BYRDOmega:
         if self.gnn_layer:
             try:
                 # Extract graph structure
-                nodes = await self.memory._run_query("""
+                node_records = await self.memory._run_query("""
                     MATCH (n)
                     WHERE n:Experience OR n:Belief OR n:Desire OR n:Pattern
-                    RETURN elementId(n) as id, labels(n)[0] as type
+                    RETURN elementId(n) as id, labels(n)[0] as type,
+                           coalesce(n.content, '') as content
                     LIMIT 500
                 """)
 
-                edges = await self.memory._run_query("""
+                edge_records = await self.memory._run_query("""
                     MATCH (a)-[r]->(b)
                     RETURN elementId(a) as source, elementId(b) as target,
                            type(r) as rel_type
                     LIMIT 2000
                 """)
 
-                if nodes and edges:
+                if node_records and edge_records:
+                    # Convert dicts to GraphNode/GraphEdge objects
+                    from gnn_layer import GraphNode, GraphEdge
+                    nodes = [
+                        GraphNode(
+                            id=n.get("id", ""),
+                            node_type=n.get("type", "Unknown"),
+                            content=n.get("content", "")
+                        )
+                        for n in node_records
+                    ]
+                    edges = [
+                        GraphEdge(
+                            source_id=e.get("source", ""),
+                            target_id=e.get("target", ""),
+                            relation_type=e.get("rel_type", "RELATED_TO")
+                        )
+                        for e in edge_records
+                    ]
+
                     # Run training epoch
                     training_result = await asyncio.to_thread(
                         self.gnn_layer.train_epoch,
-                        list(nodes),
-                        list(edges)
+                        nodes,
+                        edges
                     )
                     results["gnn"] = {
                         "loss": training_result.loss if hasattr(training_result, 'loss') else 0.0,

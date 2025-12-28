@@ -164,7 +164,6 @@ class LLMCostTracker:
     # Approximate costs per 1K tokens (as of late 2024)
     # These are estimates - actual costs vary by provider
     COST_PER_1K_TOKENS = {
-        "ollama": {"default": 0.0},  # Local, no cost
         "openrouter": {
             "default": 0.001,
             "deepseek/deepseek-chat": 0.0003,

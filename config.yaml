@@ -94,11 +94,10 @@ operating_system:
 # One mind: the same model that dreams also synthesizes research.
 # This preserves emergence — all learning flows through one model.
 local_llm:
-  # Provider: "ollama" (local), "openrouter" (cloud), or "zai" (Z.AI GLM models)
+  # Provider: "openrouter" (cloud) or "zai" (Z.AI GLM models)
   provider: "zai"
 
   # Model name (provider-specific)
-  # Ollama: "gemma2:27b", "llama3:70b", "qwen2.5:32b"
   # OpenRouter: "deepseek/deepseek-v3.2-speciale", "google/gemma-2-27b-it"
   # Z.AI: "glm-4.7", "glm-4.5-flash", "glm-4.5-airx"
   model: "glm-4.7"
@@ -106,9 +105,6 @@ local_llm:
   # API key - use environment variable (never commit real keys!)
   # Set: export ZAI_API_KEY="your-key-here"
   api_key: "${ZAI_API_KEY}"
-
-  # Ollama endpoint (only used when provider: ollama)
-  endpoint: "http://localhost:11434/api/generate"
 
   # Request timeout in seconds
   timeout: 300.0
@@ -185,7 +181,8 @@ dreamer:
 # The Seeker fulfills desires through research and capability acquisition.
 seeker:
   # Seeker cycle interval (seconds)
-  interval_seconds: 10
+  # Increased from 10s to 30s to reduce Z.AI rate limiting
+  interval_seconds: 30
 
   # Skip cycle if no new reflections since last check
   skip_if_no_new_reflections: true

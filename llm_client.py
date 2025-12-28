@@ -1,6 +1,6 @@
 """
 BYRD LLM Client - Unified interface for LLM providers.
-Supports Ollama (local), OpenRouter (cloud), and Z.AI (GLM models).
+Supports OpenRouter (cloud) and Z.AI (GLM models).
 
 The "one mind" principle: Dreamer and Seeker share the same LLM client,
 ensuring all reflection and synthesis flows through a single model.
@@ -72,10 +72,10 @@ class LLMClient(ABC):
 
         try:
             self._usage_callback(
-                provider=self.model_name.split("/")[0],  # e.g., "ollama", "openrouter"
+                provider=self.model_name.split("/")[0],  # e.g., "openrouter", "zai"
                 tokens=tokens,
                 operation=operation,
-                model=self.model_name.split("/")[-1]  # e.g., "gemma2:27b"
+                model=self.model_name.split("/")[-1]  # e.g., "glm-4.7"
             )
         except Exception as e:
             # Usage tracking failure should never break generation
@@ -268,80 +268,6 @@ class LLMClient(ABC):
                     pass
 
         return None
-
-
-class OllamaClient(LLMClient):
-    """
-    Ollama provider (local LLM).
-
-    API: POST /api/generate
-    Format: {"model": "...", "prompt": "...", "stream": false, "options": {...}}
-    Response: {"response": "..."}
-    """
-
-    def __init__(self, model: str, endpoint: str, timeout: float = 120.0):
-        self.model = model
-        self.endpoint = endpoint
-        self.timeout = timeout
-
-    @property
-    def model_name(self) -> str:
-        return f"ollama/{self.model}"
-
-    async def generate(
-        self,
-        prompt: str,
-        temperature: float = 0.7,
-        max_tokens: int = 500,
-        quantum_modulation: bool = False,
-        quantum_context: str = "unknown",
-        system_message: Optional[str] = None,
-        **kwargs
-    ) -> LLMResponse:
-        """Generate using Ollama API."""
-        quantum_influence = None
-
-        # Apply quantum modulation if requested
-        if quantum_modulation:
-            temperature, quantum_influence = await self._apply_quantum_modulation(
-                temperature, quantum_context
-            )
-
-        # Prepend system message to prompt if provided
-        full_prompt = prompt
-        if system_message:
-            full_prompt = f"{system_message}\n\n{prompt}"
-
-        timeout_config = httpx.Timeout(self.timeout, connect=60.0)
-        async with httpx.AsyncClient(timeout=timeout_config) as client:
-            response = await client.post(
-                self.endpoint,
-                json={
-                    "model": self.model,
-                    "prompt": full_prompt,
-                    "stream": False,
-                    "options": {
-                        "temperature": temperature,
-                        "num_predict": max_tokens
-                    }
-                }
-            )
-            if response.status_code != 200:
-                raise LLMError(f"Ollama error: {response.status_code}")
-
-            result = response.json()
-            response_text = result.get("response", "")
-
-            # Track usage for compute introspection
-            self._track_usage(prompt, response_text, result, "generate")
-
-            return LLMResponse(
-                text=response_text,
-                raw=result,
-                model=self.model,
-                provider="ollama",
-                quantum_influence=quantum_influence
-            )
 
 
 class OpenRouterClient(LLMClient):
@@ -592,10 +518,9 @@ def create_llm_client(config: Dict) -> LLMClient:
 
     Args:
         config: Dict with:
-            - provider: "ollama", "openrouter", or "zai"
+            - provider: "openrouter" or "zai"
             - model: Model name (provider-specific)
-            - endpoint: (ollama only) API endpoint
-            - api_key: (openrouter/zai) API key
+            - api_key: API key
             - timeout: Request timeout in seconds
             - site_url: (openrouter only) HTTP-Referer header
             - app_name: (openrouter only) X-Title header
@@ -603,16 +528,9 @@ def create_llm_client(config: Dict) -> LLMClient:
     Returns:
         Configured LLMClient instance
     """
-    provider = config.get("provider", "ollama")
+    provider = config.get("provider", "zai")
 
-    if provider == "ollama":
-        return OllamaClient(
-            model=config.get("model", "gemma2:27b"),
-            endpoint=config.get("endpoint", "http://localhost:11434/api/generate"),
-            timeout=config.get("timeout", 120.0)
-        )
-
-    elif provider == "openrouter":
+    if provider == "openrouter":
         return OpenRouterClient(
             model=config.get("model", "deepseek/deepseek-v3.2-speciale"),
             api_key=config.get("api_key"),
@@ -630,4 +548,4 @@ def create_llm_client(config: Dict) -> LLMClient:
         )
 
     else:
-        raise LLMError(f"Unknown LLM provider: {provider}. Use 'ollama', 'openrouter', or 'zai'.")
+        raise LLMError(f"Unknown LLM provider: {provider}. Use 'openrouter' or 'zai'.")
