@@ -125,15 +125,16 @@ EXISTING (extend these):                 MISSING (create these):
 │  ┌─────────────────────────────────▼──────────────────────────────────────┐ │
 │  │                       LEARNING SUBSTRATE                                │ │
 │  │                                                                         │ │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │ │
-│  │  │   WORLD     │  │  INTUITION  │  │   LEARNED   │  │    CODE     │   │ │
-│  │  │   MODEL     │  │   NETWORK   │  │  RETRIEVER  │  │   LEARNER   │   │ │
-│  │  │  (EXTEND)   │  │    (NEW)    │  │    (NEW)    │  │    (NEW)    │   │ │
-│  │  │             │  │             │  │             │  │             │   │ │
-│  │  │ Causality   │  │   Taste/    │  │  Relevance  │  │  Pattern→   │   │ │
-│  │  │ Prediction  │  │ Preference  │  │   Scoring   │  │    Code     │   │ │
-│  │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘   │ │
-│  │         └─────────────────┴─────────────────┴─────────────────┘        │ │
+│  │  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐│ │
+│  │  │   WORLD   │ │ INTUITION │ │STRUCTURAL │ │  LEARNED  │ │   CODE    ││ │
+│  │  │   MODEL   │ │  NETWORK  │ │  LEARNER  │ │ RETRIEVER │ │  LEARNER  ││ │
+│  │  │ (EXTEND)  │ │   (NEW)   │ │   (NEW)   │ │   (NEW)   │ │   (NEW)   ││ │
+│  │  │           │ │           │ │           │ │           │ │           ││ │
+│  │  │ Causality │ │  Taste/   │ │   Graph   │ │ Relevance │ │ Pattern→  ││ │
+│  │  │Prediction │ │Preference │ │ Topology  │ │  Scoring  │ │   Code    ││ │
+│  │  └─────┬─────┘ └─────┬─────┘ └─────┬─────┘ └─────┬─────┘ └─────┬─────┘│ │
+│  │        │   SEMANTIC   │  STRUCTURAL │   SEMANTIC   │   CODIFIED   │    │ │
+│  │        └──────────────┴─────────────┴──────────────┴──────────────┘    │ │
 │  └─────────────────────────────────┬──────────────────────────────────────┘ │
 │                                    │                                         │
 │  ┌─────────────────────────────────▼──────────────────────────────────────┐ │
@@ -811,7 +812,117 @@ class IntuitionNetwork:
         print("🧠 Intuition network trained")
 ```
 
-#### 2.3 Learned Retriever - NEW
+#### 2.3 Structural Learner (GNN) - NEW
+
+The IntuitionNetwork learns from TEXT (semantic). The StructuralLearner learns from GRAPH TOPOLOGY. These are complementary - two beliefs might have different text but identical structural positions.
+
+**Key difference from graph_algorithms.py**: graph_algorithms has FIXED formulas (PageRank, spreading activation). StructuralLearner TRAINS on the graph structure.
+
+```python
+# gnn_layer.py (NEW FILE - v2.0)
+
+class StructuralLearner:
+    """
+    Trainable Graph Neural Network for learning structural patterns.
+
+    Training signals:
+    1. Link prediction: Predict whether edges exist (self-supervised)
+    2. Usage feedback: Learn which retrievals were helpful (from Memory Reasoner)
+
+    Key features:
+    - Multi-head attention with message passing
+    - Directed edge handling (DERIVED_FROM is directional)
+    - Edge weights used in attention computation
+    - Semantic initialization option (sentence-transformers)
+    - Pure numpy (no PyTorch required for forward pass)
+    """
+
+    DIRECTED_RELATIONSHIPS = {
+        'DERIVED_FROM', 'MOTIVATED', 'FULFILLS', 'LED_TO', 'CAUSED', 'PROMOTED_TO'
+    }
+
+    def __init__(
+        self,
+        embedding_dim: int = 64,
+        num_heads: int = 4,
+        num_layers: int = 2,
+        learning_rate: float = 0.01
+    ):
+        # ... (full implementation in gnn_layer.py)
+
+    def train_epoch(
+        self,
+        nodes: List[GraphNode],
+        edges: List[GraphEdge],
+        negative_ratio: int = 5
+    ) -> TrainingResult:
+        """
+        Train using link prediction loss.
+
+        Positive samples: actual edges
+        Negative samples: random non-edges
+        Loss: Margin ranking (positive scores > negative scores by margin)
+        """
+        embeddings = self.compute_embeddings(nodes, edges)
+
+        # Score positive edges
+        pos_scores = [self._score_edge(src, tgt, rel) for edge in edges]
+
+        # Score negative edges (sampled)
+        neg_scores = [self._score_edge(src, tgt, rel) for (src, tgt, rel) in negatives]
+
+        # Margin ranking loss
+        loss = mean(max(0, margin - pos + neg) for pos, neg in pairs)
+
+        # Gradient update
+        self._update_weights(...)
+
+        return TrainingResult(epoch, loss, pos_accuracy, neg_accuracy)
+
+    def reinforce_from_usage(
+        self,
+        source_id: str,
+        retrieved_id: str,
+        was_helpful: bool
+    ):
+        """Learn from Memory Reasoner's actual usage."""
+        # Adjust edge weight based on utility
+        if was_helpful:
+            self.edge_weight_adjustments[(source_id, retrieved_id)] *= 1.1
+        else:
+            self.edge_weight_adjustments[(source_id, retrieved_id)] *= 0.95
+
+
+class MemoryGNNIntegration:
+    """Integration layer with Neo4j memory."""
+
+    async def train_on_memory(self, memory) -> TrainingResult:
+        """Train during DREAMING mode."""
+        nodes, edges = await self.extract_graph_from_memory(memory)
+        return self.gnn.train_epoch(nodes, edges)
+
+    async def record_retrieval_feedback(
+        self,
+        source_id: str,
+        retrieved_ids: List[str],
+        helpful_ids: Set[str]
+    ):
+        """Learn which retrievals were actually helpful."""
+        for ret_id in retrieved_ids:
+            self.gnn.reinforce_from_usage(source_id, ret_id, ret_id in helpful_ids)
+```
+
+**Integration with Memory Reasoner:**
+```python
+# In memory_reasoner.py, after using retrieved memories:
+await gnn_integration.record_retrieval_feedback(
+    source_id=query_node_id,
+    retrieved_ids=[m['id'] for m in retrieved],
+    helpful_ids={m['id'] for m in retrieved if was_used(m)}
+)
+```
+
+#### 2.4 Learned Retriever - NEW
 
 ```python
 # learned_retriever.py (NEW FILE)
@@ -926,7 +1037,7 @@ class LearnedRetriever:
         print("🔍 Learned retriever trained")
 ```
 
-#### 2.4 Code Learner - NEW
+#### 2.5 Code Learner - NEW
 
 ```python
 # code_learner.py (NEW FILE)
@@ -1667,8 +1778,9 @@ byrd/
 │
 ├── New Components (CREATE) - Phase 1+
 │   ├── agi_runner.py              # THE critical missing piece
-│   ├── intuition_network.py       # Trainable taste
-│   ├── learned_retriever.py       # Trainable relevance
+│   ├── gnn_layer.py               # Structural learning (GNN) - v2.0
+│   ├── intuition_network.py       # Trainable taste (semantic)
+│   ├── learned_retriever.py       # Trainable relevance (semantic)
 │   ├── code_learner.py            # Pattern codification
 │   ├── hierarchical_memory.py     # L0-L4 abstraction
 │   ├── emergent_categories.py     # Category discovery
@@ -1776,6 +1888,7 @@ AFTER (target):   memory>0, patterns>0, goals>0, counterfactuals>0
 | Improvement rate | AGIRunner | > 0 |
 | World model accuracy | WorldModel (existing) | > 60% |
 | Intuition agreement | IntuitionNetwork | > 70% |
+| **Structural link prediction** | **StructuralLearner** | **> 70%** |
 | Retrieval helpfulness | LearnedRetriever | > 50% |
 | Patterns codified | CodeLearner | Growing |
 | Max abstraction level | HierarchicalMemory | L2+ |
@@ -1802,11 +1915,14 @@ This unified plan merges the execution engine from AGI_SEED_V2 with the learning
 
 **The runtime insight**: Even correct architecture fails without data flow. The bootstrap phase ensures loops activate before improvement cycles begin.
 
+**The structural insight**: Semantic learning (text embeddings) and structural learning (graph topology) are complementary. The StructuralLearner captures patterns that text similarity misses.
+
 ---
 
-*Document version: 3.0 (Runtime Audited)*
+*Document version: 3.1 (StructuralLearner Added)*
 *Created: December 28, 2024*
 *Codebase audit: December 28, 2024*
 *Runtime audit: December 28, 2024 (146+ dream cycles analyzed)*
-*Status: Unified AGI architecture plan - AUDITED AGAINST CODEBASE AND RUNTIME*
+*Structural learning: December 28, 2024 (gnn_layer.py v2.0 created)*
+*Status: Unified AGI architecture plan - AUDITED AND COMPLETE*
 *Supersedes: AGI_SEED_V2_PLAN.md, ARCHITECTURE_V3_LEARNING.md*
