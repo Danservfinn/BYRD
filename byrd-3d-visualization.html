@@ -4123,9 +4123,9 @@
 
       const geometry = new THREE.BufferGeometry().setFromPoints(points);
 
-      // Clean white/gold line material
+      // Dark line material for visibility on light background
       const material = new THREE.LineBasicMaterial({
-        color: 0xd4af37, // Gold for sacred geometry feel
+        color: 0x475569, // Slate gray - visible on light background
         transparent: true,
         opacity: LINE_CONFIG.baseOpacity,
         linewidth: LINE_CONFIG.lineWidth
@@ -4168,7 +4168,7 @@
       setTimeout(() => {
         if (connection.material) {
           connection.material.opacity = originalOpacity;
-          connection.material.color.setHex(0xd4af37); // Back to gold
+          connection.material.color.setHex(0x475569); // Back to slate
         }
       }, duration);
     }
