@@ -367,6 +367,35 @@ The AGI Runner implements an 8-step improvement cycle that closes the loop betwe
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+**AGI Metrics System** (v2.0):
+
+The AGI Runner now includes comprehensive metrics tracking:
+
+| Metric Type | Description | API Field |
+|-------------|-------------|-----------|
+| **Capability Mapping** | Maps capability names (e.g., `general_reasoning` → `reasoning`) for evaluator compatibility | Internal |
+| **Real Measurement** | Captures before/after scores via CapabilityEvaluator, not heuristics | `measurement_method` |
+| **Strategy Effectiveness** | Tracks success rate and avg delta per strategy (research, failure_analysis, etc.) | `strategy_effectiveness` |
+| **Multi-Timescale View** | Session, recent 5/10/20 cycle windows, instantaneous metrics | `get_comprehensive_metrics()` |
+
+```python
+# Example metrics output from /api/status
+{
+    "agi_runner": {
+        "cycle_count": 15,
+        "improvement_rate": 0.60,
+        "strategy_effectiveness": {
+            "research": {"attempts": 5, "success_rate": 0.80, "avg_delta": 0.03},
+            "failure_analysis": {"attempts": 4, "success_rate": 0.50, "avg_delta": 0.02}
+        },
+        "recent_cycles": [
+            {"cycle": 15, "target": "reasoning", "strategy": "research",
+             "delta": 0.05, "measurement_method": "capability_evaluator"}
+        ]
+    }
+}
+```
+
 ### Desire Classifier (`desire_classifier.py`)
 
 Routes desires to appropriate handlers:

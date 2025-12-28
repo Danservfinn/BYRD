@@ -119,6 +119,23 @@ Architecture loading runs every startup (not just awakening) to ensure BYRD alwa
 | **AGI Runner** | `agi_runner.py` | 8-step improvement cycle (ASSESS→IDENTIFY→GENERATE→PREDICT→VERIFY→EXECUTE→MEASURE→LEARN) |
 | **Desire Classifier** | `desire_classifier.py` | Routes desires by type (philosophical→reflection, capability→AGI Runner, action→Seeker, meta→AGI Runner) |
 | **Capability Evaluator** | `capability_evaluator.py` | Ground-truth measurement with held-out test suites |
+
+**AGI Metrics** (v2.0 - real measurement + strategy intelligence):
+
+| Feature | Description |
+|---------|-------------|
+| **Capability Mapping** | Maps capability names (`general_reasoning` → `reasoning`) for evaluator compatibility |
+| **Before/After Measurement** | Captures score at cycle start (step 2.5) and after execution (step 7) |
+| **Strategy Tracking** | Tracks success_rate and avg_delta per strategy (`research`, `failure_analysis`, `practice`) |
+| **Multi-Timescale View** | `get_comprehensive_metrics()` for session, trend, and instantaneous analysis |
+
+Key methods:
+- `get_metrics()` - Standard metrics including `strategy_effectiveness`
+- `get_comprehensive_metrics()` - Full multi-timescale analysis
+- `_normalize_capability_name(name)` - Maps to evaluator-compatible names
+
+| Component | File | Purpose |
+|-----------|------|---------|
 | **Code Learner** | `code_learner.py` | Converts stable patterns (10+ uses, 80%+ success) to Python code |
 | **Compute Introspector** | `compute_introspection.py` | Resource monitoring, token tracking, bottleneck detection |
 
@@ -252,7 +269,7 @@ All stateful components implement `reset()` to clear in-memory state:
 | World Model | `world_model.py` | `_prediction_count`, `_pending_predictions` |
 | Self Model | `self_model.py` | `_observation_count`, `_snapshot_count` |
 | Safety Monitor | `safety_monitor.py` | `_check_count`, `_violation_history` |
-| AGI Runner | `agi_runner.py` | `_cycle_count`, `_bootstrapped`, `_cycle_history` |
+| AGI Runner | `agi_runner.py` | `_cycle_count`, `_bootstrapped`, `_cycle_history`, `_strategy_stats`, `_session_capabilities_improved` |
 | Desire Classifier | `desire_classifier.py` | `_routing_stats`, `_feedback_buffer` |
 | Hierarchical Memory | `hierarchical_memory.py` | `_promotions_by_level`, `_total_abstractions` |
 | Intuition Network | `intuition_network.py` | `_intuitions`, `_total_observations` |
