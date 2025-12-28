@@ -86,6 +86,9 @@ class QuantumRandomnessProvider:
     ANU_API_URL = "https://qrng.anu.edu.au/API/jsonI.php"
     API_TIMEOUT = 10.0           # seconds
 
+    # SSL verification - can be disabled if ANU cert expires (trusted academic source)
+    VERIFY_SSL = False  # ANU cert expired as of Dec 2024
+
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
@@ -162,7 +165,10 @@ class QuantumRandomnessProvider:
             return None
 
         try:
-            async with httpx.AsyncClient(timeout=self.API_TIMEOUT) as client:
+            async with httpx.AsyncClient(
+                timeout=self.API_TIMEOUT,
+                verify=self.VERIFY_SSL
+            ) as client:
                 response = await client.get(
                     self.ANU_API_URL,
                     params={
