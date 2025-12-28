@@ -558,6 +558,10 @@ class BYRD:
             if sum(stats.values()) == 0 or (stats.get("Experience", 0) == 0):
                 await self._awaken()
 
+            # Always ensure architecture documents are loaded (even if already awakened)
+            # This implements the AGI Seed directive's "FIRST ACTIONS: Read ARCHITECTURE.md"
+            await self._ensure_architecture_loaded()
+
             # Show self-modification status
             self_mod_status = "enabled" if self.self_mod.enabled else "disabled"
             print(f"\n🔧 Self-modification: {self_mod_status}")
@@ -884,6 +888,23 @@ class BYRD:
             await self.memory.add_constraint(content, source="config")
 
         print(f"   📋 Added {len(constraints)} operational constraints to OS")
+
+    async def _ensure_architecture_loaded(self):
+        """
+        Ensure architecture documents are loaded into memory.
+
+        Checks if architecture was already loaded (by looking for ARCHITECTURE_LOADED experience).
+        If not, loads it. This is idempotent and safe to call on every startup.
+        """
+        # Check if architecture was explicitly loaded (not just introspected)
+        recent = await self.memory.get_recent_experiences(limit=200)
+        for exp in recent:
+            if "[ARCHITECTURE_LOADED]" in exp.get("content", ""):
+                print("   📖 Architecture already loaded")
+                return
+
+        # Not loaded yet - load it now
+        await self._load_architecture_documents()
 
     async def _load_architecture_documents(self):
         """
