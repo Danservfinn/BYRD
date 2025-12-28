@@ -4815,7 +4815,7 @@ class Memory:
                     data={
                         "id": ego_id,
                         "identity_type": ego_type,
-                        "content": content[:100],
+                        "content": content,
                         "source": source
                     }
                 ))
@@ -7317,7 +7317,7 @@ class Memory:
                     data={
                         "node_type": "OperatingSystem",
                         "field": "self_portrait",
-                        "description": description[:100]
+                        "description": description
                     }
                 ))
                 return True
