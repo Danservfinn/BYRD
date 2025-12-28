@@ -1606,35 +1606,35 @@
     // Force-directed physics creates natural clustering based on relationships
     // Highly connected nodes gravitate toward center; isolated nodes drift outward
 
-    // Relationship visual styles - true neutral gray, fully opaque
+    // Relationship visual styles - yellow, fully opaque
     const RELATIONSHIP_STYLES = {
         DERIVED_FROM: {
-            color: 0x808080,    // True neutral gray (no blue tint)
+            color: 0xFFD700,    // Gold yellow
             opacity: 1.0,
             width: 1
         },
         RELATES_TO: {
-            color: 0x808080,    // True neutral gray
+            color: 0xFFD700,    // Gold yellow
             opacity: 1.0,
             width: 1
         },
         FULFILLS: {
-            color: 0x808080,    // True neutral gray
+            color: 0xFFD700,    // Gold yellow
             opacity: 1.0,
             width: 1
         },
         REFLECTS_ON: {
-            color: 0x808080,    // True neutral gray
+            color: 0xFFD700,    // Gold yellow
             opacity: 1.0,
             width: 1
         },
         EMERGES_FROM: {
-            color: 0x808080,    // True neutral gray
+            color: 0xFFD700,    // Gold yellow
             opacity: 1.0,
             width: 1
         },
         default: {
-            color: 0x808080,    // True neutral gray
+            color: 0xFFD700,    // Gold yellow
             opacity: 1.0,
             width: 1
         }
@@ -4123,9 +4123,9 @@
 
       const geometry = new THREE.BufferGeometry().setFromPoints(points);
 
-      // Dark line material for visibility on light background
+      // Yellow line material for visibility
       const material = new THREE.LineBasicMaterial({
-        color: 0x475569, // Slate gray - visible on light background
+        color: 0xFFD700, // Gold yellow
         transparent: false,
         opacity: LINE_CONFIG.baseOpacity,
         linewidth: LINE_CONFIG.lineWidth
