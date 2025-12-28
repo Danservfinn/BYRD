@@ -318,13 +318,13 @@ await event_bus.emit(Event(
 
 ### Memory Graph Operations
 
-All state goes through Memory:
+All state goes through Memory. **Note**: `record_experience()` does not accept a `metadata` parameter - embed metadata in the content string using bracketed prefixes:
 
 ```python
-# Recording experiences
+# Recording experiences (embed metadata in content with [PREFIX] markers)
 exp_id = await self.memory.record_experience(
-    content="What happened",
-    type="observation"  # Examples: observation, interaction, reflection, system
+    content="[AGI_CYCLE] SUCCESS: reasoning improved | delta=+2.5% strategy=failure_analysis",
+    type="agi_cycle"  # Examples: observation, interaction, reflection, system, agi_cycle
 )
 
 # Recording reflections (emergence-compliant)
@@ -352,12 +352,19 @@ Local LLM calls via the unified client:
 from llm_client import create_llm_client
 
 client = create_llm_client(config)
+
+# Full response with metadata (returns LLMResponse object)
 response = await client.generate(
     prompt="Your prompt here",
     temperature=0.7,
     max_tokens=2000,
     quantum_modulation=True  # Enable quantum temperature modulation
 )
+text = response.text  # Access the text content
+
+# Simple query (returns just the text string)
+# Used by AGI Runner components for simpler interactions
+text = await client.query(prompt="Your prompt", max_tokens=500)
 ```
 
 ### JSON Response Parsing
