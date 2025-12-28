@@ -524,9 +524,10 @@ Finish: {{"tool":"finish","args":{{"success":true,"message":"done"}},"t":"ok"}}
         self.config = config
 
         self._enabled = config.get("enabled", True)
-        self.max_steps = config.get("max_steps", 15)
-        self.max_file_changes = config.get("max_file_changes", 5)
+        self.max_steps = config.get("max_steps", 100)  # High limit, loop detection is primary safeguard
+        self.max_file_changes = config.get("max_file_changes", 10)
         self.temperature = config.get("temperature", 0.2)
+        self.loop_detection_window = 6  # Check last N tool calls for loops
 
         self.constitutional = ConstitutionalConstraints()
         self.tools = AgentTools(self.constitutional)
@@ -584,7 +585,7 @@ Finish: {{"tool":"finish","args":{{"success":true,"message":"done"}},"t":"ok"}}
                 lines.append("")
 
         lines.append(f"\n## Current Status")
-        lines.append(f"Steps taken: {state.steps}/{self.max_steps}")
+        lines.append(f"Steps taken: {state.steps}")
         lines.append(f"Files modified: {state.files_modified}")
         lines.append("\n## Your Next Action")
         lines.append("Provide a JSON object with 'thinking', 'tool', and 'args' fields.")
@@ -784,11 +785,18 @@ Finish: {{"tool":"finish","args":{{"success":true,"message":"done"}},"t":"ok"}}
             if filepath and filepath not in state.files_modified:
                 state.files_modified.append(filepath)
 
-        # Check limits
+        # Check for loops (primary safeguard)
+        if self._detect_loop(state):
+            state.completed = True
+            state.success = False
+            state.final_message = "Loop detected - agent stuck repeating same actions"
+            return state
+
+        # Check limits (fallback safeguards)
         if state.steps >= self.max_steps:
             state.completed = True
             state.success = False
-            state.final_message = f"Max steps ({self.max_steps}) reached without completion"
+            state.final_message = f"Max steps ({self.max_steps}) reached - task may be too complex"
 
         if len(state.files_modified) > self.max_file_changes:
             state.completed = True
@@ -796,6 +804,34 @@ Finish: {{"tool":"finish","args":{{"success":true,"message":"done"}},"t":"ok"}}
             state.final_message = f"Too many file modifications ({len(state.files_modified)})"
 
         return state
+
+    def _detect_loop(self, state: AgentState) -> bool:
+        """Detect if agent is stuck in a loop repeating the same actions."""
+        if len(state.history) < self.loop_detection_window:
+            return False
+
+        # Get recent tool calls
+        recent_tools = []
+        for msg in state.history[-self.loop_detection_window:]:
+            if msg.role == "assistant" and msg.tool_name:
+                recent_tools.append((msg.tool_name, str(msg.tool_args)))
+
+        if len(recent_tools) < 3:
+            return False
+
+        # Check for exact repetition (same tool + args repeated 3+ times)
+        if len(set(recent_tools)) == 1 and len(recent_tools) >= 3:
+            print(f"  ⚠️ Loop detected: {recent_tools[0][0]} repeated {len(recent_tools)} times")
+            return True
+
+        # Check for ping-pong pattern (A-B-A-B)
+        if len(recent_tools) >= 4:
+            pattern = recent_tools[-4:]
+            if pattern[0] == pattern[2] and pattern[1] == pattern[3] and pattern[0] != pattern[1]:
+                print(f"  ⚠️ Loop detected: ping-pong between {pattern[0][0]} and {pattern[1][0]}")
+                return True
+
+        return False
 
     async def fulfill_desire(self, desire: Dict) -> Dict:
         """
