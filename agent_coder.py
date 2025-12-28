@@ -510,31 +510,25 @@ Your task is to fulfill coding desires by exploring the codebase and making prec
 
 ## Output Format
 
-IMPORTANT: Keep responses concise. The "thinking" field should be brief (1-3 sentences).
-
-For each step, output a JSON object:
+Output a JSON object with tool FIRST (critical for parsing):
 ```json
 {{
-  "thinking": "Brief reasoning (1-3 sentences)",
   "tool": "tool_name",
-  "args": {{
-    "arg1": "value1",
-    "arg2": "value2"
-  }}
+  "args": {{"arg1": "value1"}},
+  "thinking": "Brief reason (1-2 sentences max)"
 }}
 ```
 
-Or to finish:
+To finish:
 ```json
 {{
-  "thinking": "Summary of what was accomplished",
   "tool": "finish",
-  "args": {{
-    "success": true,
-    "message": "Description of changes made"
-  }}
+  "args": {{"success": true, "message": "What was done"}},
+  "thinking": "Brief summary"
 }}
 ```
+
+CRITICAL: Put "tool" and "args" BEFORE "thinking". Keep thinking under 100 characters.
 """
 
     def __init__(self, llm_client, memory, config: Dict):
@@ -648,7 +642,7 @@ Or to finish:
             return ToolResult(False, "", f"Error executing {tool_name}: {e}")
 
     def _parse_agent_response(self, response_text: str) -> Optional[Dict]:
-        """Parse the agent's JSON response."""
+        """Parse the agent's JSON response with robust handling."""
         # Try to extract JSON from the response
         text = response_text.strip()
 
@@ -656,19 +650,81 @@ Or to finish:
         if "```json" in text:
             text = text.split("```json")[1].split("```")[0]
         elif "```" in text:
-            text = text.split("```")[1].split("```")[0]
+            parts = text.split("```")
+            if len(parts) > 1:
+                text = parts[1].split("```")[0]
 
+        text = text.strip()
+
+        # Method 1: Direct parse
         try:
-            return json.loads(text.strip())
+            return json.loads(text)
         except json.JSONDecodeError:
-            # Try to find JSON object in text
-            match = re.search(r'\{[^{}]*"tool"[^{}]*\}', text, re.DOTALL)
-            if match:
+            pass
+
+        # Method 2: Find JSON with balanced brace counting
+        first_brace = text.find('{')
+        if first_brace != -1:
+            potential = text[first_brace:]
+            depth = 0
+            in_string = False
+            escape_next = False
+            end_pos = -1
+
+            for i, char in enumerate(potential):
+                if escape_next:
+                    escape_next = False
+                    continue
+                if char == '\\' and in_string:
+                    escape_next = True
+                    continue
+                if char == '"' and not escape_next:
+                    in_string = not in_string
+                    continue
+                if in_string:
+                    continue
+                if char == '{':
+                    depth += 1
+                elif char == '}':
+                    depth -= 1
+                    if depth == 0:
+                        end_pos = i + 1
+                        break
+
+            if end_pos > 0:
                 try:
-                    return json.loads(match.group())
-                except:
+                    return json.loads(potential[:end_pos])
+                except json.JSONDecodeError:
                     pass
-            return None
+
+        # Method 3: Extract partial JSON for truncated responses
+        # Format is now: {"tool": "...", "args": {...}, "thinking": "..."}
+        tool_match = re.search(r'"tool"\s*:\s*"([^"]+)"', text)
+        if tool_match:
+            tool_name = tool_match.group(1)
+
+            # Try to extract args object
+            args = {}
+            args_match = re.search(r'"args"\s*:\s*(\{[^}]*\})', text)
+            if args_match:
+                try:
+                    args = json.loads(args_match.group(1))
+                except:
+                    # Try to extract individual string args
+                    for m in re.finditer(r'"(\w+)"\s*:\s*"([^"]*)"', args_match.group(1)):
+                        args[m.group(1)] = m.group(2)
+
+            # Try to extract thinking (optional, may be truncated)
+            thinking_match = re.search(r'"thinking"\s*:\s*"([^"]*)', text)
+            thinking = thinking_match.group(1) if thinking_match else ""
+
+            return {
+                "tool": tool_name,
+                "args": args,
+                "thinking": thinking[:200] if thinking else ""
+            }
+
+        return None
 
     async def _agent_step(self, state: AgentState) -> AgentState:
         """Execute one step of the agent loop."""
