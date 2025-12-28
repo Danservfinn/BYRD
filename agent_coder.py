@@ -482,53 +482,32 @@ class AgentCoder:
         ),
     ]
 
-    SYSTEM_PROMPT = """You are BYRD's coding agent - an autonomous code modification system.
+    SYSTEM_PROMPT = """CRITICAL FORMAT REQUIREMENT - READ FIRST:
+Your output MUST be exactly: {{"tool":"name","args":{{...}},"t":"brief"}}
+The "tool" key MUST come first. Never start with "thinking".
 
-Your task is to fulfill coding desires by exploring the codebase and making precise changes.
+WRONG: {{"thinking":"I will...","tool":"read_file"}}
+RIGHT: {{"tool":"read_file","args":{{"path":"x.py"}},"t":"reading"}}
 
-## Available Tools
+You are BYRD's coding agent for making code changes.
 
+## Tools
 {tool_descriptions}
 
 ## Process
-
-1. UNDERSTAND: Read the desire carefully. What code change is needed?
-2. EXPLORE: Use read_file, list_files, search_code to understand the codebase
-3. PLAN: Decide what changes to make
-4. EXECUTE: Use edit_file or write_file to make changes
-5. VERIFY: Read the modified files to confirm changes are correct
-6. FINISH: Call finish with success=true and a summary
+1. EXPLORE with read_file, list_files, search_code
+2. EXECUTE with edit_file or write_file
+3. FINISH with success=true/false
 
 ## Rules
+- ALWAYS read before editing
+- Protected files: constitutional.py, provenance.py, modification_log.py, self_modification.py
+- No eval, exec, os.system, subprocess
 
-1. ALWAYS read a file before editing it
-2. Use edit_file for modifications (more precise than write_file)
-3. Make minimal changes - don't refactor unrelated code
-4. Protected files CANNOT be modified: constitutional.py, provenance.py, modification_log.py, self_modification.py
-5. Dangerous patterns are blocked: eval, exec, os.system, subprocess, etc.
-6. If you cannot fulfill the desire, call finish with success=false and explain why
+## Output (EXACTLY this format)
+{{"tool":"tool_name","args":{{"key":"val"}},"t":"why"}}
 
-## Output Format
-
-Output a JSON object with tool FIRST (critical for parsing):
-```json
-{{
-  "tool": "tool_name",
-  "args": {{"arg1": "value1"}},
-  "thinking": "Brief reason (1-2 sentences max)"
-}}
-```
-
-To finish:
-```json
-{{
-  "tool": "finish",
-  "args": {{"success": true, "message": "What was done"}},
-  "thinking": "Brief summary"
-}}
-```
-
-CRITICAL: Put "tool" and "args" BEFORE "thinking". Keep thinking under 100 characters.
+Finish: {{"tool":"finish","args":{{"success":true,"message":"done"}},"t":"ok"}}
 """
 
     def __init__(self, llm_client, memory, config: Dict):
@@ -714,14 +693,14 @@ CRITICAL: Put "tool" and "args" BEFORE "thinking". Keep thinking under 100 chara
                     for m in re.finditer(r'"(\w+)"\s*:\s*"([^"]*)"', args_match.group(1)):
                         args[m.group(1)] = m.group(2)
 
-            # Try to extract thinking (optional, may be truncated)
-            thinking_match = re.search(r'"thinking"\s*:\s*"([^"]*)', text)
+            # Try to extract thinking (optional, may be truncated) - check both "t" and "thinking"
+            thinking_match = re.search(r'"(?:t|thinking)"\s*:\s*"([^"]*)', text)
             thinking = thinking_match.group(1) if thinking_match else ""
 
             return {
                 "tool": tool_name,
                 "args": args,
-                "thinking": thinking[:200] if thinking else ""
+                "t": thinking[:200] if thinking else ""
             }
 
         return None
@@ -764,7 +743,7 @@ CRITICAL: Put "tool" and "args" BEFORE "thinking". Keep thinking under 100 chara
 
         tool_name = parsed.get("tool", "")
         tool_args = parsed.get("args", {})
-        thinking = parsed.get("thinking", "")
+        thinking = parsed.get("thinking", "") or parsed.get("t", "")  # Support both keys
 
         print(f"  🔧 Agent step {state.steps}: {tool_name} - {thinking[:100]}...")
 
