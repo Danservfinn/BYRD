@@ -317,22 +317,23 @@ FIRST ACTIONS:
 2. Read docs/OPTION_B_EXPLORATION.md for the theoretical framework
 ```
 
-### Awakening Process (`byrd.py:_awaken()`)
+### Startup Process (`byrd.py:start()`)
 
-The awakening process executes these steps in order:
+BYRD's startup executes these steps:
 
-1. **Record directive** - Store AGI Seed directive as experience
-2. **Initialize OS** - Create or load OperatingSystem node
-3. **Add constraints** - Add operational constraints from config
-4. **Load architecture** - Read and store architecture documentation:
-   - `ARCHITECTURE.md` - Primary system design
-   - `docs/UNIFIED_AGI_PLAN.md` - AGI execution roadmap
-   - Documents stored as `Document` nodes in Neo4j
-   - Experience recorded of type `self_architecture`
-5. **Bootstrap AGI Runner** - Activate Option B loops
-6. **Emit orientation complete** - Signal awakening finished
+1. **Check for awakening** - If memory is empty, run `_awaken()`:
+   - Record AGI Seed directive as experience
+   - Create OperatingSystem node
+   - Add operational constraints from config
+2. **Ensure architecture loaded** - Read documentation if not already loaded:
+   - Checks for `[ARCHITECTURE_LOADED]` marker in experiences
+   - If missing, loads `ARCHITECTURE.md` and `docs/UNIFIED_AGI_PLAN.md`
+   - Stores as `Document` nodes in Neo4j
+   - Records experience with `[ARCHITECTURE_LOADED]` prefix
+3. **Bootstrap AGI Runner** - Activate Option B loops
+4. **Start background tasks** - Dreamer, Seeker, Narrator
 
-This ensures BYRD has actual knowledge of its architecture from the start, not just instructions to read it.
+This ensures BYRD has actual knowledge of its architecture on every startup, not just first awakening.
 
 ---
 
