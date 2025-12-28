@@ -181,7 +181,7 @@ Set these secrets in Space Settings:
       - ZAI_API_KEY = <your-zai-api-key>
    3. The Space will automatically rebuild
 
-🎉 BYRD will be live at: https://{username}-byrd-ai.hf.space
+🎉 BYRD will be live at: https://{username}-byrd.hf.space
 """)
 
     # Cleanup
