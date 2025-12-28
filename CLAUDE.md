@@ -102,11 +102,21 @@ The Seeker routes desires to appropriate strategies based on keyword matching:
 | `curate` | optimize, clean, consolidate, graph health | Curate memory graph |
 | `self_modify` | add to myself, extend my, modify my code | Self-modification |
 | `introspect` | analyze myself, nature of, self-awareness | Internal reflection |
+| `edit_document` | edit document, update architecture, modify file | Edit docs in memory |
 | `code` | code, write, implement, build | Generate code |
 | `install` | install, add capability, tool | Install capabilities |
 | `search` | (default fallback) | Web research |
 
 **Order matters**: Internal strategies are checked first. The Dreamer's `expressed_drives` output must be recognized via `want_keys` containing "drives".
+
+### Document Editing
+
+BYRD can edit documents stored in Neo4j through the `edit_document` strategy:
+
+- **ARCHITECTURE.md**: System design documentation - BYRD should update when making self-modifications
+- **CLAUDE.md**: Development guide - BYRD can update as needed
+- Documents are stored in Neo4j; disk versions are restored on reset
+- Express desires like: "I want to update ARCHITECTURE.md with my new capability"
 
 ## Constitutional Constraints (CRITICAL)
 

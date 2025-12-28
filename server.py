@@ -1651,6 +1651,119 @@ async def store_document(request: StoreDocumentRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class UpdateDocumentRequest(BaseModel):
+    content: str
+    reason: Optional[str] = None
+
+
+@app.put("/api/documents/{path:path}")
+async def update_document(path: str, request: UpdateDocumentRequest):
+    """
+    Update a document's content in BYRD's memory.
+
+    This updates the Neo4j copy of the document. The disk version remains
+    unchanged, so reset will restore the original version.
+
+    BYRD can use this endpoint to edit documents like ARCHITECTURE.md.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    # Security: prevent path traversal
+    if ".." in path or path.startswith("/"):
+        raise HTTPException(status_code=400, detail="Invalid path")
+
+    try:
+        await byrd_instance.memory.connect()
+
+        # Check if document exists
+        doc = await byrd_instance.memory.get_document(path)
+        if not doc:
+            raise HTTPException(status_code=404, detail=f"Document not found: {path}")
+
+        # Update the document
+        result = await byrd_instance.memory.update_document(
+            path=path,
+            content=request.content,
+            editor="byrd",
+            edit_reason=request.reason
+        )
+
+        if not result:
+            raise HTTPException(status_code=500, detail="Failed to update document")
+
+        # Get updated document
+        updated_doc = await byrd_instance.memory.get_document(path)
+
+        return {
+            "updated": True,
+            "changed": result.get("changed", True),
+            "version": result.get("version"),
+            "document": updated_doc
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/documents/{path:path}/restore")
+async def restore_document_from_disk(path: str):
+    """
+    Restore a document from disk to Neo4j.
+
+    This re-reads the file from disk and updates the Neo4j copy,
+    effectively undoing any edits BYRD made.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    # Security: prevent path traversal
+    if ".." in path or path.startswith("/"):
+        raise HTTPException(status_code=400, detail="Invalid path")
+
+    try:
+        # Read the file from disk
+        file_path = Path(BYRD_DIR) / path
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail=f"File not found on disk: {path}")
+
+        content = file_path.read_text()
+
+        await byrd_instance.memory.connect()
+
+        # Get existing document to preserve doc_type
+        existing = await byrd_instance.memory.get_document(path)
+        doc_type = existing.get("doc_type", "source") if existing else "source"
+
+        # Re-store from disk (this will update the Neo4j version)
+        doc_id = await byrd_instance.memory.store_document(
+            path=path,
+            content=content,
+            doc_type=doc_type
+        )
+
+        # Clear the edited_by_byrd flag
+        async with byrd_instance.memory.driver.session() as session:
+            await session.run("""
+                MATCH (d:Document {id: $id})
+                SET d.edited_by_byrd = false,
+                    d.last_editor = 'disk_restore',
+                    d.last_edit_reason = 'Restored from disk'
+            """, id=doc_id)
+
+        doc = await byrd_instance.memory.get_document(path)
+        return {"restored": True, "doc_id": doc_id, "document": doc}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/genesis")
 async def get_genesis():
     """

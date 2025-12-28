@@ -15,6 +15,7 @@ Integrates with aitmpl.com for curated Claude Code templates.
 
 import asyncio
 import json
+import os
 import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -649,6 +650,12 @@ Reply with ONLY one word: introspect, reconcile_orphans, curate, self_modify, or
                           "topology of the memory", "topology of my", "my memory graph",
                           "emergence of consciousness", "shift focus from external",
                           "internal topological", "from the integration of"],
+            "edit_document": ["edit document", "update document", "modify document",
+                             "edit architecture", "update architecture", "write to document",
+                             "change document", "revise document", "amend document",
+                             "edit file", "update file", "modify file content",
+                             "add to document", "append to document", "document my",
+                             "update my documentation", "edit my documentation"],
             # External strategies (more general) - CHECK LAST (fallback)
             "code": ["code", "write", "implement", "build", "create", "program"],
             "install": ["install", "add", "get", "acquire", "capability", "tool"],
@@ -907,6 +914,12 @@ Reply with ONLY one word: introspection, research, creation, or connection"""
                           "topology of the memory", "topology of my", "my memory graph",
                           "emergence of consciousness", "shift focus from external",
                           "internal topological", "from the integration of"],
+            "edit_document": ["edit document", "update document", "modify document",
+                             "edit architecture", "update architecture", "write to document",
+                             "change document", "revise document", "amend document",
+                             "edit file", "update file", "modify file content",
+                             "add to document", "append to document", "document my",
+                             "update my documentation", "edit my documentation"],
 
             # External strategies (more general) - CHECK LAST (fallback)
             "code": ["code", "write", "implement", "build", "create", "program"],
@@ -1078,6 +1091,7 @@ REASON: [brief explanation]"""
             "_execute_create_capability": self._execute_create_capability,
             "_execute_observe_strategy": self._execute_observe_strategy,
             "_execute_wait_strategy": self._execute_wait_strategy,
+            "_execute_edit_document_strategy": self._execute_edit_document_strategy,
             "_execute_request_help": self._execute_request_help,
             "_execute_document_limitation": self._execute_document_limitation,
             "_seek_capability_semantic": self._seek_capability_semantic,
@@ -1175,6 +1189,12 @@ REASON: [brief explanation]"""
                 success = await self._execute_observe_strategy(description, desire_id)
                 return ("success" if success else "failed",
                         None if success else "Observation strategy failed")
+
+            elif strategy == "edit_document":
+                # Document editing capability - BYRD can modify documents in memory
+                success = await self._execute_edit_document_strategy(description, desire_id)
+                return ("success" if success else "failed",
+                        None if success else "Document editing failed or no valid document path")
 
             else:
                 # No recognized strategy - record for BYRD to reflect on
@@ -4346,4 +4366,186 @@ PAIR: [num1] - [num2] (theme: [description])"""
             return True
         except Exception as e:
             print(f"Document limitation failed: {e}")
+            return False
+
+    async def _execute_edit_document_strategy(self, description: str, desire_id: str = None) -> bool:
+        """
+        Execute document editing based on BYRD's desire.
+
+        This strategy allows BYRD to modify documents stored in memory.
+        The edits are made to the Neo4j copy only - disk version remains unchanged
+        for reset capability.
+
+        Args:
+            description: The desire description containing what to edit
+            desire_id: Optional desire ID for tracking
+
+        Returns:
+            True if document was successfully edited, False otherwise
+        """
+        try:
+            # First, get available documents from memory
+            all_docs = await self.memory.get_all_documents()
+
+            # If no documents in memory, try to load key documents from disk
+            if not all_docs:
+                key_docs = ["ARCHITECTURE.md", "CLAUDE.md", "EMERGENCE_PRINCIPLES.md"]
+                for doc_path in key_docs:
+                    full_path = os.path.join(os.path.dirname(__file__), doc_path)
+                    if os.path.exists(full_path):
+                        try:
+                            with open(full_path, "r") as f:
+                                content = f.read()
+                            await self.memory.store_document(
+                                path=doc_path,
+                                content=content,
+                                doc_type="documentation"
+                            )
+                            print(f"[EDIT_DOCUMENT] Loaded {doc_path} from disk into memory")
+                        except Exception as e:
+                            print(f"[EDIT_DOCUMENT] Failed to load {doc_path}: {e}")
+
+                # Retry getting documents
+                all_docs = await self.memory.get_all_documents()
+
+            if not all_docs:
+                await self.memory.record_experience(
+                    content=f"[EDIT_DOCUMENT_FAILED] No documents available to edit.\nDesire: {description}",
+                    type="limitation"
+                )
+                return False
+
+            # Format document list for LLM
+            doc_list = "\n".join([
+                f"- {doc['path']} ({doc.get('type', 'document')}, {len(doc.get('content', ''))} chars)"
+                for doc in all_docs
+            ])
+
+            # Ask LLM to determine which document and what changes
+            prompt = f"""You are BYRD's document editor. Analyze this desire and determine what document to edit and how.
+
+DESIRE: {description}
+
+AVAILABLE DOCUMENTS:
+{doc_list}
+
+Respond with JSON:
+{{
+  "document_path": "path/to/document.md",
+  "edit_type": "append|replace_section|full_rewrite",
+  "section_marker": "## Section Name",  // only for replace_section
+  "new_content": "The content to add or replace with",
+  "reason": "Why this edit serves the desire"
+}}
+
+If the desire is unclear or no suitable document exists, respond:
+{{"error": "Explanation of why edit cannot proceed"}}
+"""
+
+            response = await self._query_local_llm(prompt, max_tokens=2000)
+
+            # Parse response
+            try:
+                text = response.strip()
+                if "```json" in text:
+                    text = text.split("```json")[1].split("```")[0]
+                elif "```" in text:
+                    text = text.split("```")[1].split("```")[0]
+                edit_plan = json.loads(text.strip())
+            except json.JSONDecodeError:
+                await self.memory.record_experience(
+                    content=f"[EDIT_DOCUMENT_FAILED] Could not parse edit plan.\nDesire: {description}\nResponse: {response[:500]}",
+                    type="system"
+                )
+                return False
+
+            if "error" in edit_plan:
+                await self.memory.record_experience(
+                    content=f"[EDIT_DOCUMENT_SKIPPED] {edit_plan['error']}\nDesire: {description}",
+                    type="observation"
+                )
+                return False
+
+            # Get the document to edit
+            doc_path = edit_plan.get("document_path", "")
+            target_doc = next((d for d in all_docs if d["path"] == doc_path), None)
+
+            if not target_doc:
+                await self.memory.record_experience(
+                    content=f"[EDIT_DOCUMENT_FAILED] Document not found: {doc_path}\nDesire: {description}",
+                    type="system"
+                )
+                return False
+
+            # Apply the edit based on edit_type
+            edit_type = edit_plan.get("edit_type", "append")
+            new_content = edit_plan.get("new_content", "")
+            current_content = target_doc.get("content", "")
+
+            if edit_type == "append":
+                updated_content = current_content + "\n\n" + new_content
+            elif edit_type == "replace_section":
+                section_marker = edit_plan.get("section_marker", "")
+                if section_marker and section_marker in current_content:
+                    # Find section and replace to next section or end
+                    parts = current_content.split(section_marker)
+                    if len(parts) >= 2:
+                        # Find next section header (## or #)
+                        rest = parts[1]
+                        next_section_match = re.search(r'\n(#{1,3}\s+\S)', rest)
+                        if next_section_match:
+                            updated_content = parts[0] + section_marker + "\n\n" + new_content + "\n" + rest[next_section_match.start():]
+                        else:
+                            updated_content = parts[0] + section_marker + "\n\n" + new_content
+                    else:
+                        updated_content = current_content + "\n\n" + new_content
+                else:
+                    updated_content = current_content + "\n\n" + new_content
+            elif edit_type == "full_rewrite":
+                updated_content = new_content
+            else:
+                updated_content = current_content + "\n\n" + new_content
+
+            # Update the document in memory
+            result = await self.memory.update_document(
+                path=doc_path,
+                content=updated_content,
+                editor="byrd",
+                edit_reason=edit_plan.get("reason", description)
+            )
+
+            if result:
+                await self.memory.record_experience(
+                    content=f"[DOCUMENT_EDITED] Successfully edited {doc_path}.\n"
+                           f"Edit type: {edit_type}\n"
+                           f"Reason: {edit_plan.get('reason', 'Fulfilling desire')}\n"
+                           f"Original desire: {description}",
+                    type="observation"
+                )
+
+                # Emit event for visualization
+                from event_bus import event_bus, Event, EventType
+                await event_bus.emit(Event(
+                    type=EventType.EXPERIENCE_CREATED,
+                    data={
+                        "type": "document_edit",
+                        "path": doc_path,
+                        "edit_type": edit_type
+                    }
+                ))
+
+                return True
+            else:
+                await self.memory.record_experience(
+                    content=f"[EDIT_DOCUMENT_FAILED] Memory update failed for {doc_path}.\nDesire: {description}",
+                    type="system"
+                )
+                return False
+
+        except Exception as e:
+            print(f"Edit document strategy failed: {e}")
+            await self.memory.record_experience(
+                content=f"[EDIT_DOCUMENT_ERROR] {str(e)}\nDesire: {description}",
+                type="system"
+            )
             return False

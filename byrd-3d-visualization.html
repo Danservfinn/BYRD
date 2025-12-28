@@ -714,6 +714,9 @@
       <button id="btn-speak" class="px-3 py-2 rounded-lg text-sm font-medium bg-teal-100 border border-teal-300 text-teal-700 hover:bg-teal-200 transition-all" onclick="speakToMe();" title="Ask BYRD to speak to you">
         🎙️ Speak to me
       </button>
+      <button id="btn-agi-metrics" class="px-3 py-2 rounded-lg text-sm font-medium bg-emerald-100 border border-emerald-300 text-emerald-700 hover:bg-emerald-200 transition-all" onclick="showAGIMetricsModal();" title="AGI Progress Tracking - Option B Five Compounding Loops">
+        📊 AGI Metrics
+      </button>
       <a href="byrd-architecture.html" class="px-3 py-2 rounded-lg text-sm font-medium bg-violet-100 border border-violet-300 text-violet-700 hover:bg-violet-200 transition-all inline-flex items-center gap-1">
         🏛️ Architecture
       </a>
@@ -988,6 +991,38 @@
       </div>
       <div class="px-6 py-3 border-t border-slate-200 bg-slate-50 flex justify-end">
         <button onclick="closeStatusModal()" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-all">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AGI Metrics Modal - Option B Five Compounding Loops -->
+  <div id="agi-metrics-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm">
+    <div class="bg-white border border-slate-200 rounded-xl max-w-4xl w-full mx-4 overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+      <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-emerald-50 to-teal-50 flex items-center justify-between">
+        <div>
+          <div class="text-lg font-semibold text-slate-800 flex items-center gap-2">
+            <span>📊</span>
+            <span>AGI Progress Tracking</span>
+          </div>
+          <div class="text-sm text-slate-500">Option B: Five Compounding Loops Architecture</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="refreshAGIMetrics()" class="text-slate-500 hover:text-slate-700 p-1 rounded hover:bg-slate-100" title="Refresh">
+            ↻
+          </button>
+          <button onclick="closeAGIMetricsModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+        </div>
+      </div>
+      <div id="agi-metrics-content" class="p-6 overflow-y-auto flex-1">
+        <div class="text-center text-slate-500 py-8">Loading AGI metrics...</div>
+      </div>
+      <div class="px-6 py-3 border-t border-slate-200 bg-slate-50 flex justify-between items-center">
+        <div class="text-xs text-slate-500">
+          <span id="agi-metrics-timestamp"></span>
+        </div>
+        <button onclick="closeAGIMetricsModal()" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-all">
           Close
         </button>
       </div>
@@ -7935,6 +7970,264 @@
     // Close status modal on backdrop click
     document.getElementById('status-modal')?.addEventListener('click', (e) => {
       if (e.target.id === 'status-modal') closeStatusModal();
+    });
+
+    // ==========================================================================
+    // AGI METRICS MODAL - Option B Five Compounding Loops
+    // ==========================================================================
+
+    async function showAGIMetricsModal() {
+      const modal = document.getElementById('agi-metrics-modal');
+      const content = document.getElementById('agi-metrics-content');
+      const timestamp = document.getElementById('agi-metrics-timestamp');
+
+      // Show modal with loading state
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      content.innerHTML = '<div class="text-center text-slate-500 py-8">Loading AGI metrics...</div>';
+
+      await refreshAGIMetrics();
+    }
+
+    async function refreshAGIMetrics() {
+      const content = document.getElementById('agi-metrics-content');
+      const timestamp = document.getElementById('agi-metrics-timestamp');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/omega/metrics`);
+        const data = await res.json();
+
+        timestamp.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+        content.innerHTML = formatAGIMetrics(data);
+      } catch (e) {
+        content.innerHTML = `<div class="text-center text-red-500 py-8">Failed to fetch AGI metrics: ${e.message}</div>`;
+        timestamp.textContent = `Error at: ${new Date().toLocaleTimeString()}`;
+      }
+    }
+
+    function formatAGIMetrics(data) {
+      // Helper to create status badge
+      const statusBadge = (status) => {
+        const colors = {
+          healthy: 'bg-green-100 text-green-700 border-green-200',
+          warning: 'bg-amber-100 text-amber-700 border-amber-200',
+          critical: 'bg-red-100 text-red-700 border-red-200',
+          unknown: 'bg-slate-100 text-slate-600 border-slate-200'
+        };
+        const icons = { healthy: '✓', warning: '⚠', critical: '✗', unknown: '?' };
+        return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${colors[status] || colors.unknown}">${icons[status] || '?'} ${status}</span>`;
+      };
+
+      // Helper to create metric bar
+      const metricBar = (value, max = 1, color = 'emerald') => {
+        const pct = Math.min(100, Math.max(0, (value / max) * 100));
+        return `<div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+          <div class="h-full bg-${color}-500 rounded-full transition-all" style="width: ${pct}%"></div>
+        </div>`;
+      };
+
+      // Overall status section
+      const modeColors = {
+        AWAKE: 'bg-blue-100 text-blue-700',
+        DREAMING: 'bg-purple-100 text-purple-700',
+        EVOLVING: 'bg-amber-100 text-amber-700',
+        COMPILING: 'bg-green-100 text-green-700'
+      };
+      const modeClass = modeColors[data.mode] || 'bg-slate-100 text-slate-700';
+
+      let html = `
+        <!-- Overall Status -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div class="bg-slate-50 rounded-lg p-4 text-center">
+            <div class="text-2xl font-bold text-slate-800">${data.total_cycles || 0}</div>
+            <div class="text-xs text-slate-500">Total Cycles</div>
+          </div>
+          <div class="bg-slate-50 rounded-lg p-4 text-center">
+            <div class="text-2xl font-bold text-slate-800">${(data.capability_score || 0).toFixed(2)}</div>
+            <div class="text-xs text-slate-500">Capability Score</div>
+          </div>
+          <div class="bg-slate-50 rounded-lg p-4 text-center">
+            <div class="text-2xl font-bold ${data.growth_rate > 0 ? 'text-green-600' : data.growth_rate < 0 ? 'text-red-600' : 'text-slate-600'}">
+              ${data.growth_rate > 0 ? '+' : ''}${(data.growth_rate * 100 || 0).toFixed(2)}%
+            </div>
+            <div class="text-xs text-slate-500">Growth Rate</div>
+          </div>
+          <div class="bg-slate-50 rounded-lg p-4 text-center">
+            <div class="px-3 py-1 rounded-full text-sm font-medium ${modeClass}">${data.mode || 'UNKNOWN'}</div>
+            <div class="text-xs text-slate-500 mt-1">Current Mode</div>
+          </div>
+        </div>
+
+        <!-- Critical Coupling - THE Key Metric -->
+        <div class="mb-6 p-4 rounded-lg border-2 ${data.critical_coupling_significant ? 'border-green-300 bg-green-50' : 'border-amber-300 bg-amber-50'}">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="text-xl">🔗</span>
+              <span class="font-semibold text-slate-800">Critical Coupling</span>
+              <span class="text-xs text-slate-500">(Goal Evolver → Self-Compiler)</span>
+            </div>
+            ${data.critical_coupling_significant
+              ? '<span class="px-2 py-1 bg-green-200 text-green-800 rounded-full text-xs font-medium">SIGNIFICANT</span>'
+              : '<span class="px-2 py-1 bg-amber-200 text-amber-800 rounded-full text-xs font-medium">Building...</span>'}
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="text-3xl font-bold ${data.critical_coupling_significant ? 'text-green-700' : 'text-amber-700'}">
+              ${(data.critical_coupling || 0).toFixed(3)}
+            </div>
+            <div class="flex-1">
+              ${metricBar(Math.abs(data.critical_coupling || 0), 1, data.critical_coupling_significant ? 'green' : 'amber')}
+            </div>
+          </div>
+          <div class="text-xs text-slate-600 mt-2">
+            Target: ≥0.5 for multiplicative improvement. This is THE compounding loop that drives acceleration.
+          </div>
+        </div>
+
+        <!-- Five Loops Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      `;
+
+      // Loop cards
+      const loops = data.loops || {};
+      const loopMeta = {
+        memory_reasoner: { icon: '🧠', name: 'Memory Reasoner', desc: 'Graph-based reasoning vs LLM fallback', key: 'memory_ratio' },
+        self_compiler: { icon: '⚡', name: 'Self-Compiler', desc: 'Pattern extraction and code learning', key: 'success_rate' },
+        goal_evolver: { icon: '🎯', name: 'Goal Evolver', desc: 'Evolutionary goal optimization', key: 'avg_fitness' },
+        dreaming_machine: { icon: '💭', name: 'Dreaming Machine', desc: 'Counterfactual generation', key: 'multiplication_factor' }
+      };
+
+      for (const [loopId, meta] of Object.entries(loopMeta)) {
+        const loopData = loops[loopId] || {};
+        const metrics = loopData.metrics || loopData || {};
+        const status = loopData.status || 'unknown';
+
+        html += `
+          <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">${meta.icon}</span>
+                <span class="font-semibold text-slate-800">${meta.name}</span>
+              </div>
+              ${statusBadge(status)}
+            </div>
+            <div class="text-xs text-slate-500 mb-3">${meta.desc}</div>
+            <div class="space-y-2 text-sm">
+        `;
+
+        // Render specific metrics for each loop
+        if (loopId === 'memory_reasoner') {
+          const ratio = metrics.memory_ratio || metrics.ratio || 0;
+          const answered = metrics.memory_answered || 0;
+          const total = metrics.total_queries || 0;
+          html += `
+            <div class="flex justify-between"><span class="text-slate-600">Memory Ratio:</span><span class="font-mono">${(ratio * 100).toFixed(1)}%</span></div>
+            <div class="flex justify-between"><span class="text-slate-600">Memory Answered:</span><span class="font-mono">${answered}/${total}</span></div>
+            ${metricBar(ratio)}
+          `;
+        } else if (loopId === 'self_compiler') {
+          const created = metrics.patterns_created || 0;
+          const matched = metrics.patterns_matched || 0;
+          const rate = metrics.success_rate || metrics.match_rate || 0;
+          html += `
+            <div class="flex justify-between"><span class="text-slate-600">Patterns Created:</span><span class="font-mono">${created}</span></div>
+            <div class="flex justify-between"><span class="text-slate-600">Patterns Matched:</span><span class="font-mono">${matched}</span></div>
+            <div class="flex justify-between"><span class="text-slate-600">Match Rate:</span><span class="font-mono">${(rate * 100).toFixed(1)}%</span></div>
+            ${metricBar(rate)}
+          `;
+        } else if (loopId === 'goal_evolver') {
+          const pop = metrics.population_size || metrics.population || 0;
+          const gen = metrics.generations || 0;
+          const fitness = metrics.avg_fitness || metrics.fitness || 0;
+          html += `
+            <div class="flex justify-between"><span class="text-slate-600">Population:</span><span class="font-mono">${pop}</span></div>
+            <div class="flex justify-between"><span class="text-slate-600">Generations:</span><span class="font-mono">${gen}</span></div>
+            <div class="flex justify-between"><span class="text-slate-600">Avg Fitness:</span><span class="font-mono">${fitness.toFixed(3)}</span></div>
+            ${metricBar(fitness)}
+          `;
+        } else if (loopId === 'dreaming_machine') {
+          const cf = metrics.counterfactuals || metrics.counterfactuals_generated || 0;
+          const insights = metrics.insights || metrics.insights_created || 0;
+          const mult = metrics.multiplication_factor || 0;
+          html += `
+            <div class="flex justify-between"><span class="text-slate-600">Counterfactuals:</span><span class="font-mono">${cf}</span></div>
+            <div class="flex justify-between"><span class="text-slate-600">Insights:</span><span class="font-mono">${insights}</span></div>
+            <div class="flex justify-between"><span class="text-slate-600">Multiplication:</span><span class="font-mono">${mult.toFixed(2)}x</span></div>
+            ${metricBar(mult, 3)}
+          `;
+        }
+
+        html += `
+            </div>
+          </div>
+        `;
+      }
+
+      html += `</div>`;
+
+      // Kill Criteria Section
+      html += `
+        <div class="border-t border-slate-200 pt-4">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-lg">⚠️</span>
+            <span class="font-semibold text-slate-800">Kill Criteria Status</span>
+          </div>
+          <div class="grid grid-cols-2 gap-4 text-sm">
+            <div class="bg-slate-50 rounded p-3">
+              <div class="text-slate-600 mb-1">Hard Limit (4 weeks)</div>
+              <div class="font-mono ${data.growth_rate > 0 ? 'text-green-600' : 'text-amber-600'}">
+                ${data.growth_rate > 0 ? '✓ Growth detected' : '⏳ No growth yet'}
+              </div>
+            </div>
+            <div class="bg-slate-50 rounded p-3">
+              <div class="text-slate-600 mb-1">Soft Plateau (10 cycles)</div>
+              <div class="font-mono ${data.improvement_rate > 0.01 ? 'text-green-600' : 'text-amber-600'}">
+                ${data.improvement_rate > 0.01 ? '✓ Improving' : '⏳ Plateau watch'}
+              </div>
+            </div>
+          </div>
+          <div class="text-xs text-slate-500 mt-3">
+            Per OPTION_B_EXPLORATION.md: Abandon approach after 4 weeks without measurable progress.
+            Internal kill criteria prevent sunk-cost delusion.
+          </div>
+        </div>
+      `;
+
+      // Improvement trajectory if available
+      if (data.improvement_trajectory && data.improvement_trajectory.length > 0) {
+        html += `
+          <div class="border-t border-slate-200 pt-4 mt-4">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-lg">📈</span>
+              <span class="font-semibold text-slate-800">Improvement Trajectory</span>
+            </div>
+            <div class="flex items-end gap-1 h-16">
+              ${data.improvement_trajectory.slice(-20).map(v => {
+                const height = Math.max(5, Math.min(100, (v / Math.max(...data.improvement_trajectory)) * 100));
+                const color = v > 0 ? 'bg-green-400' : 'bg-red-400';
+                return `<div class="${color} rounded-t" style="height: ${height}%; width: 12px;" title="${v.toFixed(4)}"></div>`;
+              }).join('')}
+            </div>
+            <div class="text-xs text-slate-500 mt-1">Last 20 improvement measurements</div>
+          </div>
+        `;
+      }
+
+      return html;
+    }
+
+    function closeAGIMetricsModal() {
+      const modal = document.getElementById('agi-metrics-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    window.showAGIMetricsModal = showAGIMetricsModal;
+    window.closeAGIMetricsModal = closeAGIMetricsModal;
+    window.refreshAGIMetrics = refreshAGIMetrics;
+
+    // Close AGI metrics modal on backdrop click
+    document.getElementById('agi-metrics-modal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'agi-metrics-modal') closeAGIMetricsModal();
     });
 
     // ==========================================================================

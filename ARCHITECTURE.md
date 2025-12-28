@@ -148,6 +148,7 @@ Fulfills desires autonomously through strategy routing:
 | `curate` | optimize, clean, consolidate | Graph optimization |
 | `crystallize` | crystallize, form crystal | Create unified concepts |
 | `self_modify` | modify my code, extend myself | Self-modification |
+| `edit_document` | edit document, update architecture | Edit docs in memory |
 | `code` | code, write, implement | Generate code |
 | `research` | (default) | Web research via DuckDuckGo |
 
@@ -223,6 +224,32 @@ BYRD supports multiple LLM providers. Configure in `config.yaml`:
 -[:FULFILLS]->          // Capability/Research -> Desire
 -[:MOTIVATED_BY]->      // Modification -> Desire
 ```
+
+### Document Storage
+
+BYRD stores and can edit key documents in Neo4j:
+
+| Document | Purpose | Editable |
+|----------|---------|----------|
+| `ARCHITECTURE.md` | System design documentation | Yes |
+| `CLAUDE.md` | Development guide for Claude Code | Yes |
+| `EMERGENCE_PRINCIPLES.md` | Core philosophical principles | Yes |
+
+**Key Properties:**
+- Documents are stored as `Document` nodes in Neo4j
+- Disk version is the canonical source (restored on reset)
+- Neo4j version is the working copy that BYRD can edit
+- `edited_by_byrd` flag tracks which docs have been modified
+- Version history maintained for each edit
+
+**Document Editing Flow:**
+1. BYRD expresses desire: "I want to update ARCHITECTURE.md with my new capability"
+2. Seeker routes to `edit_document` strategy
+3. LLM determines what changes to make
+4. Neo4j copy is updated (disk version unchanged)
+5. Experience recorded for future reflection
+
+**Reset Behavior:** All BYRD edits are lost on reset. The disk version is restored to Neo4j, ensuring a clean slate.
 
 ---
 

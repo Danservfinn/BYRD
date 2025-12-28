@@ -1287,6 +1287,135 @@ class Memory:
             records = await result.data()
             return records
 
+    async def update_document(
+        self,
+        path: str,
+        content: str,
+        editor: str = "byrd",
+        edit_reason: Optional[str] = None
+    ) -> Optional[Dict]:
+        """
+        Update an existing document's content.
+
+        This updates the Neo4j copy of the document. The disk version remains
+        unchanged, allowing reset to restore the original.
+
+        Args:
+            path: File path of the document
+            content: New content
+            editor: Who made the edit (default: "byrd")
+            edit_reason: Optional reason for the edit
+
+        Returns:
+            Updated document info or None if not found
+        """
+        from datetime import datetime, timezone
+        import hashlib
+
+        doc_id = f"doc_{hashlib.sha256(path.encode()).hexdigest()[:16]}"
+        content_hash = hashlib.sha256(content.encode()).hexdigest()[:32]
+        line_count = content.count('\n') + 1
+        char_count = len(content)
+
+        async with self.driver.session() as session:
+            # Check if document exists
+            existing = await session.run("""
+                MATCH (d:Document {id: $id})
+                RETURN d.version as version, d.content_hash as hash
+            """, id=doc_id)
+            record = await existing.single()
+
+            if not record:
+                return None  # Document doesn't exist
+
+            old_version = record["version"] or 1
+            old_hash = record["hash"]
+
+            # Check if content actually changed
+            if old_hash == content_hash:
+                return {"id": doc_id, "path": path, "changed": False, "version": old_version}
+
+            # Update document with edit tracking
+            new_version = old_version + 1
+            await session.run("""
+                MATCH (d:Document {id: $id})
+                SET d.content = $content,
+                    d.content_hash = $hash,
+                    d.updated_at = datetime(),
+                    d.version = $version,
+                    d.line_count = $line_count,
+                    d.char_count = $char_count,
+                    d.last_editor = $editor,
+                    d.last_edit_reason = $reason,
+                    d.edited_by_byrd = true
+            """, id=doc_id, content=content, hash=content_hash,
+                version=new_version, line_count=line_count, char_count=char_count,
+                editor=editor, reason=edit_reason)
+
+            # Emit update event
+            await event_bus.emit(Event(
+                type=EventType.NODE_UPDATED,
+                data={
+                    "id": doc_id,
+                    "node_type": "Document",
+                    "path": path,
+                    "version": new_version,
+                    "editor": editor,
+                    "change": "content_edited"
+                }
+            ))
+
+            # Record the edit as an experience
+            await self.record_experience(
+                content=f"Edited document {path}: {edit_reason or 'no reason given'}",
+                type="document_edit"
+            )
+
+            return {
+                "id": doc_id,
+                "path": path,
+                "changed": True,
+                "version": new_version,
+                "line_count": line_count,
+                "char_count": char_count
+            }
+
+    async def get_documents_edited_by_byrd(self) -> List[Dict]:
+        """
+        Get all documents that BYRD has edited.
+
+        Returns:
+            List of documents with edited_by_byrd=true
+        """
+        async with self.driver.session() as session:
+            result = await session.run("""
+                MATCH (d:Document)
+                WHERE d.edited_by_byrd = true
+                RETURN d.id as id, d.path as path, d.doc_type as doc_type,
+                       d.version as version, d.last_editor as editor,
+                       d.last_edit_reason as reason
+            """)
+            records = await result.data()
+            return records
+
+    async def get_all_documents(self) -> List[Dict]:
+        """
+        Get all documents stored in memory.
+
+        Returns:
+            List of documents with their content and metadata
+        """
+        async with self.driver.session() as session:
+            result = await session.run("""
+                MATCH (d:Document)
+                RETURN d.id as id, d.path as path, d.content as content,
+                       d.doc_type as type, d.version as version,
+                       d.edited_by_byrd as edited_by_byrd
+                ORDER BY d.path
+            """)
+            records = await result.data()
+            return records
+
     async def link_document_to_node(
         self,
         doc_id: str,
