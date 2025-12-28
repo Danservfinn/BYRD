@@ -33,5 +33,8 @@ numpy>=1.24.0
 # System monitoring for compute introspection (optional, graceful fallback)
 psutil>=5.9.0
 
-# Optional: for embeddings (future)
-# sentence-transformers>=2.2.0
+# Bayesian distributions for capability tracking (optional, graceful fallback)
+scipy>=1.10.0
+
+# Semantic embeddings for IntuitionNetwork (optional, graceful fallback)
+sentence-transformers>=2.2.0

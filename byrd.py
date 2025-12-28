@@ -387,6 +387,61 @@ class BYRD:
                 # Update Seeker's reference
                 self.seeker.self_mod = self.self_mod
 
+                # Learning Components - wire into Omega training hooks
+                # These enable genuine capability improvement over time
+                learning_components_status = []
+
+                try:
+                    from hierarchical_memory import HierarchicalMemory
+                    hierarchical_memory = HierarchicalMemory(
+                        self.memory, self.llm_client,
+                        config=option_b_config.get("hierarchical_memory", {})
+                    )
+                    if self.omega:
+                        self.omega.hierarchical_memory = hierarchical_memory
+                    learning_components_status.append("HierarchicalMemory: initialized")
+                except Exception as e:
+                    learning_components_status.append(f"HierarchicalMemory: {e}")
+
+                try:
+                    from code_learner import CodeLearner
+                    code_learner = CodeLearner(
+                        self.memory, self.llm_client,
+                        config=option_b_config.get("code_learner", {})
+                    )
+                    if self.omega:
+                        self.omega.code_learner = code_learner
+                    learning_components_status.append("CodeLearner: initialized")
+                except Exception as e:
+                    learning_components_status.append(f"CodeLearner: {e}")
+
+                try:
+                    from intuition_network import IntuitionNetwork
+                    intuition_network = IntuitionNetwork(
+                        self.memory,
+                        config=option_b_config.get("intuition_network", {})
+                    )
+                    if self.omega:
+                        self.omega.intuition_network = intuition_network
+                    learning_components_status.append("IntuitionNetwork: initialized")
+                except Exception as e:
+                    learning_components_status.append(f"IntuitionNetwork: {e}")
+
+                try:
+                    from gnn_layer import StructuralLearner
+                    gnn_config = option_b_config.get("gnn", {})
+                    gnn_layer = StructuralLearner(
+                        embedding_dim=gnn_config.get("embedding_dim", 64),
+                        num_heads=gnn_config.get("num_heads", 4),
+                        num_layers=gnn_config.get("num_layers", 2),
+                        learning_rate=gnn_config.get("learning_rate", 0.01)
+                    )
+                    if self.omega:
+                        self.omega.gnn_layer = gnn_layer
+                    learning_components_status.append("StructuralLearner: initialized")
+                except Exception as e:
+                    learning_components_status.append(f"StructuralLearner: {e}")
+
                 print("🔮 Option B (Omega): enabled - Five Compounding Loops active")
                 print("   WorldModel: initialized")
                 print("   SafetyMonitor: pending async init")
@@ -396,6 +451,8 @@ class BYRD:
                 print("   AGIRunner: initialized")
                 print("   CapabilityEvaluator: initialized")
                 print("   ComputeIntrospector: initialized")
+                for status in learning_components_status:
+                    print(f"   {status}")
             except ImportError as e:
                 print(f"⚠️ Option B (Omega): disabled - missing module: {e}")
             except Exception as e:
