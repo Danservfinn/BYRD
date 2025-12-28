@@ -720,7 +720,7 @@ Finish: {{"tool":"finish","args":{{"success":true,"message":"done"}},"t":"ok"}}
             response = await self.llm_client.generate(
                 prompt=user,
                 temperature=self.temperature,
-                max_tokens=3000,  # Increased from 1500 to allow complete JSON responses
+                max_tokens=8000,  # Large budget to ensure complete JSON responses
                 system_message=system  # Override default reflection format
             )
 
@@ -736,6 +736,10 @@ Finish: {{"tool":"finish","args":{{"success":true,"message":"done"}},"t":"ok"}}
         parsed = self._parse_agent_response(response_text)
 
         if not parsed:
+            # Debug: log full response length and whether it contains "tool"
+            has_tool = '"tool"' in response_text
+            print(f"  ⚠️ Parse failed: len={len(response_text)}, has_tool={has_tool}")
+            print(f"  ⚠️ First 500 chars: {response_text[:500]}")
             state.completed = True
             state.success = False
             state.final_message = f"Failed to parse agent response: {response_text[:200]}"
