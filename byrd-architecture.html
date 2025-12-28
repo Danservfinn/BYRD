@@ -187,7 +187,7 @@
         </a>
         <div>
           <h1 class="text-2xl font-bold sacred-title">BYRD Unified AGI Architecture</h1>
-          <p class="text-xs text-slate-500 mt-0.5">AGI Execution Engine + Learning Substrate + Five Compounding Loops</p>
+          <p class="text-xs text-slate-500 mt-0.5">Core Components + AGI Execution + Learning + Compute Self-Awareness</p>
         </div>
       </div>
       <div class="flex items-center gap-4">
@@ -643,6 +643,16 @@
           <circle class="status-dot" cx="927" cy="152" r="3" fill="#ef4444" data-status="SafetyMonitor"/>
         </g>
 
+        <!-- COMPUTE INTROSPECTOR -->
+        <g class="component-box" data-module="ComputeIntrospector" onclick="selectModule('ComputeIntrospector')">
+          <rect class="box-bg" x="960" y="140" width="100" height="55" rx="8" fill="rgba(139, 92, 246, 0.15)"/>
+          <rect class="box-outline" x="960" y="140" width="100" height="55" rx="8" fill="none" stroke="#8b5cf6" stroke-width="1.5"/>
+          <text x="1010" y="162" text-anchor="middle" fill="#8b5cf6" font-weight="600" font-size="9">COMPUTE</text>
+          <text x="1010" y="174" text-anchor="middle" fill="#8b5cf6" font-weight="600" font-size="9">INTROSPECTOR</text>
+          <text x="1010" y="187" text-anchor="middle" fill="#64748b" font-size="7">Resource Awareness</text>
+          <circle class="status-dot" cx="1047" cy="152" r="3" fill="#8b5cf6" data-status="ComputeIntrospector"/>
+        </g>
+
         <!-- Mode Transition Diagram (left side, adjusted position) -->
         <g transform="translate(20, 450)">
           <text x="60" y="0" text-anchor="middle" fill="#64748b" font-size="10" font-weight="600">MODE TRANSITIONS</text>
@@ -776,7 +786,7 @@
           </div>
         </div>
         <div class="text-xs text-slate-500">
-          ARCHITECTURE.md v3.0
+          ARCHITECTURE.md v3.1
         </div>
       </div>
     </div>
@@ -793,7 +803,7 @@
     let selectedModule = null;
     let animationPaused = false;
 
-    // Component information based on ARCHITECTURE.md v3.0
+    // Component information based on ARCHITECTURE.md v3.1
     const LOOP_INFO = {
       // Core Components
       Dreamer: {
@@ -956,10 +966,18 @@
       },
       SafetyMonitor: {
         name: 'Safety Monitor',
-        description: 'PROTECTED component. Enforces constitutional constraints. Verifies goal preservation and blocks dangerous patterns.',
+        description: 'PROTECTED component. Observes patterns without blocking (emergence-preserving). BYRD learns what is "safe" from outcome correlation.',
         color: '#ef4444',
-        mechanism: 'Pre-modification checks + dangerous pattern detection + rollback triggers',
-        successMetric: 'Constraint violations = 0',
+        mechanism: 'Pattern observation → outcome tracking → BYRD forms beliefs from success/failure correlations',
+        successMetric: 'Pattern-outcome correlation learned',
+        plateauWarning: 'N/A'
+      },
+      ComputeIntrospector: {
+        name: 'Compute Introspector',
+        description: 'Resource awareness, token tracking, and bottleneck detection. BYRD knows its computational substrate.',
+        color: '#8b5cf6',
+        mechanism: 'Resource snapshots → token budgets → bottleneck analysis → resource alerts',
+        successMetric: 'Budget adherence',
         plateauWarning: 'N/A'
       }
     };
@@ -992,9 +1010,10 @@
       IntegrationMind: ['LearningSubstrate', 'Omega'],
 
       // Safety & Orchestration
-      Omega: ['SelfCompiler', 'MemoryReasoner', 'GoalEvolver', 'DreamingMachine', 'IntegrationMind', 'LearningSubstrate', 'SelfModifier'],
-      SelfModifier: ['Coder', 'SafetyMonitor', 'Omega'],
-      SafetyMonitor: ['SelfModifier', 'Omega']
+      Omega: ['SelfCompiler', 'MemoryReasoner', 'GoalEvolver', 'DreamingMachine', 'IntegrationMind', 'LearningSubstrate', 'SelfModifier', 'ComputeIntrospector'],
+      SelfModifier: ['Coder', 'SafetyMonitor', 'Omega', 'ComputeIntrospector'],
+      SafetyMonitor: ['SelfModifier', 'Omega'],
+      ComputeIntrospector: ['Omega', 'SelfModifier', 'Dreamer', 'Seeker']
     };
 
     // ========================================================================
@@ -1166,7 +1185,7 @@
 
       // AGI Execution Engine list
       const agiList = document.getElementById('agi-list');
-      const agiComponents = ['AGIRunner', 'DesireClassifier', 'LearningSubstrate', 'CapabilityEvaluator'];
+      const agiComponents = ['AGIRunner', 'DesireClassifier', 'LearningSubstrate', 'CapabilityEvaluator', 'ComputeIntrospector'];
 
       agiList.innerHTML = agiComponents.map(name => {
         const info = LOOP_INFO[name];
