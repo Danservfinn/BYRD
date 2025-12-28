@@ -418,6 +418,109 @@ Meta-orchestration layer. Measures coupling between loops and allocates resource
 
 ---
 
+## Compute Self-Awareness
+
+BYRD has introspective awareness of its computational substrate through the `compute_introspection.py` module.
+
+### ComputeIntrospector (`compute_introspection.py`)
+
+Provides resource awareness, token tracking, and bottleneck detection:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    COMPUTE INTROSPECTION                         │
+│                                                                  │
+│   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
+│   │  RESOURCE   │  │    TOKEN    │  │  BOTTLENECK │            │
+│   │  SNAPSHOTS  │  │   TRACKING  │  │  DETECTION  │            │
+│   │             │  │             │  │             │            │
+│   │ CPU, Memory │  │ Per-provider│  │ Identifies  │            │
+│   │ Disk, Time  │  │ cost budget │  │ constraints │            │
+│   └─────────────┘  └─────────────┘  └─────────────┘            │
+│          │                │                │                    │
+│          └────────────────┴────────────────┘                    │
+│                           │                                     │
+│                    Resource Alerts                              │
+│                    Budget Warnings                              │
+│                    Bottleneck Reports                           │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Key Classes:**
+
+| Class | Purpose |
+|-------|---------|
+| `ResourceSnapshot` | Point-in-time CPU, memory, disk measurement |
+| `ResourceBudget` | Configurable limits (tokens/day, cost/day) |
+| `LLMCostTracker` | Per-provider token consumption and costs |
+| `BottleneckAnalysis` | Identifies resource constraints |
+| `ComputeIntrospector` | Main orchestrator |
+
+**Integration Points:**
+
+1. **LLM Client** - Token usage callback tracks all LLM calls
+2. **Omega Training Hooks** - Periodic resource snapshots
+3. **Self-Modification** - Pre-modification resource checks
+
+### Emergence-Preserving Pattern Observation
+
+The safety monitor observes patterns in self-modifications **without blocking**:
+
+```python
+# In self_modification.py _validate_proposal():
+# Patterns are OBSERVED, not blocked - BYRD learns from outcomes
+observations = await self.safety_monitor.observe_patterns(code, file_path)
+# Patterns logged but modification proceeds
+```
+
+**Observable Patterns:**
+- `eval`, `exec`, `__import__` - Dynamic code execution
+- `subprocess`, `os.system` - Shell commands
+- File I/O patterns
+
+**Philosophy:** BYRD develops its own understanding of "safe" from experience. When a modification using `eval()` fails, that outcome is recorded. Over time, BYRD can reflect: "Modifications using eval() fail 80% of the time" and form its own beliefs.
+
+### Outcome Tracking
+
+Every self-modification records its outcome for learning:
+
+```python
+# After successful modification:
+await self.log.record_outcome(modification_id, success=True)
+
+# After failed modification:
+await self.log.record_outcome(modification_id, success=False, error=str(e))
+```
+
+Outcomes are stored as Experience nodes in Neo4j, enabling BYRD to:
+- Query pattern-outcome correlations
+- Reflect on what makes modifications succeed/fail
+- Form beliefs about modification safety from its own history
+
+### Configuration
+
+```yaml
+option_b:
+  compute_introspection:
+    enabled: true
+    daily_token_limit: 1000000
+    daily_cost_limit: 10.0
+    memory_warning_percent: 85.0
+    cpu_warning_percent: 80.0
+```
+
+### Event Types
+
+| Event | When Emitted |
+|-------|--------------|
+| `RESOURCE_SNAPSHOT` | Periodic resource measurement |
+| `RESOURCE_ALERT` | Approaching resource limits |
+| `BUDGET_EXCEEDED` | Token/cost budget exceeded |
+| `BOTTLENECK_DETECTED` | Resource constraint identified |
+| `LLM_USAGE_RECORDED` | Token usage logged |
+
+---
+
 ## Constitutional Constraints
 
 ### Protected Files (NEVER Modify)
@@ -488,10 +591,11 @@ byrd/
 │       ├── __init__.py
 │       └── agi_seed.yaml
 │
-├── AGI Execution Engine (NEW)
+├── AGI Execution Engine
 │   ├── agi_runner.py        # 8-step improvement cycle
 │   ├── desire_classifier.py # Routes desires by type
 │   ├── capability_evaluator.py # Ground-truth testing
+│   ├── compute_introspection.py # Resource awareness + token tracking
 │   └── code_learner.py      # Pattern → Python code
 │
 ├── Learning Components (NEW)
@@ -619,6 +723,6 @@ If yes, we have something useful. If no, we learn and try something else.
 
 ---
 
-*Document version: 3.0*
+*Document version: 3.1*
 *Updated: December 28, 2025*
-*Based on: UNIFIED_AGI_PLAN implementation complete*
+*Based on: UNIFIED_AGI_PLAN + Compute Self-Awareness implementation*
