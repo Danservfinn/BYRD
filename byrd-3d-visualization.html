@@ -7082,12 +7082,20 @@
           break;
 
         case 'system_reset':
+          // Reset local counters immediately
+          dreamCount = 0;
+          seekCount = 0;
+          dreamCountEl.textContent = '0';
+          seekCountEl.textContent = '0';
+
           clearVisualization();
           updateStatus('System reset', 'orange');
-          // After reset, reload event mode nodes (excludes experiences/reflections)
+
+          // Reload fresh data from server after reset completes
           setTimeout(async () => {
             await loadEventModeNodes();
-          }, 1000);
+            await fetchStatus();  // Get authoritative counts from server
+          }, 1500);
           break;
 
         // Quantum randomness events
