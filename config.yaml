@@ -191,35 +191,23 @@ seeker:
   skip_if_no_new_reflections: true
 
   # ---------------------------------------------------------------------------
-  # KNOWLEDGE ACQUISITION (DuckDuckGo + SearXNG fallback)
+  # KNOWLEDGE ACQUISITION (DuckDuckGo)
   # ---------------------------------------------------------------------------
   research:
-    # Search provider priority:
-    # 1. DuckDuckGo API (primary - reliable, no setup required)
-    # 2. SearXNG (fallback - for when DDG returns no results)
-    #
-    # SearXNG fallback options:
-    # - SEARXNG_URL env var (for custom instance)
-    # - Public instance: https://searx.be
-    # - Local: http://localhost:8888
-    searxng_url: "${SEARXNG_URL:-https://searx.be}"
+    # Uses DuckDuckGo for web search (no self-hosting required)
+    # Requires: pip install duckduckgo-search
 
     # Minimum desire intensity to trigger research (0-1)
-    # Lower = more research, higher = only strong desires
-    min_intensity: 0.3  # Lowered for more research (was 0.4)
+    min_intensity: 0.3
 
     # Maximum search queries per desire
-    max_queries: 5  # Increased for query diversity (was 3)
+    max_queries: 5
 
     # Maximum search results to synthesize
-    max_results: 15  # Deeper synthesis (was 10)
+    max_results: 15
 
     # Parallel research execution
-    max_concurrent_desires: 3  # Research up to 3 desires simultaneously
-
-    # Search engine configuration
-    language: "en"
-    engines: "google,duckduckgo,bing,wikipedia,arxiv"
+    max_concurrent_desires: 3
 
     # Domain quality filters
     prefer_domains:

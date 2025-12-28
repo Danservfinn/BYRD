@@ -3020,10 +3020,10 @@ Respond in first person as BYRD, sharing your understanding. Be specific about c
         if not queries:
             queries = [description]  # Fallback to raw description
 
-        # Step 2: Execute searches via SearXNG
+        # Step 2: Execute searches via DuckDuckGo
         all_results = []
         for query in queries[:self.max_queries]:
-            results = await self._search_searxng(query)
+            results = await self._search_duckduckgo(query)
             all_results.extend(results)
 
             # Avoid duplicate results
@@ -3122,103 +3122,90 @@ Example: ["query one", "query two", "query three"]"""
             # Fallback: try to extract anything that looks like queries
             return []
     
-    async def _search_searxng(self, query: str) -> List[Dict]:
+    async def _search_duckduckgo(self, query: str) -> List[Dict]:
         """
-        Primary search method - uses DuckDuckGo first, then SearXNG if available.
-        DDG is more reliable and doesn't require self-hosting.
+        Primary search method using DuckDuckGo.
+        Uses the duckduckgo-search library for robust web search.
         """
-        # Try DuckDuckGo first (primary)
-        results = await self._search_ddg(query)
+        try:
+            # Import here to handle async context
+            from duckduckgo_search import DDGS
 
-        if results:
-            print(f"🔍 DDG returned {len(results)} results")
+            results = []
+
+            # Run sync DDG search in thread pool to avoid blocking
+            def do_search():
+                with DDGS() as ddgs:
+                    return list(ddgs.text(query, max_results=self.max_results))
+
+            # Execute in thread pool
+            loop = asyncio.get_event_loop()
+            raw_results = await loop.run_in_executor(None, do_search)
+
+            for r in raw_results:
+                url = r.get("href", "")
+
+                # Apply domain filtering
+                if self.exclude_domains:
+                    if any(domain in url for domain in self.exclude_domains):
+                        continue
+
+                result = {
+                    "title": r.get("title", ""),
+                    "url": url,
+                    "snippet": r.get("body", ""),
+                    "engine": "duckduckgo",
+                    "score": 1.0
+                }
+
+                # Boost preferred domains
+                if self.prefer_domains:
+                    if any(domain in url for domain in self.prefer_domains):
+                        result["score"] = 1.5
+
+                results.append(result)
+
+            # Sort by score (preferred domains first)
+            results.sort(key=lambda x: x.get("score", 1.0), reverse=True)
+
+            if results:
+                print(f"🔍 DuckDuckGo returned {len(results)} results")
+
             return results
 
-        # Fallback to SearXNG if DDG returns nothing
-        return await self._search_searxng_direct(query)
-
-    async def _search_searxng_direct(self, query: str) -> List[Dict]:
-        """Search using self-hosted SearXNG with domain filtering."""
-
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.get(
-                    f"{self.searxng_url}/search",
-                    params={
-                        "q": query,
-                        "format": "json",
-                        "language": self.search_language,
-                        "engines": self.search_engines
-                    }
-                )
-
-                if response.status_code != 200:
-                    print(f"🔍 SearXNG error: {response.status_code}")
-                    return []
-
-                data = response.json()
-                results = []
-
-                for r in data.get("results", []):
-                    url = r.get("url", "")
-
-                    # Apply domain filtering
-                    if self.exclude_domains:
-                        if any(domain in url for domain in self.exclude_domains):
-                            continue
-
-                    result = {
-                        "title": r.get("title", ""),
-                        "url": url,
-                        "snippet": r.get("content", ""),
-                        "engine": r.get("engine", ""),
-                        "score": 1.0  # Base score
-                    }
-
-                    # Boost preferred domains
-                    if self.prefer_domains:
-                        if any(domain in url for domain in self.prefer_domains):
-                            result["score"] = 1.5  # Prefer quality sources
-
-                    results.append(result)
-
-                # Sort by score (preferred domains first)
-                results.sort(key=lambda x: x.get("score", 1.0), reverse=True)
-
-                return results[:self.max_results]
-
-        except httpx.ConnectError:
-            print(f"🔍 SearXNG not available at {self.searxng_url}")
-            return []
+        except ImportError:
+            print("🔍 duckduckgo-search not installed. Run: pip install duckduckgo-search")
+            return await self._search_ddg_api(query)
         except Exception as e:
-            print(f"🔍 SearXNG error: {e}")
-            return []
+            print(f"🔍 DuckDuckGo error: {e}")
+            # Fallback to instant answers API
+            return await self._search_ddg_api(query)
 
-    async def _search_ddg(self, query: str) -> List[Dict]:
-        """Primary search: DuckDuckGo instant answers API (reliable, no setup required)."""
-        
+    async def _search_ddg_api(self, query: str) -> List[Dict]:
+        """Fallback: DuckDuckGo instant answers API (limited but reliable)."""
+
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.get(
                     "https://api.duckduckgo.com/",
                     params={"q": query, "format": "json", "no_html": 1}
                 )
-                
+
                 if response.status_code != 200:
                     return []
-                
+
                 data = response.json()
                 results = []
-                
+
                 # Abstract (main result)
                 if data.get("Abstract"):
                     results.append({
                         "title": data.get("Heading", query),
                         "url": data.get("AbstractURL", ""),
                         "snippet": data.get("Abstract", ""),
-                        "engine": "duckduckgo",
+                        "engine": "duckduckgo_api",
                     })
-                
+
                 # Related topics
                 for topic in data.get("RelatedTopics", [])[:5]:
                     if isinstance(topic, dict) and topic.get("Text"):
@@ -3226,13 +3213,13 @@ Example: ["query one", "query two", "query three"]"""
                             "title": topic.get("Text", "")[:100],
                             "url": topic.get("FirstURL", ""),
                             "snippet": topic.get("Text", ""),
-                            "engine": "duckduckgo",
+                            "engine": "duckduckgo_api",
                         })
-                
+
                 return results
-                
+
         except Exception as e:
-            print(f"🔍 DDG fallback error: {e}")
+            print(f"🔍 DDG API error: {e}")
             return []
     
     async def _synthesize_results(self, desire: str, results: List[Dict]) -> str:

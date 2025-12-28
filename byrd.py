@@ -413,6 +413,13 @@ class BYRD:
                 await self.safety_monitor.initialize()
                 print("🛡️ SafetyMonitor: initialized with immutable core")
 
+            # Seed Goal Evolver with initial goals from kernel
+            if self.omega and self.kernel.initial_goals:
+                goal_descriptions = self.kernel.get_goal_descriptions()
+                seeded_count = await self.omega.seed_initial_goals(goal_descriptions)
+                if seeded_count > 0:
+                    print(f"🎯 Goal Evolver: seeded with {seeded_count} initial goals from kernel")
+
             # Get stats
             stats = await self.memory.stats()
             print(f"   Nodes: {sum(stats.values())} total")

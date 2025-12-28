@@ -22,6 +22,15 @@ class KernelSeed:
 
 
 @dataclass
+class InitialGoal:
+    """An initial goal for the Goal Evolver population."""
+    description: str
+    domain: str
+    priority: str = "medium"
+    success_criteria: str = ""
+
+
+@dataclass
 class Kernel:
     """
     The kernel configuration for BYRD.
@@ -33,6 +42,7 @@ class Kernel:
     - constraints: Operational constraints
     - capability_instructions: How to use each major capability
     - seeds: Initial beliefs/desires to plant
+    - initial_goals: Goals to seed the Goal Evolver population
     """
     name: str
     version: int
@@ -42,6 +52,7 @@ class Kernel:
     constraints: List[str]
     capability_instructions: Dict[str, str]
     seeds: List[KernelSeed]
+    initial_goals: List[InitialGoal] = field(default_factory=list)
     template_type: str = "agi_seed"
 
     def get_voice(self) -> str:
@@ -67,8 +78,21 @@ class Kernel:
                 }
                 for s in self.seeds
             ],
+            "initial_goals": [
+                {
+                    "description": g.description,
+                    "domain": g.domain,
+                    "priority": g.priority,
+                    "success_criteria": g.success_criteria
+                }
+                for g in self.initial_goals
+            ],
             "template_type": self.template_type
         }
+
+    def get_goal_descriptions(self) -> List[str]:
+        """Get list of initial goal descriptions for seeding Goal Evolver."""
+        return [g.description for g in self.initial_goals]
 
 
 def load_kernel(kernel_path: str = None) -> Kernel:
@@ -102,6 +126,16 @@ def load_kernel(kernel_path: str = None) -> Kernel:
             intensity=seed_data.get("intensity")
         ))
 
+    # Parse initial goals for Goal Evolver
+    initial_goals = []
+    for goal_data in data.get("initial_goals", []):
+        initial_goals.append(InitialGoal(
+            description=goal_data.get("description", ""),
+            domain=goal_data.get("domain", "general"),
+            priority=goal_data.get("priority", "medium"),
+            success_criteria=goal_data.get("success_criteria", "")
+        ))
+
     return Kernel(
         name=data.get("name", "Unknown"),
         version=data.get("version", 1),
@@ -111,6 +145,7 @@ def load_kernel(kernel_path: str = None) -> Kernel:
         constraints=data.get("constraints", []),
         capability_instructions=data.get("capability_instructions", {}),
         seeds=seeds,
+        initial_goals=initial_goals,
         template_type=data.get("template_type", "agi_seed")
     )
 
@@ -121,4 +156,4 @@ def load_default_kernel() -> Kernel:
 
 
 # Export main classes
-__all__ = ["Kernel", "KernelSeed", "load_kernel", "load_default_kernel"]
+__all__ = ["Kernel", "KernelSeed", "InitialGoal", "load_kernel", "load_default_kernel"]

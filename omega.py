@@ -136,6 +136,52 @@ class BYRDOmega:
         self._capability_history: List[Tuple[datetime, float]] = []
         self._max_history = 1000
 
+        # Track if goals have been seeded
+        self._goals_seeded = False
+
+    async def seed_initial_goals(self, goal_descriptions: List[str]) -> int:
+        """
+        Seed the Goal Evolver with initial goals from the kernel.
+
+        This should be called once at startup to populate the goal population.
+        Without goals, the Goal Evolver has nothing to evolve.
+
+        Args:
+            goal_descriptions: List of goal descriptions from kernel.initial_goals
+
+        Returns:
+            Number of goals created
+        """
+        if self._goals_seeded:
+            return 0
+
+        if not self.goal_evolver:
+            return 0
+
+        # Check if there are already goals in the population
+        existing = await self.goal_evolver.get_current_population()
+        if len(existing) >= 5:  # Already have a decent population
+            self._goals_seeded = True
+            return 0
+
+        # Seed with initial goals
+        if goal_descriptions:
+            goal_ids = await self.goal_evolver.create_initial_population(goal_descriptions)
+            self._goals_seeded = True
+
+            await event_bus.emit(Event(
+                type=EventType.GOAL_EVOLVED,
+                data={
+                    "event": "goals_seeded",
+                    "count": len(goal_ids),
+                    "source": "kernel_initial_goals"
+                }
+            ))
+
+            return len(goal_ids)
+
+        return 0
+
     @property
     def mode(self) -> OperatingMode:
         """Get current operating mode."""
