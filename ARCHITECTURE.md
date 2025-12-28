@@ -425,6 +425,82 @@ The Omega cycle runs learning component updates:
 
 ---
 
+## AGI Execution Engine (UNIFIED_AGI_PLAN)
+
+The AGI Runner implements an 8-step improvement cycle that closes the loop between assessment, hypothesis, prediction, execution, and learning.
+
+### AGI Runner (`agi_runner.py`)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     AGI IMPROVEMENT CYCLE                        │
+│                                                                  │
+│   ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐           │
+│   │ ASSESS  │→ │IDENTIFY │→ │GENERATE │→ │ PREDICT │           │
+│   │         │  │         │  │         │  │         │           │
+│   │ Bayesian│  │ Highest │  │Hypothesis│ │ Store   │           │
+│   │ caps    │  │ uncert. │  │ creation │ │ expected│           │
+│   └─────────┘  └─────────┘  └─────────┘  └─────────┘           │
+│                                                                  │
+│   ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐           │
+│   │ LEARN   │← │ MEASURE │← │ EXECUTE │← │ VERIFY  │           │
+│   │         │  │         │  │         │  │         │           │
+│   │ Update  │  │ Ground  │  │ Run     │  │ Safety  │           │
+│   │ priors  │  │ truth   │  │ change  │  │ checks  │           │
+│   └─────────┘  └─────────┘  └─────────┘  └─────────┘           │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Desire Classifier (`desire_classifier.py`)
+
+Routes desires to appropriate handlers:
+
+| Desire Type | Route To | Purpose |
+|-------------|----------|---------|
+| `philosophical` | Reflection | Deep introspection |
+| `capability` | AGI Runner | Improvement cycle |
+| `action` | Seeker | Direct execution |
+| `meta` | AGI Runner | Meta-cognition |
+
+### Capability Evaluator (`capability_evaluator.py`)
+
+Provides ground-truth measurement with held-out test suites for 7 capabilities:
+- `reasoning`, `memory`, `learning`, `research`, `self_modification`, `prediction`, `metacognition`
+
+### Learning Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| **Hierarchical Memory** | `hierarchical_memory.py` | L0-L4 abstraction (Experience→Pattern→Principle→Axiom→MetaAxiom) |
+| **Intuition Network** | `intuition_network.py` | Trainable "taste" using semantic similarity |
+| **Learned Retriever** | `learned_retriever.py` | Learns relevance from query-result feedback |
+| **Emergent Categories** | `emergent_categories.py` | Discovers categories from behavior clustering |
+| **Code Learner** | `code_learner.py` | Converts stable patterns (10+ uses, 80%+ success) to Python |
+
+### Bayesian Capability Tracking (`self_model.py`)
+
+Uses Beta distribution for capability confidence:
+```python
+# Update after success/failure
+self._alpha[capability] += 1 if success else 0
+self._beta[capability] += 0 if success else 1
+
+# Posterior mean
+mean = alpha / (alpha + beta)
+
+# Uncertainty (higher = explore more)
+uncertainty = sqrt(alpha * beta / ((alpha + beta)^2 * (alpha + beta + 1)))
+```
+
+### Training Hooks (`omega.py`)
+
+The Omega cycle runs learning component updates:
+- **Every cycle**: GNN training, Intuition Network update
+- **Every 10 cycles**: Hierarchical Memory consolidation
+- **Every 20 cycles**: Code Learner codification
+
+---
+
 ## Option B: Compounding Loops
 
 BYRD implements five experimental compounding loops for accelerated improvement:
