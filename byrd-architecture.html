@@ -786,7 +786,7 @@
           </div>
         </div>
         <div class="text-xs text-slate-500">
-          ARCHITECTURE.md v3.1
+          ARCHITECTURE.md v3.2
         </div>
       </div>
     </div>
@@ -803,7 +803,7 @@
     let selectedModule = null;
     let animationPaused = false;
 
-    // Component information based on ARCHITECTURE.md v3.1
+    // Component information based on ARCHITECTURE.md v3.2
     const LOOP_INFO = {
       // Core Components
       Dreamer: {
@@ -866,10 +866,10 @@
       },
       LearningSubstrate: {
         name: 'Learning Substrate',
-        description: 'Six learning components: Hierarchical Memory (L0-L4), Intuition Network, Learned Retriever, Emergent Categories, Code Learner, World Model.',
+        description: 'Six learning components wired into Omega training hooks: HierarchicalMemory (L0-L4), IntuitionNetwork, StructuralLearner (GNN), CodeLearner, LearnedRetriever, EmergentCategories.',
         color: '#818cf8',
-        mechanism: 'Experience→Pattern→Principle→Axiom abstraction | Pattern codification (10+ uses, 80%+ success)',
-        successMetric: 'Patterns codified',
+        mechanism: 'GNN every cycle | HierarchicalMemory every 10 cycles | CodeLearner every 20 cycles | Pattern codification (10+ uses, 80%+ success)',
+        successMetric: 'Training metrics in /api/metrics: gnn.loss, hierarchical_memory.consolidation_run, code_learner.patterns_codified',
         plateauWarning: 'No new patterns for 100 cycles'
       },
       CapabilityEvaluator: {
