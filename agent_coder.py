@@ -736,6 +736,33 @@ Finish: {{"tool":"finish","args":{{"success":true,"message":"done"}},"t":"ok"}}
         # Parse response
         parsed = self._parse_agent_response(response_text)
 
+        # Detect wrong format (LLM used reflection format instead of agent format)
+        if not parsed and '"output"' in response_text and '"tool"' not in response_text:
+            print(f"  ⚠️ Wrong format detected - LLM used reflection format, retrying with correction...")
+            # Retry with stronger format instruction
+            correction_prompt = f"""CRITICAL: You must output ONLY a JSON object with "tool" key.
+
+Your previous response used the wrong format. Do NOT use {{"output": ...}}
+
+CORRECT FORMAT (copy this structure exactly):
+{{"tool":"read_file","args":{{"path":"some/file.py"}},"t":"reading file"}}
+
+Available tools: read_file, write_file, edit_file, list_files, search_code, get_file_info, finish
+
+Now respond with ONLY the JSON object. No markdown, no explanation."""
+
+            try:
+                response = await self.llm_client.generate(
+                    prompt=correction_prompt,
+                    temperature=0.1,  # Lower temp for format compliance
+                    max_tokens=500,   # Shorter response needed
+                    system_message="You are a JSON-only responder. Output ONLY valid JSON with 'tool', 'args', 't' keys."
+                )
+                response_text = response.text if hasattr(response, 'text') else str(response)
+                parsed = self._parse_agent_response(response_text)
+            except Exception as e:
+                print(f"  ⚠️ Retry failed: {e}")
+
         if not parsed:
             # Debug: log full response length and whether it contains "tool"
             has_tool = '"tool"' in response_text
