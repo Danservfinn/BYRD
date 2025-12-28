@@ -3487,6 +3487,9 @@ class Memory:
         These are isolated memories that haven't been integrated into
         BYRD's knowledge graph through beliefs, reflections, or desires.
 
+        Drift nodes (reconciliation_attempts >= 3) are excluded to prevent
+        wasting cycles on nodes that consistently fail to reconcile.
+
         Args:
             limit: Maximum number of orphaned experiences to return
             min_content_length: Minimum content length to consider (filters noise)
@@ -3503,6 +3506,7 @@ class Memory:
                     WHERE NOT (e)--()
                     AND size(e.content) >= $min_len
                     AND NOT coalesce(e.archived, false)
+                    AND (coalesce(e.reconciliation_attempts, 0) < 3)
                     RETURN e.id as id, e.content as content,
                            e.type as type, e.timestamp as timestamp
                     ORDER BY e.timestamp DESC
@@ -3653,6 +3657,9 @@ class Memory:
                     limit=3  # Connect to top 3 similar beliefs max
                 )
 
+                # Track drift: increment reconciliation_attempts if no connections made
+                connection_created_for_orphan = False
+
                 for belief in similar_beliefs:
                     if connections_made >= max_conns:
                         break
@@ -3678,8 +3685,14 @@ class Memory:
                             }
                         )
                         connections_made += 1
+                        connection_created_for_orphan = True
 
                     result["connections"].append(connection_detail)
+
+                # Drift node tracking: increment counter if no connection was made
+                if not dry_run and not connection_created_for_orphan:
+                    # Get current reconciliation attempts and increment
+                    await self._increment_reconciliation_attempts(orphan["id"])
 
                     if not dry_run:
                         result["connections_created"] = connections_made
@@ -3701,6 +3714,35 @@ class Memory:
             print(f"Error applying connection heuristic: {e}")
             result["error"] = str(e)
             return result
+
+    async def _increment_reconciliation_attempts(self, node_id: str) -> bool:
+        """
+        Increment the reconciliation_attempts counter for a node to track drift.
+
+        This is used to identify "drift nodes" - orphaned experiences that
+        consistently fail to connect to other nodes despite multiple attempts.
+        Nodes with 3+ failed attempts are excluded from future reconciliation
+        to prevent wasting computational cycles.
+
+        Args:
+            node_id: The ID of the experience node to increment
+
+        Returns:
+            True if increment succeeded, False otherwise
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (n {id: $id})
+                    SET n.reconciliation_attempts = coalesce(n.reconciliation_attempts, 0) + 1,
+                        n.updated_at = $updated_at
+                    RETURN n.reconciliation_attempts as attempts
+                """, id=node_id, updated_at=datetime.now().isoformat())
+                record = await result.single()
+                return record is not None
+        except Exception as e:
+            print(f"Error incrementing reconciliation attempts for node {node_id}: {e}")
+            return False
 
     async def get_connection_statistics(self) -> Dict:
         """

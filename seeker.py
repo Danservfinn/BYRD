@@ -1553,6 +1553,19 @@ Output JSON: {{"learnings": ["learning 1", "learning 2"]}}
                 "conflicts": await self.memory.find_conflicting_beliefs()
             }
 
+            # Explicitly filter out drift nodes (reconciliation_attempts >= 3)
+            # These nodes have failed to reconcile multiple times and should be skipped
+            # to prevent wasting cycles on persistent integration failures
+            drift_threshold = 3
+            orphans_before = len(issues["orphans"])
+            issues["orphans"] = [
+                orphan for orphan in issues["orphans"]
+                if orphan.get("reconciliation_attempts", 0) < drift_threshold
+            ]
+            orphans_after = len(issues["orphans"])
+            if orphans_before > orphans_after:
+                print(f"⚠️  Skipped {orphans_before - orphans_after} drift nodes (reconciliation_attempts >= {drift_threshold})")
+
             # Count total issues
             total_issues = sum(len(v) for v in issues.values())
 
@@ -1724,6 +1737,25 @@ If no action needed, return: {{"rationale": "reason", "actions": []}}
                 return True
 
             print(f"🔗 Found {initial_orphans} orphaned experiences, applying multi-phase reconciliation...")
+
+            # Filter out drift nodes (reconciliation_attempts >= 3)
+            # These nodes have failed to reconcile multiple times and should be skipped
+            # to prevent wasting cycles on persistent integration failures
+            drift_threshold = 3
+            orphans = await self.memory.get_orphaned_experiences(limit=1000)
+            orphans_before = len(orphans)
+            orphans = [o for o in orphans if o.get("reconciliation_attempts", 0) < drift_threshold]
+            orphans_after = len(orphans)
+            if orphans_before > orphans_after:
+                print(f"⚠️  Skipped {orphans_before - orphans_after} drift nodes (reconciliation_attempts >= {drift_threshold})")
+                initial_orphans = orphans_after
+                if initial_orphans == 0:
+                    await self.memory.record_experience(
+                        content=f"[ORPHAN_RECONCILIATION_COMPLETE] No orphaned experiences found after filtering drift nodes.",
+                        type="reconciliation_success"
+                    )
+                    print(f"✅ No orphans to reconcile - graph is healthy")
+                    return True
 
             total_connections_made = 0
 
