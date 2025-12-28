@@ -680,36 +680,51 @@
   </div>
 
   <!-- Side Panel -->
-  <div class="fixed top-24 right-4 bottom-4 w-72 overflow-hidden flex flex-col gap-4">
-    <!-- Loops Panel -->
+  <div class="fixed top-24 right-4 bottom-4 w-72 overflow-hidden flex flex-col gap-3">
+    <!-- Architecture Layers Panel -->
     <div class="glass-panel p-4 flex-1 overflow-y-auto">
-      <h2 class="text-lg font-semibold text-white mb-3">Five Compounding Loops</h2>
-      <div id="loops-list" class="space-y-2">
+      <h2 class="text-lg font-semibold text-white mb-3">Architecture Layers</h2>
+
+      <!-- Core Components -->
+      <h3 class="text-xs font-semibold text-slate-500 mb-2">CORE COMPONENTS</h3>
+      <div id="core-list" class="space-y-1 mb-4">
         <!-- Populated by JS -->
       </div>
 
-      <!-- Acceleration Metrics -->
-      <h3 class="text-sm font-semibold text-slate-400 mt-5 mb-3">Acceleration Metrics</h3>
-      <div id="metrics-panel" class="space-y-3">
+      <!-- AGI Execution Engine -->
+      <h3 class="text-xs font-semibold text-slate-500 mb-2">AGI EXECUTION ENGINE</h3>
+      <div id="agi-list" class="space-y-1 mb-4">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- Option B Loops -->
+      <h3 class="text-xs font-semibold text-slate-500 mb-2">OPTION B LOOPS</h3>
+      <div id="loops-list" class="space-y-1 mb-4">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- Metrics -->
+      <h3 class="text-xs font-semibold text-slate-500 mt-4 mb-2">ACCELERATION METRICS</h3>
+      <div id="metrics-panel" class="space-y-2">
         <!-- Populated by JS -->
       </div>
     </div>
 
     <!-- Kill Criteria Panel -->
-    <div class="glass-panel p-4">
-      <h3 class="text-sm font-semibold text-white mb-2">Kill Criteria Status</h3>
-      <div id="kill-criteria" class="space-y-2 text-xs">
+    <div class="glass-panel p-3">
+      <h3 class="text-sm font-semibold text-white mb-2">Kill Criteria</h3>
+      <div id="kill-criteria" class="space-y-1 text-xs">
         <div class="flex justify-between items-center">
           <span class="text-slate-400">Zero growth</span>
-          <span class="text-green-400">OK (4 week limit)</span>
+          <span class="text-green-400">OK</span>
         </div>
         <div class="flex justify-between items-center">
           <span class="text-slate-400">LLM efficiency</span>
-          <span class="text-green-400">OK (6 week limit)</span>
+          <span class="text-green-400">OK</span>
         </div>
         <div class="flex justify-between items-center">
-          <span class="text-slate-400">All loops failing</span>
-          <span class="text-green-400">OK (4 week limit)</span>
+          <span class="text-slate-400">Loops failing</span>
+          <span class="text-green-400">OK</span>
         </div>
       </div>
     </div>
@@ -736,28 +751,32 @@
 
   <!-- Legend -->
   <div class="fixed bottom-4 left-4 right-80">
-    <div class="glass-panel px-4 py-3">
-      <div class="flex items-center justify-between flex-wrap gap-3">
-        <div class="flex gap-4 flex-wrap">
+    <div class="glass-panel px-4 py-2">
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <div class="flex gap-3 flex-wrap">
           <div class="legend-item">
             <div class="legend-line" style="background: #3b82f6;"></div>
-            <span>Context Flow</span>
+            <span>Memory Flow</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-line" style="background: #f59e0b;"></div>
+            <span>AGI Runner</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-line" style="background: #818cf8;"></div>
+            <span>Learning</span>
           </div>
           <div class="legend-item">
             <div class="legend-line" style="background: #22c55e;"></div>
-            <span>Goal→Compiler (Multiplicative)</span>
+            <span>Multiplicative</span>
           </div>
           <div class="legend-item">
-            <div class="legend-line" style="background: #64748b;"></div>
-            <span>Additive Coupling</span>
-          </div>
-          <div class="legend-item">
-            <div class="legend-line" style="background: #a78bfa;"></div>
-            <span>Identity</span>
+            <div class="legend-line" style="background: #ef4444;"></div>
+            <span>Safety/Omega</span>
           </div>
         </div>
         <div class="text-xs text-slate-500">
-          Based on ARCHITECTURE.md
+          ARCHITECTURE.md v3.0
         </div>
       </div>
     </div>
@@ -774,84 +793,208 @@
     let selectedModule = null;
     let animationPaused = false;
 
-    // Loop information based on ARCHITECTURE.md
+    // Component information based on ARCHITECTURE.md v3.0
     const LOOP_INFO = {
+      // Core Components
+      Dreamer: {
+        name: 'Dreamer',
+        description: 'Runs continuously in the background. Takes recent experiences, finds related memories, reflects. Outputs beliefs, desires, OS updates.',
+        color: '#a855f7',
+        mechanism: 'Quantum-modulated temperature → semantic search → meta-schema reflection → new beliefs/desires',
+        successMetric: 'Desire generation rate',
+        plateauWarning: 'N/A'
+      },
+      Seeker: {
+        name: 'Seeker',
+        description: 'Fulfills desires autonomously through strategy routing: introspection, research, code, self-modify, crystallize.',
+        color: '#3b82f6',
+        mechanism: 'Desire → classify intent → route to strategy → execute → record experience',
+        successMetric: 'Desire fulfillment rate',
+        plateauWarning: 'N/A'
+      },
+      Actor: {
+        name: 'Actor',
+        description: 'Claude API interface for complex reasoning, user chat, and goal pursuit requiring frontier intelligence.',
+        color: '#06b6d4',
+        mechanism: 'On-demand reasoning for complex tasks and user interaction',
+        successMetric: 'Response quality',
+        plateauWarning: 'N/A'
+      },
+      Coder: {
+        name: 'Coder',
+        description: 'Autonomous coding agent via Claude Code CLI. Post-validates against constitutional constraints. Auto-rollback on protected file touch.',
+        color: '#10b981',
+        mechanism: 'Code request → generate → constitutional check → apply/rollback',
+        successMetric: 'Modification success rate',
+        plateauWarning: 'N/A'
+      },
+      Voice: {
+        name: 'Voice',
+        description: 'ElevenLabs TTS integration. Voice Design API for creating unique voices. Voice emerges through self-reflection.',
+        color: '#ec4899',
+        mechanism: 'Text-to-speech with emergent voice characteristics',
+        successMetric: 'Voice coherence',
+        plateauWarning: 'N/A'
+      },
+
+      // AGI Execution Engine
+      AGIRunner: {
+        name: 'AGI Runner',
+        description: '8-step improvement cycle: ASSESS → IDENTIFY → GENERATE → PREDICT → VERIFY → EXECUTE → MEASURE → LEARN. Closes the loop between assessment and learning.',
+        color: '#f59e0b',
+        mechanism: 'Bayesian capability assessment → hypothesis generation → prediction storage → safety verification → execution → ground-truth measurement → prior update',
+        successMetric: 'Capability improvement rate',
+        plateauWarning: 'Flat for 10+ cycles'
+      },
+      DesireClassifier: {
+        name: 'Desire Classifier',
+        description: 'Routes desires to appropriate handlers: philosophical→dreamer, capability→AGI runner, action→seeker, meta→AGI runner.',
+        color: '#14b8a6',
+        mechanism: 'Keyword-based classification with confidence scoring and routing statistics',
+        successMetric: 'Routing accuracy',
+        plateauWarning: 'N/A'
+      },
+      LearningSubstrate: {
+        name: 'Learning Substrate',
+        description: 'Six learning components: Hierarchical Memory (L0-L4), Intuition Network, Learned Retriever, Emergent Categories, Code Learner, World Model.',
+        color: '#818cf8',
+        mechanism: 'Experience→Pattern→Principle→Axiom abstraction | Pattern codification (10+ uses, 80%+ success)',
+        successMetric: 'Patterns codified',
+        plateauWarning: 'No new patterns for 100 cycles'
+      },
+      CapabilityEvaluator: {
+        name: 'Capability Evaluator',
+        description: 'Ground-truth measurement with held-out test suites for 7 capabilities: reasoning, memory, learning, research, self_modification, prediction, metacognition.',
+        color: '#f59e0b',
+        mechanism: 'Held-out test suites → objective measurement → Bayesian update',
+        successMetric: 'Test coverage',
+        plateauWarning: 'N/A'
+      },
+
+      // Option B Compounding Loops
       SelfCompiler: {
         name: 'Self-Compiler',
         description: 'Extracts reusable patterns from successful modifications, making future modifications more likely to succeed.',
         color: '#f43f5e',
         mechanism: 'Pattern library grows → future problems have more relevant patterns → higher success rate → more patterns extracted',
-        successMetric: 'Modification success rate > 50%',
+        successMetric: 'patterns_created > 0',
         plateauWarning: 'Flat at < 40%'
       },
       MemoryReasoner: {
         name: 'Memory Reasoner',
-        description: 'Answers queries from the graph before calling the LLM, making each LLM call more valuable.',
+        description: 'Graph-based reasoning using spreading activation. Answers queries from memory before calling LLM.',
         color: '#06b6d4',
         mechanism: 'More experiences → richer graph → more queries answered from memory → LLM calls reserved for novel problems',
-        successMetric: 'Memory reasoning ratio > 50%',
+        successMetric: 'memory_ratio > 50%',
         plateauWarning: 'Flat at < 30%'
       },
       GoalEvolver: {
         name: 'Goal Evolver',
-        description: 'Goals evolve through fitness selection, producing increasingly effective goals.',
+        description: 'Evolutionary goal optimization. Goals compete and evolve based on fitness selection.',
         color: '#22c55e',
         mechanism: 'Fitness-weighted selection → better goals survive → system pursues more valuable objectives',
-        successMetric: 'Average fitness increasing per generation',
+        successMetric: 'avg_fitness increasing',
         plateauWarning: 'Fitness flat for 5+ generations'
       },
       DreamingMachine: {
         name: 'Dreaming Machine',
-        description: 'Generates counterfactual experiences and hypotheses, multiplying learning from each real experience.',
+        description: 'Generates counterfactual experiences. Multiplies learning from each real experience.',
         color: '#fbbf24',
         mechanism: 'One experience → N imagined variations → N+1 learning opportunities',
-        successMetric: 'Insight extraction rate > 15%',
+        successMetric: 'insights_extracted > 0',
         plateauWarning: 'Rate < 10%'
       },
       IntegrationMind: {
         name: 'Integration Mind',
-        description: 'Enables cross-loop synergies that produce emergent behaviors.',
+        description: 'Meta-orchestration layer. Measures coupling between loops and allocates resources based on mode.',
         color: '#14b8a6',
         mechanism: 'If loops reinforce each other, combined value > sum of parts',
-        successMetric: 'Emergent behaviors > 0',
+        successMetric: 'coupling_correlation > 0.3',
         plateauWarning: 'None observed after week 4'
       },
+
+      // Infrastructure
       Memory: {
         name: 'Unified Memory',
-        description: 'Neo4j graph database. Single source of truth for all experiences, patterns, goals, beliefs, and capabilities.',
+        description: 'Neo4j graph database. Single source of truth: Experiences, Reflections, Beliefs, Desires, Capabilities, Crystals, OperatingSystem.',
         color: '#3b82f6',
-        mechanism: 'All state, all learning, all provenance stored in graph',
+        mechanism: 'All state, all learning, all provenance stored in graph. Semantic search + hierarchical summaries.',
         successMetric: 'Graph connectivity',
         plateauWarning: 'N/A'
       },
       Kernel: {
-        name: 'The Kernel',
-        description: 'BYRD\'s operating nucleus—a single Neo4j node read at the START of every dream cycle containing voice, identity, values, and constraints.',
+        name: 'Kernel',
+        description: 'Python config from kernel/agi_seed.yaml. Defines awakening_prompt, identity, values, constraints, initial_goals. Informs OS at awakening.',
         color: '#a78bfa',
-        mechanism: 'Loaded at start of each dream cycle to ground reflection in core identity',
+        mechanism: 'Loaded at startup to ground BYRD in core identity and seed Goal Evolver',
         successMetric: 'Identity coherence',
+        plateauWarning: 'N/A'
+      },
+      SelfModel: {
+        name: 'Self-Model',
+        description: 'Bayesian capability tracking using Beta distribution. Tracks 7 capabilities with uncertainty-driven exploration.',
+        color: '#fbbf24',
+        mechanism: 'Success/failure → update alpha/beta → posterior mean + uncertainty → exploration targeting',
+        successMetric: 'Uncertainty reduction',
         plateauWarning: 'N/A'
       },
       Omega: {
         name: 'BYRD Omega',
-        description: 'The orchestrator that manages mode transitions, safety monitoring, coupling tracking, and metrics collection.',
+        description: 'Master orchestrator. Mode controller, safety monitor, coupling tracker, kill criteria. Training hooks every cycle (GNN), every 10 (Memory L4), every 20 (Codification).',
         color: '#ef4444',
-        mechanism: 'Coordinates all loops, manages state transitions, ensures safety',
+        mechanism: 'AWAKE→DREAMING→EVOLVING→COMPILING mode transitions with resource allocation',
         successMetric: 'System health',
+        plateauWarning: 'N/A'
+      },
+      SelfModifier: {
+        name: 'Self-Modifier',
+        description: 'Enables BYRD to modify its own code. Verifies modification traces to emergent desire. Creates checkpoints, runs health checks.',
+        color: '#ef4444',
+        mechanism: 'Desire verification → checkpoint → modify → health check → record experience',
+        successMetric: 'Safe modifications',
+        plateauWarning: 'N/A'
+      },
+      SafetyMonitor: {
+        name: 'Safety Monitor',
+        description: 'PROTECTED component. Enforces constitutional constraints. Verifies goal preservation and blocks dangerous patterns.',
+        color: '#ef4444',
+        mechanism: 'Pre-modification checks + dangerous pattern detection + rollback triggers',
+        successMetric: 'Constraint violations = 0',
         plateauWarning: 'N/A'
       }
     };
 
     // Flow connections for highlighting
     const FLOW_CONNECTIONS = {
-      Memory: ['SelfCompiler', 'MemoryReasoner', 'GoalEvolver', 'DreamingMachine', 'IntegrationMind', 'Kernel'],
+      // Infrastructure layer
+      Memory: ['Dreamer', 'Seeker', 'Actor', 'Coder', 'Kernel', 'SelfModel'],
       Kernel: ['Memory'],
-      SelfCompiler: ['Memory', 'Omega', 'GoalEvolver'],
-      MemoryReasoner: ['Memory', 'Omega', 'DreamingMachine'],
-      GoalEvolver: ['Memory', 'Omega', 'SelfCompiler'],
-      DreamingMachine: ['Memory', 'Omega', 'MemoryReasoner'],
-      IntegrationMind: ['Memory', 'Omega'],
-      Omega: ['SelfCompiler', 'MemoryReasoner', 'GoalEvolver', 'DreamingMachine', 'IntegrationMind']
+      SelfModel: ['Kernel', 'AGIRunner', 'CapabilityEvaluator'],
+
+      // Core Components
+      Dreamer: ['Memory', 'Seeker'],
+      Seeker: ['Memory', 'DesireClassifier', 'AGIRunner'],
+      Actor: ['Memory'],
+      Coder: ['Memory', 'SelfModifier', 'SafetyMonitor'],
+      Voice: ['Memory'],
+
+      // AGI Execution Engine
+      AGIRunner: ['LearningSubstrate', 'CapabilityEvaluator', 'MemoryReasoner', 'SelfCompiler', 'GoalEvolver'],
+      DesireClassifier: ['Dreamer', 'Seeker', 'AGIRunner'],
+      LearningSubstrate: ['DreamingMachine', 'IntegrationMind', 'Omega'],
+      CapabilityEvaluator: ['AGIRunner', 'SelfModel'],
+
+      // Option B Loops
+      SelfCompiler: ['AGIRunner', 'Omega', 'GoalEvolver'],
+      MemoryReasoner: ['AGIRunner', 'Omega', 'Memory'],
+      GoalEvolver: ['AGIRunner', 'Omega', 'SelfCompiler'],
+      DreamingMachine: ['LearningSubstrate', 'Omega'],
+      IntegrationMind: ['LearningSubstrate', 'Omega'],
+
+      // Safety & Orchestration
+      Omega: ['SelfCompiler', 'MemoryReasoner', 'GoalEvolver', 'DreamingMachine', 'IntegrationMind', 'LearningSubstrate', 'SelfModifier'],
+      SelfModifier: ['Coder', 'SafetyMonitor', 'Omega'],
+      SafetyMonitor: ['SelfModifier', 'Omega']
     };
 
     // ========================================================================
@@ -1005,9 +1148,41 @@
     }
 
     function renderUI(statusData, omegaData) {
-      // Loops list
+      // Core Components list
+      const coreList = document.getElementById('core-list');
+      const coreComponents = ['Dreamer', 'Seeker', 'Actor', 'Coder', 'Voice'];
+
+      coreList.innerHTML = coreComponents.map(name => {
+        const info = LOOP_INFO[name];
+        return `
+          <div class="loop-card py-2" data-module="${name}" onclick="selectModule('${name}')">
+            <div class="flex items-center justify-between">
+              <span class="font-medium text-xs" style="color: ${info.color}">${info.name}</span>
+              <span class="w-2 h-2 rounded-full bg-green-500"></span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // AGI Execution Engine list
+      const agiList = document.getElementById('agi-list');
+      const agiComponents = ['AGIRunner', 'DesireClassifier', 'LearningSubstrate', 'CapabilityEvaluator'];
+
+      agiList.innerHTML = agiComponents.map(name => {
+        const info = LOOP_INFO[name];
+        return `
+          <div class="loop-card py-2" data-module="${name}" onclick="selectModule('${name}')">
+            <div class="flex items-center justify-between">
+              <span class="font-medium text-xs" style="color: ${info.color}">${info.name}</span>
+              <span class="w-2 h-2 rounded-full bg-green-500"></span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Option B Loops list
       const loopsList = document.getElementById('loops-list');
-      const loops = ['SelfCompiler', 'MemoryReasoner', 'GoalEvolver', 'DreamingMachine', 'IntegrationMind'];
+      const loops = ['MemoryReasoner', 'SelfCompiler', 'GoalEvolver', 'DreamingMachine', 'IntegrationMind'];
 
       loopsList.innerHTML = loops.map(name => {
         const info = LOOP_INFO[name];
@@ -1016,13 +1191,12 @@
         const isHealthy = loopData.is_healthy !== false; // Default to healthy if no data
 
         return `
-          <div class="loop-card" data-module="${name}" onclick="selectModule('${name}')">
-            <div class="flex items-center justify-between mb-1">
-              <span class="font-medium text-sm" style="color: ${info.color}">${info.name}</span>
+          <div class="loop-card py-2" data-module="${name}" onclick="selectModule('${name}')">
+            <div class="flex items-center justify-between">
+              <span class="font-medium text-xs" style="color: ${info.color}">${info.name}</span>
               <span class="w-2 h-2 rounded-full ${isHealthy ? 'bg-green-500' : 'bg-red-500'}"></span>
             </div>
-            <div class="text-xs text-slate-500">${info.successMetric}</div>
-            ${loopData.cycles_completed ? `<div class="text-xs text-slate-600 mt-1">${loopData.cycles_completed} cycles</div>` : ''}
+            <div class="text-xs text-slate-600">${info.successMetric}</div>
           </div>
         `;
       }).join('');
