@@ -127,7 +127,7 @@ class GoalEvolver:
 
         return [
             EvolvedGoal(
-                id=g["id"],
+                id=g.get("id", f"goal_{abs(hash(g.get('description', ''))) % 100000000}"),
                 description=g.get("description", ""),
                 fitness=g.get("fitness", 0.5),
                 generation=g.get("generation", 0),
@@ -139,6 +139,7 @@ class GoalEvolver:
                 attempts=g.get("attempts", 0)
             )
             for g in goals
+            if g.get("description")  # Skip goals without description
         ]
 
     def _parse_criteria(self, criteria: Any) -> Dict:
