@@ -2187,6 +2187,18 @@ async def reset_byrd(request: ResetRequest = None):
         if byrd_instance.quantum_provider:
             byrd_instance.quantum_provider.reset()
 
+        # Reset Option B / AGI components
+        if hasattr(byrd_instance, 'world_model') and byrd_instance.world_model:
+            byrd_instance.world_model.reset()
+        if hasattr(byrd_instance, 'self_model') and byrd_instance.self_model:
+            byrd_instance.self_model.reset()
+        if hasattr(byrd_instance, 'agi_runner') and byrd_instance.agi_runner:
+            byrd_instance.agi_runner.reset()  # Also resets desire_classifier
+        if hasattr(byrd_instance, 'rollback') and byrd_instance.rollback:
+            byrd_instance.rollback.reset()
+        if hasattr(byrd_instance, 'capability_evaluator') and byrd_instance.capability_evaluator:
+            byrd_instance.capability_evaluator.reset()
+
         # 3. Clear memory (Neo4j database) - complete wipe
         await byrd_instance.memory.connect()
         await byrd_instance.memory.clear_all()

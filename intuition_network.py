@@ -88,6 +88,18 @@ class IntuitionNetwork:
         self._total_observations = 0
         self._successful_predictions = 0
 
+    def reset(self):
+        """
+        Reset intuition network state for system reset.
+
+        Clears all learned intuitions and statistics.
+        Note: The encoder model is NOT reset (expensive to reload).
+        Called by server.py during reset_byrd().
+        """
+        self._intuitions.clear()
+        self._total_observations = 0
+        self._successful_predictions = 0
+
     def _encode(self, text: str) -> List[float]:
         """Encode text to embedding vector."""
         if self._has_embeddings and self._encoder:

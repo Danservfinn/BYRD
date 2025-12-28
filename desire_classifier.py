@@ -94,6 +94,17 @@ class DesireClassifier:
         # Learning from feedback (future enhancement)
         self._feedback_buffer: List[Dict] = []
 
+    def reset(self):
+        """
+        Reset classifier state for system reset.
+
+        Clears routing statistics and feedback buffer.
+        Called by AGIRunner.reset() or server.py during reset_byrd().
+        """
+        self._routing_stats = {t: 0 for t in DesireType}
+        self._total_classified = 0
+        self._feedback_buffer.clear()
+
     def classify(self, desire_description: str) -> ClassificationResult:
         """
         Classify a desire and return type with confidence.

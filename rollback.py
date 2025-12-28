@@ -96,6 +96,17 @@ class RollbackSystem:
         self._max_modifications_before_checkpoint = 10
         self._auto_rollback_enabled = True
 
+    def reset(self):
+        """
+        Reset rollback system state for system reset.
+
+        Clears in-memory modification and rollback history.
+        Git state is NOT reset (that's handled by restore_code_from_git).
+        Called by server.py during reset_byrd().
+        """
+        self._modifications.clear()
+        self._rollbacks.clear()
+
     async def initialize(self):
         """Initialize rollback system and verify git is available."""
         # Verify git is available

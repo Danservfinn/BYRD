@@ -101,6 +101,19 @@ class CodeLearner:
         # Load existing codified patterns
         self._load_existing_patterns()
 
+    def reset(self):
+        """
+        Reset code learner state for system reset.
+
+        Clears in-memory registry but preserves learned_strategies/ files.
+        Codified patterns are considered "crystallized knowledge" that
+        persists across resets. Reload from disk to restore registry.
+        Called by server.py during reset_byrd().
+        """
+        self.code_registry.clear()
+        # Reload from disk (codified patterns persist)
+        self._load_existing_patterns()
+
     def _ensure_directories(self):
         """Create learned_strategies directory structure."""
         base = Path(self.LEARNED_STRATEGIES_DIR)

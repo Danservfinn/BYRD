@@ -122,6 +122,27 @@ class AGIRunner:
             'counterfactuals_seeded': 0
         }
 
+    def reset(self):
+        """
+        Reset AGI Runner state for system reset.
+
+        Clears all cycle tracking, bootstrap state, and metrics.
+        Called by server.py during reset_byrd().
+        """
+        self._cycle_count = 0
+        self._improvement_rate = 0.0
+        self._bootstrapped = False
+        self._cycle_history.clear()
+        self._bootstrap_metrics = {
+            'goals_injected': 0,
+            'research_indexed': 0,
+            'patterns_seeded': 0,
+            'counterfactuals_seeded': 0
+        }
+        # Also reset sub-components if they exist
+        if self.desire_classifier:
+            self.desire_classifier.reset()
+
     async def bootstrap_from_current_state(self):
         """
         PHASE 0: Activate dormant Option B loops.

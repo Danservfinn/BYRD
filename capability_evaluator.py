@@ -208,6 +208,17 @@ class CapabilityEvaluator:
         # Custom test suites can be added dynamically
         self._custom_suites: Dict[str, List[TestCase]] = {}
 
+    def reset(self):
+        """
+        Reset evaluator state for system reset.
+
+        Clears evaluation history and custom test suites.
+        Built-in TEST_SUITES are NOT cleared (they're class-level).
+        Called by server.py during reset_byrd().
+        """
+        self._evaluation_history.clear()
+        self._custom_suites.clear()
+
     def get_available_capabilities(self) -> List[str]:
         """Get list of capabilities that can be evaluated."""
         return list(self.TEST_SUITES.keys()) + list(self._custom_suites.keys())

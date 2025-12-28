@@ -97,6 +97,17 @@ class HierarchicalMemory:
         }
         self._total_abstractions = 0
 
+    def reset(self):
+        """
+        Reset hierarchical memory state for system reset.
+
+        Clears promotion statistics. Neo4j nodes are cleared separately
+        by memory.clear_all().
+        Called by server.py during reset_byrd().
+        """
+        self._promotions_by_level = {level: 0 for level in MemoryLevel}
+        self._total_abstractions = 0
+
     async def maybe_promote(self, node_ids: List[str], source_level: MemoryLevel) -> PromotionResult:
         """
         Check if nodes are ready for promotion and promote if so.
