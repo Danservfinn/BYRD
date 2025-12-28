@@ -676,6 +676,24 @@ async def get_status():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/agi/comprehensive")
+async def get_agi_comprehensive_metrics():
+    """Get comprehensive AGI metrics with multi-timescale analysis."""
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    if not byrd_instance.agi_runner:
+        return {"enabled": False, "message": "AGI Runner not enabled"}
+
+    try:
+        metrics = byrd_instance.agi_runner.get_comprehensive_metrics()
+        return {"enabled": True, **metrics}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting AGI metrics: {e}")
+
+
 @app.get("/api/omega/metrics", response_model=OmegaMetricsResponse)
 async def get_omega_metrics():
     """
