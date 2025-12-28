@@ -1176,6 +1176,9 @@
     import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
     import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { Line2 } from 'three/addons/lines/Line2.js';
+    import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+    import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 
     // ==========================================================================
     // CUSTOM SHADERS (Phase 3: Post-processing Effects)
@@ -1606,37 +1609,37 @@
     // Force-directed physics creates natural clustering based on relationships
     // Highly connected nodes gravitate toward center; isolated nodes drift outward
 
-    // Relationship visual styles - bright yellow, fully opaque
+    // Relationship visual styles - dark goldenrod, thick lines
     const RELATIONSHIP_STYLES = {
         DERIVED_FROM: {
-            color: 0xFFFF00,    // Pure bright yellow
+            color: 0xB8860B,    // Dark goldenrod
             opacity: 1.0,
-            width: 1
+            width: 3
         },
         RELATES_TO: {
-            color: 0xFFFF00,    // Pure bright yellow
+            color: 0xB8860B,    // Dark goldenrod
             opacity: 1.0,
-            width: 1
+            width: 3
         },
         FULFILLS: {
-            color: 0xFFFF00,    // Pure bright yellow
+            color: 0xB8860B,    // Dark goldenrod
             opacity: 1.0,
-            width: 1
+            width: 3
         },
         REFLECTS_ON: {
-            color: 0xFFFF00,    // Pure bright yellow
+            color: 0xB8860B,    // Dark goldenrod
             opacity: 1.0,
-            width: 1
+            width: 3
         },
         EMERGES_FROM: {
-            color: 0xFFFF00,    // Pure bright yellow
+            color: 0xB8860B,    // Dark goldenrod
             opacity: 1.0,
-            width: 1
+            width: 3
         },
         default: {
-            color: 0xFFFF00,    // Pure bright yellow
+            color: 0xB8860B,    // Dark goldenrod
             opacity: 1.0,
-            width: 1
+            width: 3
         }
     };
 
@@ -4106,8 +4109,9 @@
     const LINE_CONFIG = {
       baseOpacity: 1.0,       // Full opacity for maximum visibility
       highlightOpacity: 1.0,
-      lineWidth: 1,  // Note: WebGL line width is often limited to 1
-      highlightDuration: 500
+      lineWidth: 3,           // Thick lines using Line2
+      highlightDuration: 500,
+      color: 0xB8860B         // Dark goldenrod - visible on light background
     };
 
     function createConnection3D(nodeA, nodeB, type) {
@@ -4115,23 +4119,24 @@
       incrementConnectionCount(nodeA.userData.id);
       incrementConnectionCount(nodeB.userData.id);
 
-      // Create simple straight line geometry
-      const points = [
-        nodeA.position.clone(),
-        nodeB.position.clone()
+      // Create Line2 geometry for thick lines
+      const positions = [
+        nodeA.position.x, nodeA.position.y, nodeA.position.z,
+        nodeB.position.x, nodeB.position.y, nodeB.position.z
       ];
 
-      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+      const geometry = new LineGeometry();
+      geometry.setPositions(positions);
 
-      // Bright yellow line material for visibility
-      const material = new THREE.LineBasicMaterial({
-        color: 0xFFFF00, // Pure bright yellow
-        transparent: false,
-        opacity: LINE_CONFIG.baseOpacity,
-        linewidth: LINE_CONFIG.lineWidth
+      // Dark goldenrod thick line material
+      const material = new LineMaterial({
+        color: LINE_CONFIG.color,
+        linewidth: LINE_CONFIG.lineWidth,
+        resolution: new THREE.Vector2(window.innerWidth, window.innerHeight)
       });
 
-      const line = new THREE.Line(geometry, material);
+      const line = new Line2(geometry, material);
+      line.computeLineDistances();
       line.userData = {
         nodeA: nodeA.userData.id,
         nodeB: nodeB.userData.id,
@@ -4168,7 +4173,7 @@
       setTimeout(() => {
         if (connection.material) {
           connection.material.opacity = originalOpacity;
-          connection.material.color.setHex(0xFFFF00); // Back to bright yellow
+          connection.material.color.setHex(LINE_CONFIG.color); // Back to dark goldenrod
         }
       }, duration);
     }
@@ -5099,23 +5104,24 @@
         const start = sourceMesh.position.clone();
         const end = targetMesh.position.clone();
 
-        // Create geometry with two points for a straight line
-        const geometry = new THREE.BufferGeometry();
-        const positions = new Float32Array([
+        // Create Line2 geometry for thick lines
+        const positions = [
             start.x, start.y, start.z,
             end.x, end.y, end.z
-        ]);
-        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        ];
 
-        // Thin, luminous lines for sacred geometry effect
-        const material = new THREE.LineBasicMaterial({
+        const geometry = new LineGeometry();
+        geometry.setPositions(positions);
+
+        // Thick dark goldenrod lines
+        const material = new LineMaterial({
             color: style.color,
-            transparent: false,
-            opacity: style.opacity,
-            linewidth: 1  // Note: WebGL typically renders as 1px regardless
+            linewidth: style.width,
+            resolution: new THREE.Vector2(window.innerWidth, window.innerHeight)
         });
 
-        const line = new THREE.Line(geometry, material);
+        const line = new Line2(geometry, material);
+        line.computeLineDistances();
         line.userData = {
             relationshipId: relationship.id,
             type: relationship.type,
