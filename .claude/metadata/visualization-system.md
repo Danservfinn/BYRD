@@ -5,7 +5,7 @@ type: metadata
 ontological_relations: []
 tags: [visualization, 3d, webgl, mind-space, ego-space, websocket, cat-animation, state-machine]
 created_at: 2025-12-24T00:00:00Z
-updated_at: 2025-12-26T00:00:00Z
+updated_at: 2025-12-28T12:00:00Z
 uuid: v1s2u3a4-5678-90ab-cdef-visualize0001
 ---
 
@@ -22,11 +22,21 @@ Real-time 3D visualization of BYRD's cognitive state through WebSocket-based eve
 
 ### Mind Space
 3D neural network visualization showing beliefs, desires, and connections.
-- **Belief Nodes**: Yellow spheres (size = confidence)
-- **Desire Nodes**: Magenta spheres (size = intensity)
-- **Capability Nodes**: Green spheres
-- **Connections**: Synaptic lines showing relationships
-- **Physics**: Nodes organize through repulsion and gravity
+- **Belief Nodes**: Amber spheres (size = confidence)
+- **Desire Nodes**: Rose spheres (size = intensity)
+- **Capability Nodes**: Violet spheres
+- **Reflection Nodes**: Emerald spheres
+- **Experience Nodes**: Sky blue spheres
+- **OS Node**: Black cat head at center (BYRD's self-model)
+- **Connections**: Dark slate lines (0x475569) for visibility on light background
+- **Physics**: Force-directed with spring forces, connection-weighted gravity toward center
+- **Node Scaling**: Logarithmic scaling based on connection count (hub nodes appear larger)
+
+#### System Reset Behavior
+On `system_reset` event:
+1. Dream/seek counters reset to 0 immediately
+2. Visualization cleared
+3. Fresh status fetched from server after 1.5s
 
 ### Ego Space
 Embodied representation with black cat avatar.
@@ -112,6 +122,29 @@ const ws = new WebSocket('ws://localhost:8000/ws');
   }
 }
 ```
+
+## REST API Endpoints
+
+### Status
+`GET /api/status` - System status including:
+- Running state
+- Dream/seek counts (persisted in Neo4j)
+- Memory statistics
+- Quantum status
+- OS (Operating System) self-model
+- AGI Runner metrics (if Option B enabled):
+  - `enabled`, `bootstrapped`, `cycle_count`
+  - `improvement_rate`, `goals_injected`, `research_indexed`
+  - `patterns_seeded`, `recent_cycles`
+
+### Control
+- `POST /api/reset` - Reset BYRD (clears memory, restarts)
+- `POST /api/start` - Start dream/seek cycles
+- `POST /api/stop` - Stop dream/seek cycles
+
+### Memory
+- `POST /api/experience/message` - Send message to BYRD
+- `GET /api/omega/metrics` - Option B loop metrics
 
 ## Starting the Visualization
 
