@@ -192,6 +192,68 @@ server.py            - WebSocket server
 installers/*.py      - Template installers
 ```
 
+## System Reset
+
+When BYRD is reset via `/api/reset`, all components are returned to their default state:
+
+### Reset Flow (server.py:reset_byrd)
+
+1. **Stop** running components (Dreamer, Seeker)
+2. **Reset** component state via individual `reset()` methods
+3. **Clear** Neo4j via `memory.clear_all()`
+4. **Create** minimal OS from template
+5. **Clear** event history
+6. **Restore** git files (if hard reset)
+7. **Restart** server (if hard reset)
+
+### Component Reset Methods
+
+All stateful components implement `reset()` to clear in-memory state:
+
+| Component | File | State Cleared |
+|-----------|------|---------------|
+| Dreamer | `dreamer.py` | `_dream_count`, `_observed_keys`, `_belief_cache` |
+| Seeker | `seeker.py` | `_seek_count`, `_installs_today`, `_observed_themes` |
+| Coder | `coder.py` | `_generation_count` |
+| LLM Client | `llm_client.py` | `_request_count`, `_failure_count` |
+| Quantum Provider | `quantum_randomness.py` | `_usage_count`, `_pool` |
+| World Model | `world_model.py` | `_prediction_count`, `_pending_predictions` |
+| Self Model | `self_model.py` | `_observation_count`, `_snapshot_count` |
+| Safety Monitor | `safety_monitor.py` | `_check_count`, `_violation_history` |
+| AGI Runner | `agi_runner.py` | `_cycle_count`, `_bootstrapped`, `_cycle_history` |
+| Desire Classifier | `desire_classifier.py` | `_routing_stats`, `_feedback_buffer` |
+| Hierarchical Memory | `hierarchical_memory.py` | `_promotions_by_level`, `_total_abstractions` |
+| Intuition Network | `intuition_network.py` | `_intuitions`, `_total_observations` |
+| Code Learner | `code_learner.py` | `code_registry` (reloads from disk) |
+| Rollback System | `rollback.py` | `_modifications`, `_rollbacks` |
+| Capability Evaluator | `capability_evaluator.py` | `_evaluation_history`, `_custom_suites` |
+
+### What Persists Across Reset
+
+- **Constitutional files**: `modification_log.json` (immutable audit trail)
+- **Learned strategies**: `learned_strategies/` directory (codified patterns)
+- **Git history**: Code is restored from git, not deleted
+- **External caches**: `~/.cache/byrd/` (template registry)
+
+### Reset API
+
+```bash
+# Hard reset (recommended) - clears all, restores git, restarts server
+curl -X POST http://localhost:8000/api/reset \
+  -H "Content-Type: application/json" \
+  -d '{"hard_reset": true}'
+
+# Soft reset - clears memory but keeps server running
+curl -X POST http://localhost:8000/api/reset \
+  -H "Content-Type: application/json" \
+  -d '{"hard_reset": false}'
+
+# Reset with custom awakening prompt
+curl -X POST http://localhost:8000/api/reset \
+  -H "Content-Type: application/json" \
+  -d '{"hard_reset": true, "awakening_prompt": "Focus on self-improvement"}'
+```
+
 ## Code Patterns
 
 ### Async Throughout

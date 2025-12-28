@@ -108,6 +108,15 @@ python byrd.py
 python server.py
 ```
 
+### System Reset
+
+```bash
+# Reset BYRD to default state (clears memory, restarts server)
+curl -X POST http://localhost:8000/api/reset \
+  -H "Content-Type: application/json" \
+  -d '{"hard_reset": true}'
+```
+
 ### HuggingFace Spaces
 
 Set these secrets in Space Settings:
