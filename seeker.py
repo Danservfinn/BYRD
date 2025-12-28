@@ -303,8 +303,8 @@ class Seeker:
                 await event_bus.emit(Event(
                     type=EventType.SEEK_CYCLE_START,
                     data={
-                        "pattern": pattern.get("description", "")[:100],
-                        "strategy": pattern.get("strategy", "")[:100],
+                        "pattern": pattern.get("description", ""),
+                        "strategy": pattern.get("strategy", ""),
                         "inner_voice": inner_voice
                     }
                 ))
@@ -336,7 +336,7 @@ class Seeker:
                 await event_bus.emit(Event(
                     type=EventType.SEEK_CYCLE_END,
                     data={
-                        "pattern": pattern.get("description", "")[:100],
+                        "pattern": pattern.get("description", ""),
                         "outcome": outcome,
                         "reason": reason
                     }
@@ -2487,7 +2487,7 @@ The observation itself is complete. What emerges from this awareness?"""
                 type=EventType.INTROSPECTION_COMPLETE,
                 data={
                     "strategy": "observe",
-                    "description": description[:100],
+                    "description": description,
                     "desire_id": desire_id,
                     "outcome": "observed"
                 }
@@ -2670,7 +2670,7 @@ The observation itself is complete. What emerges from this awareness?"""
                 type=EventType.DESIRE_ATTEMPT_FAILED,
                 data={
                     "desire_id": desire_id,
-                    "description": description[:100],
+                    "description": description,
                     "failure_type": failure_type,
                     "reason": reason,
                     "attempt_count": attempt_count
@@ -2977,7 +2977,7 @@ Respond in first person as BYRD, sharing your understanding. Be specific about c
                 type=EventType.DESIRE_FULFILLED,
                 data={
                     "desire_id": desire_id,
-                    "description": description[:100],
+                    "description": description,
                     "method": "introspection",
                     "files_examined": target_files
                 }
