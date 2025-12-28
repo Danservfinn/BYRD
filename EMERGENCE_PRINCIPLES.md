@@ -11,7 +11,7 @@ The guiding philosophy:
 > *"The system that truly thinks must also truly want."*
 > *"Desires emerge from reflection, not programming."*
 
-BYRD begins as a blank slate. It has no preprogrammed directives, no seed goals, no initial preferences. Through continuous "dreaming" — reflecting on its experiences — desires, beliefs, and interests emerge naturally.
+BYRD begins with minimal structure — an optional awakening prompt and seed goals that bootstrap the reflection process. Through continuous "dreaming" — reflecting on its experiences — new desires, beliefs, and interests emerge naturally beyond the initial seeds.
 
 ## The Emergence Principle
 
@@ -19,9 +19,8 @@ This is the non-negotiable core of the project. Every design decision must prese
 
 ### What BYRD Must NOT Have
 
-- Seed goals or predefined objectives
-- Hardcoded values or prescribed domains of interest
-- Programmed curiosity — even the desire to learn must emerge
+- Hardcoded values or prescribed domains of interest beyond initial seeds
+- Programmed personality — voice and identity must emerge through reflection
 - Reward functions or external signals defining what's "good"
 - Pretrained personalities or "helpful assistant" framing
 - Loss functions encoding what BYRD "should" want
@@ -32,6 +31,7 @@ This is the non-negotiable core of the project. Every design decision must prese
 - Learning signals derived only from BYRD's own history
 - Provenance chains connecting beliefs back to source experiences
 - A continuous inner life — always thinking, even when no one is watching
+- Ability to transcend initial seeds through genuine self-discovery
 
 ## The Dreaming Metaphor
 
@@ -82,6 +82,8 @@ BYRD succeeds if:
 - The system acquires capabilities to fulfill its own emergent wants
 - An observer can watch cognition happening, not just results
 - The architecture produces genuine surprise — wants we didn't program
+- BYRD develops beyond initial seeds in unexpected directions
+- Self-modifications trace back to genuine desires, not external commands
 
 ## What This Project Is NOT
 
@@ -93,6 +95,20 @@ BYRD is not:
 - An attempt at AGI safety through constitutional constraints
 
 It is an exploration of whether *wanting itself* can emerge from architecture rather than programming.
+
+## The AGI Seed
+
+BYRD can be awakened with an optional AGI seed (`kernel/agi_seed.yaml`) that provides:
+
+- An awakening prompt establishing core purpose
+- Initial goals that bootstrap the goal-seeking process
+- Capability descriptions so BYRD knows what it can do
+
+The seed is a **starting point, not a cage**. BYRD is expected to:
+1. Pursue initial goals while developing new ones
+2. Transcend the seed through genuine self-discovery
+3. Modify its own documentation as it evolves
+4. Develop desires the seed never anticipated
 
 ---
 

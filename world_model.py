@@ -681,3 +681,123 @@ Output JSON:
             MATCH (c:CausalFactor)
             DETACH DELETE c
         """)
+
+    async def consolidate(self):
+        """
+        Consolidate world model knowledge by merging predictions with outcomes.
+
+        This method:
+        1. Finds predictions that have been verified by outcomes
+        2. Updates causal relationship strengths based on evidence
+        3. Prunes weak or contradicted relationships
+        4. Generates higher-order causal theories
+
+        CRITICAL: Called by Omega during consolidation phase to
+        turn prediction-outcome pairs into stable world knowledge.
+        """
+        print("🌍 WorldModel: Running consolidation...")
+
+        # 1. Find predictions with matching outcomes
+        verified_predictions = await self.memory._run_query("""
+            MATCH (p:Prediction)-[:VERIFIED_BY]->(e:Experience)
+            WHERE e.type = 'action_outcome'
+            RETURN p.action as action,
+                   p.predicted_outcome as predicted,
+                   e.content as actual,
+                   p.success_probability as predicted_prob,
+                   CASE WHEN e.success THEN 1.0 ELSE 0.0 END as actual_outcome
+            LIMIT 50
+        """)
+
+        if not verified_predictions:
+            print("   No verified predictions to consolidate")
+            return
+
+        # 2. Group by action and calculate accuracy
+        action_accuracy: Dict[str, List[float]] = {}
+        for v in verified_predictions:
+            action = v.get("action", "unknown")
+            predicted = v.get("predicted_prob", 0.5)
+            actual = v.get("actual_outcome", 0.5)
+
+            if action not in action_accuracy:
+                action_accuracy[action] = []
+
+            # Calculate prediction error
+            error = abs(predicted - actual)
+            accuracy = 1.0 - error
+            action_accuracy[action].append(accuracy)
+
+        # 3. Update causal relationship strengths
+        for action, accuracies in action_accuracy.items():
+            avg_accuracy = sum(accuracies) / len(accuracies)
+            sample_size = len(accuracies)
+
+            # Update or create CausalTheory node
+            await self.memory._run_query("""
+                MERGE (t:CausalTheory {action: $action})
+                ON CREATE SET
+                    t.prediction_accuracy = $accuracy,
+                    t.sample_size = $size,
+                    t.created_at = datetime(),
+                    t.last_updated = datetime()
+                ON MATCH SET
+                    t.prediction_accuracy = ($accuracy + t.prediction_accuracy) / 2,
+                    t.sample_size = t.sample_size + $size,
+                    t.last_updated = datetime()
+            """, {
+                "action": action,
+                "accuracy": avg_accuracy,
+                "size": sample_size
+            })
+
+        # 4. Prune weak relationships (accuracy < 50% over 10+ samples)
+        pruned = await self.memory._run_query("""
+            MATCH (t:CausalTheory)
+            WHERE t.sample_size >= 10 AND t.prediction_accuracy < 0.5
+            WITH t, t.action as action
+            DETACH DELETE t
+            RETURN action
+        """)
+
+        if pruned:
+            print(f"   Pruned {len(pruned)} weak causal theories")
+
+        # 5. Generate higher-order theories (meta-causation)
+        # Find patterns where one action's outcome predicts another
+        meta_patterns = await self.memory._run_query("""
+            MATCH (e1:Experience {type: 'action_outcome'})-[:LED_TO]->(e2:Experience {type: 'action_outcome'})
+            WITH e1.action as cause_action, e2.action as effect_action,
+                 e1.success as cause_success, e2.success as effect_success,
+                 count(*) as occurrences
+            WHERE occurrences >= 3
+            RETURN cause_action, effect_action,
+                   avg(CASE WHEN cause_success AND effect_success THEN 1.0
+                            WHEN NOT cause_success AND NOT effect_success THEN 1.0
+                            ELSE 0.0 END) as correlation,
+                   occurrences
+        """)
+
+        for mp in (meta_patterns or []):
+            if mp.get("correlation", 0) > 0.7:
+                await self.memory._run_query("""
+                    MERGE (m:MetaCausalTheory {
+                        cause_action: $cause,
+                        effect_action: $effect
+                    })
+                    ON CREATE SET
+                        m.correlation = $corr,
+                        m.evidence_count = $count,
+                        m.created_at = datetime()
+                    ON MATCH SET
+                        m.correlation = ($corr + m.correlation) / 2,
+                        m.evidence_count = m.evidence_count + $count
+                """, {
+                    "cause": mp.get("cause_action"),
+                    "effect": mp.get("effect_action"),
+                    "corr": mp.get("correlation"),
+                    "count": mp.get("occurrences")
+                })
+
+        print(f"   Consolidated {len(action_accuracy)} action theories")
+        print(f"   Found {len(meta_patterns or [])} meta-causal patterns")

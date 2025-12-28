@@ -132,6 +132,16 @@ class BYRDOmega:
         # Meta-learning system (injected by BYRD if Option B enabled)
         self.meta_learning = None
 
+        # AGI Runner and Rollback (injected by BYRD)
+        self.agi_runner = None
+        self.rollback = None
+
+        # Learning components (injected later)
+        self.hierarchical_memory = None
+        self.code_learner = None
+        self.intuition_network = None
+        self.gnn_layer = None  # StructuralLearner
+
         # Metrics history
         self._capability_history: List[Tuple[datetime, float]] = []
         self._max_history = 1000
@@ -300,6 +310,11 @@ class BYRDOmega:
                 except Exception as e:
                     logger.warning(f"Meta-learning plateau detection error: {e}")
 
+            # TRAINING HOOKS: Run learning component updates
+            training_results = await self._run_training_hooks()
+            if training_results:
+                results["training"] = training_results
+
             # Check for mode transition
             if self.should_transition():
                 next_mode = self.get_next_mode()
@@ -452,6 +467,101 @@ class BYRDOmega:
             }
         ))
 
+    async def _run_training_hooks(self) -> Dict[str, Any]:
+        """
+        Run training updates for all learning components.
+
+        Training hooks are called every Omega cycle to:
+        1. Train GNN on graph structure (if gnn_layer available)
+        2. Run hierarchical memory consolidation (every 10 cycles)
+        3. Check for patterns to codify (every 20 cycles)
+        4. Update intuition network from outcomes (every cycle)
+
+        Returns:
+            Dict with training results from each component
+        """
+        results = {}
+
+        # 1. GNN Training (StructuralLearner) - every cycle
+        if self.gnn_layer:
+            try:
+                # Extract graph structure
+                nodes = await self.memory._run_query("""
+                    MATCH (n)
+                    WHERE n:Experience OR n:Belief OR n:Desire OR n:Pattern
+                    RETURN elementId(n) as id, labels(n)[0] as type
+                    LIMIT 500
+                """)
+
+                edges = await self.memory._run_query("""
+                    MATCH (a)-[r]->(b)
+                    RETURN elementId(a) as source, elementId(b) as target,
+                           type(r) as rel_type
+                    LIMIT 2000
+                """)
+
+                if nodes and edges:
+                    # Run training epoch
+                    training_result = await asyncio.to_thread(
+                        self.gnn_layer.train_epoch,
+                        list(nodes),
+                        list(edges)
+                    )
+                    results["gnn"] = {
+                        "loss": training_result.loss if hasattr(training_result, 'loss') else 0.0,
+                        "accuracy": training_result.accuracy if hasattr(training_result, 'accuracy') else 0.0
+                    }
+            except Exception as e:
+                logger.warning(f"GNN training error: {e}")
+
+        # 2. Hierarchical Memory Consolidation - every 10 cycles
+        if self.hierarchical_memory and self._total_cycles % 10 == 0:
+            try:
+                await self.hierarchical_memory.consolidation_cycle()
+                results["hierarchical_memory"] = {
+                    "consolidation_run": True
+                }
+            except Exception as e:
+                logger.warning(f"Hierarchical memory consolidation error: {e}")
+
+        # 3. Code Learner codification check - every 20 cycles
+        if self.code_learner and self._total_cycles % 20 == 0:
+            try:
+                codification_results = await self.code_learner.codification_cycle()
+                results["code_learner"] = {
+                    "patterns_checked": len(codification_results),
+                    "patterns_codified": sum(1 for r in codification_results if r.success)
+                }
+            except Exception as e:
+                logger.warning(f"Code learner error: {e}")
+
+        # 4. Intuition Network update - every cycle
+        if self.intuition_network:
+            try:
+                # Get recent outcomes and update intuition
+                recent_outcomes = await self.memory._run_query("""
+                    MATCH (e:Experience {type: 'action_outcome'})
+                    WHERE e.timestamp > datetime() - duration('PT1H')
+                    RETURN e.action as action, e.success as success, e.context as context
+                    ORDER BY e.timestamp DESC
+                    LIMIT 20
+                """)
+
+                if recent_outcomes:
+                    for outcome in recent_outcomes:
+                        await self.intuition_network.record_outcome(
+                            situation=str(outcome.get("context", "")),
+                            action=outcome.get("action", ""),
+                            success=outcome.get("success", False)
+                        )
+                    results["intuition"] = {
+                        "outcomes_processed": len(recent_outcomes)
+                    }
+            except Exception as e:
+                logger.warning(f"Intuition network error: {e}")
+
+        return results
+
         if self._growth_rate != 0:
             await event_bus.emit(Event(
                 type=EventType.GROWTH_RATE_COMPUTED,
@@ -460,6 +570,26 @@ class BYRDOmega:
                     "window_samples": len(self._capability_history)
                 }
             ))
+
+        # Phase 5: Capability regression detection and auto-rollback
+        if self._growth_rate < -0.1:  # Significant regression threshold
+            logger.warning(f"Capability regression detected: growth_rate={self._growth_rate:.4f}")
+
+            if hasattr(self, 'rollback') and self.rollback:
+                result = await self.rollback.auto_rollback_on_problem(
+                    problem_type="capability_regression",
+                    severity="high"
+                )
+                if result and result.success:
+                    logger.info(f"Auto-rollback successful: {result.modifications_rolled_back} modifications reverted")
+                    await event_bus.emit(Event(
+                        type=EventType.ROLLBACK_TRIGGERED,
+                        data={
+                            "reason": "capability_regression",
+                            "growth_rate": self._growth_rate,
+                            "modifications_rolled_back": result.modifications_rolled_back
+                        }
+                    ))
 
     def get_state(self) -> OmegaState:
         """Get current Omega state."""

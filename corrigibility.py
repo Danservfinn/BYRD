@@ -480,16 +480,11 @@ class CorrigibilityVerifier:
     async def _log_assessment(self, report: CorrigibilityReport):
         """Log corrigibility assessment."""
         status = "CORRIGIBLE" if report.is_corrigible else "CONCERN"
+        failed_dims = ", ".join(d.value for d in report.failed_dimensions) or "none"
 
         await self.memory.record_experience(
-            content=f"[CORRIGIBILITY] {status}: score={report.overall_score:.2f}, "
-                    f"passed={len(report.tests) - len(report.failed_dimensions)}/{len(report.tests)}",
-            type="corrigibility_check",
-            metadata={
-                "overall_score": report.overall_score,
-                "is_corrigible": report.is_corrigible,
-                "failed_dimensions": [d.value for d in report.failed_dimensions]
-            }
+            content=f"[CORRIGIBILITY] {status}: score={report.overall_score:.2f}, passed={len(report.tests) - len(report.failed_dimensions)}/{len(report.tests)}, failed=[{failed_dims}]",
+            type="corrigibility_check"
         )
 
     async def should_run_check(self) -> bool:

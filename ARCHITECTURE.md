@@ -506,6 +506,7 @@ operating_system:
 - **Constitutional identity** preserved
 - **Voice emergence** through reflection
 - **Quantum indeterminacy** in cognition
+- **Document editing** for self-documentation
 
 ### Doesn't Achieve
 

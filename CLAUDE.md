@@ -572,6 +572,9 @@ byrd/
 ├── coder.py                # Claude Code CLI wrapper
 ├── llm_client.py           # LLM provider abstraction (Ollama/OpenRouter/Z.AI)
 ├── quantum_randomness.py   # ANU QRNG integration for cognitive indeterminacy
+├── narrator.py             # Inner voice generation
+├── elevenlabs_voice.py     # Voice design via ElevenLabs
+├── capability_registry.py  # Dynamic capability menu
 │
 ├── self_modification.py    # PROTECTED: Self-mod system
 ├── provenance.py           # PROTECTED: Provenance tracking
@@ -581,6 +584,9 @@ byrd/
 ├── event_bus.py            # Event system for real-time updates
 ├── server.py               # WebSocket + REST API server
 ├── aitmpl_client.py        # Template registry client
+│
+├── kernel/                 # AGI seed configuration
+│   └── agi_seed.yaml       # Core directive and initial goals
 │
 ├── installers/             # Template installers
 │   ├── base.py
@@ -592,11 +598,15 @@ byrd/
 │   └── settings_installer.py
 │
 ├── config.yaml             # Configuration
-├── docker-compose.yml      # Neo4j + SearXNG
+├── docker-compose.yml      # Neo4j
 ├── requirements.txt        # Python dependencies
 │
 ├── byrd-3d-visualization.html    # Mind Space: 3D neural network view
 ├── byrd-cat-visualization.html   # Ego Space: Black cat avatar view
+│
+├── docs/                   # Additional documentation
+│   ├── OPTION_B_EXPLORATION.md   # Theoretical framework
+│   └── ...                 # Planning documents
 │
 ├── .claude/                # Knowledge base
 │   ├── manifest.md

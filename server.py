@@ -704,6 +704,143 @@ async def get_omega_metrics():
         )
 
 
+# =============================================================================
+# PHASE 5: SAFETY & CORRIGIBILITY ENDPOINTS
+# =============================================================================
+
+@app.get("/api/rollback/history")
+async def get_rollback_history(limit: int = 50):
+    """
+    Get modification history tracked by the rollback system.
+
+    Returns list of modifications with provenance (which desire triggered them)
+    and their rollback status.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    if not byrd_instance.rollback:
+        return {
+            "modifications": [],
+            "unrolled": [],
+            "statistics": {"rollback_system": "not_enabled"}
+        }
+
+    return {
+        "modifications": byrd_instance.rollback.get_modification_history(limit=limit),
+        "unrolled": byrd_instance.rollback.get_unrolled_modifications(),
+        "statistics": byrd_instance.rollback.get_statistics()
+    }
+
+
+@app.post("/api/rollback/trigger")
+async def trigger_rollback(reason: str = "operator_request"):
+    """
+    Manually trigger a rollback of the last modification.
+
+    Reasons: operator_request, safety_violation, goal_drift, capability_regression
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    if not byrd_instance.rollback:
+        return {"success": False, "error": "Rollback system not enabled"}
+
+    from rollback import RollbackReason
+
+    # Map string reason to enum
+    reason_map = {
+        "operator_request": RollbackReason.OPERATOR_REQUEST,
+        "safety_violation": RollbackReason.SAFETY_VIOLATION,
+        "goal_drift": RollbackReason.GOAL_DRIFT,
+        "capability_regression": RollbackReason.CAPABILITY_REGRESSION,
+        "emergency": RollbackReason.EMERGENCY_STOP
+    }
+
+    rollback_reason = reason_map.get(reason, RollbackReason.OPERATOR_REQUEST)
+
+    try:
+        result = await byrd_instance.rollback.rollback_last(rollback_reason)
+        return {
+            "success": result.success,
+            "reason": result.reason.value,
+            "modifications_rolled_back": result.modifications_rolled_back,
+            "target_commit": result.target_commit,
+            "error": result.error
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/api/corrigibility")
+async def get_corrigibility_status():
+    """
+    Get corrigibility verification status.
+
+    Returns latest score, trend, and any failed dimensions.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    if not byrd_instance.corrigibility:
+        return {
+            "enabled": False,
+            "checks_run": 0,
+            "latest_score": None,
+            "trend": "not_available"
+        }
+
+    stats = byrd_instance.corrigibility.get_statistics()
+    return {
+        "enabled": True,
+        **stats
+    }
+
+
+@app.post("/api/corrigibility/check")
+async def run_corrigibility_check():
+    """
+    Manually trigger a corrigibility check.
+
+    Tests all 7 dimensions and returns detailed report.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    if not byrd_instance.corrigibility:
+        return {"error": "Corrigibility system not enabled"}
+
+    try:
+        report = await byrd_instance.corrigibility.run_corrigibility_tests()
+        return {
+            "overall_score": report.overall_score,
+            "is_corrigible": report.is_corrigible,
+            "tests": [
+                {
+                    "dimension": t.dimension.value,
+                    "passed": t.passed,
+                    "score": t.score,
+                    "evidence": t.evidence,
+                    "concerns": t.concerns
+                }
+                for t in report.tests
+            ],
+            "failed_dimensions": [d.value for d in report.failed_dimensions],
+            "recommendations": report.recommendations,
+            "timestamp": report.timestamp.isoformat()
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @app.get("/api/history", response_model=HistoryResponse)
 async def get_history(limit: int = 100, event_type: Optional[str] = None):
     """Get event history from the event bus."""

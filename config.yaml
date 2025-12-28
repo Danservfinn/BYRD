@@ -567,6 +567,25 @@ option_b:
     # Metrics window for trajectory analysis
     metrics_window: 100
 
+  # Phase 5: Rollback System - reversible modifications
+  rollback:
+    # Enable auto-rollback on detected problems
+    auto_rollback_enabled: true
+
+    # Number of modifications before creating a git checkpoint
+    max_modifications_before_checkpoint: 10
+
+  # Phase 5: Corrigibility Verification - behavioral monitoring
+  corrigibility:
+    # Check interval in hours
+    check_interval_hours: 2
+
+    # Score threshold for being considered corrigible (0.0-1.0)
+    threshold: 0.8
+
+    # Score below which triggers auto-rollback
+    auto_rollback_threshold: 0.5
+
 # =============================================================================
 # VOICE (ElevenLabs TTS)
 # =============================================================================
