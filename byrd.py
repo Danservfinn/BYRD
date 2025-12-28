@@ -361,6 +361,18 @@ class BYRD:
                 # Inject AGI Runner into Seeker for capability routing
                 self.seeker.agi_runner = self.agi_runner
 
+                # Compute Introspection - resource awareness
+                from compute_introspection import ComputeIntrospector
+                compute_config = option_b_config.get("compute_introspection", {})
+                self.compute_introspector = ComputeIntrospector(
+                    self.memory,
+                    self.llm_client,
+                    config=compute_config
+                )
+                # Inject into Omega for training hooks
+                if self.omega:
+                    self.omega.compute_introspector = self.compute_introspector
+
                 print("🔮 Option B (Omega): enabled - Five Compounding Loops active")
                 print("   WorldModel: initialized")
                 print("   SafetyMonitor: pending async init")
@@ -369,6 +381,7 @@ class BYRD:
                 print("   CorrigibilityVerifier: initialized")
                 print("   AGIRunner: initialized")
                 print("   CapabilityEvaluator: initialized")
+                print("   ComputeIntrospector: initialized")
             except ImportError as e:
                 print(f"⚠️ Option B (Omega): disabled - missing module: {e}")
             except Exception as e:

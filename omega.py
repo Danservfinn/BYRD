@@ -142,6 +142,9 @@ class BYRDOmega:
         self.intuition_network = None
         self.gnn_layer = None  # StructuralLearner
 
+        # Compute introspection (injected later)
+        self.compute_introspector = None
+
         # Metrics history
         self._capability_history: List[Tuple[datetime, float]] = []
         self._max_history = 1000
@@ -559,6 +562,37 @@ class BYRDOmega:
                     }
             except Exception as e:
                 logger.warning(f"Intuition network error: {e}")
+
+        # 5. Compute Introspection - every cycle
+        # Take resource snapshot and check for bottlenecks
+        if self.compute_introspector:
+            try:
+                snapshot = await self.compute_introspector.take_snapshot()
+                bottlenecks = await self.compute_introspector.identify_bottlenecks()
+
+                results["compute"] = {
+                    "cpu_percent": snapshot.cpu_percent,
+                    "memory_percent": snapshot.memory_percent,
+                    "bottlenecks": len(bottlenecks),
+                    "llm_tokens": self.compute_introspector.cost_tracker._total_tokens
+                }
+
+                # Emit snapshot event
+                await event_bus.emit(Event(
+                    type=EventType.RESOURCE_SNAPSHOT,
+                    data={
+                        "cpu_percent": snapshot.cpu_percent,
+                        "memory_percent": snapshot.memory_percent,
+                        "active_operations": snapshot.active_operations,
+                        "bottleneck_count": len(bottlenecks)
+                    }
+                ))
+
+                # Persist periodically (every 5 cycles)
+                if self._total_cycles % 5 == 0:
+                    await self.compute_introspector.persist()
+            except Exception as e:
+                logger.warning(f"Compute introspection error: {e}")
 
         return results
 

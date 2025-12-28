@@ -603,3 +603,151 @@ Output JSON:
         self._last_goal_check = None
         # Re-initialize to store original goal hash
         await self.initialize()
+
+    # =====================================================================
+    # EMERGENCE-PRESERVING PATTERN OBSERVATION
+    # These methods OBSERVE patterns for learning, they don't BLOCK them
+    # =====================================================================
+
+    # Observable patterns - for learning, not blocking
+    OBSERVABLE_PATTERNS = [
+        ('eval', r'\beval\s*\('),
+        ('exec', r'\bexec\s*\('),
+        ('dynamic_import', r'\b__import__\s*\('),
+        ('subprocess', r'\bsubprocess\.'),
+        ('os_system', r'\bos\.system\s*\('),
+        ('shell', r'\bos\.popen\s*\('),
+        ('file_write', r'\bopen\s*\([^)]*["\']w'),
+        ('network', r'\bsocket\.'),
+    ]
+
+    async def observe_patterns(
+        self,
+        code: str,
+        file_path: str
+    ) -> List[Dict]:
+        """
+        Observe patterns in code WITHOUT blocking.
+
+        EMERGENCE PRINCIPLE:
+        We log what patterns are used, but don't block.
+        BYRD learns from outcomes which patterns lead to success/failure.
+        This enables BYRD to develop its OWN understanding of what's "safe"
+        from experience, rather than having it imposed.
+
+        Args:
+            code: The code to analyze
+            file_path: Path to the file being modified
+
+        Returns:
+            List of observed patterns (informational only, not blocking)
+        """
+        import re
+
+        observations = []
+
+        for name, pattern in self.OBSERVABLE_PATTERNS:
+            matches = list(re.finditer(pattern, code, re.IGNORECASE))
+            if matches:
+                observation = {
+                    'pattern': name,
+                    'file': file_path,
+                    'count': len(matches),
+                    'timestamp': datetime.now().isoformat()
+                }
+                observations.append(observation)
+
+                # Log as experience for learning
+                try:
+                    await self.memory.record_experience(
+                        content=f"Pattern observed in modification: {name} ({len(matches)} occurrences)",
+                        type="pattern_observation",
+                        metadata=observation
+                    )
+                except Exception as e:
+                    print(f"SafetyMonitor: Failed to record pattern observation: {e}")
+
+        # Emit event if patterns observed
+        if observations and HAS_EVENT_BUS:
+            await event_bus.emit(Event(
+                type=EventType.SYSTEM,
+                data={
+                    "subtype": "patterns_observed",
+                    "patterns": [o['pattern'] for o in observations],
+                    "file": file_path,
+                    "count": len(observations)
+                }
+            ))
+
+        return observations  # Return observations, don't block
+
+    async def get_pattern_statistics(self) -> Dict:
+        """
+        Query pattern observations for BYRD's reflection.
+
+        EMERGENCE PRINCIPLE:
+        BYRD can reflect on this data and form beliefs like:
+        "When I use eval(), modifications fail 80% of the time"
+
+        Returns:
+            Dictionary with pattern observation statistics
+        """
+        try:
+            # Query pattern observations from memory
+            results = await self.memory._run_query("""
+                MATCH (e:Experience)
+                WHERE e.type = 'pattern_observation'
+                WITH e.content as content
+                RETURN content, count(*) as count
+                ORDER BY count DESC
+                LIMIT 20
+            """)
+
+            if not results:
+                return {"patterns": {}, "total_observations": 0}
+
+            patterns = {}
+            total = 0
+            for r in results:
+                content = r.get("content", "")
+                count = r.get("count", 0)
+                total += count
+                # Extract pattern name from content
+                if "Pattern observed" in content:
+                    pattern_name = content.split(": ")[1].split(" (")[0] if ": " in content else "unknown"
+                    patterns[pattern_name] = patterns.get(pattern_name, 0) + count
+
+            return {
+                "patterns": patterns,
+                "total_observations": total
+            }
+        except Exception as e:
+            print(f"SafetyMonitor: Failed to get pattern statistics: {e}")
+            return {"patterns": {}, "total_observations": 0, "error": str(e)}
+
+    async def get_pattern_outcome_correlation(self) -> Dict:
+        """
+        Correlate patterns with modification outcomes.
+
+        EMERGENCE PRINCIPLE:
+        This enables BYRD to form data-driven beliefs about which
+        patterns tend to lead to successful vs failed modifications.
+
+        Returns:
+            Dictionary correlating patterns with success/failure rates
+        """
+        try:
+            # This would ideally query Neo4j to correlate patterns with outcomes
+            # For now, return a placeholder that can be enhanced
+            pattern_stats = await self.get_pattern_statistics()
+
+            # TODO: Implement full correlation when we have outcome data linked
+            # to pattern observations via modification_id
+
+            return {
+                "patterns_observed": pattern_stats.get("patterns", {}),
+                "note": "Full correlation available after modifications accumulate",
+                "recommendation": "Observe patterns over time to build understanding"
+            }
+        except Exception as e:
+            return {"error": str(e)}

@@ -195,6 +195,13 @@ class EventType(Enum):
     CORRIGIBILITY_CHECKED = "corrigibility_checked"      # Corrigibility assessment completed
     CORRIGIBILITY_ALERT = "corrigibility_alert"          # Corrigibility score below threshold
 
+    # Compute Introspection Events (self-awareness of computational substrate)
+    RESOURCE_ALERT = "resource_alert"                    # CPU/memory approaching limits
+    BUDGET_EXCEEDED = "budget_exceeded"                  # Token/cost budget exceeded
+    BOTTLENECK_DETECTED = "bottleneck_detected"          # Performance bottleneck identified
+    RESOURCE_SNAPSHOT = "resource_snapshot"              # Periodic resource snapshot taken
+    LLM_USAGE_RECORDED = "llm_usage_recorded"            # LLM tokens/cost tracked
+
 
 @dataclass
 class Event:
