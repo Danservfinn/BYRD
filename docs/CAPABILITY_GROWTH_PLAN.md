@@ -14,7 +14,6 @@ This plan extracts the still-relevant parts from ATTRACTOR_ESCAPE_PLAN.md and fo
 1. Better instrumentation
 2. Real capability benchmarks
 3. Goal Evolver verification
-4. Stagnation detection (safety net)
 
 ---
 
@@ -478,61 +477,6 @@ async def _run_goal_evolver_cycle(self):
 
 ---
 
-## Phase 4: Stagnation Detection (Safety Net)
-
-### Lightweight Stagnation Check
-
-Keep this as a safety net in case the philosophical attractor reasserts:
-
-**File**: `byrd.py`
-
-```python
-async def _check_for_stagnation(self):
-    """Lightweight stagnation check - safety net."""
-
-    # Only check after enough cycles
-    if self.dream_count < 50:
-        return False
-
-    # Check last 20 cycles
-    recent_fulfilled = await self.memory.count_desires_fulfilled_since(cycles=20)
-    recent_experiences = await self.memory.count_experiences_created_since(cycles=20)
-
-    # Stagnation indicators
-    is_stagnant = (
-        recent_fulfilled == 0 and
-        recent_experiences < 10  # Almost no new experiences
-    )
-
-    if is_stagnant:
-        print("⚠️ STAGNATION WARNING: No desires fulfilled in last 20 cycles")
-        await self._log_stagnation_warning()
-
-        # Inject a grounding task from the seed goals
-        await self._inject_seed_goal()
-
-    return is_stagnant
-
-async def _inject_seed_goal(self):
-    """Re-inject a seed goal to break potential stagnation."""
-    from kernel import load_kernel
-    kernel = load_kernel()
-
-    import random
-    goal = random.choice(kernel.initial_goals)
-
-    await self.memory.create_desire(
-        description=goal['description'],
-        type='seed_goal_injection',
-        intensity=0.9,
-        metadata={'injected_due_to': 'stagnation_detection'}
-    )
-
-    print(f"📌 Injected seed goal: {goal['description'][:50]}...")
-```
-
----
-
 ## Implementation Checklist
 
 ### Week 1: Instrumentation
@@ -554,9 +498,7 @@ async def _inject_seed_goal(self):
 - [ ] Verify evolution is producing new goals
 
 ### Ongoing: Monitoring
-- [ ] Add stagnation detection (lightweight)
 - [ ] Monitor benchmark trends over time
-- [ ] Alert if philosophical attractor reasserts
 
 ---
 
@@ -583,8 +525,7 @@ OPTION_B_FIX_PLAN (Infrastructure)     ✅ DONE
 CAPABILITY_GROWTH_PLAN (This Plan)     ← CURRENT FOCUS
 ├── Instrumentation fixes
 ├── Real capability benchmarks
-├── Goal Evolver verification
-└── Stagnation safety net
+└── Goal Evolver verification
 
 ATTRACTOR_ESCAPE_PLAN (Fallback)       📦 ARCHIVED
 ├── Actionability gate
@@ -601,6 +542,5 @@ Goal seeding solved the cold-start problem. Now we need to:
 1. **Measure** what's actually happening (instrumentation)
 2. **Benchmark** real capabilities (not self-assessed)
 3. **Verify** the improvement loops are working (Goal Evolver)
-4. **Protect** against regression (stagnation detection)
 
 The philosophical attractor is broken. Now we build the measurement infrastructure to track actual AGI progress.
