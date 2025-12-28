@@ -70,14 +70,22 @@ def main():
         "self_modification.py", "quantum_randomness.py",
         "aitmpl_client.py", "coder.py", "graph_algorithms.py",
         "elevenlabs_voice.py",  # Voice TTS
+        "capability_registry.py",  # Capability registry (required by seeker.py)
+        "agent_coder.py",  # Agent-based coder
         # Option B - Five Compounding Loops
         "embedding.py", "coupling_tracker.py", "memory_reasoner.py",
         "goal_evolver.py", "dreaming_machine.py", "omega.py",
         "kill_criteria.py", "accelerators.py",
+        # AGI Execution Engine
+        "agi_runner.py", "desire_classifier.py", "capability_evaluator.py",
+        "compute_introspection.py",
         # AGI Seed components
         "meta_learning.py", "self_model.py", "world_model.py",
         "corrigibility.py", "rollback.py", "safety_monitor.py",
         "semantic_lexicon.py",
+        # Learning components
+        "code_learner.py", "emergent_categories.py", "gnn_layer.py",
+        "hierarchical_memory.py", "intuition_network.py", "learned_retriever.py",
         # Config and assets
         "config.yaml", "requirements.txt",
         "byrd-3d-visualization.html",

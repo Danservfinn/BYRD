@@ -52,7 +52,34 @@ When responding:
         
         # Load emergent self-definition from OperatingSystem node
         self._load_emergent_voice()
-    
+
+    def _load_emergent_voice(self):
+        """
+        Load emergent self-definition from memory.
+
+        Note: This is a placeholder. Proper loading happens asynchronously
+        in update_emergent_voice() which is called after memory is connected.
+        """
+        # Voice will be updated asynchronously when memory is available
+        pass
+
+    async def update_emergent_voice(self):
+        """Update system prompt with emergent self-definition from memory."""
+        try:
+            # Query for OperatingSystem node containing emergent voice
+            if hasattr(self.memory, 'driver') and self.memory.driver:
+                async with self.memory.driver.session() as session:
+                    result = await session.run(
+                        "MATCH (os:OperatingSystem) RETURN os.voice AS voice LIMIT 1"
+                    )
+                    record = await result.single()
+                    if record and record.get("voice"):
+                        emergent_voice = record["voice"]
+                        self.system_prompt = f"{self.base_system_prompt}\n\nYOUR EMERGENT VOICE:\n{emergent_voice}"
+        except Exception:
+            # Silently use base prompt if voice loading fails
+            pass
+
     async def respond(self, user_input: str, context: Dict) -> str:
         """Generate a response to user input using Claude."""
         
