@@ -1606,36 +1606,36 @@
     // Force-directed physics creates natural clustering based on relationships
     // Highly connected nodes gravitate toward center; isolated nodes drift outward
 
-    // Relationship visual styles - true neutral gray, very subtle
+    // Relationship visual styles - true neutral gray, fully opaque
     const RELATIONSHIP_STYLES = {
         DERIVED_FROM: {
             color: 0x808080,    // True neutral gray (no blue tint)
-            opacity: 0.15,
+            opacity: 1.0,
             width: 1
         },
         RELATES_TO: {
             color: 0x808080,    // True neutral gray
-            opacity: 0.12,
+            opacity: 1.0,
             width: 1
         },
         FULFILLS: {
             color: 0x808080,    // True neutral gray
-            opacity: 0.15,
+            opacity: 1.0,
             width: 1
         },
         REFLECTS_ON: {
             color: 0x808080,    // True neutral gray
-            opacity: 0.12,
+            opacity: 1.0,
             width: 1
         },
         EMERGES_FROM: {
             color: 0x808080,    // True neutral gray
-            opacity: 0.15,
+            opacity: 1.0,
             width: 1
         },
         default: {
             color: 0x808080,    // True neutral gray
-            opacity: 0.12,
+            opacity: 1.0,
             width: 1
         }
     };
@@ -4104,8 +4104,8 @@
     // SACRED GEOMETRY CONNECTION SYSTEM - Straight Lines
     // ==========================================================================
     const LINE_CONFIG = {
-      baseOpacity: 0.65,      // Increased from 0.4 for better visibility
-      highlightOpacity: 0.9,
+      baseOpacity: 1.0,       // Full opacity for maximum visibility
+      highlightOpacity: 1.0,
       lineWidth: 1,  // Note: WebGL line width is often limited to 1
       highlightDuration: 500
     };
@@ -4126,7 +4126,7 @@
       // Dark line material for visibility on light background
       const material = new THREE.LineBasicMaterial({
         color: 0x475569, // Slate gray - visible on light background
-        transparent: true,
+        transparent: false,
         opacity: LINE_CONFIG.baseOpacity,
         linewidth: LINE_CONFIG.lineWidth
       });
@@ -5110,8 +5110,8 @@
         // Thin, luminous lines for sacred geometry effect
         const material = new THREE.LineBasicMaterial({
             color: style.color,
-            transparent: true,
-            opacity: style.opacity * 0.8,  // Slightly more subtle
+            transparent: false,
+            opacity: style.opacity,
             linewidth: 1  // Note: WebGL typically renders as 1px regardless
         });
 
