@@ -706,7 +706,7 @@ Output JSON:
             },
             "strongest": inventory.strongest,
             "weakest": inventory.weakest,
-            "timestamp": inventory.timestamp
+            "timestamp": inventory.timestamp.isoformat()  # Convert datetime to string for JSON serialization
         }
 
         # Store in memory
