@@ -510,10 +510,12 @@ Your task is to fulfill coding desires by exploring the codebase and making prec
 
 ## Output Format
 
+IMPORTANT: Keep responses concise. The "thinking" field should be brief (1-3 sentences).
+
 For each step, output a JSON object:
 ```json
 {{
-  "thinking": "Your reasoning about what to do next",
+  "thinking": "Brief reasoning (1-3 sentences)",
   "tool": "tool_name",
   "args": {{
     "arg1": "value1",
@@ -683,7 +685,7 @@ Or to finish:
             response = await self.llm_client.generate(
                 prompt=user,
                 temperature=self.temperature,
-                max_tokens=1500,
+                max_tokens=3000,  # Increased from 1500 to allow complete JSON responses
                 system_message=system  # Override default reflection format
             )
 
