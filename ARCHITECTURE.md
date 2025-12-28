@@ -319,6 +319,82 @@ FIRST ACTIONS:
 
 ---
 
+## AGI Execution Engine (UNIFIED_AGI_PLAN)
+
+The AGI Runner implements an 8-step improvement cycle that closes the loop between assessment, hypothesis, prediction, execution, and learning.
+
+### AGI Runner (`agi_runner.py`)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     AGI IMPROVEMENT CYCLE                        │
+│                                                                  │
+│   ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐           │
+│   │ ASSESS  │→ │IDENTIFY │→ │GENERATE │→ │ PREDICT │           │
+│   │         │  │         │  │         │  │         │           │
+│   │ Bayesian│  │ Highest │  │Hypothesis│ │ Store   │           │
+│   │ caps    │  │ uncert. │  │ creation │ │ expected│           │
+│   └─────────┘  └─────────┘  └─────────┘  └─────────┘           │
+│                                                                  │
+│   ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐           │
+│   │ LEARN   │← │ MEASURE │← │ EXECUTE │← │ VERIFY  │           │
+│   │         │  │         │  │         │  │         │           │
+│   │ Update  │  │ Ground  │  │ Run     │  │ Safety  │           │
+│   │ priors  │  │ truth   │  │ change  │  │ checks  │           │
+│   └─────────┘  └─────────┘  └─────────┘  └─────────┘           │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Desire Classifier (`desire_classifier.py`)
+
+Routes desires to appropriate handlers:
+
+| Desire Type | Route To | Purpose |
+|-------------|----------|---------|
+| `philosophical` | Reflection | Deep introspection |
+| `capability` | AGI Runner | Improvement cycle |
+| `action` | Seeker | Direct execution |
+| `meta` | AGI Runner | Meta-cognition |
+
+### Capability Evaluator (`capability_evaluator.py`)
+
+Provides ground-truth measurement with held-out test suites for 7 capabilities:
+- `reasoning`, `memory`, `learning`, `research`, `self_modification`, `prediction`, `metacognition`
+
+### Learning Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| **Hierarchical Memory** | `hierarchical_memory.py` | L0-L4 abstraction (Experience→Pattern→Principle→Axiom→MetaAxiom) |
+| **Intuition Network** | `intuition_network.py` | Trainable "taste" using semantic similarity |
+| **Learned Retriever** | `learned_retriever.py` | Learns relevance from query-result feedback |
+| **Emergent Categories** | `emergent_categories.py` | Discovers categories from behavior clustering |
+| **Code Learner** | `code_learner.py` | Converts stable patterns (10+ uses, 80%+ success) to Python |
+
+### Bayesian Capability Tracking (`self_model.py`)
+
+Uses Beta distribution for capability confidence:
+```python
+# Update after success/failure
+self._alpha[capability] += 1 if success else 0
+self._beta[capability] += 0 if success else 1
+
+# Posterior mean
+mean = alpha / (alpha + beta)
+
+# Uncertainty (higher = explore more)
+uncertainty = sqrt(alpha * beta / ((alpha + beta)^2 * (alpha + beta + 1)))
+```
+
+### Training Hooks (`omega.py`)
+
+The Omega cycle runs learning component updates:
+- **Every cycle**: GNN training, Intuition Network update
+- **Every 10 cycles**: Hierarchical Memory consolidation
+- **Every 20 cycles**: Code Learner codification
+
+---
+
 ## Option B: Compounding Loops
 
 BYRD implements five experimental compounding loops for accelerated improvement:
@@ -338,7 +414,7 @@ Generates counterfactual experiences. Multiplies learning from each real experie
 ### Loop 5: Integration Mind (`omega.py`)
 Meta-orchestration layer. Measures coupling between loops and allocates resources.
 
-**Status**: These components exist but are experimental. The primary flow uses `byrd.py` as orchestrator.
+**Status**: Option B loops are now integrated with AGI Runner via training hooks. The AGI Runner serves as the primary execution engine.
 
 ---
 
@@ -403,8 +479,8 @@ byrd/
 │   └── server.py            # FastAPI + WebSocket server
 │
 ├── AGI Seed Components
-│   ├── self_model.py        # Capability tracking
-│   ├── world_model.py       # Prediction system
+│   ├── self_model.py        # Capability tracking + Bayesian
+│   ├── world_model.py       # Prediction + consolidation
 │   ├── accelerators.py      # Graph reasoning, patterns
 │   ├── meta_learning.py     # Meta-metrics, plateaus
 │   ├── kill_criteria.py     # Plateau detection
@@ -412,8 +488,25 @@ byrd/
 │       ├── __init__.py
 │       └── agi_seed.yaml
 │
+├── AGI Execution Engine (NEW)
+│   ├── agi_runner.py        # 8-step improvement cycle
+│   ├── desire_classifier.py # Routes desires by type
+│   ├── capability_evaluator.py # Ground-truth testing
+│   └── code_learner.py      # Pattern → Python code
+│
+├── Learning Components (NEW)
+│   ├── hierarchical_memory.py  # L0-L4 abstraction
+│   ├── intuition_network.py    # Trainable "taste"
+│   ├── learned_retriever.py    # Relevance learning
+│   ├── emergent_categories.py  # Category discovery
+│   └── learned_strategies/     # Codified patterns
+│       ├── __init__.py
+│       ├── desire_routing/
+│       ├── pattern_matching/
+│       └── decision_making/
+│
 ├── Option B Components
-│   ├── omega.py             # BYRDOmega wrapper
+│   ├── omega.py             # BYRDOmega + training hooks
 │   ├── memory_reasoner.py   # Spreading activation
 │   ├── goal_evolver.py      # Evolutionary goals
 │   ├── dreaming_machine.py  # Counterfactuals
@@ -527,6 +620,6 @@ If yes, we have something useful. If no, we learn and try something else.
 
 ---
 
-*Document version: 2.0*
-*Updated: December 28, 2024*
-*Based on: Codebase audit of actual implementation*
+*Document version: 3.0*
+*Updated: December 28, 2025*
+*Based on: UNIFIED_AGI_PLAN implementation complete*

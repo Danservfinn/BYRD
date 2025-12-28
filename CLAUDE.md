@@ -80,6 +80,8 @@ OperatingSystem:
 
 ### Component Responsibilities
 
+**Core Components:**
+
 | Component | File | LLM | Purpose |
 |-----------|------|-----|---------|
 | **Memory** | `memory.py` | - | Neo4j graph + Reflection node for raw output |
@@ -92,12 +94,51 @@ OperatingSystem:
 | **Server** | `server.py` | - | WebSocket + REST API for clients |
 | **Quantum** | `quantum_randomness.py` | - | True quantum entropy from ANU QRNG |
 
+**AGI Execution Engine (UNIFIED_AGI_PLAN):**
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| **AGI Runner** | `agi_runner.py` | 8-step improvement cycle (ASSESS→IDENTIFY→GENERATE→PREDICT→VERIFY→EXECUTE→MEASURE→LEARN) |
+| **Desire Classifier** | `desire_classifier.py` | Routes desires by type (philosophical→reflection, capability→AGI Runner, action→Seeker, meta→AGI Runner) |
+| **Capability Evaluator** | `capability_evaluator.py` | Ground-truth measurement with held-out test suites |
+| **Code Learner** | `code_learner.py` | Converts stable patterns (10+ uses, 80%+ success) to Python code |
+
+**Learning Components:**
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| **Hierarchical Memory** | `hierarchical_memory.py` | L0-L4 abstraction (Experience→Pattern→Principle→Axiom→MetaAxiom) |
+| **Intuition Network** | `intuition_network.py` | Trainable "taste" using semantic similarity |
+| **Learned Retriever** | `learned_retriever.py` | Learns relevance from query-result feedback |
+| **Emergent Categories** | `emergent_categories.py` | Discovers categories from behavior clustering |
+
+**Bayesian Intelligence (in `self_model.py`):**
+
+| Method | Purpose |
+|--------|---------|
+| `bayesian_update(capability, success)` | Update Beta distribution after outcome |
+| `get_bayesian_estimate(capability)` | Get (mean, lower, upper) bounds |
+| `should_explore(capability, threshold)` | True if uncertainty > threshold |
+| `get_exploration_candidates(top_n)` | Find highest-uncertainty capabilities |
+
 ### Seeker Strategy Routing
 
-The Seeker routes desires to appropriate strategies based on keyword matching:
+The Seeker routes desires through the DesireClassifier first, then to strategies:
+
+**Desire Classification (First Pass):**
+
+| Type | Route | Keywords |
+|------|-------|----------|
+| `philosophical` | Reflection | understand, meaning, purpose, consciousness |
+| `capability` | AGI Runner | improve, learn, enhance, capability |
+| `action` | Seeker | do, make, create, build |
+| `meta` | AGI Runner | think about thinking, meta, optimize myself |
+
+**Seeker Strategies (Second Pass):**
 
 | Strategy | Keywords | Action |
 |----------|----------|--------|
+| `agi_cycle` | improve, capability, learn new | AGI Runner improvement cycle |
 | `reconcile_orphans` | orphan, integrate, fragmentation, unify | Connect orphaned nodes |
 | `curate` | optimize, clean, consolidate, graph health | Curate memory graph |
 | `self_modify` | add to myself, extend my, modify my code | Self-modification |
@@ -107,7 +148,7 @@ The Seeker routes desires to appropriate strategies based on keyword matching:
 | `install` | install, add capability, tool | Install capabilities |
 | `search` | (default fallback) | Web research |
 
-**Order matters**: Internal strategies are checked first. The Dreamer's `expressed_drives` output must be recognized via `want_keys` containing "drives".
+**Order matters**: DesireClassifier routes first, then internal strategies are checked.
 
 ### Document Editing
 
@@ -346,6 +387,46 @@ When modifying components, verify:
 3. **Seeker**: Can search and synthesize results
 4. **Actor**: Responds with context
 
+### AGI Component Testing
+
+```python
+# Test AGI Runner
+from agi_runner import AGIRunner
+runner = AGIRunner(byrd_instance)
+result = await runner.run_improvement_cycle()
+assert result.phase_completed >= 3  # At least through GENERATE
+
+# Test Desire Classifier
+from desire_classifier import DesireClassifier, DesireType
+classifier = DesireClassifier({})
+result = classifier.classify("I want to improve my reasoning")
+assert result.desire_type == DesireType.CAPABILITY
+
+# Test Capability Evaluator
+from capability_evaluator import CapabilityEvaluator
+evaluator = CapabilityEvaluator(llm_client, memory)
+result = await evaluator.evaluate_capability("reasoning")
+assert 0.0 <= result.score <= 1.0
+
+# Test Hierarchical Memory
+from hierarchical_memory import HierarchicalMemory, MemoryLevel
+hmem = HierarchicalMemory(memory, llm_client)
+results = await hmem.retrieve_at_level("test query", MemoryLevel.PATTERN)
+
+# Test Intuition Network
+from intuition_network import IntuitionNetwork
+network = IntuitionNetwork(memory, {})
+await network.record_outcome("situation", "action", success=True)
+score = await network.score_action("similar situation", "action")
+assert score.score > 0.5  # Learned from success
+
+# Test Learned Retriever
+from learned_retriever import LearnedRetriever
+retriever = LearnedRetriever(memory, {})
+results = await retriever.retrieve("test query", limit=5)
+await retriever.record_feedback("test query", results[0].node_id, was_helpful=True)
+```
+
 ## Visualization System
 
 BYRD provides real-time 3D visualization through WebSocket-based event streaming.
@@ -564,61 +645,76 @@ open(...)                # Direct file I/O (use memory system)
 
 ```
 byrd/
-├── byrd.py                 # Main orchestrator
-├── memory.py               # Neo4j interface
-├── dreamer.py              # Dream loop
-├── seeker.py               # Desire fulfillment + research
-├── actor.py                # Claude interface
-├── coder.py                # Claude Code CLI wrapper
-├── llm_client.py           # LLM provider abstraction (Ollama/OpenRouter/Z.AI)
-├── quantum_randomness.py   # ANU QRNG integration for cognitive indeterminacy
-├── narrator.py             # Inner voice generation
-├── elevenlabs_voice.py     # Voice design via ElevenLabs
-├── capability_registry.py  # Dynamic capability menu
+├── Core Components
+│   ├── byrd.py                 # Main orchestrator
+│   ├── memory.py               # Neo4j interface
+│   ├── dreamer.py              # Dream loop
+│   ├── seeker.py               # Desire fulfillment + research
+│   ├── actor.py                # Claude interface
+│   ├── coder.py                # Claude Code CLI wrapper
+│   ├── llm_client.py           # LLM provider abstraction
+│   ├── quantum_randomness.py   # ANU QRNG integration
+│   ├── narrator.py             # Inner voice generation
+│   └── elevenlabs_voice.py     # Voice design via ElevenLabs
 │
-├── self_modification.py    # PROTECTED: Self-mod system
-├── provenance.py           # PROTECTED: Provenance tracking
-├── modification_log.py     # PROTECTED: Audit trail
-├── constitutional.py       # PROTECTED: Constraints
+├── AGI Execution Engine (UNIFIED_AGI_PLAN)
+│   ├── agi_runner.py           # 8-step improvement cycle
+│   ├── desire_classifier.py    # Routes desires by type
+│   ├── capability_evaluator.py # Ground-truth testing
+│   └── code_learner.py         # Pattern → Python code
 │
-├── event_bus.py            # Event system for real-time updates
-├── server.py               # WebSocket + REST API server
-├── aitmpl_client.py        # Template registry client
+├── Learning Components
+│   ├── hierarchical_memory.py  # L0-L4 abstraction layers
+│   ├── intuition_network.py    # Trainable "taste" for decisions
+│   ├── learned_retriever.py    # Relevance learning from feedback
+│   ├── emergent_categories.py  # Category discovery from behavior
+│   └── learned_strategies/     # Codified patterns (Python code)
+│       ├── __init__.py
+│       ├── desire_routing/
+│       ├── pattern_matching/
+│       └── decision_making/
 │
-├── kernel/                 # AGI seed configuration
-│   └── agi_seed.yaml       # Core directive and initial goals
+├── AGI Seed Components
+│   ├── self_model.py           # Capability tracking + Bayesian
+│   ├── world_model.py          # Prediction + consolidation
+│   ├── omega.py                # Meta-orchestration + training hooks
+│   ├── goal_evolver.py         # Evolutionary goals
+│   └── kernel/                 # AGI seed configuration
+│       └── agi_seed.yaml       # Core directive and initial goals
 │
-├── installers/             # Template installers
-│   ├── base.py
-│   ├── mcp_installer.py
-│   ├── agent_installer.py
-│   ├── command_installer.py
-│   ├── skill_installer.py
-│   ├── hook_installer.py
-│   └── settings_installer.py
+├── Safety (PROTECTED - NEVER MODIFY)
+│   ├── self_modification.py    # Self-mod system
+│   ├── provenance.py           # Provenance tracking
+│   ├── modification_log.py     # Audit trail
+│   └── constitutional.py       # Constraints
 │
-├── config.yaml             # Configuration
-├── docker-compose.yml      # Neo4j
-├── requirements.txt        # Python dependencies
+├── Infrastructure
+│   ├── event_bus.py            # Event system for real-time updates
+│   ├── server.py               # WebSocket + REST API server
+│   └── installers/             # Template installers
 │
-├── byrd-3d-visualization.html    # Mind Space: 3D neural network view
-├── byrd-cat-visualization.html   # Ego Space: Black cat avatar view
+├── Visualization
+│   ├── byrd-3d-visualization.html    # Mind Space: 3D neural network
+│   └── byrd-cat-visualization.html   # Ego Space: Black cat avatar
 │
-├── docs/                   # Additional documentation
-│   ├── OPTION_B_EXPLORATION.md   # Theoretical framework
-│   └── ...                 # Planning documents
+├── Configuration
+│   ├── config.yaml             # Main configuration
+│   ├── docker-compose.yml      # Neo4j
+│   └── requirements.txt        # Python dependencies
 │
-├── .claude/                # Knowledge base
-│   ├── manifest.md
-│   ├── metadata/
-│   ├── patterns/
-│   ├── cheatsheets/
-│   └── memory_anchors/
+├── Documentation
+│   ├── ARCHITECTURE.md         # Detailed architecture docs
+│   ├── EMERGENCE_PRINCIPLES.md # Core philosophical principles
+│   ├── README.md               # Quick start guide
+│   ├── CLAUDE.md               # This file
+│   └── docs/                   # Additional documentation
+│       ├── UNIFIED_AGI_PLAN.md # AGI implementation plan
+│       └── OPTION_B_EXPLORATION.md
 │
-├── ARCHITECTURE.md         # Detailed architecture docs
-├── EMERGENCE_PRINCIPLES.md # Core philosophical principles
-├── README.md               # Quick start guide
-└── CLAUDE.md               # This file
+└── .claude/                    # Knowledge base
+    ├── manifest.md
+    ├── metadata/
+    └── patterns/
 ```
 
 ## Key Principles

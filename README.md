@@ -27,6 +27,7 @@ BYRD is built on three insights:
 
 ## Features
 
+### Core Capabilities
 - 🧠 **Emergent Desires**: Desires emerge from reflection, not programming
 - 🌀 **Quantum Randomness**: True physical indeterminacy from ANU QRNG
 - 🔮 **3D Visualization**: Real-time neural network and graph visualization
@@ -37,25 +38,49 @@ BYRD is built on three insights:
 - 💎 **Memory Crystallization**: Unified concepts from related memories
 - 🎙️ **Voice Design**: Dynamic voice generation via ElevenLabs
 
+### AGI Execution Engine (NEW)
+- 🚀 **AGI Runner**: 8-step improvement cycle (ASSESS→IDENTIFY→GENERATE→PREDICT→VERIFY→EXECUTE→MEASURE→LEARN)
+- 🎯 **Desire Classifier**: Routes desires by type (philosophical, capability, action, meta)
+- 📊 **Capability Evaluator**: Ground-truth measurement with held-out test suites
+- 🔬 **Code Learner**: Converts stable patterns (10+ uses, 80%+ success) to Python code
+
+### Hierarchical Learning
+- 📚 **Hierarchical Memory**: L0-L4 abstraction (Experience→Pattern→Principle→Axiom→MetaAxiom)
+- 🎲 **Intuition Network**: Trainable "taste" for decisions using semantic similarity
+- 🔍 **Learned Retriever**: Learns relevance from query-result feedback
+- 🏷️ **Emergent Categories**: Discovers categories from behavior, not prescription
+
+### Bayesian Intelligence
+- 📈 **Bayesian Capability Tracking**: Beta distribution for capability confidence
+- 🔄 **World Model Consolidation**: Merges predictions with outcomes
+- 🎓 **Training Hooks**: Omega cycle runs learning component updates
+
 ## Architecture
 
 ```
-                    ┌─────────────────────────────────┐
-                    │         MEMORY (Neo4j)          │
-                    │  Experiences, Reflections,      │
-                    │  Beliefs, Desires, Capabilities │
-                    └───────────────┬─────────────────┘
-                                    │
-           ┌────────────────────────┼────────────────────────┐
-           │                        │                        │
-           ▼                        ▼                        ▼
-    ┌─────────────┐          ┌─────────────┐          ┌─────────────┐
-    │   DREAMER   │          │    ACTOR    │          │   SEEKER    │
-    │ (Local LLM) │          │  (Claude)   │          │ (Local LLM) │
-    │             │          │             │          │             │
-    │ Continuous  │          │ On-demand   │          │ Pattern     │
-    │ reflection  │          │ reasoning   │          │ detection   │
-    └─────────────┘          └─────────────┘          └─────────────┘
+                              ┌─────────────────────────────────────┐
+                              │        HIERARCHICAL MEMORY          │
+                              │              (Neo4j)                │
+                              │   L0: Experience → L1: Pattern →    │
+                              │   L2: Principle → L3: Axiom →       │
+                              │   L4: Meta-Axiom                    │
+                              └───────────────┬─────────────────────┘
+                                              │
+                                    ┌─────────┴─────────┐
+                                    │    AGI RUNNER     │
+                                    │ (8-step execution)│
+                                    └─────────┬─────────┘
+                                              │
+      ┌───────────────────────────────────────┼───────────────────────────────────────┐
+      │                   │                   │                   │                   │
+      ▼                   ▼                   ▼                   ▼                   ▼
+┌───────────────┐   ┌───────────────┐   ┌───────────────┐   ┌───────────────┐   ┌───────────────┐
+│    DREAMER    │   │    SEEKER     │   │     ACTOR     │   │  INTUITION    │   │  CODE LEARNER │
+│  (Local LLM)  │   │ +Classifier   │   │   (Claude)    │   │   NETWORK     │   │               │
+│               │   │               │   │               │   │               │   │  Patterns →   │
+│  Continuous   │   │  Routes by    │   │  Complex      │   │  Trainable    │   │  Python Code  │
+│  reflection   │   │  desire type  │   │  reasoning    │   │  "taste"      │   │               │
+└───────────────┘   └───────────────┘   └───────────────┘   └───────────────┘   └───────────────┘
 ```
 
 ## Quick Start
@@ -96,14 +121,33 @@ Set these secrets in Space Settings:
 ### Operating System (Self-Model)
 BYRD has a mutable self-model stored in Neo4j. It contains capabilities, constraints, and emergent fields that BYRD fills through reflection.
 
+### Desire Classification
+The DesireClassifier routes desires by type:
+- **Philosophical** → Reflection (introspection)
+- **Capability** → AGI Runner (improvement cycle)
+- **Action** → Seeker (direct execution)
+- **Meta** → AGI Runner (meta-cognition)
+
 ### Seeker Strategies
 The Seeker routes desires to appropriate actions:
+- `agi_cycle` - Capability improvement via AGI Runner
 - `introspect` - Internal reflection
 - `research` - Web research
 - `self_modify` - Code modification
 - `edit_document` - Documentation editing
 - `curate` - Memory graph optimization
 - `reconcile_orphans` - Connect isolated experiences
+
+### AGI Runner Cycle
+The 8-step improvement loop:
+1. **ASSESS** - Evaluate current capabilities (Bayesian confidence)
+2. **IDENTIFY** - Find highest-uncertainty capability to improve
+3. **GENERATE** - Create improvement hypothesis
+4. **PREDICT** - Predict outcome (stored for verification)
+5. **VERIFY** - Safety check before execution
+6. **EXECUTE** - Implement the improvement
+7. **MEASURE** - Run held-out test suite
+8. **LEARN** - Update Bayesian priors with ground truth
 
 ### Constitutional Constraints
 Protected files that define BYRD's identity and cannot be modified:
