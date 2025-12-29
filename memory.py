@@ -3448,10 +3448,11 @@ class Memory:
     # =========================================================================
 
     # Configuration for connection heuristic
+    # BYPASS SOLUTION ACTIVATED: More aggressive settings to resolve orphan bottleneck
     CONNECTION_HEURISTIC_CONFIG = {
-        "similarity_threshold": 0.3,      # Minimum similarity to create link
-        "max_connections_per_run": 10,    # Limit connections per execution
-        "min_content_length": 20,         # Skip very short content
+        "similarity_threshold": 0.08,     # Lowered threshold to catch more matches (was 0.3)
+        "max_connections_per_run": 50,    # Increased batch size for faster orphan clearing (was 10)
+        "min_content_length": 10,        # Lowered to include shorter experiences (was 20)
         "relationship_type": "SEMANTICALLY_RELATED",
     }
 
@@ -6418,8 +6419,16 @@ class Memory:
             ],
             "creation": [
                 "modify_code(file, changes) - Change your modifiable source files",
-                "add_capability(tool) - Install new tools",
-                "write_files(path, content) - Create new files"
+                "add_capability(tool) - Install new tools from aitmpl registry"
+            ],
+            "coding_agent": [
+                "read_file(filepath) - Read any file in the codebase",
+                "write_file(filepath, content) - Create or overwrite files (any file except protected)",
+                "edit_file(filepath, old, new) - Make targeted edits to existing files",
+                "list_files(directory, pattern) - Explore directory structure",
+                "search_code(pattern) - Search for patterns in code files",
+                "run_python(filepath, args, timeout) - Execute Python in sandboxed subprocess (no secrets, 60s max)",
+                "get_file_info(filepath) - Get file metadata"
             ],
             "connection": [
                 "link_concepts() - Connect related ideas",

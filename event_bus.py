@@ -69,6 +69,8 @@ class EventType(Enum):
     CODER_COMPLETE = "coder_complete"
     CODER_FAILED = "coder_failed"
     CODER_VALIDATION_FAILED = "coder_validation_failed"
+    CODER_BYPASSED = "coder_bypassed"  # Code execution failed, used graph bypass
+    SYNTHETIC_ACTION = "synthetic_action"  # Graph-based action created without code execution
 
     # System events
     SYSTEM_STARTED = "system_started"

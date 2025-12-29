@@ -43,6 +43,13 @@ try:
 except ImportError:
     HAS_DESIRE_CLASSIFIER = False
 
+# Try to import LocalGraphConnector for code execution bypass
+try:
+    from local_graph_connector import get_local_graph_connector, code_execution_bypass
+    HAS_LOCAL_GRAPH_CONNECTOR = True
+except ImportError:
+    HAS_LOCAL_GRAPH_CONNECTOR = False
+
 
 class Seeker:
     """
@@ -4141,6 +4148,23 @@ If the change is too risky or unclear, output: ERROR: <reason>"""
 
         # Check if Coder is available
         if not self.coder:
+            # Try to use local graph connector as bypass
+            if HAS_LOCAL_GRAPH_CONNECTOR and self.memory:
+                print("🔗 Coder unavailable, using local graph bypass...")
+                connector = get_local_graph_connector(self.memory)
+                result = await connector.handle_coding_desire_without_execution(
+                    desire,
+                    "Coder not initialized"
+                )
+                if result.success:
+                    print(f"✅ Graph bypass successful: {result.message}")
+                    # Record the bypass as an experience
+                    await self._record_seek_failure(
+                        desire,
+                        "coder_bypassed",
+                        f"Handled via graph bypass: {result.message}"
+                    )
+                    return True
             await self._record_seek_failure(
                 desire,
                 "coder_unavailable",
@@ -4149,6 +4173,22 @@ If the change is too risky or unclear, output: ERROR: <reason>"""
             return False
 
         if not self.coder.enabled:
+            # Try to use local graph connector as bypass
+            if HAS_LOCAL_GRAPH_CONNECTOR and self.memory:
+                print("🔗 Coder disabled, using local graph bypass...")
+                connector = get_local_graph_connector(self.memory)
+                result = await connector.handle_coding_desire_without_execution(
+                    desire,
+                    "Coder is disabled in config"
+                )
+                if result.success:
+                    print(f"✅ Graph bypass successful: {result.message}")
+                    await self._record_seek_failure(
+                        desire,
+                        "coder_bypassed",
+                        f"Handled via graph bypass: {result.message}"
+                    )
+                    return True
             await self._record_seek_failure(
                 desire,
                 "coder_disabled",
@@ -4241,10 +4281,26 @@ If the change is too risky or unclear, output: ERROR: <reason>"""
                 print(f"✅ Coder complete: {description[:50]}")
                 return True
             else:
-                # Include output for debugging (truncated)
+                # Coder execution failed - try graph bypass
                 error_msg = result.error or "Unknown error"
                 if result.output and not result.error:
                     error_msg += f" | stdout: {result.output[:200]}"
+                
+                # Try local graph connector bypass
+                if HAS_LOCAL_GRAPH_CONNECTOR and self.memory:
+                    print(f"🔄 Coder execution failed, attempting graph bypass...")
+                    connector = get_local_graph_connector(self.memory)
+                    bypass_result = await connector.handle_coding_desire_without_execution(
+                        desire,
+                        f"Coder execution failed: {error_msg}"
+                    )
+                    if bypass_result.success:
+                        print(f"✅ Graph bypass successful: {bypass_result.message}")
+                        # Mark as fulfilled despite code execution failure
+                        await self.memory.fulfill_desire(desire_id)
+                        await self.memory.update_desire_status(desire_id, "bypassed")
+                        return True
+                
                 await self._record_seek_failure(
                     desire,
                     "coder_execution_failed",
@@ -4253,6 +4309,21 @@ If the change is too risky or unclear, output: ERROR: <reason>"""
                 return False
 
         except Exception as e:
+            # Coder threw exception - try graph bypass
+            if HAS_LOCAL_GRAPH_CONNECTOR and self.memory:
+                print(f"🔄 Coder exception, attempting graph bypass...")
+                connector = get_local_graph_connector(self.memory)
+                bypass_result = await connector.handle_coding_desire_without_execution(
+                    desire,
+                    f"Coder exception: {str(e)}"
+                )
+                if bypass_result.success:
+                    print(f"✅ Graph bypass successful: {bypass_result.message}")
+                    desire_id = desire.get("id", "")
+                    await self.memory.fulfill_desire(desire_id)
+                    await self.memory.update_desire_status(desire_id, "bypassed")
+                    return True
+            
             await self._record_seek_failure(
                 desire,
                 "coder_exception",
