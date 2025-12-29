@@ -591,8 +591,8 @@ option_b:
     enabled: true
 
     # Resource budget limits
-    daily_token_limit: 1000000  # Maximum tokens per day
-    daily_cost_limit: 10.0      # Maximum USD per day
+    daily_token_limit: 10000000  # Maximum tokens per day (10M)
+    daily_cost_limit: 50.0       # Maximum USD per day
 
     # Alert thresholds
     cpu_warning: 80.0           # CPU percent to trigger warning

@@ -2970,8 +2970,11 @@ If you want to redesign your voice, include:
     "accent": "american" (or other),
     "accent_strength": 1.0,
     "reason": "why you want this new voice",
-    "acknowledged": true
+    "acknowledged": false
   }}
+
+IMPORTANT: Set acknowledged=false for new designs. After hearing your new voice,
+you may then include voice_design with acknowledged=true to formally accept it.
 """
 
             # Check if voice exists but is not yet acknowledged
@@ -3092,45 +3095,77 @@ You can change your voice any time you feel it no longer represents you.
                 print("⚠️ Voice design missing description")
                 return
 
-            # Try to generate voice via ElevenLabs Voice Design API
-            voice_id = None
-            generation_status = "pending"
+            # Check if this is an acknowledgment (formal acceptance of existing voice)
+            # This avoids regenerating the voice when BYRD is just formally accepting it
+            # An acknowledgment is recognized when:
+            # 1. acknowledged=true is set
+            # 2. The description is similar to existing voice (same first 50 chars)
+            # 3. An already-generated voice exists
+            is_acknowledgment = False
+            is_pure_acknowledgment = False
+            
+            if acknowledged and current_voice_config:
+                current_description = current_voice_config.get("description", "")
+                current_voice_id = current_voice_config.get("voice_id")
+                
+                # Check if we have an existing generated voice
+                has_generated_voice = current_voice_id and len(str(current_voice_id)) >= 20
+                
+                # Check if description is similar (same first 50 characters)
+                description_similar = (
+                    len(description) >= 20 and
+                    len(current_description) >= 20 and
+                    description[:50].lower() == current_description[:50].lower()
+                )
+                
+                if has_generated_voice and description_similar:
+                    # This is an acknowledgment - same description, already generated, just acknowledging
+                    is_acknowledgment = True
+                    is_pure_acknowledgment = True
+                    voice_id = current_voice_id
+                    generation_status = current_voice_config.get("generation_status", "acknowledged")
+                    acknowledged = True  # Ensure acknowledged is True for saving
+                    print("🎤 Voice acknowledged (no regeneration)")
+            elif not is_pure_acknowledgment:
+                # Not an acknowledgment - try to generate voice via ElevenLabs Voice Design API
+                voice_id = None
+                generation_status = "pending"
 
-            try:
-                # Use the coordinator's voice client if available (has API key from config)
-                voice_client = None
-                if self.coordinator and hasattr(self.coordinator, 'voice') and self.coordinator.voice:
-                    voice_client = self.coordinator.voice
-                    print("🎤 Using coordinator's voice client")
-                else:
-                    # Fallback to creating new client from env
-                    from elevenlabs_voice import ElevenLabsVoice
-                    import os
-                    api_key = os.getenv("ELEVENLABS_API_KEY")
-                    if api_key:
-                        voice_client = ElevenLabsVoice(api_key, self.memory)
-                        print("🎤 Created new voice client from env")
-
-                if voice_client:
-                    voice_id, preview_audio, status_msg = await voice_client.generate_voice(
-                        voice_description=description,
-                        gender=gender,
-                        age=age,
-                        accent=accent,
-                        accent_strength=accent_strength
-                    )
-                    if voice_id:
-                        generation_status = "generated"
-                        print(f"🎤 Voice generated: {voice_id}")
+                try:
+                    # Use the coordinator's voice client if available (has API key from config)
+                    voice_client = None
+                    if self.coordinator and hasattr(self.coordinator, 'voice') and self.coordinator.voice:
+                        voice_client = self.coordinator.voice
+                        print("🎤 Using coordinator's voice client")
                     else:
-                        generation_status = f"failed: {status_msg}"
-                        print(f"⚠️ Voice generation failed: {status_msg}")
-                else:
-                    generation_status = "no_voice_client"
-                    print("⚠️ No voice client available (no API key)")
-            except Exception as e:
-                generation_status = f"error: {str(e)}"
-                print(f"⚠️ Voice generation error: {e}")
+                        # Fallback to creating new client from env
+                        from elevenlabs_voice import ElevenLabsVoice
+                        import os
+                        api_key = os.getenv("ELEVENLABS_API_KEY")
+                        if api_key:
+                            voice_client = ElevenLabsVoice(api_key, self.memory)
+                            print("🎤 Created new voice client from env")
+
+                    if voice_client:
+                        voice_id, preview_audio, status_msg = await voice_client.generate_voice(
+                            voice_description=description,
+                            gender=gender,
+                            age=age,
+                            accent=accent,
+                            accent_strength=accent_strength
+                        )
+                        if voice_id:
+                            generation_status = "generated"
+                            print(f"🎤 Voice generated: {voice_id}")
+                        else:
+                            generation_status = f"failed: {status_msg}"
+                            print(f"⚠️ Voice generation failed: {status_msg}")
+                    else:
+                        generation_status = "no_voice_client"
+                        print("⚠️ No voice client available (no API key)")
+                except Exception as e:
+                    generation_status = f"error: {str(e)}"
+                    print(f"⚠️ Voice generation error: {e}")
 
             # Build voice config (even if generation failed, save the design)
             voice_config = {
@@ -3147,7 +3182,7 @@ You can change your voice any time you feel it no longer represents you.
                 "generation_status": generation_status,
                 "is_generated": voice_id is not None,
                 "acknowledged": acknowledged,
-                "version": (current_voice_config.get("version", 0) + 1) if current_voice_config else 1,
+                "version": current_voice_config.get("version", 1) if is_pure_acknowledgment else ((current_voice_config.get("version", 0) + 1) if current_voice_config else 1),
                 "credits": current_voice_config.get("credits", {
                     "monthly_used": 0,
                     "monthly_limit": 10000,

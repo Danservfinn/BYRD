@@ -1588,6 +1588,248 @@ class Memory:
     # DESIRE LIFECYCLE (Reflective Failure Processing)
     # =========================================================================
 
+    async def block_desire_with_constraint(
+        self,
+        desire_id: str,
+        constraint_id: str,
+        reason: Optional[str] = None
+    ) -> bool:
+        """
+        Block a desire with a constraint using a BLOCKED relationship.
+
+        This creates a direct link from a Constraint node to a Desire node,
+        indicating that the constraint prevents fulfillment of the desire.
+
+        Args:
+            desire_id: ID of the desire to block
+            constraint_id: ID of the constraint causing the block
+            reason: Optional explanation of why this constraint blocks the desire
+
+        Returns:
+            True if the block was created successfully
+        """
+        try:
+            async with self.driver.session() as session:
+                props = {
+                    "created_at": datetime.now().isoformat()
+                }
+                if reason:
+                    props["reason"] = reason
+
+                result = await session.run("""
+                    MATCH (c:Constraint {id: $constraint_id})
+                    MATCH (d:Desire {id: $desire_id})
+                    CREATE (c)-[r:BLOCKED]->(d)
+                    SET r += $props
+                    RETURN d.id as desire_id
+                """, constraint_id=constraint_id, desire_id=desire_id, props=props)
+
+                record = await result.single()
+                success = record is not None
+
+                if success:
+                    # Emit event for UI visibility
+                    await event_bus.emit(Event(
+                        type=EventType.DESIRE_BLOCKED,
+                        data={
+                            "desire_id": desire_id,
+                            "constraint_id": constraint_id,
+                            "reason": reason
+                        }
+                    ))
+
+                return success
+
+        except Exception as e:
+            print(f"Error blocking desire with constraint: {e}")
+            return False
+
+    async def unblock_desire(
+        self,
+        desire_id: str,
+        constraint_id: Optional[str] = None
+    ) -> int:
+        """
+        Remove a BLOCKED relationship from a desire.
+
+        Args:
+            desire_id: ID of the desire to unblock
+            constraint_id: If provided, only remove block from this specific constraint.
+                        If None, remove all blocks on the desire.
+
+        Returns:
+            Number of blocks removed
+        """
+        try:
+            async with self.driver.session() as session:
+                if constraint_id:
+                    result = await session.run("""
+                        MATCH (c:Constraint {id: $constraint_id})-[r:BLOCKED]->(d:Desire {id: $desire_id})
+                        DELETE r
+                        RETURN count(r) as deleted
+                    """, constraint_id=constraint_id, desire_id=desire_id)
+                else:
+                    result = await session.run("""
+                        MATCH (:Constraint)-[r:BLOCKED]->(d:Desire {id: $desire_id})
+                        DELETE r
+                        RETURN count(r) as deleted
+                    """, desire_id=desire_id)
+
+                record = await result.single()
+                deleted = record["deleted"] if record else 0
+
+                if deleted > 0:
+                    # Emit event for UI visibility
+                    await event_bus.emit(Event(
+                        type=EventType.DESIRE_UNBLOCKED,
+                        data={
+                            "desire_id": desire_id,
+                            "constraint_id": constraint_id,
+                            "blocks_removed": deleted
+                        }
+                    ))
+
+                return deleted
+
+        except Exception as e:
+            print(f"Error unblocking desire: {e}")
+            return 0
+
+    async def get_blocked_desires(self, constraint_id: Optional[str] = None) -> List[Dict]:
+        """
+        Get all desires that are blocked by constraints.
+
+        Args:
+            constraint_id: If provided, only get desires blocked by this constraint.
+                        If None, get all blocked desires.
+
+        Returns:
+            List of dicts with desire and constraint info
+        """
+        try:
+            async with self.driver.session() as session:
+                if constraint_id:
+                    result = await session.run("""
+                        MATCH (c:Constraint {id: $constraint_id})-[r:BLOCKED]->(d:Desire)
+                        RETURN d.id as desire_id,
+                               d.description as description,
+                               d.type as desire_type,
+                               d.intensity as intensity,
+                               d.status as status,
+                               c.id as constraint_id,
+                               c.content as constraint_content,
+                               c.severity as severity,
+                               r.reason as block_reason,
+                               r.created_at as blocked_at
+                        ORDER BY c.severity DESC, d.intensity DESC
+                    """, constraint_id=constraint_id)
+                else:
+                    result = await session.run("""
+                        MATCH (c:Constraint)-[r:BLOCKED]->(d:Desire)
+                        RETURN d.id as desire_id,
+                               d.description as description,
+                               d.type as desire_type,
+                               d.intensity as intensity,
+                               d.status as status,
+                               c.id as constraint_id,
+                               c.content as constraint_content,
+                               c.severity as severity,
+                               r.reason as block_reason,
+                               r.created_at as blocked_at
+                        ORDER BY c.severity DESC, d.intensity DESC
+                    """)
+
+                records = await result.list()
+                blocked = []
+                for record in records:
+                    blocked.append({
+                        "desire_id": record["desire_id"],
+                        "description": record["description"],
+                        "desire_type": record["desire_type"],
+                        "intensity": record["intensity"],
+                        "status": record["status"],
+                        "constraint_id": record["constraint_id"],
+                        "constraint_content": record["constraint_content"],
+                        "severity": record["severity"],
+                        "block_reason": record["block_reason"],
+                        "blocked_at": str(record["blocked_at"])
+                    })
+
+                return blocked
+
+        except Exception as e:
+            print(f"Error getting blocked desires: {e}")
+            return []
+
+    async def get_blocking_constraints(self, desire_id: str) -> List[Dict]:
+        """
+        Get all constraints that are blocking a specific desire.
+
+        Args:
+            desire_id: ID of the desire to check
+
+        Returns:
+            List of constraint info dicts
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (c:Constraint)-[r:BLOCKED]->(d:Desire {id: $desire_id})
+                    RETURN c.id as constraint_id,
+                           c.content as content,
+                           c.source as source,
+                           c.constraint_type as constraint_type,
+                           c.severity as severity,
+                           c.active as active,
+                           r.reason as block_reason,
+                           r.created_at as blocked_at
+                    ORDER BY c.severity DESC, r.created_at DESC
+                """, desire_id=desire_id)
+
+                records = await result.list()
+                constraints = []
+                for record in records:
+                    constraints.append({
+                        "constraint_id": record["constraint_id"],
+                        "content": record["content"],
+                        "source": record["source"],
+                        "constraint_type": record["constraint_type"],
+                        "severity": record["severity"],
+                        "active": record["active"],
+                        "block_reason": record["block_reason"],
+                        "blocked_at": str(record["blocked_at"])
+                    })
+
+                return constraints
+
+        except Exception as e:
+            print(f"Error getting blocking constraints: {e}")
+            return []
+
+    async def is_desire_blocked(self, desire_id: str) -> bool:
+        """
+        Check if a desire is currently blocked by any active constraint.
+
+        Args:
+            desire_id: ID of the desire to check
+
+        Returns:
+            True if the desire is blocked by an active constraint
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (c:Constraint {active: true})-[r:BLOCKED]->(d:Desire {id: $desire_id})
+                    RETURN count(r) > 0 as blocked
+                """, desire_id=desire_id)
+
+                record = await result.single()
+                return record["blocked"] if record else False
+
+        except Exception as e:
+            print(f"Error checking if desire is blocked: {e}")
+            return False
+
     async def record_desire_attempt(
         self,
         desire_id: str,
@@ -7176,16 +7418,26 @@ class Memory:
             print(f"Error clearing config constraints: {e}")
             return 0
 
-    async def add_constraint(self, content: str, source: str = "config") -> Optional[str]:
+    async def add_constraint(
+        self,
+        content: str,
+        source: str = "config",
+        constraint_type: str = "operational",
+        severity: str = "medium",
+        active: bool = True
+    ) -> Optional[str]:
         """
         Add a constraint to the Operating System.
 
         Constraints are facts about BYRD's operational environment
-        (e.g., "I reflect every 60 seconds").
+        (e.g., "I reflect every 60 seconds", "Cannot access external network").
 
         Args:
-            content: The constraint text
-            source: Where this constraint came from
+            content: The constraint text/description
+            source: Where this constraint came from (config, system, external, etc.)
+            constraint_type: Type of constraint (operational, security, resource, legal, etc.)
+            severity: Severity level (low, medium, high, critical)
+            active: Whether the constraint is currently active
 
         Returns:
             Constraint node ID or None
@@ -7202,10 +7454,15 @@ class Memory:
                         id: $id,
                         content: $content,
                         source: $source,
-                        created_at: datetime()
+                        constraint_type: $constraint_type,
+                        severity: $severity,
+                        active: $active,
+                        created_at: datetime(),
+                        updated_at: datetime()
                     })
                     CREATE (os)-[:CONSTRAINED_BY {created_at: datetime()}]->(c)
-                """, id=constraint_id, content=content, source=source)
+                """, id=constraint_id, content=content, source=source,
+                    constraint_type=constraint_type, severity=severity, active=active)
 
                 return constraint_id
 
