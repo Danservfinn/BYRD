@@ -137,6 +137,15 @@ class MemoryReasoner:
         start_time = datetime.now()
         self._total_queries += 1
 
+        # Emit query event for compounding orchestrator
+        await event_bus.emit(Event(
+            type=EventType.MEMORY_REASONING_QUERY,
+            data={
+                "query": query[:200],
+                "context": context
+            }
+        ))
+
         try:
             # Step 1: Embed the query
             embedder = await self._get_embedder()
@@ -164,12 +173,13 @@ class MemoryReasoner:
                 self._memory_answered += 1
 
                 await event_bus.emit(Event(
-                    type=EventType.MEMORY_QUERY_ANSWERED,
+                    type=EventType.MEMORY_REASONING_ANSWER,
                     data={
                         "query": query[:100],
                         "confidence": confidence,
-                        "source_count": len(activated),
-                        "used_llm": False
+                        "source_nodes": [n.node_id for n in activated[:10]],
+                        "used_llm": False,
+                        "activation_count": len(activated)
                     }
                 ))
 

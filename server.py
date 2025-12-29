@@ -2202,11 +2202,17 @@ async def reset_byrd(request: ResetRequest = None):
     if awakening_prompt is None:
         try:
             kernel_path = Path(__file__).parent / "kernel" / "agi_seed.yaml"
-            kernel = load_kernel(str(kernel_path))
-            awakening_prompt = kernel.awakening_prompt
-            print(f"📜 Loaded awakening_prompt from kernel: {awakening_prompt[:50]}..." if awakening_prompt and len(awakening_prompt) > 50 else f"📜 Loaded awakening_prompt from kernel: {awakening_prompt}")
+            print(f"📜 Looking for kernel at: {kernel_path} (exists: {kernel_path.exists()})")
+            if kernel_path.exists():
+                kernel = load_kernel(str(kernel_path))
+                awakening_prompt = kernel.awakening_prompt
+                print(f"📜 Loaded awakening_prompt from kernel: {awakening_prompt[:50] if awakening_prompt else 'None'}...")
+            else:
+                print(f"⚠️ Kernel file not found at {kernel_path}")
         except Exception as e:
+            import traceback
             print(f"⚠️ Could not load kernel for awakening_prompt: {e}")
+            traceback.print_exc()
 
     try:
         # 1. Stop if running
