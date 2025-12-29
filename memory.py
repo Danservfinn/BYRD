@@ -4606,6 +4606,7 @@ class Memory:
                         n.id as id,
                         labels(n)[0] as type,
                         n.content as content,
+                        n.essence as essence,
                         n.raw_output as raw_output,
                         n.description as description,
                         n.name as name,
@@ -4653,8 +4654,12 @@ class Memory:
                         except:
                             content = str(raw_output)[:200] if raw_output else ""
                     else:
+                        # Debug: print crystal essence
+                        if node_type == "crystal":
+                            print(f"DEBUG Crystal: content={repr(record.get('content'))}, essence={repr(record.get('essence'))}")
                         content = (
                             record["content"] or
+                            record.get("essence") or  # For Crystal nodes
                             record["description"] or
                             record["name"] or
                             ""

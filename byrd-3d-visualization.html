@@ -1778,7 +1778,14 @@
 
     function isTypeVisible(type) {
       const normalizedType = (type || 'experience').toLowerCase();
-      return nodeTypeFilters[normalizedType] !== false;
+      const isVisible = nodeTypeFilters[normalizedType] !== false;
+      // Debug: log first few type checks
+      if (!window._typeCheckCount) window._typeCheckCount = 0;
+      if (window._typeCheckCount < 10) {
+        console.log(`isTypeVisible("${normalizedType}") = ${isVisible}, filter value = ${nodeTypeFilters[normalizedType]}`);
+        window._typeCheckCount++;
+      }
+      return isVisible;
     }
 
     function toggleTypeFilter(type) {
@@ -1845,10 +1852,155 @@
           showOnlyType(typeShortcuts[e.key]);
         }
       }
+
+      // 'b' key toggles belief network mode
+      if (e.key === 'b' || e.key === 'B') {
+        console.log('🔗 Toggling belief network mode');
+        toggleBeliefNetwork();
+      }
     });
 
     // Export for console use
     window.showOnlyType = showOnlyType;
+
+    // ==========================================================================
+    // BELIEF NETWORK MODE - Show implicit belief-to-belief connections
+    // ==========================================================================
+    function toggleBeliefNetwork() {
+      if (graphState.beliefNetworkMode) {
+        clearBeliefNetwork();
+        graphState.beliefNetworkMode = false;
+        updateStatus('Belief network OFF', 'gray');
+      } else {
+        buildBeliefNetwork();
+        graphState.beliefNetworkMode = true;
+        updateStatus('Belief network ON - showing shared experience connections', 'blue');
+      }
+    }
+
+    function clearBeliefNetwork() {
+      // Remove all belief network lines from scene
+      for (const line of graphState.beliefNetworkLines) {
+        scene.remove(line);
+        if (line.geometry) line.geometry.dispose();
+        if (line.material) line.material.dispose();
+      }
+      graphState.beliefNetworkLines = [];
+    }
+
+    function buildBeliefNetwork() {
+      console.log('🔗 Building belief network...');
+      clearBeliefNetwork();
+
+      // Build experience -> beliefs map
+      const experienceToBeliefs = new Map();
+
+      graphState.relationships.forEach(rel => {
+        const sourceNode = graphState.nodes.get(rel.source_id);
+        const targetNode = graphState.nodes.get(rel.target_id);
+
+        if (!sourceNode || !targetNode) return;
+
+        const sourceType = (sourceNode.type || '').toLowerCase();
+        const targetType = (targetNode.type || '').toLowerCase();
+
+        // belief -> experience
+        if (sourceType === 'belief' && targetType === 'experience') {
+          if (!experienceToBeliefs.has(rel.target_id)) {
+            experienceToBeliefs.set(rel.target_id, new Set());
+          }
+          experienceToBeliefs.get(rel.target_id).add(rel.source_id);
+        }
+        // experience -> belief (reverse direction)
+        if (sourceType === 'experience' && targetType === 'belief') {
+          if (!experienceToBeliefs.has(rel.source_id)) {
+            experienceToBeliefs.set(rel.source_id, new Set());
+          }
+          experienceToBeliefs.get(rel.source_id).add(rel.target_id);
+        }
+      });
+
+      // Find belief pairs that share experiences
+      const beliefConnections = new Map(); // "beliefA-beliefB" -> count
+
+      experienceToBeliefs.forEach((beliefs, expId) => {
+        const beliefArray = Array.from(beliefs);
+        for (let i = 0; i < beliefArray.length; i++) {
+          for (let j = i + 1; j < beliefArray.length; j++) {
+            const key = [beliefArray[i], beliefArray[j]].sort().join('-');
+            beliefConnections.set(key, (beliefConnections.get(key) || 0) + 1);
+          }
+        }
+      });
+
+      console.log(`🔗 Found ${beliefConnections.size} belief-to-belief connections via shared experiences`);
+
+      // Create lines for top connections (limit to prevent performance issues)
+      const sortedConnections = Array.from(beliefConnections.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 2000); // Limit to top 2000 connections
+
+      const lineMaterial = new THREE.LineBasicMaterial({
+        color: 0xff6b6b,  // Red-orange for belief network
+        transparent: true,
+        opacity: 0.3,
+        linewidth: 1
+      });
+
+      for (const [key, strength] of sortedConnections) {
+        const [beliefA, beliefB] = key.split('-');
+        const meshA = graphState.nodeIdToMesh.get(beliefA);
+        const meshB = graphState.nodeIdToMesh.get(beliefB);
+
+        if (!meshA || !meshB) continue;
+
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(6);
+        positions[0] = meshA.position.x;
+        positions[1] = meshA.position.y;
+        positions[2] = meshA.position.z;
+        positions[3] = meshB.position.x;
+        positions[4] = meshB.position.y;
+        positions[5] = meshB.position.z;
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+        const line = new THREE.Line(geometry, lineMaterial.clone());
+        line.material.opacity = Math.min(0.6, 0.1 + strength * 0.05); // Stronger connections = more opaque
+        line.userData = { beliefA, beliefB, strength };
+
+        scene.add(line);
+        graphState.beliefNetworkLines.push(line);
+      }
+
+      console.log(`🔗 Created ${graphState.beliefNetworkLines.length} belief network lines`);
+    }
+
+    // Update belief network line positions (call in animation loop)
+    function updateBeliefNetworkPositions() {
+      if (!graphState.beliefNetworkMode) return;
+
+      for (const line of graphState.beliefNetworkLines) {
+        const meshA = graphState.nodeIdToMesh.get(line.userData.beliefA);
+        const meshB = graphState.nodeIdToMesh.get(line.userData.beliefB);
+
+        if (meshA && meshB) {
+          const positions = line.geometry.attributes.position.array;
+          positions[0] = meshA.position.x;
+          positions[1] = meshA.position.y;
+          positions[2] = meshA.position.z;
+          positions[3] = meshB.position.x;
+          positions[4] = meshB.position.y;
+          positions[5] = meshB.position.z;
+          line.geometry.attributes.position.needsUpdate = true;
+
+          // Only show if both beliefs are visible
+          line.visible = meshA.visible && meshB.visible;
+        }
+      }
+    }
+
+    window.toggleBeliefNetwork = toggleBeliefNetwork;
+    window.buildBeliefNetwork = buildBeliefNetwork;
 
     function applyAllFilters() {
       const now = Date.now();
@@ -2130,6 +2282,8 @@
         relationships: new Map(),   // id → relationship data from API
         nodeIdToMesh: new Map(),    // id → Three.js mesh
         relationshipLines: [],      // Three.js line objects for relationships
+        beliefNetworkLines: [],     // Synthetic lines for belief network mode
+        beliefNetworkMode: false,   // Whether belief network view is active
         loaded: false,
         lastFetch: null,
     };
@@ -4826,11 +4980,11 @@
       gravity: 0.0001,          // Very gentle gravity
       gravityPerConnection: 0.00005, // Very subtle connection bonus
 
-      // Damping and limits (tuned for ~5% vibration with connection weighting)
-      baseDamping: 0.92,        // Strong damping for very calm base
-      dampingPerConnection: 0.008, // More damping reduction per connection (more connections = more vibration)
-      minDamping: 0.75,         // Allow highly connected nodes to be noticeably more active
-      maxVelocity: 0.08,        // Very low max velocity for subtle movement
+      // Damping and limits (tuned for minimal vibration)
+      baseDamping: 0.98,        // Very strong damping for near-static display
+      dampingPerConnection: 0.002, // Minimal damping reduction per connection
+      minDamping: 0.92,         // Keep nodes very calm even with many connections
+      maxVelocity: 0.02,        // Very low max velocity for minimal movement
       minDistance: 4,           // Minimum distance between nodes
 
       // Boundary
@@ -5544,8 +5698,8 @@
 
         // EMERGENT SIZE: Base size is uniform; connection count scales it dynamically
         // Initial size is small; updateNodeScaleByConnections will grow important nodes
-        const baseSize = 0.6;
-        const heatBonus = getHeatIntensity(accessCount) * 0.3;
+        const baseSize = 0.3;  // Reduced from 0.6 for smaller nodes
+        const heatBonus = getHeatIntensity(accessCount) * 0.15;  // Reduced proportionally
         const size = baseSize + heatBonus;
 
         // GEOMETRY: Different shapes for different node types
@@ -7057,6 +7211,11 @@
       // Update relationship lines (both event and graph mode)
       if (graphState.relationshipLines.length > 0) {
         updateRelationshipPositions();
+      }
+
+      // Update belief network lines if active
+      if (graphState.beliefNetworkMode) {
+        updateBeliefNetworkPositions();
       }
 
       // Phase 2: Update node motion trails (disabled for performance)
@@ -10007,6 +10166,13 @@
         });
 
         console.log(`Loading ${filteredNodes.length} unique nodes from database (excluded: ${excludeTypes.join(', ') || 'none'})`);
+
+        // Store ALL nodes and relationships in graphState (needed for belief network mode)
+        data.nodes.forEach(n => graphState.nodes.set(n.id, n));
+        if (data.relationships) {
+          data.relationships.forEach(r => graphState.relationships.set(r.id, r));
+        }
+        console.log(`Stored ${graphState.nodes.size} nodes and ${graphState.relationships.size} relationships in graphState`);
 
         // Group nodes by type for positioning
         const nodesByType = {};
