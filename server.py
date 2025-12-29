@@ -2197,6 +2197,17 @@ async def reset_byrd(request: ResetRequest = None):
     hard_reset = request.hard_reset if request else True  # Default to hard reset
     git_ref = request.git_ref if request else None  # Optional git ref to restore to
 
+    # If no awakening_prompt provided, read from kernel file
+    # This allows "Save & Awaken" to use the just-saved kernel
+    if awakening_prompt is None:
+        try:
+            kernel_path = Path(__file__).parent / "kernel" / "agi_seed.yaml"
+            kernel = load_kernel(str(kernel_path))
+            awakening_prompt = kernel.awakening_prompt
+            print(f"📜 Loaded awakening_prompt from kernel: {awakening_prompt[:50]}..." if awakening_prompt and len(awakening_prompt) > 50 else f"📜 Loaded awakening_prompt from kernel: {awakening_prompt}")
+        except Exception as e:
+            print(f"⚠️ Could not load kernel for awakening_prompt: {e}")
+
     try:
         # 1. Stop if running
         if byrd_instance._running:

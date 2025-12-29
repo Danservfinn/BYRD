@@ -9174,13 +9174,39 @@
     });
 
     document.getElementById('btn-seed-confirm').addEventListener('click', async () => {
-      // Save kernel edits first
-      const saved = await saveKernel();
-      if (!saved) {
-        return; // Don't proceed if save failed (error shown in modal)
+      const btn = document.getElementById('btn-seed-confirm');
+      const originalText = btn.innerHTML;
+
+      try {
+        // Disable button and show progress
+        btn.disabled = true;
+        btn.innerHTML = 'Saving...';
+        btn.className = 'px-4 py-2 rounded-lg text-sm font-medium bg-indigo-400 border border-indigo-500 text-white cursor-wait transition-all';
+
+        // Save kernel edits first
+        const saved = await saveKernel();
+        if (!saved) {
+          // Re-enable button on failure (error shown in modal by saveKernel)
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+          btn.className = 'px-4 py-2 rounded-lg text-sm font-medium bg-indigo-500 border border-indigo-600 text-white hover:bg-indigo-600 transition-all';
+          return;
+        }
+
+        // Update button to show reset progress
+        btn.innerHTML = 'Resetting...';
+
+        hideSeedModal();
+        await resetByrd(null);  // Reset and awaken with kernel's directive (server reads from saved file)
+      } catch (e) {
+        console.error('Save & Awaken failed:', e);
+        // Re-enable button on error
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        btn.className = 'px-4 py-2 rounded-lg text-sm font-medium bg-indigo-500 border border-indigo-600 text-white hover:bg-indigo-600 transition-all';
+        document.getElementById('kernel-error').textContent = 'Operation failed: ' + e.message;
+        document.getElementById('kernel-error').classList.remove('hidden');
       }
-      hideSeedModal();
-      await resetByrd(null);  // Reset and awaken with kernel's directive
     });
 
     // Reset to Default button handler
