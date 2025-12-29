@@ -186,7 +186,8 @@ class GoalEvolver:
                 fitness=0.5,  # Initial neutral fitness
                 generation=0,
                 parent_goals=[],
-                success_criteria={"type": "subjective"}
+                success_criteria={"type": "subjective"},
+                from_bootstrap=True  # Mark as genesis/bootstrap goal
             )
             goal_ids.append(goal_id)
             self._total_goals_created += 1

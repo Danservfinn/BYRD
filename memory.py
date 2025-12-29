@@ -7648,9 +7648,20 @@ class Memory:
         generation: int = 0,
         parent_goals: Optional[List[str]] = None,
         success_criteria: Optional[Dict[str, Any]] = None,
-        resources_required: Optional[List[str]] = None
+        resources_required: Optional[List[str]] = None,
+        from_bootstrap: bool = False
     ) -> str:
-        """Create a new goal for evolutionary selection."""
+        """Create a new goal for evolutionary selection.
+
+        Args:
+            description: Goal description
+            fitness: Initial fitness score
+            generation: Evolution generation number
+            parent_goals: IDs of parent goals this was derived from
+            success_criteria: Criteria for goal completion
+            resources_required: Resources needed for this goal
+            from_bootstrap: If True, marks as genesis/bootstrap goal
+        """
         goal_id = self._generate_id(description)
 
         async with self.driver.session() as session:
@@ -7663,6 +7674,7 @@ class Memory:
                     parent_goals: $parent_goals,
                     success_criteria: $success_criteria,
                     resources_required: $resources_required,
+                    from_bootstrap: $from_bootstrap,
                     status: 'active',
                     attempts: 0,
                     capability_delta: 0.0,
@@ -7675,7 +7687,8 @@ class Memory:
             generation=generation,
             parent_goals=parent_goals or [],
             success_criteria=json.dumps(success_criteria) if success_criteria else "{}",
-            resources_required=resources_required or []
+            resources_required=resources_required or [],
+            from_bootstrap=from_bootstrap
             )
 
             # Link to parent goals if provided
