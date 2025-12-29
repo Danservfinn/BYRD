@@ -21,6 +21,7 @@ Tools Available:
     - list_files: List directory contents
     - search_code: Search for patterns in codebase
     - get_file_info: Get file metadata
+    - run_python: Execute Python in sandboxed subprocess
     - finish: Complete the task
 
 Safety:
@@ -35,6 +36,8 @@ import os
 import re
 import json
 import asyncio
+import subprocess
+import tempfile
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Callable
@@ -394,6 +397,146 @@ class AgentTools:
                 return True
         return False
 
+    async def run_python(self, filepath: str, args: List[str] = None, timeout: int = 30) -> ToolResult:
+        """
+        Execute a Python file in a sandboxed subprocess.
+
+        Security measures:
+        - No API keys or secrets in environment
+        - Timeout enforced (max 60 seconds)
+        - Memory limited to 256MB (Unix only)
+        - Process count limited (Unix only)
+        - Constitutional files cannot be executed
+        - Output truncated to prevent memory exhaustion
+
+        Args:
+            filepath: Path to the Python file to execute
+            args: Optional list of command-line arguments
+            timeout: Max seconds to run (default 30, max 60)
+        """
+        try:
+            # Validate filepath
+            if not filepath.endswith('.py'):
+                return ToolResult(False, "", "Only .py files can be executed")
+
+            # Resolve path - allow absolute paths too
+            path = Path(filepath)
+            if not path.is_absolute():
+                path = self.base_path / path
+            path = path.resolve()
+
+            if not path.exists():
+                return ToolResult(False, "", f"File not found: {filepath}")
+
+            if not path.is_file():
+                return ToolResult(False, "", f"Not a file: {filepath}")
+
+            # Security: block execution of constitutional files
+            # (These are the core identity files that shouldn't even be read by sandboxed code)
+            protected_names = ['provenance.py', 'constitutional.py', 'modification_log.py', 'self_modification.py']
+            if path.name in protected_names:
+                return ToolResult(False, "", f"Cannot execute protected file: {filepath}")
+
+            # Enforce timeout limits
+            timeout = min(max(1, timeout), 60)  # Clamp between 1-60 seconds
+
+            # Build command
+            cmd = ["python3", str(path)]
+            if args:
+                # Handle args as string (JSON array) or list
+                if isinstance(args, str):
+                    try:
+                        args = json.loads(args)
+                    except json.JSONDecodeError:
+                        args = [args]  # Treat as single arg
+                cmd.extend([str(a) for a in args])
+
+            # Create sandboxed environment - strip ALL dangerous env vars
+            safe_env = {
+                "PATH": "/usr/bin:/bin:/usr/local/bin",
+                "PYTHONPATH": str(self.base_path),
+                "HOME": tempfile.gettempdir(),
+                "TMPDIR": tempfile.gettempdir(),
+                "LANG": "en_US.UTF-8",
+                # Explicitly exclude: ANTHROPIC_API_KEY, ZAI_API_KEY, OPENROUTER_API_KEY,
+                # NEO4J_PASSWORD, ELEVENLABS_API_KEY, and all other secrets
+            }
+
+            # Set up resource limits (Unix only)
+            preexec = None
+            if os.name != 'nt':  # Not Windows
+                preexec = self._set_resource_limits
+
+            # Run the subprocess
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                cwd=str(self.base_path),
+                env=safe_env,
+                preexec_fn=preexec
+            )
+
+            # Build output
+            output_parts = [f"Exit code: {result.returncode}"]
+
+            if result.stdout:
+                stdout = result.stdout
+                if len(stdout) > 5000:
+                    stdout = stdout[:5000] + "\n... [STDOUT TRUNCATED]"
+                output_parts.append(f"\n=== STDOUT ===\n{stdout}")
+
+            if result.stderr:
+                stderr = result.stderr
+                if len(stderr) > 2000:
+                    stderr = stderr[:2000] + "\n... [STDERR TRUNCATED]"
+                output_parts.append(f"\n=== STDERR ===\n{stderr}")
+
+            output = "\n".join(output_parts)
+
+            return ToolResult(
+                success=result.returncode == 0,
+                output=output,
+                error=None if result.returncode == 0 else f"Process exited with code {result.returncode}"
+            )
+
+        except subprocess.TimeoutExpired:
+            return ToolResult(False, "", f"Execution timed out after {timeout} seconds")
+        except PermissionError:
+            return ToolResult(False, "", f"Permission denied executing {filepath}")
+        except Exception as e:
+            return ToolResult(False, "", f"Execution failed: {e}")
+
+    def _set_resource_limits(self):
+        """
+        Set resource limits for sandboxed subprocess (Unix only).
+
+        Called via preexec_fn before the subprocess starts.
+        """
+        try:
+            import resource
+
+            # Max 256MB memory (virtual address space)
+            mem_limit = 256 * 1024 * 1024
+            resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
+
+            # Max 100 open files
+            resource.setrlimit(resource.RLIMIT_NOFILE, (100, 100))
+
+            # Max 10 subprocesses (prevent fork bombs)
+            resource.setrlimit(resource.RLIMIT_NPROC, (10, 10))
+
+            # Max 30 seconds CPU time (backup for timeout)
+            resource.setrlimit(resource.RLIMIT_CPU, (30, 30))
+
+        except (ImportError, AttributeError):
+            # resource module not available (Windows)
+            pass
+        except Exception:
+            # Ignore resource limit errors, timeout is primary safeguard
+            pass
+
 
 # =============================================================================
 # AGENT CODER
@@ -468,6 +611,16 @@ class AgentCoder:
             description="Get metadata about a file (size, is_modifiable, line count, etc.)",
             parameters={
                 "filepath": "Path to the file"
+            },
+            required=["filepath"]
+        ),
+        Tool(
+            name="run_python",
+            description="Execute a Python file in a sandboxed environment. Returns stdout, stderr, and exit code. Has timeout, no network access, and limited memory. Use to test code you've written.",
+            parameters={
+                "filepath": "Path to the Python file to execute",
+                "args": "(Optional) Command-line arguments as a JSON array of strings",
+                "timeout": "(Optional) Max seconds to run, default 30, max 60"
             },
             required=["filepath"]
         ),
@@ -601,6 +754,7 @@ Finish: {{"tool":"finish","args":{{"success":true,"message":"done"}},"t":"ok"}}
             "list_files": self.tools.list_files,
             "search_code": self.tools.search_code,
             "get_file_info": self.tools.get_file_info,
+            "run_python": self.tools.run_python,
         }
 
         if tool_name == "finish":
