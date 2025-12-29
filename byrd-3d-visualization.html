@@ -1954,6 +1954,18 @@
       }
     }
 
+    // Expose filter functions to global scope for onclick handlers (module scope issue)
+    window.toggleTypeFilter = toggleTypeFilter;
+    window.showAllTypes = showAllTypes;
+    window.hideAllTypes = hideAllTypes;
+    window.toggleFilterPanel = toggleFilterPanel;
+    window.setRecencyFilter = setRecencyFilter;
+    window.setImportanceFilter = setImportanceFilter;
+    window.setConnectionFilter = setConnectionFilter;
+    window.setSearchFilter = setSearchFilter;
+    window.clearSearch = clearSearch;
+    window.resetAllFilters = resetAllFilters;
+
     // Type highlight state
     let highlightedType = null;  // Currently highlighted type, null = none
 
