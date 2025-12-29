@@ -3187,60 +3187,39 @@
       }
 
       update(delta, state, catModel, accessedNodeIds = []) {
-        if (!this.initialized || !catModel) return;
+        if (!this.initialized) return;
 
-        // State-based whisker activity - whiskers always visible
+        // State-based whisker glow intensity
         switch(state) {
           case CatState.CONNECTING:
           case CatState.SEEKING:
             this.targetOpacity = 1.0;
             break;
           case CatState.DREAMING:
-            this.targetOpacity = 0.8;
+            this.targetOpacity = 0.85;
             break;
           default:
-            this.targetOpacity = 0.7; // Always visible, even in idle
+            this.targetOpacity = 0.75;
         }
 
         // Smooth opacity transition
         this.connectionOpacity += (this.targetOpacity - this.connectionOpacity) * delta * 3;
 
-        // Update whisker positions - follow cat model
-        const catPos = catModel.position;
-        const catRot = catModel.rotation.y;
-        const catScale = catModel.scale;
+        const time = performance.now() * 0.001;
 
+        // Whiskers are children of catModel, so they auto-follow
+        // Just animate twitch and update materials
         this.whiskers.forEach((whisker, i) => {
           const userData = whisker.userData;
 
-          // Transform base position with cat rotation and scale
-          const scaledX = userData.basePosition.x * catScale.x;
-          const scaledY = userData.basePosition.y * catScale.y;
-          const scaledZ = userData.basePosition.z * catScale.z;
+          // Gentle twitch animation
+          const twitch = Math.sin(time * 3 + i * 0.7) * 0.03;
+          whisker.rotation.z = userData.baseRotZ + twitch;
+          whisker.rotation.x = userData.baseRotX + Math.cos(time * 2 + i) * 0.01;
 
-          const rotatedX = scaledX * Math.cos(catRot) - scaledZ * Math.sin(catRot);
-          const rotatedZ = scaledX * Math.sin(catRot) + scaledZ * Math.cos(catRot);
-
-          // Position whisker at cat's face
-          whisker.position.set(
-            catPos.x + rotatedX + userData.side * 2,
-            catPos.y + scaledY,
-            catPos.z + rotatedZ
-          );
-
-          // Rotate whisker to point outward from face
-          whisker.rotation.y = catRot + (userData.side > 0 ? -0.3 : Math.PI + 0.3);
-          whisker.rotation.z = userData.angleSpread * 0.5;
-
-          // Gentle idle animation - subtle twitch
-          const time = performance.now() * 0.001;
-          const twitch = Math.sin(time * 2 + i * 0.5) * 0.02;
-          whisker.rotation.z += twitch;
-
-          // Update opacity and emissive intensity
-          const opacity = Math.max(0.5, this.connectionOpacity);
-          whisker.material.opacity = opacity;
-          whisker.material.emissiveIntensity = 0.2 + this.connectionOpacity * 0.3;
+          // Update material
+          whisker.material.opacity = Math.max(0.6, this.connectionOpacity);
+          whisker.material.emissiveIntensity = 0.4 + this.connectionOpacity * 0.4;
         });
       }
 
