@@ -2634,7 +2634,7 @@
     // ==========================================================================
 
     /**
-     * WhiskerController - Dynamic whisker lines connecting to memory nodes
+     * WhiskerController - Dynamic whisker cylinders connecting to memory nodes
      */
     class WhiskerController {
       constructor(scene) {
@@ -2643,21 +2643,15 @@
         this.whiskerCount = 12; // 6 per side
         this.targetNodes = [];
         this.activeConnections = [];
-        this.connectionOpacity = 0;
-        this.targetOpacity = 0;
+        this.connectionOpacity = 0.6;
+        this.targetOpacity = 0.6;
         this.initialized = false;
       }
 
       initialize(catPosition) {
         if (this.initialized) return;
 
-        const whiskerMaterial = new THREE.LineBasicMaterial({
-          color: 0xd4af37,
-          transparent: true,
-          opacity: 0.6  // Start visible
-        });
-
-        // Create whisker lines (start points on cat face, end points dynamic)
+        // Create whisker cylinders (much more visible than lines)
         for (let i = 0; i < this.whiskerCount; i++) {
           const side = i < 6 ? -1 : 1;
           const index = i % 6;
@@ -2668,18 +2662,31 @@
           const baseY = 0.2 + Math.abs(index - 2.5) * 0.1;
           const baseZ = 1.2;
 
-          const geometry = new THREE.BufferGeometry();
-          const positions = new Float32Array([
-            baseX, baseY, baseZ,
-            baseX + side * 2, baseY + angleSpread, baseZ + 0.5
-          ]);
-          geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+          // Initial whisker as cylinder
+          const whiskerLength = 3;
+          const geometry = new THREE.CylinderGeometry(0.02, 0.01, whiskerLength, 6);
+          geometry.rotateZ(Math.PI / 2); // Rotate to point sideways
 
-          const whisker = new THREE.Line(geometry, whiskerMaterial.clone());
+          const material = new THREE.MeshStandardMaterial({
+            color: 0xd4af37,
+            emissive: 0xd4af37,
+            emissiveIntensity: 0.3,
+            transparent: true,
+            opacity: 0.8,
+            roughness: 0.3,
+            metalness: 0.5
+          });
+
+          const whisker = new THREE.Mesh(geometry, material);
+          whisker.position.set(baseX + side * 1.5, baseY, baseZ);
+          whisker.rotation.y = side > 0 ? -0.2 : 0.2;
+          whisker.rotation.z = angleSpread;
+
           whisker.userData = {
             basePosition: new THREE.Vector3(baseX, baseY, baseZ),
             side: side,
             index: index,
+            angleSpread: angleSpread,
             targetNode: null,
             extendFactor: 0
           };
@@ -2689,6 +2696,7 @@
         }
 
         this.initialized = true;
+        console.log('Whiskers initialized:', this.whiskerCount, 'whiskers');
       }
 
       update(delta, state, catModel, accessedNodeIds = []) {
@@ -2704,65 +2712,48 @@
             this.targetOpacity = 0.8;
             break;
           default:
-            this.targetOpacity = 0.6; // Always visible, even in idle
+            this.targetOpacity = 0.7; // Always visible, even in idle
         }
 
         // Smooth opacity transition
         this.connectionOpacity += (this.targetOpacity - this.connectionOpacity) * delta * 3;
 
-        // Update whisker positions
+        // Update whisker positions - follow cat model
         const catPos = catModel.position;
         const catRot = catModel.rotation.y;
+        const catScale = catModel.scale;
 
         this.whiskers.forEach((whisker, i) => {
           const userData = whisker.userData;
 
-          // Transform base position with cat rotation
-          const rotatedX = userData.basePosition.x * Math.cos(catRot) - userData.basePosition.z * Math.sin(catRot);
-          const rotatedZ = userData.basePosition.x * Math.sin(catRot) + userData.basePosition.z * Math.cos(catRot);
+          // Transform base position with cat rotation and scale
+          const scaledX = userData.basePosition.x * catScale.x;
+          const scaledY = userData.basePosition.y * catScale.y;
+          const scaledZ = userData.basePosition.z * catScale.z;
 
-          const startPos = new THREE.Vector3(
-            catPos.x + rotatedX,
-            catPos.y + userData.basePosition.y,
+          const rotatedX = scaledX * Math.cos(catRot) - scaledZ * Math.sin(catRot);
+          const rotatedZ = scaledX * Math.sin(catRot) + scaledZ * Math.cos(catRot);
+
+          // Position whisker at cat's face
+          whisker.position.set(
+            catPos.x + rotatedX + userData.side * 2,
+            catPos.y + scaledY,
             catPos.z + rotatedZ
           );
 
-          // Find target node for this whisker
-          let endPos;
-          if (accessedNodeIds.length > 0 && i < accessedNodeIds.length) {
-            const targetNodeId = accessedNodeIds[i % accessedNodeIds.length];
-            const targetMesh = nodes3D.find(n => n.userData?.id === targetNodeId);
-            if (targetMesh) {
-              endPos = targetMesh.position.clone();
-              userData.extendFactor = Math.min(1, userData.extendFactor + delta * 3);
-            } else {
-              endPos = this.getIdleEndPosition(startPos, userData, catRot);
-              userData.extendFactor = Math.max(0, userData.extendFactor - delta * 2);
-            }
-          } else {
-            endPos = this.getIdleEndPosition(startPos, userData, catRot);
-            userData.extendFactor = Math.max(0, userData.extendFactor - delta * 2);
-          }
+          // Rotate whisker to point outward from face
+          whisker.rotation.y = catRot + (userData.side > 0 ? -0.3 : Math.PI + 0.3);
+          whisker.rotation.z = userData.angleSpread * 0.5;
 
-          // Interpolate to target
-          const currentEnd = new THREE.Vector3().lerpVectors(
-            this.getIdleEndPosition(startPos, userData, catRot),
-            endPos,
-            userData.extendFactor
-          );
+          // Gentle idle animation - subtle twitch
+          const time = performance.now() * 0.001;
+          const twitch = Math.sin(time * 2 + i * 0.5) * 0.02;
+          whisker.rotation.z += twitch;
 
-          // Update geometry
-          const positions = whisker.geometry.attributes.position.array;
-          positions[0] = startPos.x;
-          positions[1] = startPos.y;
-          positions[2] = startPos.z;
-          positions[3] = currentEnd.x;
-          positions[4] = currentEnd.y;
-          positions[5] = currentEnd.z;
-          whisker.geometry.attributes.position.needsUpdate = true;
-
-          // Update opacity - minimum 0.4 to ensure always visible
-          whisker.material.opacity = Math.max(0.4, this.connectionOpacity * (0.6 + userData.extendFactor * 0.4));
+          // Update opacity and emissive intensity
+          const opacity = Math.max(0.5, this.connectionOpacity);
+          whisker.material.opacity = opacity;
+          whisker.material.emissiveIntensity = 0.2 + this.connectionOpacity * 0.3;
         });
       }
 
