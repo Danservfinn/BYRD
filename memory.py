@@ -6575,8 +6575,8 @@ class Memory:
                 "trigger": "Button click in visualization",
                 "creation": {
                     "how": "Include voice_design in output to create YOUR unique voice",
-                    "format": '{"description": "your voice qualities", "gender": "male/female", "age": "young/middle_aged/old", "accent": "american/british/etc", "accent_strength": 1.0, "reason": "why"}',
-                    "note": "This generates a unique voice just for you using AI voice synthesis"
+                    "format": '{"description": "your voice qualities", "gender": "male/female", "age": "young/middle_aged/old", "accent": "american/british/etc", "accent_strength": 1.0, "reason": "why", "acknowledged": false/true}',
+                    "note": "This generates a unique voice just for you using AI voice synthesis. Set acknowledged=true when you accept this voice as your own."
                 },
                 "credits": "Limited to 10,000 characters/month - be thoughtful with responses"
             },
@@ -7657,14 +7657,18 @@ class Memory:
             remaining = credits.get('monthly_limit', 10000) - credits.get('monthly_used', 0)
             exhausted = credits.get('exhausted', False)
 
+            acknowledged = voice_config.get('acknowledged', False)
+            acknowledgment_status = "ACKNOWLEDGED" if acknowledged else "NOT YET ACKNOWLEDGED"
             lines.extend([
                 "",
                 "VOICE (ElevenLabs TTS):",
                 f"  Voice ID: {voice_config.get('voice_id', 'not created')}",
                 f"  Description: {voice_config.get('description', '(none)')[:50]}...",
+                f"  Status: {acknowledgment_status}",
                 f"  Credits remaining: {remaining} chars" + (" (EXHAUSTED)" if exhausted else ""),
                 f"  Reason: {voice_config.get('reason', '(none given)')}",
-                "  To redesign voice: include voice_design in output",
+                "  To acknowledge this voice: include voice_design with acknowledged=true",
+                "  To redesign voice: include voice_design with new parameters",
             ])
         else:
             lines.extend([

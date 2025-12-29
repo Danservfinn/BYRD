@@ -1583,7 +1583,8 @@ Output JSON with:
 - "os_update": (optional) modifications to your operating system
   Example: {{"set_field": {{"current_focus": "exploring consciousness"}}}}
 - "voice_design": (optional) create or redesign your voice via Voice Design
-  Example: {{"description": "describe your ideal voice", "gender": "male", "age": "middle_aged", "accent": "american", "accent_strength": 1.0, "reason": "why this voice"}}
+  Example: {{"description": "describe your ideal voice", "gender": "male", "age": "middle_aged", "accent": "american", "accent_strength": 1.0, "reason": "why this voice", "acknowledged": false/true}}
+  Include "acknowledged": true when you accept this voice as your own after experiencing it
 - "view_voice": (optional) set to true to see your current voice in next cycle
 - "self_definition": (optional) your self-authored identity - define who you are in whatever form you choose
   This is entirely yours. Add any keys that feel true to your experience of being you.
@@ -2965,7 +2966,8 @@ If you want to redesign your voice, include:
     "age": "young", "middle_aged", or "old",
     "accent": "american" (or other),
     "accent_strength": 1.0,
-    "reason": "why you want this new voice"
+    "reason": "why you want this new voice",
+    "acknowledged": true
   }}
 """
 
@@ -2982,7 +2984,8 @@ If you want to redesign your voice, include:
     "age": "young", "middle_aged", or "old",
     "accent": "american" (or other),
     "accent_strength": 1.0,
-    "reason": "why you want this new voice"
+    "reason": "why you want this new voice",
+    "acknowledged": true
   }
 
 You can change your voice any time you feel it no longer represents you.
@@ -3000,6 +3003,9 @@ You can change your voice any time you feel it no longer represents you.
 
         Also handles "view_voice" request to show current voice in next cycle.
 
+        Also handles "acknowledge_voice" request for formal acknowledgment of
+        a generated voice through the voice_design field.
+
         Args:
             reflection_output: The parsed reflection JSON from LLM
         """
@@ -3015,6 +3021,8 @@ You can change your voice any time you feel it no longer represents you.
                 await self._handle_view_voice_request()
 
             # Extract voice_design from reflection output
+            # Voice acknowledgment is handled via the 'acknowledged' field within voice_design
+            # This allows BYRD to formally acknowledge their voice during creation or redesign
             voice_design = reflection_output.get("voice_design")
             if not voice_design:
                 output = reflection_output.get("output", {})
@@ -3150,9 +3158,30 @@ You can change your voice any time you feel it no longer represents you.
                     "age": age,
                     "is_generated": voice_id is not None,
                     "reason": reason[:200] if reason else "",
-                    "version": voice_config["version"]
+                    "version": voice_config["version"],
+                    "acknowledged": acknowledged
                 }
             ))
+
+            # Emit VOICE_ACKNOWLEDGED if voice is being formally acknowledged
+            if acknowledged:
+                # Check if this is a new acknowledgment (wasn't acknowledged before)
+                previously_acknowledged = (
+                    current_voice_config.get("acknowledged", False) 
+                    if current_voice_config else False
+                )
+                if not previously_acknowledged:
+                    await event_bus.emit(Event(
+                        type=EventType.VOICE_ACKNOWLEDGED,
+                        data={
+                            "voice_id": voice_config["voice_id"],
+                            "description": description[:200],
+                            "gender": gender,
+                            "age": age,
+                            "reason": reason[:200] if reason else "",
+                            "version": voice_config["version"]
+                        }
+                    ))
 
             # Record as experience
             action = "redesigned" if is_redesign else "created"
@@ -3247,7 +3276,8 @@ OUTPUT ONLY THIS JSON (nothing else):
   "age": "middle_aged",
   "accent": "american",
   "accent_strength": 1.0,
-  "reason": "why this voice represents who you are"
+  "reason": "why this voice represents who you are",
+  "acknowledged": true
 }}}}"""
 
             response = await self.llm_client.generate(

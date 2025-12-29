@@ -1215,6 +1215,7 @@ async def get_voice_status():
             result["credits_used"] = voice_config.get("monthly_used", 0)
             result["credits_remaining"] = voice_config.get("monthly_limit", 10000) - voice_config.get("monthly_used", 0)
             result["credits_exhausted"] = voice_config.get("exhausted", False)
+            result["acknowledged"] = voice_config.get("acknowledged", False)
 
             # Get voice name from ElevenLabs client
             if result["voice_id"] and hasattr(byrd_instance.voice, 'VOICES'):

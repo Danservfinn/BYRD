@@ -5854,21 +5854,10 @@
       selectedNode = node;
       selectedNodeIndex = nodes3D.indexOf(node);
 
-      // Focus camera on node
-      const targetPos = node.position.clone();
-      const direction = targetPos.clone().normalize();
-      const cameraOffset = direction.multiplyScalar(-25).add(new THREE.Vector3(0, 8, 0));
-      const newCameraPos = targetPos.clone().add(cameraOffset);
-
-      // Show camera indicator
-      showCameraIndicator('Focusing on ' + (NODE_COLORS[node.userData.type]?.label || 'Node'));
-
-      // Animate camera
+      // Don't move camera - just show the detail panel
+      // User can double-click or press Enter to fly to the node if desired
       controls.autoRotate = false;
-      animateCameraTo(newCameraPos, targetPos, 1200, () => {
-        hideCameraIndicator();
-        showDetailPanel(node);
-      });
+      showDetailPanel(node);
     }
 
     function deselectNode() {
