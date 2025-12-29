@@ -802,22 +802,22 @@
         <span class="stat-label">Beliefs</span>
         <span class="stat-count" id="belief-count">0</span>
       </button>
-      <button class="stat-toggle active" data-type="desire" onclick="toggleTypeFilter('desire')" title="Toggle desires">
+      <button class="stat-toggle" data-type="desire" onclick="toggleTypeFilter('desire')" title="Toggle desires">
         <span class="stat-dot" style="background: #be123c"></span>
         <span class="stat-label">Desires</span>
         <span class="stat-count" id="desire-count">0</span>
       </button>
-      <button class="stat-toggle active" data-type="goal" onclick="toggleTypeFilter('goal')" title="Toggle goals">
+      <button class="stat-toggle" data-type="goal" onclick="toggleTypeFilter('goal')" title="Toggle goals">
         <span class="stat-dot" style="background: #16a34a"></span>
         <span class="stat-label">Goals</span>
         <span class="stat-count" id="goal-count">0</span>
       </button>
-      <button class="stat-toggle active" data-type="reflection" onclick="toggleTypeFilter('reflection')" title="Toggle reflections">
+      <button class="stat-toggle" data-type="reflection" onclick="toggleTypeFilter('reflection')" title="Toggle reflections">
         <span class="stat-dot" style="background: #047857"></span>
         <span class="stat-label">Reflect</span>
         <span class="stat-count" id="reflection-count">0</span>
       </button>
-      <button class="stat-toggle active" data-type="experience" onclick="toggleTypeFilter('experience')" title="Toggle experiences">
+      <button class="stat-toggle" data-type="experience" onclick="toggleTypeFilter('experience')" title="Toggle experiences">
         <span class="stat-dot" style="background: #0369a1"></span>
         <span class="stat-label">Exp</span>
         <span class="stat-count" id="exp-count">0</span>
@@ -1755,17 +1755,17 @@
     // ==========================================================================
     const nodeTypeFilters = {
       belief: true,
-      desire: true,
-      goal: true,
-      experience: true,
-      reflection: true,
-      capability: true,
-      insight: true,
-      prediction: true,
-      task: true,
-      identity: true,
-      operatingsystem: true,
-      crystal: true
+      desire: false,
+      goal: false,
+      experience: false,
+      reflection: false,
+      capability: false,
+      insight: false,
+      prediction: false,
+      task: false,
+      identity: false,
+      operatingsystem: false,
+      crystal: false
     };
 
     // Advanced filter state
@@ -1820,6 +1820,7 @@
     }
 
     // Keyboard shortcuts for type filtering: 1=belief, 2=desire, 3=goal, 4=reflection, 5=experience, 0=all
+    console.log('🎹 Type filter keyboard shortcuts loaded: 1=belief, 2=desire, 3=goal, 4=reflection, 5=experience, 0=all');
     document.addEventListener('keydown', (e) => {
       // Ignore if typing in input field
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -1836,6 +1837,7 @@
       };
 
       if (typeShortcuts[e.key]) {
+        console.log(`🎹 Key pressed: ${e.key} → filtering to: ${typeShortcuts[e.key]}`);
         if (e.key === '0') {
           showAllTypes();
           updateStatus('Showing all types', 'green');
