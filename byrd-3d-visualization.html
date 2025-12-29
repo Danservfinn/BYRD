@@ -2654,7 +2654,7 @@
         const whiskerMaterial = new THREE.LineBasicMaterial({
           color: 0xd4af37,
           transparent: true,
-          opacity: 0
+          opacity: 0.6  // Start visible
         });
 
         // Create whisker lines (start points on cat face, end points dynamic)
@@ -2694,17 +2694,17 @@
       update(delta, state, catModel, accessedNodeIds = []) {
         if (!this.initialized || !catModel) return;
 
-        // State-based whisker activity
+        // State-based whisker activity - whiskers always visible
         switch(state) {
           case CatState.CONNECTING:
           case CatState.SEEKING:
-            this.targetOpacity = 0.7;
+            this.targetOpacity = 1.0;
             break;
           case CatState.DREAMING:
-            this.targetOpacity = 0.3;
+            this.targetOpacity = 0.8;
             break;
           default:
-            this.targetOpacity = 0;
+            this.targetOpacity = 0.6; // Always visible, even in idle
         }
 
         // Smooth opacity transition
@@ -2761,8 +2761,8 @@
           positions[5] = currentEnd.z;
           whisker.geometry.attributes.position.needsUpdate = true;
 
-          // Update opacity
-          whisker.material.opacity = this.connectionOpacity * (0.5 + userData.extendFactor * 0.5);
+          // Update opacity - minimum 0.4 to ensure always visible
+          whisker.material.opacity = Math.max(0.4, this.connectionOpacity * (0.6 + userData.extendFactor * 0.4));
         });
       }
 
