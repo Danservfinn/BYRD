@@ -205,7 +205,17 @@ class Dreamer:
             lines.append(f"- Summarization age threshold: {self.summarization_min_age_hours} hours")
 
         # === Self-Modification ===
+        # Check config (should be passed from byrd.py) with fallback to main config file
         self_mod = self._config.get("self_modification", {})
+        if not self_mod:
+            # Fallback: read directly from config.yaml
+            try:
+                import yaml
+                with open("config.yaml", "r") as f:
+                    main_config = yaml.safe_load(f)
+                    self_mod = main_config.get("self_modification", {})
+            except Exception:
+                pass
         if self_mod.get("enabled"):
             max_mods = self_mod.get("max_modifications_per_day", 5)
             lines.append(f"- Self-modification: enabled ({max_mods} changes per day)")
