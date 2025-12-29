@@ -7526,6 +7526,26 @@ class Memory:
                             if 'examples' in pattern_info:
                                 lines.append(f"    Examples: {', '.join(pattern_info['examples'])}")
 
+                # Capability installation (aitmpl)
+                if 'capability_installation' in instructions:
+                    ci = instructions['capability_installation']
+                    lines.extend([
+                        "",
+                        "CAPABILITY INSTALLATION (aitmpl registry):",
+                        f"  What: {ci.get('what', '')}",
+                        f"  Source: {ci.get('source', '')}",
+                        f"  Categories: {', '.join(ci.get('categories', []))}",
+                    ])
+                    how = ci.get('how_to_trigger', {})
+                    if how:
+                        lines.append(f"  Keywords: {', '.join(how.get('desire_keywords', []))}")
+                        lines.append(f"  Example: {how.get('example', '')}")
+                    types = ci.get('available_types', {})
+                    if types:
+                        lines.append("  Available types:")
+                        for t, desc in types.items():
+                            lines.append(f"    - {t}: {desc}")
+
                 # Architecture overview
                 if 'architecture' in instructions:
                     lines.extend([
