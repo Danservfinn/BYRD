@@ -2286,9 +2286,10 @@ async def reset_byrd(request: ResetRequest = None):
             asyncio.create_task(delayed_restart())
 
             # Hard reset: Return success, server will restart
+            prompt_status = f"awakening_prompt loaded ({len(awakening_prompt)} chars)" if awakening_prompt else "no awakening_prompt"
             return ResetResponse(
                 success=True,
-                message=f"Full reset complete. Minimal OS created, {restored_msg}. Server restarting..."
+                message=f"Full reset complete. Minimal OS created ({prompt_status}), {restored_msg}. Server restarting..."
             )
 
         # Soft reset: Re-awaken and restart (legacy behavior)
