@@ -2670,6 +2670,11 @@
       camera.lookAt(0, 0, 0);  // Always looking at center where OS node is
 
       // Renderer - simple, clean rendering for light theme
+      // Remove any existing canvas without touching WebGL context
+      const existingCanvas = container.querySelector('canvas');
+      if (existingCanvas) existingCanvas.remove();
+
+      // Create renderer - let Three.js create its own canvas
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -5206,6 +5211,7 @@
     function updateNodeTrails(delta) {
       for (const node of nodes3D) {
         const velocity = node.userData.velocity;
+        if (!velocity) continue; // Skip nodes without velocity
         const speed = velocity.length();
 
         // Only show trails for moving nodes
