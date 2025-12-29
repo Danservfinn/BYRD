@@ -270,6 +270,37 @@ class GoalEvolver:
 
         return max(tournament, key=lambda g: g.fitness)
 
+    def _extract_goal_sentence(self, text: str) -> str:
+        """
+        Extract just the goal sentence from LLM output.
+
+        Filters out chain-of-thought reasoning that some models produce.
+        """
+        text = text.strip()
+
+        # If it starts with reasoning markers, try to find the actual goal
+        reasoning_markers = [
+            "1.", "**", "- ", "Let me", "I need to", "The user",
+            "Analyze", "First", "Looking at", "Based on"
+        ]
+
+        # Check if output looks like reasoning (too long, has markers)
+        if len(text) > 300 or any(text.startswith(m) for m in reasoning_markers):
+            # Try to find a clean sentence at the end
+            lines = text.split('\n')
+            for line in reversed(lines):
+                line = line.strip().strip('*').strip('-').strip()
+                # Look for a goal-like sentence (20-200 chars, ends properly)
+                if 20 < len(line) < 200 and not any(line.startswith(m) for m in reasoning_markers):
+                    return line
+
+            # If still too long, truncate to first sentence
+            if '.' in text[:200]:
+                return text[:text.index('.', 0, 200) + 1]
+            return text[:150] + "..."
+
+        return text
+
     async def _crossover(
         self,
         parent1: EvolvedGoal,
@@ -280,20 +311,23 @@ class GoalEvolver:
 
         Uses LLM to intelligently combine goal aspects.
         """
-        prompt = f"""Create a new goal by combining the best aspects of these two goals:
+        # Extract core intent from potentially corrupted descriptions
+        desc1 = self._extract_goal_sentence(parent1.description)
+        desc2 = self._extract_goal_sentence(parent2.description)
 
-Goal 1 (fitness={parent1.fitness:.2f}): {parent1.description}
+        prompt = f"""Combine these two goals into ONE new goal.
 
-Goal 2 (fitness={parent2.fitness:.2f}): {parent2.description}
+Goal 1: {desc1}
+Goal 2: {desc2}
 
-Create a combined goal that captures the essence of both.
-The new goal should be specific, achievable, and focused on capability improvement.
+OUTPUT ONLY the new goal as a single sentence (no explanation, no analysis).
+Example format: "Implement X to achieve Y"
 
-New goal description (1-2 sentences):"""
+New goal:"""
 
         try:
-            new_description = await self.llm_client.query(prompt, max_tokens=200)
-            new_description = new_description.strip()
+            new_description = await self.llm_client.query(prompt, max_tokens=100)
+            new_description = self._extract_goal_sentence(new_description)
 
             goal_id = await self.memory.create_goal(
                 description=new_description,
@@ -319,20 +353,21 @@ New goal description (1-2 sentences):"""
 
         Uses LLM to create a variation.
         """
+        # Extract core intent from potentially corrupted description
+        original = self._extract_goal_sentence(goal.description)
+
         prompt = f"""Create a variation of this goal:
 
-Original: {goal.description}
+Original: {original}
 
-Create a slightly different version that:
-- Maintains the core intent
-- Adds a new angle or approach
-- Could lead to capability improvement
+OUTPUT ONLY the mutated goal as a single sentence (no explanation).
+Keep the core intent but add a new angle.
 
-Mutated goal (1-2 sentences):"""
+Mutated goal:"""
 
         try:
-            mutated = await self.llm_client.query(prompt, max_tokens=200)
-            mutated = mutated.strip()
+            mutated = await self.llm_client.query(prompt, max_tokens=100)
+            mutated = self._extract_goal_sentence(mutated)
 
             goal_id = await self.memory.create_goal(
                 description=mutated,
