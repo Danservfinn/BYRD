@@ -200,6 +200,8 @@ BYRD supports multiple LLM providers. Configure in `config.yaml`:
 
 **One Mind Principle**: Dreamer and Seeker share the same LLM. All learning flows through one model to preserve emergence.
 
+**Global Rate Limiter**: The `GlobalRateLimiter` class in `llm_client.py` ensures minimum spacing (default 10s) between ALL LLM requests. This prevents rate limit errors (HTTP 429) when Dreamer, Seeker, and Coder compete for API quota. Configure via `rate_limit_interval` in `config.yaml`.
+
 ---
 
 ## Memory Schema
@@ -640,7 +642,7 @@ byrd/
 │   ├── actor.py             # Claude API interface
 │   ├── agent_coder.py       # Multi-step coding agent with tools
 │   ├── coder.py             # Claude Code CLI wrapper (legacy)
-│   ├── llm_client.py        # Multi-provider LLM abstraction
+│   ├── llm_client.py        # Multi-provider LLM abstraction + GlobalRateLimiter
 │   ├── event_bus.py         # Real-time event streaming
 │   ├── server.py            # FastAPI + WebSocket server
 │   ├── capability_registry.py  # Capability definition registry

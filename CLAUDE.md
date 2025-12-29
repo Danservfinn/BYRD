@@ -518,9 +518,12 @@ Set API key: `export OPENROUTER_API_KEY="sk-or-..."`
 local_llm:
   provider: "zai"
   model: "glm-4.7"
+  rate_limit_interval: 10.0  # Minimum seconds between requests (prevents 429 errors)
 ```
 
 Set API key: `export ZAI_API_KEY="your-key"`
+
+**Rate Limiting:** BYRD includes a global rate limiter (`GlobalRateLimiter` in `llm_client.py`) that ensures minimum spacing between ALL LLM requests. This prevents Z.AI rate limit errors when Dreamer, Seeker, and Coder compete for API quota.
 
 ### Operating System Configuration
 
