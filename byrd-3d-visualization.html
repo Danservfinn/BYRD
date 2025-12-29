@@ -1609,37 +1609,37 @@
     // Force-directed physics creates natural clustering based on relationships
     // Highly connected nodes gravitate toward center; isolated nodes drift outward
 
-    // Relationship visual styles - grey, 1px
+    // Relationship visual styles - grey, thin
     const RELATIONSHIP_STYLES = {
         DERIVED_FROM: {
             color: 0x808080,    // Grey
             opacity: 1.0,
-            width: 1
+            width: 0.5
         },
         RELATES_TO: {
             color: 0x808080,    // Grey
             opacity: 1.0,
-            width: 1
+            width: 0.5
         },
         FULFILLS: {
             color: 0x808080,    // Grey
             opacity: 1.0,
-            width: 1
+            width: 0.5
         },
         REFLECTS_ON: {
             color: 0x808080,    // Grey
             opacity: 1.0,
-            width: 1
+            width: 0.5
         },
         EMERGES_FROM: {
             color: 0x808080,    // Grey
             opacity: 1.0,
-            width: 1
+            width: 0.5
         },
         default: {
             color: 0x808080,    // Grey
             opacity: 1.0,
-            width: 1
+            width: 0.5
         }
     };
 
@@ -4109,7 +4109,7 @@
     const LINE_CONFIG = {
       baseOpacity: 1.0,       // Full opacity for maximum visibility
       highlightOpacity: 1.0,
-      lineWidth: 1,           // 1px thickness
+      lineWidth: 0.5,         // Thin lines
       highlightDuration: 500,
       color: 0x808080         // Grey
     };
