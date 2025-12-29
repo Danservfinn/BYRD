@@ -3698,8 +3698,8 @@ class Memory:
                     # Get current reconciliation attempts and increment
                     await self._increment_reconciliation_attempts(orphan["id"])
 
-                    if not dry_run:
-                        result["connections_created"] = connections_made
+            # Update result with actual connections made (FIXED: was inside failure block)
+            result["connections_created"] = connections_made
 
             # Emit event for monitoring
             if not dry_run and connections_made > 0:
