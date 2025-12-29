@@ -28,7 +28,7 @@ Safety:
     - All write operations validated against constitutional constraints
     - Protected files cannot be modified
     - Dangerous patterns are blocked
-    - Maximum steps prevent runaway execution
+    - Loop detection prevents runaway execution (no step limit)
     - All changes tracked with provenance
 """
 

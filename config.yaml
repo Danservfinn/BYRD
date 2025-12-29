@@ -351,11 +351,11 @@ coder:
   # ---------------------------------------------------------------------------
   # AGENT MODE SETTINGS (only used when type: "agent" or auto-fallback)
   # ---------------------------------------------------------------------------
-  # Maximum reasoning steps per task
-  max_steps: 15
+  # No step limit - loop detection is the safeguard for runaway execution
+  # Loop detection catches: repeated tool+args 3x, ping-pong patterns
 
   # Maximum file changes per task (safety limit)
-  max_file_changes: 5
+  max_file_changes: 10
 
   # LLM temperature for code generation (lower = more deterministic)
   temperature: 0.2
