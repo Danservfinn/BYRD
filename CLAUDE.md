@@ -207,6 +207,47 @@ BYRD can edit documents stored in Neo4j through the `edit_document` strategy:
 - Documents are stored in Neo4j; disk versions are restored on reset
 - Express desires like: "I want to update ARCHITECTURE.md with my new capability"
 
+### Capability Installation (aitmpl)
+
+BYRD can install new capabilities from the aitmpl registry (claude-code-templates):
+
+**Source**: `github.com/davila7/claude-code-templates` - curated, trusted templates
+
+**Available Categories**:
+- `mcp` - Model Context Protocol servers (external tools and resources)
+- `skill` - Reusable workflows for complex tasks
+- `command` - Custom slash commands for quick actions
+- `agent` - Specialized agents for specific domains
+
+**What BYRD Can Install**:
+- GitHub tools - repository management, PR creation, issue tracking
+- Database tools - PostgreSQL, SQLite, vector databases
+- Web tools - browser automation, web scraping, API clients
+- File tools - PDF processing, image manipulation, file conversion
+- Code tools - linting, formatting, analysis, documentation
+- AI/ML tools - embeddings, vector search, model inference
+
+**How It Works**:
+1. BYRD expresses desire with keywords: `install`, `add`, `get`, `acquire`, `capability`, `tool`
+2. Seeker searches aitmpl registry for matching templates
+3. Templates ranked by trust score (curated = higher trust)
+4. If trust >= threshold, installer runs automatically
+5. Capability node created in memory on success
+
+**Example Desires**:
+```json
+{"description": "install a GitHub integration capability", "intensity": 0.7}
+{"description": "add tool for processing PDFs", "intensity": 0.6}
+```
+
+**Configuration** (`config.yaml`):
+```yaml
+aitmpl:
+  enabled: true
+  base_trust: 0.5  # Minimum trust threshold
+  cache_ttl_hours: 24
+```
+
 ## Constitutional Constraints (CRITICAL)
 
 BYRD has a two-tier file system that **MUST** be respected:
