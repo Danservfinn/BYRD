@@ -9,10 +9,78 @@ ensuring all reflection and synthesis flows through a single model.
 import os
 import json
 import re
+import asyncio
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
 import httpx
+
+
+# =============================================================================
+# GLOBAL RATE LIMITER
+# =============================================================================
+# Ensures minimum spacing between ALL LLM requests across all components
+# (Dreamer, Seeker, Coder) to prevent Z.AI rate limiting
+
+class GlobalRateLimiter:
+    """
+    Global rate limiter for all LLM requests.
+
+    Z.AI has strict rate limits. This ensures that no matter how many
+    components are trying to make requests, they are spaced out appropriately.
+    """
+
+    _instance = None
+    _lock = asyncio.Lock() if asyncio.get_event_loop_policy() else None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._last_request_time = 0
+            cls._instance._min_interval = 10.0  # Minimum 10 seconds between requests (configurable)
+            cls._instance._lock = None  # Will be created on first use
+        return cls._instance
+
+    async def wait_for_slot(self) -> float:
+        """
+        Wait until it's safe to make a request.
+        Returns the actual wait time in seconds.
+        """
+        # Create lock if needed (must be in async context)
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+
+        async with self._lock:
+            now = time.time()
+            elapsed = now - self._last_request_time
+
+            if elapsed < self._min_interval:
+                wait_time = self._min_interval - elapsed
+                print(f"⏳ Rate limiter: waiting {wait_time:.1f}s before next LLM call")
+                await asyncio.sleep(wait_time)
+                self._last_request_time = time.time()
+                return wait_time
+            else:
+                self._last_request_time = now
+                return 0.0
+
+    def set_min_interval(self, seconds: float):
+        """Update the minimum interval between requests."""
+        self._min_interval = max(1.0, seconds)  # At least 1 second
+        print(f"📊 Rate limiter interval set to {self._min_interval}s")
+
+
+# Global instance
+_rate_limiter = GlobalRateLimiter()
+
+
+def configure_rate_limiter(interval_seconds: float):
+    """
+    Configure the global rate limiter interval.
+    Called from byrd.py during initialization with config values.
+    """
+    _rate_limiter.set_min_interval(interval_seconds)
 
 
 @dataclass
@@ -430,7 +498,6 @@ Example format: {"output": {...your reflection...}}"""
         **kwargs
     ) -> LLMResponse:
         """Generate using Z.AI API with retry on rate limits."""
-        import asyncio
 
         quantum_influence = None
 
@@ -455,6 +522,10 @@ Example format: {"output": {...your reflection...}}"""
         max_delay = 90   # cap delay at 90 seconds
 
         for attempt in range(max_retries):
+            # Wait for rate limiter slot before making request
+            # This prevents overwhelming Z.AI with concurrent requests
+            await _rate_limiter.wait_for_slot()
+
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
                     self.endpoint,

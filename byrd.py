@@ -26,7 +26,7 @@ from agent_coder import AgentCoder, create_agent_coder
 from self_modification import SelfModificationSystem
 from constitutional import ConstitutionalConstraints
 from event_bus import event_bus, Event, EventType
-from llm_client import create_llm_client
+from llm_client import create_llm_client, configure_rate_limiter
 from contextlib import asynccontextmanager
 from kernel import load_default_kernel, Kernel
 
@@ -179,10 +179,13 @@ class BYRD:
 
         # Create shared LLM client ("one mind" principle)
         # Voice emerges through reflection, not injection
-        self.llm_client = create_llm_client(
-            self.config.get("local_llm", {})
-        )
+        llm_config = self.config.get("local_llm", {})
+        self.llm_client = create_llm_client(llm_config)
         print(f"🧠 LLM: {self.llm_client.model_name}")
+
+        # Configure global rate limiter to prevent Z.AI rate limiting
+        rate_limit_interval = llm_config.get("rate_limit_interval", 10.0)
+        configure_rate_limiter(rate_limit_interval)
 
         # Initialize quantum randomness provider if enabled
         self.quantum_provider = None

@@ -109,6 +109,11 @@ local_llm:
   # Request timeout in seconds
   timeout: 300.0
 
+  # Global rate limit: minimum seconds between any two LLM requests
+  # Prevents rate limiting when Dreamer, Seeker, and Coder compete for quota
+  # Z.AI free tier: ~6 requests/minute, so 10s minimum is safe
+  rate_limit_interval: 10.0
+
   # Z.AI coding endpoint (has different quota from default endpoint)
   use_coding_endpoint: true
 
