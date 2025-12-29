@@ -4572,7 +4572,7 @@ class Memory:
     # GRAPH VISUALIZATION METHODS
     # =========================================================================
 
-    async def get_full_graph(self, limit: int = 1000) -> Dict[str, Any]:
+    async def get_full_graph(self, limit: int = 10000) -> Dict[str, Any]:
         """
         Get the complete graph structure for visualization.
 
@@ -4580,7 +4580,7 @@ class Memory:
         suitable for rendering the full memory graph in 3D.
 
         Args:
-            limit: Maximum number of nodes to return (default 1000)
+            limit: Maximum number of nodes to return (default 10000 for full graph)
 
         Returns:
             {
@@ -6712,6 +6712,10 @@ class Memory:
                     "format": '[{"type": "TypeName", "content": "...", "property": "value"}]',
                     "types": "Insight, Question, Theory, Hypothesis, Concept, Pattern, Principle",
                     "when": "Create custom node types beyond Experience/Belief/Desire"
+                },
+                "voice_design": {
+                    "format": '{"description": "voice description", "gender": "male|female", "age": "young|middle_aged|old", "accent": "american|british|...", "accent_strength": 0.0-1.0, "reason": "why this voice represents me", "acknowledged": true|false}',
+                    "when": "Create your voice (acknowledged=false) or formally acknowledge an existing generated voice (acknowledged=true with matching description)"
                 },
                 "os_update": {
                     "format": '{"set_field": {"field_name": "value"}}',

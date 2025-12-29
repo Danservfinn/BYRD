@@ -1806,6 +1806,48 @@
       applyAllFilters();
     }
 
+    // Show only a specific node type (hide all others)
+    function showOnlyType(targetType) {
+      Object.keys(nodeTypeFilters).forEach(type => {
+        nodeTypeFilters[type] = (type === targetType);
+      });
+      document.querySelectorAll('.stat-toggle').forEach(btn => {
+        const btnType = btn.getAttribute('data-type');
+        btn.classList.toggle('active', btnType === targetType);
+      });
+      applyAllFilters();
+      updateStatus(`Showing only: ${targetType}`, 'blue');
+    }
+
+    // Keyboard shortcuts for type filtering: 1=belief, 2=desire, 3=goal, 4=reflection, 5=experience, 0=all
+    document.addEventListener('keydown', (e) => {
+      // Ignore if typing in input field
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      const typeShortcuts = {
+        '1': 'belief',
+        '2': 'desire',
+        '3': 'goal',
+        '4': 'reflection',
+        '5': 'experience',
+        '6': 'insight',
+        '7': 'crystal',
+        '0': 'all'
+      };
+
+      if (typeShortcuts[e.key]) {
+        if (e.key === '0') {
+          showAllTypes();
+          updateStatus('Showing all types', 'green');
+        } else {
+          showOnlyType(typeShortcuts[e.key]);
+        }
+      }
+    });
+
+    // Export for console use
+    window.showOnlyType = showOnlyType;
+
     function applyAllFilters() {
       const now = Date.now();
       const recencyMs = {
@@ -2030,11 +2072,12 @@
 
     // Physics throttling - only run physics every N frames
     let physicsFrameCount = 0;
-    const PHYSICS_FRAME_SKIP = 6; // Run physics every 6th frame (10fps physics vs 60fps render)
+    const PHYSICS_FRAME_SKIP = 8; // Run physics every 8th frame (~7.5fps physics vs 60fps render)
 
-    // Performance limits - prevent browser crashes with large graphs
-    // O(n²) physics: 150 nodes = 11,250 iterations; 400 nodes = 160,000 iterations
-    const MAX_RENDERED_NODES = 150; // Hard limit on nodes to prevent O(n²) physics from crashing browser
+    // Performance limits - increased for full graph visibility
+    // WARNING: Large graphs may cause browser lag due to O(n²) physics calculations
+    // O(n²) physics: 500 nodes = 125,000 iterations; 1000 nodes = 500,000 iterations
+    const MAX_RENDERED_NODES = 5000; // Increased limit - may cause lag with very large graphs
 
     // Gravitational Spiral: Connection tracking for centrality-based positioning
     const connectionCounts = new Map(); // nodeId -> connection count
@@ -2677,7 +2720,7 @@
       // Create renderer - let Three.js create its own canvas
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // Capped for performance
       container.appendChild(renderer.domElement);
 
       // No post-processing for light theme - use simple render pass only
@@ -7014,8 +7057,8 @@
         updateRelationshipPositions();
       }
 
-      // Phase 2: Update node motion trails
-      updateNodeTrails(delta);
+      // Phase 2: Update node motion trails (disabled for performance)
+      // updateNodeTrails(delta);
 
       // Animate ambient particles
       animateAmbientParticles(delta);
@@ -9993,8 +10036,8 @@
         }
         console.log(`Created ${totalCreated} nodes (${crystalCount} crystals)`);
 
-        // Create relationship lines (only for visible nodes, limited for performance)
-        const MAX_RELATIONSHIPS = 100;  // Limit for cleaner visualization
+        // Create relationship lines (only for visible nodes)
+        const MAX_RELATIONSHIPS = 50000;  // Increased limit for full graph visibility
         let relsCreated = 0;
         let relsSkipped = 0;
         let relsMissingNodes = 0;

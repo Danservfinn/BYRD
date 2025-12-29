@@ -2102,7 +2102,7 @@ async def get_narrator_summary():
 
 
 @app.get("/api/graph", response_model=GraphResponse)
-async def get_graph(limit: int = 1000):
+async def get_graph(limit: int = 10000):
     """
     Get full graph structure for visualization.
 
@@ -2110,7 +2110,7 @@ async def get_graph(limit: int = 1000):
     suitable for rendering the complete memory graph in 3D.
 
     Args:
-        limit: Maximum number of nodes to return (default 1000)
+        limit: Maximum number of nodes to return (default 10000 for full graph)
     """
     global byrd_instance
 

@@ -8,6 +8,10 @@ Usage:
     python byrd.py --chat       # Interactive chat mode
 """
 
+# Load environment variables from .env file BEFORE any imports that use them
+from dotenv import load_dotenv
+load_dotenv()
+
 import asyncio
 import argparse
 import os
