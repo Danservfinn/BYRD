@@ -1869,9 +1869,10 @@
 
     function updateRelationshipVisibility() {
       // Hide connection lines where either endpoint is hidden
+      // PERF: Use cached mesh references instead of O(n) find() lookups
       connections3D.forEach(conn => {
-        const nodeA = nodes3D.find(n => n.userData.id === conn.userData.nodeA);
-        const nodeB = nodes3D.find(n => n.userData.id === conn.userData.nodeB);
+        const nodeA = conn.userData.meshA;
+        const nodeB = conn.userData.meshB;
         conn.visible = (nodeA?.visible !== false) && (nodeB?.visible !== false);
       });
 
@@ -2015,10 +2016,11 @@
 
     // Physics throttling - only run physics every N frames
     let physicsFrameCount = 0;
-    const PHYSICS_FRAME_SKIP = 3; // Run physics every 3rd frame (20fps physics vs 60fps render)
+    const PHYSICS_FRAME_SKIP = 6; // Run physics every 6th frame (10fps physics vs 60fps render)
 
     // Performance limits - prevent browser crashes with large graphs
-    const MAX_RENDERED_NODES = 400; // Hard limit on nodes to prevent O(n²) physics from crashing browser
+    // O(n²) physics: 150 nodes = 11,250 iterations; 400 nodes = 160,000 iterations
+    const MAX_RENDERED_NODES = 150; // Hard limit on nodes to prevent O(n²) physics from crashing browser
 
     // Gravitational Spiral: Connection tracking for centrality-based positioning
     const connectionCounts = new Map(); // nodeId -> connection count
@@ -4991,10 +4993,11 @@
       }
 
       // 3. Calculate spring forces for connected nodes
+      // PERF: Use cached mesh references instead of O(n) find() lookups
       for (const connection of connections3D) {
-        const nodeA = nodes3D.find(n => n.userData.id === connection.userData.nodeA);
-        const nodeB = nodes3D.find(n => n.userData.id === connection.userData.nodeB);
-        if (nodeA && nodeB) {
+        const nodeA = connection.userData.meshA;
+        const nodeB = connection.userData.meshB;
+        if (nodeA && nodeB && nodeA.parent && nodeB.parent) {
           applySpring(nodeA, nodeB, physics);
         }
       }
@@ -5234,10 +5237,11 @@
           nodeTrails.set(node.userData.id, trail);
         }
 
-        // Update trail history (shift and add current position)
+        // Update trail history (shift and reuse Vector3 to avoid GC pressure)
         const history = trail.userData.history;
-        history.shift();
-        history.push(node.position.clone());
+        const recycled = history.shift();
+        recycled.copy(node.position);
+        history.push(recycled);
 
         // Update geometry
         const positions = trail.geometry.attributes.position.array;
@@ -5683,12 +5687,15 @@
         console.log(`Created ${totalCreated} graph nodes (${crystalCount} crystals, ${absorbedCount} absorbed experiences)`);
 
         // Create relationship lines (skip relationships to absorbed nodes)
+        // PERF: Limit to prevent too many lines causing lag
+        const MAX_GRAPH_RELATIONSHIPS = 200;
         let relsCreated = 0;
-        data.relationships.forEach(rel => {
+        for (const rel of data.relationships) {
+            if (relsCreated >= MAX_GRAPH_RELATIONSHIPS) break;
             if (createRelationshipLine(rel)) {
                 relsCreated++;
             }
-        });
+        }
 
         console.log(`Created ${relsCreated} relationship lines`);
 
@@ -9618,9 +9625,13 @@
         nodeById.set(node.userData.id, node);
       }
 
-      // Run physics iterations
-      const iterations = 150;
+      // Run physics iterations - use fewer iterations with reduced node count
+      const iterations = 100;
       const dt = 0.5;
+
+      // PERF: Reuse Vector3 objects to avoid GC pressure (was creating millions of objects)
+      const _diffVec = new THREE.Vector3();
+      const _centerVec = new THREE.Vector3();
 
       for (let iter = 0; iter < iterations; iter++) {
         // Reset forces
@@ -9635,14 +9646,14 @@
           const nodeA = nodes3D[i];
           for (let j = i + 1; j < nodes3D.length; j++) {
             const nodeB = nodes3D[j];
-            const diff = new THREE.Vector3().subVectors(nodeA.position, nodeB.position);
-            const dist = diff.length();
+            _diffVec.subVectors(nodeA.position, nodeB.position);
+            const dist = _diffVec.length();
 
             if (dist > 0.5 && dist < physics.repulsionCutoff) {
               const force = physics.repulsion / (dist * dist);
-              const direction = diff.normalize();
-              nodeA.userData.force.addScaledVector(direction, force);
-              nodeB.userData.force.addScaledVector(direction, -force);
+              _diffVec.normalize();
+              nodeA.userData.force.addScaledVector(_diffVec, force);
+              nodeB.userData.force.addScaledVector(_diffVec, -force);
             }
           }
         }
@@ -9656,13 +9667,13 @@
             const nodeB = nodeById.get(connectedId);
             if (!nodeB) continue;
 
-            const diff = new THREE.Vector3().subVectors(nodeB.position, nodeA.position);
-            const dist = diff.length();
+            _diffVec.subVectors(nodeB.position, nodeA.position);
+            const dist = _diffVec.length();
             if (dist > 0.1) {
               const displacement = dist - physics.springLength;
               const springForce = displacement * physics.spring;
-              const direction = diff.normalize();
-              nodeA.userData.force.addScaledVector(direction, springForce);
+              _diffVec.normalize();
+              nodeA.userData.force.addScaledVector(_diffVec, springForce);
             }
           }
         }
@@ -9676,8 +9687,8 @@
           const connCount = connections.get(node.userData.id)?.size || 0;
           const gravity = physics.gravity + connCount * physics.gravityPerConnection;
           if (distFromCenter > 1) {
-            const toCenter = pos.clone().normalize().multiplyScalar(-gravity);
-            node.userData.force.add(toCenter);
+            _centerVec.copy(pos).normalize().multiplyScalar(-gravity);
+            node.userData.force.add(_centerVec);
           }
 
           // Boundary force
