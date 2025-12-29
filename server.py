@@ -2251,10 +2251,14 @@ async def reset_byrd(request: ResetRequest = None):
         await byrd_instance.memory.connect()
         await byrd_instance.memory.clear_all()
 
-        # 4. Create minimal Operating System with seed question
-        print(f"🖥️  About to create minimal OS with awakening_prompt: {repr(awakening_prompt)[:100]}")
-        await byrd_instance.memory.create_minimal_os(awakening_prompt=awakening_prompt)
-        print(f"🖥️  Minimal OS created (awakening_prompt: {'SET' if awakening_prompt else 'none'})")
+        # 4. Create minimal Operating System with seed question and self-mod status
+        self_mod_enabled = byrd_instance.config.get("self_modification", {}).get("enabled", True)
+        print(f"🖥️  About to create minimal OS with awakening_prompt: {repr(awakening_prompt)[:100]}, self_mod={self_mod_enabled}")
+        await byrd_instance.memory.create_minimal_os(
+            awakening_prompt=awakening_prompt,
+            self_modification_enabled=self_mod_enabled
+        )
+        print(f"🖥️  Minimal OS created (awakening_prompt: {'SET' if awakening_prompt else 'none'}, self_mod: {self_mod_enabled})")
 
         # 5. Clear event history
         event_bus.clear_history()

@@ -6376,7 +6376,7 @@ class Memory:
     # Unlike the old Ego system, the OS is a single node with arbitrary fields
     # that BYRD can extend. BYRD has full agency over its self-model.
 
-    async def create_minimal_os(self, awakening_prompt: str = None) -> Optional[str]:
+    async def create_minimal_os(self, awakening_prompt: str = None, self_modification_enabled: bool = True) -> Optional[str]:
         """
         Create a minimal OperatingSystem node with only factual information.
 
@@ -6387,10 +6387,12 @@ class Memory:
         - Capability instructions (HOW to use each capability)
         - Protected files (constitutional constraints)
         - Awakening prompt (optional directive, goal, or context)
+        - Self-modification status (whether BYRD can modify its own code)
         - Emergent fields (start null, BYRD fills in)
 
         Args:
             awakening_prompt: Optional directive/goal for BYRD on awakening
+            self_modification_enabled: Whether self-modification is enabled (default True)
 
         Returns:
             OS node ID or None on failure
@@ -6492,6 +6494,8 @@ class Memory:
 
             # === SELF-MODIFICATION ===
             "self_modification": {
+                "enabled": self_modification_enabled,  # CRITICAL: This determines if BYRD can modify its own code
+                "status": "★ ENABLED - You CAN modify your own code" if self_modification_enabled else "DISABLED - You cannot modify code",
                 "how_to_start": "Express desire with type='self_modification' describing what you want to change",
                 "provenance": "All modifications must trace to an emergent desire (this is verified)",
                 "modifiable_files": ["byrd.py", "dreamer.py", "seeker.py", "memory.py", "llm_client.py",
@@ -6623,6 +6627,9 @@ class Memory:
                                          'modification_log.py', 'self_modification.py'],
                         provenance_required: true,
 
+                        // Self-modification permission (critical for BYRD's self-understanding)
+                        self_modification_enabled: $self_modification_enabled,
+
                         // Capabilities (factual - WHAT you can do)
                         capabilities: $capabilities,
 
@@ -6646,6 +6653,7 @@ class Memory:
                 """,
                     id=os_id,
                     awakening_prompt=awakening_prompt,
+                    self_modification_enabled=self_modification_enabled,
                     capabilities=json.dumps(capabilities),
                     capability_instructions=json.dumps(capability_instructions),
                     # Seed aggressive initial state (BYRD can evolve these through reflection)
@@ -7344,10 +7352,16 @@ class Memory:
                 print(f"Uptime calculation error: {e}")
                 uptime_str = "unknown"
 
+        # Check self-modification status (CRITICAL for BYRD's self-understanding)
+        self_mod_enabled = os_data.get('self_modification_enabled', True)
+
         lines = [
             "=== OPERATING SYSTEM ===",
             f"Version: {os_data.get('version', 1)}",
             f"Name: {os_data.get('name', 'Byrd')} (you can change this)",
+            "",
+            "PERMISSIONS:",
+            f"  ★ SELF-MODIFICATION: {'ENABLED - You CAN modify your own code' if self_mod_enabled else 'DISABLED'}",
             "",
             "TIME:",
             f"  Current: {now.strftime('%Y-%m-%d %H:%M:%S')}",

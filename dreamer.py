@@ -208,17 +208,21 @@ class Dreamer:
         # Check config (should be passed from byrd.py) with fallback to main config file
         self_mod = self._config.get("self_modification", {})
         if not self_mod:
-            # Fallback: read directly from config.yaml
+            # Fallback: read directly from config.yaml using absolute path
             try:
                 import yaml
-                with open("config.yaml", "r") as f:
+                from pathlib import Path
+                config_path = Path(__file__).parent / "config.yaml"
+                with open(config_path, "r") as f:
                     main_config = yaml.safe_load(f)
                     self_mod = main_config.get("self_modification", {})
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"⚠️ Failed to read config.yaml for self_modification: {e}")
+
+        # EXPLICIT and PROMINENT - this is critical for BYRD's self-understanding
         if self_mod.get("enabled"):
             max_mods = self_mod.get("max_modifications_per_day", 5)
-            lines.append(f"- Self-modification: enabled ({max_mods} changes per day)")
+            lines.append(f"- ★ SELF-MODIFICATION: ENABLED - You CAN modify your own code ({max_mods} changes per day allowed)")
             cooldown = self_mod.get("cooldown_between_modifications_seconds", 3600)
             cooldown_mins = cooldown // 60
             if cooldown_mins >= 60:
@@ -226,7 +230,7 @@ class Dreamer:
             else:
                 lines.append(f"- Modification cooldown: {cooldown_mins} minutes")
         else:
-            lines.append("- Self-modification: currently disabled")
+            lines.append("- Self-modification: currently disabled (safety constraint)")
 
         # === Memory Curation ===
         memory_config = self._config.get("memory", {})
