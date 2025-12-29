@@ -172,8 +172,8 @@ class AgentTools:
             content: Complete content to write
         """
         try:
-            # Validate against constitutional constraints
-            if not self.constitutional.is_modifiable(filepath):
+            # Block only protected files (allow creating any other file)
+            if self.constitutional.is_protected(filepath):
                 return ToolResult(False, "", f"BLOCKED: Cannot modify protected file: {filepath}")
 
             if self._has_dangerous_pattern(content):
@@ -207,8 +207,8 @@ class AgentTools:
             new_content: Content to replace it with
         """
         try:
-            # Validate against constitutional constraints
-            if not self.constitutional.is_modifiable(filepath):
+            # Block only protected files (allow editing any other file)
+            if self.constitutional.is_protected(filepath):
                 return ToolResult(False, "", f"BLOCKED: Cannot modify protected file: {filepath}")
 
             if self._has_dangerous_pattern(new_content):
@@ -364,7 +364,7 @@ class AgentTools:
                 "is_dir": path.is_dir(),
                 "size_bytes": stat.st_size,
                 "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-                "is_modifiable": self.constitutional.is_modifiable(filepath),
+                "is_protected": self.constitutional.is_protected(filepath),
             }
 
             if path.is_file():
@@ -608,7 +608,7 @@ class AgentCoder:
         ),
         Tool(
             name="get_file_info",
-            description="Get metadata about a file (size, is_modifiable, line count, etc.)",
+            description="Get metadata about a file (size, is_protected, line count, etc.)",
             parameters={
                 "filepath": "Path to the file"
             },
