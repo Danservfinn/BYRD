@@ -1365,6 +1365,18 @@
   </div>
 
   <!-- Three.js and Dependencies -->
+  <script>
+    // Global error handler to catch module loading errors
+    window.addEventListener('error', (e) => {
+      console.error('🔴 Window error:', e.message, e.filename, e.lineno);
+      alert('Error: ' + e.message);
+    });
+    window.addEventListener('unhandledrejection', (e) => {
+      console.error('🔴 Unhandled rejection:', e.reason);
+      alert('Promise rejected: ' + e.reason);
+    });
+    console.log('🟢 Error handlers installed');
+  </script>
   <script type="importmap">
   {
     "imports": {
@@ -1385,6 +1397,8 @@
     import { Line2 } from 'three/addons/lines/Line2.js';
     import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
     import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
+
+    console.log('📦 All imports loaded! THREE version:', THREE.REVISION);
 
     // ==========================================================================
     // CUSTOM SHADERS (Phase 3: Post-processing Effects)
@@ -10027,20 +10041,53 @@
     }
 
     async function init() {
-      initThree();
-      connectWebSocket();
-      await fetchStatus();
-      await fetchQuantumStatus();
+      console.log('🚀 init() starting...');
+      try {
+        console.log('  → initThree()...');
+        initThree();
+        console.log('  ✓ initThree() done');
 
-      // Load event mode nodes (excludes experiences and reflections)
-      await loadEventModeNodes();
+        console.log('  → connectWebSocket()...');
+        connectWebSocket();
+        console.log('  ✓ connectWebSocket() done');
 
-      setInterval(fetchStatus, 10000);
-      setInterval(fetchQuantumStatus, 30000); // Update quantum status every 30s
-      renderEventLog();
+        console.log('  → fetchStatus()...');
+        await fetchStatus();
+        console.log('  ✓ fetchStatus() done');
+
+        console.log('  → fetchQuantumStatus()...');
+        await fetchQuantumStatus();
+        console.log('  ✓ fetchQuantumStatus() done');
+
+        console.log('  → loadEventModeNodes()...');
+        await loadEventModeNodes();
+        console.log('  ✓ loadEventModeNodes() done');
+
+        setInterval(fetchStatus, 10000);
+        setInterval(fetchQuantumStatus, 30000);
+        renderEventLog();
+        console.log('🎉 init() complete!');
+      } catch (err) {
+        console.error('❌ init() failed:', err);
+        // Show error in loading overlay instead of leaving it spinning
+        const loadingText = document.querySelector('#loading-overlay .text-sm');
+        if (loadingText) {
+          loadingText.textContent = '❌ Failed to initialize: ' + (err.message || err);
+          loadingText.style.color = '#ef4444';
+        }
+        const spinner = document.querySelector('#loading-overlay .loading-spinner');
+        if (spinner) spinner.style.display = 'none';
+      }
     }
 
-    init();
+    init().catch(err => {
+      console.error('init() promise rejected:', err);
+      const loadingText = document.querySelector('#loading-overlay .text-sm');
+      if (loadingText) {
+        loadingText.textContent = '❌ Initialization error: ' + (err.message || err);
+        loadingText.style.color = '#ef4444';
+      }
+    });
   </script>
 </body>
 </html>
