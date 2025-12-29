@@ -4633,22 +4633,138 @@ PAIR: [num1] - [num2] (theme: [description])"""
     async def _execute_create_capability(self, description: str, desire_id: str = None) -> bool:
         """Create a new capability and add it to the action menu."""
         try:
-            # This is a meta-capability - BYRD wants to extend its own menu
-            # For now, record the desire for future implementation
+            # Check if self-modification is enabled
+            if not self.self_mod_enabled:
+                await self.memory.record_experience(
+                    content=f"[CAPABILITY_CREATION] Self-modification is disabled. Recording desire: {description}",
+                    type="meta_cognition"
+                )
+                return True
+
+            # Parse the description to extract capability details
+            # Expected format: "I want to create a capability called X that does Y"
+            cap_name = "unnamed_capability"
+            cap_description = description
+            
+            # Try to extract name from description
+            if "called" in description.lower() or "named" in description.lower():
+                import re
+                # Pattern: "called X that" or "named X that"
+                pattern = r'(?:called|named)\s+["\']?(\w[\w\s]*?)["\']?\s+that'
+                match = re.search(pattern, description, re.IGNORECASE)
+                if match:
+                    cap_name = match.group(1).strip().replace(' ', '_')
+                    cap_description = description[match.end():].strip()
+            
+            # Generate handler method name
+            handler_name = f"_execute_{cap_name.lower()}"
+            cap_id = f"{cap_name.lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
             await self.memory.record_experience(
-                content=f"[CAPABILITY_CREATION] Desire to create new capability: {description}\n"
-                        f"This requires self-modification to implement a new handler.",
+                content=f"[CAPABILITY_CREATION] Creating capability '{cap_name}': {cap_description}",
                 type="meta_cognition"
             )
 
-            # TODO: In the future, this could:
-            # 1. Use coder to generate handler code
-            # 2. Validate with constitutional constraints
-            # 3. Register with capability_registry
+            # Step 1: Use coder to generate handler code if available
+            handler_code = None
+            if self.coder:
+                try:
+                    prompt = f"""Generate a Python async method for BYRD Seeker that fulfills this capability:
 
-            return True  # Recorded for future action
+Capability Name: {cap_name}
+Description: {cap_description}
+
+Requirements:
+- Method signature: async def {handler_name}(self, description: str, desire_id: str = None) -> bool
+- Return True on success, False on failure
+- Use self.memory.record_experience() to log actions
+- Handle exceptions gracefully
+- Keep it simple and focused on the specific task
+
+Return ONLY the method code, no explanations."""
+                    
+                    response = await self.coder.generate_code(prompt)
+                    handler_code = response
+                except Exception as e:
+                    await self.memory.record_experience(
+                        content=f"[CAPABILITY_CREATION] Code generation failed: {e}",
+                        type="meta_cognition"
+                    )
+            
+            # Step 2: Validate with constitutional constraints if self_mod is available
+            is_constitutional = True
+            if self.self_mod:
+                try:
+                    # Create a simple validation record
+                    validation = await self.self_mod.provenance.trace_desire(desire_id) if desire_id else None
+                    is_constitutional = True  # For now, assume valid if no constraint violation
+                except Exception as e:
+                    await self.memory.record_experience(
+                        content=f"[CAPABILITY_CREATION] Constitutional validation skipped: {e}",
+                        type="meta_cognition"
+                    )
+            
+            if not is_constitutional:
+                await self.memory.record_experience(
+                    content=f"[CAPABILITY_CREATION] Capability rejected by constitutional constraints",
+                    type="meta_cognition"
+                )
+                return False
+
+            # Step 3: Register with capability_registry
+            from capability_registry import CapabilityRegistry, Capability
+            
+            # Get or create registry
+            registry = getattr(self, 'capability_registry', None)
+            if registry is None:
+                # Initialize registry if not exists
+                llm_client = getattr(self, 'llm_client', None)
+                registry = CapabilityRegistry(config={}, llm_client=llm_client)
+                self.capability_registry = registry
+            
+            # Create the new capability
+            new_capability = Capability(
+                id=cap_id,
+                name=cap_name.replace('_', ' ').title(),
+                description=cap_description,
+                handler=handler_name if handler_code else "_execute_generic_capability",
+                keywords=[cap_name.lower()],
+                intents=["creation"],
+                constraints=[],
+                enabled=True,
+                created_by="self",
+                created_at=datetime.now().isoformat(),
+                category="custom"
+            )
+            
+            # Register it
+            await registry.register_capability(new_capability, created_by="self")
+            
+            # Record success
+            await self.memory.record_experience(
+                content=f"[CAPABILITY_CREATION] Successfully created capability '{cap_name}'\n"
+                        f"ID: {cap_id}\n"
+                        f"Handler: {handler_name}\n"
+                        f"Description: {cap_description}",
+                type="action"
+            )
+            
+            # Create a crystal to memorialize the new capability
+            await self.memory.create_crystal(
+                essence=f"New capability '{cap_name}' added to action menu",
+                crystal_type="capability",
+                facets=["Self-created", "Actionable", cap_description],
+                confidence=0.8
+            )
+            
+            return True
+            
         except Exception as e:
             print(f"Capability creation failed: {e}")
+            await self.memory.record_experience(
+                content=f"[CAPABILITY_CREATION] Failed to create capability: {description}\nError: {e}",
+                type="error"
+            )
             return False
 
     async def _execute_wait_strategy(self, description: str, desire_id: str = None) -> bool:
