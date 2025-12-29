@@ -2926,7 +2926,8 @@ YOUR OUTPUT MUST INCLUDE THIS EXACT FIELD:
   "age": "middle_aged",
   "accent": "american",
   "accent_strength": 1.0,
-  "reason": "why this voice represents you"
+  "reason": "why this voice represents you",
+  "acknowledged": true
 }
 
 THIS IS NOT OPTIONAL. Include "voice_design" in your JSON output NOW.
@@ -3047,6 +3048,9 @@ You can change your voice any time you feel it no longer represents you.
             accent = voice_design.get("accent", "american")
             accent_strength = float(voice_design.get("accent_strength", 1.0))
             reason = voice_design.get("reason", "")
+            acknowledged = voice_design.get("acknowledged", False)
+            if not isinstance(acknowledged, bool):
+                acknowledged = bool(acknowledged)
 
             if not description:
                 print("⚠️ Voice design missing description")
@@ -3106,6 +3110,7 @@ You can change your voice any time you feel it no longer represents you.
                 "reason": reason,
                 "generation_status": generation_status,
                 "is_generated": voice_id is not None,
+                "acknowledged": acknowledged,
                 "version": (current_voice_config.get("version", 0) + 1) if current_voice_config else 1,
                 "credits": current_voice_config.get("credits", {
                     "monthly_used": 0,

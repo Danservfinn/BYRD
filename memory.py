@@ -4707,6 +4707,7 @@ class Memory:
                     WHERE os.genesis = true
                     RETURN os.id as id, os.name as name, os.version as version,
                            os.awakening_prompt as awakening_prompt,
+                           os.self_modification_enabled as self_modification_enabled,
                            toString(os.created_at) as created_at
                 """)
                 async for record in os_result:
