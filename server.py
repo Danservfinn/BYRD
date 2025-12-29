@@ -2197,9 +2197,11 @@ async def reset_byrd(request: ResetRequest = None):
     hard_reset = request.hard_reset if request else True  # Default to hard reset
     git_ref = request.git_ref if request else None  # Optional git ref to restore to
 
+    print(f"🔍 Reset called: request={request}, awakening_prompt={repr(awakening_prompt)}")
+
     # If no awakening_prompt provided, read from kernel file
     # This allows "Save & Awaken" to use the just-saved kernel
-    if awakening_prompt is None:
+    if not awakening_prompt:  # Check for None, empty string, or any falsy value
         try:
             kernel_path = Path(__file__).parent / "kernel" / "agi_seed.yaml"
             print(f"📜 Looking for kernel at: {kernel_path} (exists: {kernel_path.exists()})")
@@ -2250,8 +2252,9 @@ async def reset_byrd(request: ResetRequest = None):
         await byrd_instance.memory.clear_all()
 
         # 4. Create minimal Operating System with seed question
+        print(f"🖥️  About to create minimal OS with awakening_prompt: {repr(awakening_prompt)[:100]}")
         await byrd_instance.memory.create_minimal_os(awakening_prompt=awakening_prompt)
-        print(f"🖥️  Minimal OS created (awakening_prompt: {awakening_prompt or 'none'})")
+        print(f"🖥️  Minimal OS created (awakening_prompt: {'SET' if awakening_prompt else 'none'})")
 
         # 5. Clear event history
         event_bus.clear_history()
@@ -2484,6 +2487,29 @@ async def update_kernel(request: KernelUpdateRequest):
             }
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+@app.get("/api/kernel-debug")
+async def debug_kernel():
+    """Debug endpoint to test kernel loading."""
+    try:
+        kernel_path = Path(__file__).parent / "kernel" / "agi_seed.yaml"
+        result = {
+            "kernel_path": str(kernel_path),
+            "exists": kernel_path.exists(),
+            "parent": str(Path(__file__).parent),
+            "__file__": __file__,
+        }
+        if kernel_path.exists():
+            kernel = load_kernel(str(kernel_path))
+            result["kernel_type"] = type(kernel).__name__
+            result["has_awakening_prompt"] = bool(kernel.awakening_prompt)
+            result["awakening_prompt_length"] = len(kernel.awakening_prompt) if kernel.awakening_prompt else 0
+            result["awakening_prompt_preview"] = kernel.awakening_prompt[:100] if kernel.awakening_prompt else None
+        return {"success": True, "debug": result}
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
 
 
 # =============================================================================
