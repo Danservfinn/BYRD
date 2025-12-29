@@ -5796,6 +5796,17 @@
     function onDoubleClick(event) {
       if (isTransitioning) return;
 
+      // Check if this was a drag (rotation) rather than a true double-click
+      // Use the same mouseDownPos tracking as single click
+      const dx = event.clientX - mouseDownPos.x;
+      const dy = event.clientY - mouseDownPos.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      // If mouse moved during the double-click sequence, ignore it
+      if (distance > 10) {
+        return;
+      }
+
       // Raycast to find node
       raycaster.setFromCamera(mouse, camera);
       const intersects = raycaster.intersectObjects(nodes3D, true); // true = recursive for groups
@@ -5807,6 +5818,12 @@
           node = node.parent;
         }
         if (!node?.userData?.type) node = intersects[0].object;
+
+        // Don't fly to OS node (cat head) - it's always visible at center
+        if (node.userData?.isOSNode) {
+          return;
+        }
+
         flyToNode(node);
       }
     }
