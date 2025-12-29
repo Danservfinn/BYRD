@@ -1581,7 +1581,10 @@
 
     // Physics throttling - only run physics every N frames
     let physicsFrameCount = 0;
-    const PHYSICS_FRAME_SKIP = 2; // Run physics every 2nd frame (30fps physics vs 60fps render)
+    const PHYSICS_FRAME_SKIP = 3; // Run physics every 3rd frame (20fps physics vs 60fps render)
+
+    // Performance limits - prevent browser crashes with large graphs
+    const MAX_RENDERED_NODES = 400; // Hard limit on nodes to prevent O(n²) physics from crashing browser
 
     // Gravitational Spiral: Connection tracking for centrality-based positioning
     const connectionCounts = new Map(); // nodeId -> connection count
@@ -3994,6 +3997,12 @@
     }
 
     function createNode3D(type, content, id, importance = 0.5) {
+      // Performance limit - prevent browser crashes with too many nodes
+      if (nodes3D.length >= MAX_RENDERED_NODES) {
+        console.warn(`Node limit reached (${MAX_RENDERED_NODES}), skipping new ${type} node`);
+        return null;
+      }
+
       const nodeId = id || `node_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
       // Prevent duplicate nodes - check if node with this ID already exists
@@ -4923,7 +4932,7 @@
         if (graphState.mode !== 'graph') return;
 
         try {
-            const response = await fetch('/api/graph?limit=1000');
+            const response = await fetch(`/api/graph?limit=${MAX_RENDERED_NODES}`);
             if (!response.ok) return;
 
             const data = await response.json();
@@ -4957,8 +4966,8 @@
     async function fetchFullGraph() {
         try {
             updateStatus('Loading graph...', 'amber');
-            console.log('Fetching graph from:', `${API_BASE}/api/graph?limit=1000`);
-            const response = await fetch(`${API_BASE}/api/graph?limit=1000`);
+            console.log('Fetching graph from:', `${API_BASE}/api/graph?limit=${MAX_RENDERED_NODES}`);
+            const response = await fetch(`${API_BASE}/api/graph?limit=${MAX_RENDERED_NODES}`);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
             const data = await response.json();
@@ -9464,7 +9473,7 @@
     async function loadExistingGraph(excludeTypes = []) {
       try {
         updateStatus('Loading existing nodes...', 'amber');
-        const response = await fetch(`${API_BASE}/api/graph?limit=2000`);
+        const response = await fetch(`${API_BASE}/api/graph?limit=${MAX_RENDERED_NODES}`);
         if (!response.ok) {
           console.warn('Could not load existing graph:', response.status);
           return;
