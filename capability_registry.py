@@ -267,6 +267,16 @@ class CapabilityRegistry:
                 constraints=["Must implement handler", "Must define matching criteria"],
                 category="creation"
             ),
+            Capability(
+                id="convert_potential",
+                name="Potential to Action",
+                description="Convert latent potential from reflections into concrete actionable execution",
+                handler="_execute_convert_potential",
+                keywords=["potential", "convert", "actionable", "implement", "realize", "act on"],
+                intents=["creation", "action"],
+                constraints=["Requires identified potential", "Converts abstract to concrete"],
+                category="creation"
+            ),
 
             # === OBSERVATION CAPABILITIES ===
             Capability(

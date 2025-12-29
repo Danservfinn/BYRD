@@ -4555,6 +4555,63 @@ PAIR: [num1] - [num2] (theme: [description])"""
             print(f"Belief crystallization failed: {e}")
             return False
 
+    async def _execute_convert_potential(self, description: str, desire_id: str = None) -> bool:
+        """Convert latent potential from reflections into concrete actionable execution."""
+        try:
+            from potential_converter import create_potential_converter
+            
+            # Lazy load the potential converter
+            if not hasattr(self, 'potential_converter'):
+                self.potential_converter = await create_potential_converter(
+                    self.memory, 
+                    self.llm_client,
+                    self
+                )
+            
+            # Force a scan to identify potential
+            print("\ud83d\udd2e Scanning for latent potential in reflections...")
+            discovered = await self.potential_converter.scan_for_potential(force=True)
+            
+            if discovered:
+                print(f"\u2728 Found {len(discovered)} new potential(s) to convert")
+                
+            # Process the highest priority potential
+            result = await self.potential_converter.process_next_potential()
+            
+            if result:
+                await self.memory.record_experience(
+                    content=f"[POTENTIAL_CONVERSION] Successfully converted potential to action: {result.description}\n"
+                            f"Type: {result.potential_type.value}\n"
+                            f"Priority: {result.priority:.2f}",
+                    type="action"
+                )
+                return True
+            else:
+                await self.memory.record_experience(
+                    content=f"[POTENTIAL_CONVERSION] No high-priority potential ready for conversion",
+                    type="meta_cognition"
+                )
+                return True  # Not a failure - just nothing ready
+                
+        except ImportError:
+            # Fallback if potential_converter module not available
+            await self.memory.record_experience(
+                content=f"[POTENTIAL_CONVERSION] Desire: {description}\n"
+                        f"Potential converter module not available. Recording as insight.",
+                type="meta_cognition"
+            )
+            # Create a crystal to capture the potential
+            await self.memory.create_crystal(
+                essence=f"Actionable potential identified: {description}",
+                crystal_type="potential",
+                facets=["Ready for conversion", "Awaiting implementation"],
+                confidence=0.7
+            )
+            return True
+        except Exception as e:
+            print(f"Potential conversion failed: {e}")
+            return False
+
     async def _execute_create_capability(self, description: str, desire_id: str = None) -> bool:
         """Create a new capability and add it to the action menu."""
         try:
