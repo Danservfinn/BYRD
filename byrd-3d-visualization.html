@@ -1535,6 +1535,54 @@
     // Type highlight state
     let highlightedType = null;  // Currently highlighted type, null = none
 
+    // ==========================================================================
+    // PERFORMANCE OPTIMIZATION: Prevent Chrome freezing
+    // ==========================================================================
+
+    // Debounce utility - batches rapid calls into single execution
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+
+    // Debounced event log rendering - prevents DOM thrashing
+    // Instead of rebuilding DOM on every event, batch updates every 100ms
+    let eventLogDirty = false;
+    const debouncedRenderEventLog = debounce(() => {
+      if (eventLogDirty) {
+        renderEventLog();
+        eventLogDirty = false;
+      }
+    }, 100);
+
+    // Mark event log as needing update (called from handleEvent)
+    function scheduleEventLogRender() {
+      eventLogDirty = true;
+      debouncedRenderEventLog();
+    }
+
+    // Visibility API - pause expensive operations when tab is hidden
+    let isTabVisible = true;
+    document.addEventListener('visibilitychange', () => {
+      isTabVisible = !document.hidden;
+      if (isTabVisible) {
+        console.log('Tab visible - resuming animations');
+      } else {
+        console.log('Tab hidden - pausing expensive operations');
+      }
+    });
+
+    // Physics throttling - only run physics every N frames
+    let physicsFrameCount = 0;
+    const PHYSICS_FRAME_SKIP = 2; // Run physics every 2nd frame (30fps physics vs 60fps render)
+
     // Gravitational Spiral: Connection tracking for centrality-based positioning
     const connectionCounts = new Map(); // nodeId -> connection count
     const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5)); // ~137.5 degrees
@@ -6457,6 +6505,13 @@
     function animate() {
       requestAnimationFrame(animate);
 
+      // PERF: Skip expensive operations when tab is hidden
+      if (!isTabVisible) {
+        // Still call getDelta to prevent time jump when tab becomes visible
+        clock.getDelta();
+        return;
+      }
+
       const delta = clock.getDelta();
       const time = clock.getElapsedTime();
 
@@ -6472,8 +6527,13 @@
       // Animate cat ego form
       animateCat(time, delta);
 
-      // Update physics (includes spring forces, gravitational spiral positioning)
-      updateNodePhysics(delta);
+      // PERF: Throttle physics to every Nth frame (reduces O(n²) calculations)
+      physicsFrameCount++;
+      if (physicsFrameCount >= PHYSICS_FRAME_SKIP) {
+        physicsFrameCount = 0;
+        // Update physics (includes spring forces, gravitational spiral positioning)
+        updateNodePhysics(delta * PHYSICS_FRAME_SKIP); // Compensate for skipped frames
+      }
 
       // Update node scales based on connection counts
       updateNodeScales(delta);
@@ -6761,7 +6821,8 @@
     function handleEvent(event) {
       events.unshift(event);
       if (events.length > 500) events.pop();
-      renderEventLog();
+      // PERF: Use debounced rendering instead of immediate DOM rebuild
+      scheduleEventLogRender();
 
       // Trigger cat animations for this event
       if (catAnimationController) {
