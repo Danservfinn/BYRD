@@ -1609,37 +1609,37 @@
     // Force-directed physics creates natural clustering based on relationships
     // Highly connected nodes gravitate toward center; isolated nodes drift outward
 
-    // Relationship visual styles - dark goldenrod, moderate thickness
+    // Relationship visual styles - grey, 1px
     const RELATIONSHIP_STYLES = {
         DERIVED_FROM: {
-            color: 0xB8860B,    // Dark goldenrod
+            color: 0x808080,    // Grey
             opacity: 1.0,
-            width: 1.5
+            width: 1
         },
         RELATES_TO: {
-            color: 0xB8860B,    // Dark goldenrod
+            color: 0x808080,    // Grey
             opacity: 1.0,
-            width: 1.5
+            width: 1
         },
         FULFILLS: {
-            color: 0xB8860B,    // Dark goldenrod
+            color: 0x808080,    // Grey
             opacity: 1.0,
-            width: 1.5
+            width: 1
         },
         REFLECTS_ON: {
-            color: 0xB8860B,    // Dark goldenrod
+            color: 0x808080,    // Grey
             opacity: 1.0,
-            width: 1.5
+            width: 1
         },
         EMERGES_FROM: {
-            color: 0xB8860B,    // Dark goldenrod
+            color: 0x808080,    // Grey
             opacity: 1.0,
-            width: 1.5
+            width: 1
         },
         default: {
-            color: 0xB8860B,    // Dark goldenrod
+            color: 0x808080,    // Grey
             opacity: 1.0,
-            width: 1.5
+            width: 1
         }
     };
 
@@ -4109,9 +4109,9 @@
     const LINE_CONFIG = {
       baseOpacity: 1.0,       // Full opacity for maximum visibility
       highlightOpacity: 1.0,
-      lineWidth: 1.5,         // Moderate thickness using Line2
+      lineWidth: 1,           // 1px thickness
       highlightDuration: 500,
-      color: 0xB8860B         // Dark goldenrod - visible on light background
+      color: 0x808080         // Grey
     };
 
     function createConnection3D(nodeA, nodeB, type) {
