@@ -489,6 +489,7 @@ Confidence: [high/medium/low]"""
             await event_bus.emit(Event(
                 type=EventType.INSIGHT_CREATED,
                 data={
+                    "content": insight.content,
                     "source_type": insight.source_type.value,
                     "confidence": insight.confidence,
                     "domains": insight.domains
