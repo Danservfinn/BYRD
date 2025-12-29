@@ -1933,8 +1933,9 @@ If no action needed, return: {{"rationale": "reason", "actions": []}}
 
                 if umbrella_belief:
                     # Connect all orphans of this type to the umbrella belief
+                    actual_connections = 0
                     for exp in experiences:
-                        await self.memory.create_connection(
+                        success = await self.memory.create_connection(
                             from_id=exp["id"],
                             to_id=umbrella_belief,
                             relationship="CATEGORIZED_AS",
@@ -1944,9 +1945,12 @@ If no action needed, return: {{"rationale": "reason", "actions": []}}
                                 "experience_type": exp_type
                             }
                         )
-                        connections_made += 1
+                        if success:
+                            connections_made += 1
+                            actual_connections += 1
 
-                    print(f"🔗 Phase 2: Connected {len(experiences)} '{exp_type}' experiences to umbrella belief")
+                    if actual_connections > 0:
+                        print(f"🔗 Phase 2: Connected {actual_connections}/{len(experiences)} '{exp_type}' experiences to umbrella belief")
 
             return connections_made
 
@@ -2031,8 +2035,9 @@ If no action needed, return: {{"rationale": "reason", "actions": []}}
                     )
 
                     # Connect batch orphans to this belief
+                    batch_connections = 0
                     for exp in batch:
-                        await self.memory.create_connection(
+                        success = await self.memory.create_connection(
                             from_id=exp["id"],
                             to_id=belief_id,
                             relationship="THEMATICALLY_RELATED",
@@ -2042,9 +2047,12 @@ If no action needed, return: {{"rationale": "reason", "actions": []}}
                                 "batch_index": i // batch_size
                             }
                         )
-                        connections_made += 1
+                        if success:
+                            connections_made += 1
+                            batch_connections += 1
 
-                    print(f"🔗 Phase 4: Created bridging belief for {len(batch)} orphans")
+                    if batch_connections > 0:
+                        print(f"🔗 Phase 4: Created bridging belief for {batch_connections}/{len(batch)} orphans")
 
             return connections_made
 

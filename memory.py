@@ -2309,31 +2309,50 @@ class Memory:
         to_id: str,
         relationship: str = "RELATES_TO",
         properties: Optional[Dict] = None
-    ):
-        """Create a relationship between any two nodes."""
+    ) -> bool:
+        """
+        Create a relationship between any two nodes.
+
+        Returns:
+            True if connection was created, False if nodes not found
+        """
         props = properties or {}
         props["formed_at"] = datetime.now().isoformat()
 
+        # Use MERGE to create relationship and RETURN to verify it happened
         query = f"""
             MATCH (a), (b)
             WHERE a.id = $from_id AND b.id = $to_id
-            CREATE (a)-[r:{relationship}]->(b)
-            SET r += $props
+            MERGE (a)-[r:{relationship}]->(b)
+            ON CREATE SET r += $props
+            ON MATCH SET r.updated_at = datetime()
+            RETURN count(r) as created
         """
 
-        async with self.driver.session() as session:
-            await session.run(query, from_id=from_id, to_id=to_id, props=props)
+        try:
+            async with self.driver.session() as session:
+                result = await session.run(query, from_id=from_id, to_id=to_id, props=props)
+                record = await result.single()
+                created = record["created"] if record else 0
 
-        # Emit event for real-time visualization
-        await event_bus.emit(Event(
-            type=EventType.CONNECTION_CREATED,
-            data={
-                "from_id": from_id,
-                "to_id": to_id,
-                "relationship": relationship,
-                "properties": props
-            }
-        ))
+                if created > 0:
+                    # Only emit event if connection was actually created
+                    await event_bus.emit(Event(
+                        type=EventType.CONNECTION_CREATED,
+                        data={
+                            "from_id": from_id,
+                            "to_id": to_id,
+                            "relationship": relationship,
+                            "properties": props
+                        }
+                    ))
+                    return True
+                else:
+                    print(f"⚠️  Connection failed: nodes not found (from={from_id[:16]}, to={to_id[:16]})")
+                    return False
+        except Exception as e:
+            print(f"⚠️  Connection error: {e}")
+            return False
 
     # =========================================================================
     # CAUSAL RELATIONSHIPS
