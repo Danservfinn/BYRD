@@ -2005,6 +2005,96 @@ Write ONLY the inner thought, nothing else:"""
             voice = voice[1:-1]
         return voice
 
+    def _clean_drive_description(self, text: str) -> str:
+        """
+        Clean LLM reasoning traces from drive/goal descriptions.
+
+        LLMs often produce chain-of-thought reasoning even when asked for
+        a simple description. This extracts just the goal/desire itself.
+
+        Examples of pollution this catches:
+        - "I should install a capability because..."
+        - "**Task Analysis**: 1. First I need to..."
+        - "Looking at my current state, I want to..."
+        """
+        if not text or not isinstance(text, str):
+            return ""
+
+        text = text.strip()
+
+        # If very short, it's probably already clean
+        if len(text) < 50 and '\n' not in text and '**' not in text:
+            return self._clean_goal_text(text)
+
+        # Check for chain-of-thought markers
+        cot_markers = [
+            "**", "1.", "2.", "3.", "- ", "* ", "Let me", "I need to",
+            "First,", "Looking at", "Based on", "I should", "I want to",
+            "The goal", "The task", "Analysis:", "Task:", "I will"
+        ]
+
+        is_cot = (
+            any(text.lstrip().startswith(m) for m in cot_markers) or
+            text.count('\n') > 2 or
+            len(text) > 150
+        )
+
+        if not is_cot:
+            return self._clean_goal_text(text)
+
+        # Try to extract the actual goal from reasoning
+        # Strategy 1: Look for quoted text
+        import re
+        quotes = re.findall(r'["\']([^"\']{15,120})["\']', text)
+        for q in quotes:
+            q = q.strip()
+            if len(q) > 15 and not any(m in q for m in cot_markers):
+                return self._clean_goal_text(q)
+
+        # Strategy 2: Look for lines starting with action verbs
+        action_verbs = [
+            'install', 'implement', 'create', 'build', 'develop', 'improve',
+            'optimize', 'research', 'identify', 'track', 'measure', 'extract',
+            'consolidate', 'achieve', 'verify', 'design', 'establish', 'explore',
+            'understand', 'learn', 'discover', 'acquire', 'enhance', 'test'
+        ]
+
+        lines = text.split('\n')
+        for line in lines:
+            cleaned = line.strip().lstrip('*-•123456789.()').strip().strip('"\'').strip()
+            lower = cleaned.lower()
+            if any(lower.startswith(v) for v in action_verbs) and 10 < len(cleaned) < 150:
+                return self._clean_goal_text(cleaned)
+
+        # Strategy 3: Take first sentence if it's reasonable
+        first_sentence = text.split('.')[0].strip()
+        if 10 < len(first_sentence) < 150:
+            # Remove reasoning starters
+            for starter in ["I should", "I want to", "I need to", "I will", "The goal is to"]:
+                if first_sentence.lower().startswith(starter.lower()):
+                    first_sentence = first_sentence[len(starter):].strip()
+            return self._clean_goal_text(first_sentence)
+
+        # Fallback: truncate and clean
+        return self._clean_goal_text(text[:120])
+
+    def _clean_goal_text(self, text: str) -> str:
+        """Remove formatting artifacts from goal text."""
+        text = text.strip()
+        # Remove markdown
+        text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)
+        text = re.sub(r'\*([^*]+)\*', r'\1', text)
+        # Remove leading bullets/numbers
+        text = re.sub(r'^[\s\-\*•\d\.]+', '', text).strip()
+        # Remove trailing punctuation
+        text = text.rstrip('.,;:')
+        # Collapse whitespace
+        text = ' '.join(text.split())
+        # Truncate if still too long
+        if len(text) > 150:
+            text = text[:147] + "..."
+        return text
+
     def _detects_viewer_addressing(self, inner_voice: str, recent_experiences: List[Dict]) -> Optional[str]:
         """
         Detect if inner voice appears to address viewer input.
@@ -2267,8 +2357,9 @@ Write ONLY the inner thought, nothing else:"""
                 insights_created += 1
 
                 # Create high-priority desire to remove bottleneck
-                action = analysis.get("bottleneck_action")
-                if action:
+                raw_action = analysis.get("bottleneck_action")
+                if raw_action:
+                    action = self._clean_drive_description(raw_action)
                     await self.memory.create_desire(
                         description=f"Remove bottleneck: {action}",
                         intensity=0.9,  # High priority
@@ -2297,9 +2388,10 @@ Write ONLY the inner thought, nothing else:"""
                 print(f"⚠️ Failed to create success insight: {e}")
 
         # Create experiment hypothesis as desire
-        hypothesis = analysis.get("experiment_hypothesis")
-        if hypothesis:
+        raw_hypothesis = analysis.get("experiment_hypothesis")
+        if raw_hypothesis:
             try:
+                hypothesis = self._clean_drive_description(raw_hypothesis)
                 await self.memory.create_desire(
                     description=f"Experiment: {hypothesis}",
                     intensity=0.7,
@@ -2692,10 +2784,13 @@ Format your response as a numbered list matching the input:
             if not isinstance(drive, dict):
                 continue
 
-            description = drive.get("description", "")
+            raw_description = drive.get("description", "")
             strength = drive.get("strength", 0.5)
             intent = drive.get("intent", None)
             target = drive.get("target", None)
+
+            # Clean description to remove LLM reasoning traces
+            description = self._clean_drive_description(raw_description)
 
             # Validate description
             if not description or len(description) < 5:
@@ -3515,8 +3610,9 @@ Only generate predictions for beliefs that are actually testable. If no beliefs 
                 elif action == "reformulate":
                     # Mark old as dormant, create new reformulated desire
                     await self.memory.update_desire_status(desire_id, "dormant")
-                    new_desc = mod.get("new_description", "")
-                    if new_desc:
+                    raw_new_desc = mod.get("new_description", "")
+                    if raw_new_desc:
+                        new_desc = self._clean_drive_description(raw_new_desc)
                         await self.memory.create_desire(
                             description=new_desc,
                             type=desire.get("type", "exploration"),
@@ -3664,12 +3760,14 @@ Only generate predictions for beliefs that are actually testable. If no beliefs 
 
         # Create desires from prescribed format
         for desire in dream.get("desires", []):
-            desc = desire.get("description", "")
+            raw_desc = desire.get("description", "")
             dtype = desire.get("type", "exploration")
             intensity = desire.get("intensity", 0.5)
             plan = desire.get("plan", [])
             intent = desire.get("intent", None)
             target = desire.get("target", None)
+            # Clean description to remove LLM reasoning traces
+            desc = self._clean_drive_description(raw_desc)
             if desc and len(desc) > 5:
                 exists = await self.memory.desire_exists(desc)
                 if not exists:
