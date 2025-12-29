@@ -5765,13 +5765,10 @@
 
     // Track mouse position for drag detection
     let mouseDownPos = { x: 0, y: 0 };
-    let isDragging = false;
-    const DRAG_THRESHOLD = 5; // pixels
 
     function onMouseDown(event) {
       mouseDownPos.x = event.clientX;
       mouseDownPos.y = event.clientY;
-      isDragging = false;
     }
 
     function onMouseClick(event) {
@@ -5782,17 +5779,17 @@
       const dy = event.clientY - mouseDownPos.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
-      if (distance > DRAG_THRESHOLD) {
-        // This was a drag, not a click - don't trigger selection/deselection
+      // Increase threshold to 10px to better distinguish drags from clicks
+      if (distance > 10) {
+        // This was a drag, not a click - don't do anything
         return;
       }
 
-      if (hoveredNode) {
+      // Only select non-OS nodes (cat head is always visible, no need to focus on it)
+      if (hoveredNode && !hoveredNode.userData?.isOSNode) {
         selectNode(hoveredNode);
-      } else {
-        // Click on empty space - deselect (but don't reset camera)
-        deselectNode();
       }
+      // Empty space clicks and OS node clicks do nothing - free navigation
     }
 
     // Double-click to fly directly to a node
