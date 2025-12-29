@@ -2016,11 +2016,13 @@
 
     // Physics throttling - only run physics every N frames
     let physicsFrameCount = 0;
-    const PHYSICS_FRAME_SKIP = 6; // Run physics every 6th frame (10fps physics vs 60fps render)
+    const PHYSICS_FRAME_SKIP = 12; // Run physics every 12th frame (5fps physics vs 60fps render)
 
-    // Performance limits - prevent browser crashes with large graphs
-    // O(n²) physics: 150 nodes = 11,250 iterations; 400 nodes = 160,000 iterations
-    const MAX_RENDERED_NODES = 150; // Hard limit on nodes to prevent O(n²) physics from crashing browser
+    // CRITICAL: Hard limits to prevent browser crashes
+    // O(n²) physics: 75 nodes = 2,812 iterations; 100 nodes = 5,000; 150 nodes = 11,250
+    const MAX_RENDERED_NODES = 75; // Reduced from 150 - hard limit on nodes
+    const MAX_CONNECTIONS = 100; // Hard limit on connection lines
+    const MAX_GRAPH_RELS = 75; // Hard limit on graph mode relationships
 
     // Gravitational Spiral: Connection tracking for centrality-based positioning
     const connectionCounts = new Map(); // nodeId -> connection count
@@ -4205,7 +4207,7 @@
     // ENVIRONMENT
     // ==========================================================================
     function createStarField() {
-      const starCount = 2000;
+      const starCount = 800; // Reduced from 2000 for performance
       const geometry = new THREE.BufferGeometry();
       const positions = new Float32Array(starCount * 3);
       const colors = new Float32Array(starCount * 3);
@@ -4673,6 +4675,12 @@
 
     // Create connection by node IDs (wrapper for event handler)
     function createConnection(fromId, toId, type) {
+      // PERF: Hard limit on connections
+      if (connections3D.length >= MAX_CONNECTIONS) {
+        console.warn(`Connection limit reached (${MAX_CONNECTIONS}), skipping`);
+        return null;
+      }
+
       const nodeA = nodes3D.find(n => n.userData.id === fromId);
       const nodeB = nodes3D.find(n => n.userData.id === toId);
 
@@ -4686,21 +4694,26 @@
     }
 
     // Update connection positions when nodes move
+    // PERF: Reuse positions array to avoid GC pressure (was creating new array every frame per connection)
+    const _connPositions = new Float32Array(6);
+
     function updateConnectionPositions() {
-      connections3D.forEach(conn => {
-        if (!conn.userData.meshA || !conn.userData.meshB) return;
+      for (const conn of connections3D) {
+        if (!conn.userData.meshA || !conn.userData.meshB) continue;
 
         const start = conn.userData.meshA.position;
         const end = conn.userData.meshB.position;
 
-        // Update Line2/LineGeometry positions
-        const positions = [
-          start.x, start.y, start.z,
-          end.x, end.y, end.z
-        ];
-        conn.geometry.setPositions(positions);
+        // Update Line2/LineGeometry positions (reuse array)
+        _connPositions[0] = start.x;
+        _connPositions[1] = start.y;
+        _connPositions[2] = start.z;
+        _connPositions[3] = end.x;
+        _connPositions[4] = end.y;
+        _connPositions[5] = end.z;
+        conn.geometry.setPositions(_connPositions);
         conn.computeLineDistances();
-      });
+      }
     }
 
     // Cascade effect - highlight connected nodes
@@ -5687,11 +5700,10 @@
         console.log(`Created ${totalCreated} graph nodes (${crystalCount} crystals, ${absorbedCount} absorbed experiences)`);
 
         // Create relationship lines (skip relationships to absorbed nodes)
-        // PERF: Limit to prevent too many lines causing lag
-        const MAX_GRAPH_RELATIONSHIPS = 200;
+        // PERF: Use global limit constant to prevent too many lines causing lag
         let relsCreated = 0;
         for (const rel of data.relationships) {
-            if (relsCreated >= MAX_GRAPH_RELATIONSHIPS) break;
+            if (relsCreated >= MAX_GRAPH_RELS) break;
             if (createRelationshipLine(rel)) {
                 relsCreated++;
             }
@@ -5761,6 +5773,9 @@
     /**
      * Update relationship line positions when nodes move
      */
+    // PERF: Reuse positions array for relationship lines
+    const _relPositions = new Float32Array(6);
+
     function updateRelationshipPositions() {
         for (const line of graphState.relationshipLines) {
             const sourceMesh = line.userData.sourceMesh;
@@ -5768,16 +5783,17 @@
 
             if (!sourceMesh || !targetMesh) continue;
 
-            // Sacred geometry: update straight line positions
+            // Sacred geometry: update straight line positions (reuse array)
             const start = sourceMesh.position;
             const end = targetMesh.position;
 
-            // Update Line2/LineGeometry positions
-            const positions = [
-                start.x, start.y, start.z,
-                end.x, end.y, end.z
-            ];
-            line.geometry.setPositions(positions);
+            _relPositions[0] = start.x;
+            _relPositions[1] = start.y;
+            _relPositions[2] = start.z;
+            _relPositions[3] = end.x;
+            _relPositions[4] = end.y;
+            _relPositions[5] = end.z;
+            line.geometry.setPositions(_relPositions);
             line.computeLineDistances();
         }
     }
@@ -6950,6 +6966,14 @@
     // ==========================================================================
     // RENDER LOOP
     // ==========================================================================
+
+    // PERF: Frame budget tracking to detect performance issues
+    let lastFrameTime = 0;
+    let slowFrameCount = 0;
+    const FRAME_BUDGET_MS = 33; // Target 30fps minimum (33ms per frame)
+    let secondaryFrameCount = 0;
+    const SECONDARY_FRAME_SKIP = 3; // Secondary throttle for non-critical animations
+
     function animate() {
       requestAnimationFrame(animate);
 
@@ -6960,16 +6984,17 @@
         return;
       }
 
+      const frameStart = performance.now();
       const delta = clock.getDelta();
       const time = clock.getElapsedTime();
 
-      // Update controls
+      // Update controls (essential)
       controls.update();
 
       // Hybrid Navigation: Update camera movement from WASD keys
       updateCameraMovement(delta);
 
-      // Animate core
+      // Animate core (essential - visual center)
       animateCore(time);
 
       // Animate cat ego form
@@ -6983,8 +7008,15 @@
         updateNodePhysics(delta * PHYSICS_FRAME_SKIP); // Compensate for skipped frames
       }
 
-      // Update node scales based on connection counts
-      updateNodeScales(delta);
+      // PERF: Secondary throttle for visual polish (non-critical)
+      secondaryFrameCount++;
+      const doSecondaryUpdates = secondaryFrameCount >= SECONDARY_FRAME_SKIP;
+      if (doSecondaryUpdates) secondaryFrameCount = 0;
+
+      // Update node scales (secondary priority)
+      if (doSecondaryUpdates) {
+        updateNodeScales(delta * SECONDARY_FRAME_SKIP);
+      }
 
       // Update connection line positions as nodes move
       updateConnectionPositions();
@@ -6994,25 +7026,35 @@
         updateRelationshipPositions();
       }
 
-      // Phase 2: Update node motion trails
-      updateNodeTrails(delta);
+      // Phase 2: Update node motion trails (secondary priority)
+      if (doSecondaryUpdates) {
+        updateNodeTrails(delta * SECONDARY_FRAME_SKIP);
+      }
 
-      // Animate ambient particles
-      animateAmbientParticles(delta);
+      // Animate ambient particles (secondary priority)
+      if (doSecondaryUpdates) {
+        animateAmbientParticles(delta * SECONDARY_FRAME_SKIP);
+      }
 
       // Rotate star field slowly
       if (starField) {
         starField.rotation.y = time * 0.01;
       }
 
-      // Phase 3: Update shader uniforms
-      updateShaderUniforms(time);
+      // Phase 3: Update shader uniforms (secondary priority)
+      if (doSecondaryUpdates) {
+        updateShaderUniforms(time);
+      }
 
-      // Phase 3: Update reflection highlights (pulsing rings)
-      updateHighlightAnimations();
+      // Phase 3: Update reflection highlights (secondary priority)
+      if (doSecondaryUpdates) {
+        updateHighlightAnimations();
+      }
 
-      // Animate crystal nodes (gentle rotation)
-      animateCrystals(delta, time);
+      // Animate crystal nodes (secondary priority)
+      if (doSecondaryUpdates) {
+        animateCrystals(delta * SECONDARY_FRAME_SKIP, time);
+      }
 
       // Animate OS cat head (breathing)
       animateOSNode(time);
@@ -9625,9 +9667,9 @@
         nodeById.set(node.userData.id, node);
       }
 
-      // Run physics iterations - use fewer iterations with reduced node count
-      const iterations = 100;
-      const dt = 0.5;
+      // Run physics iterations - reduced from 100 for faster completion
+      const iterations = 50;
+      const dt = 0.8; // Larger timestep to compensate for fewer iterations
 
       // PERF: Reuse Vector3 objects to avoid GC pressure (was creating millions of objects)
       const _diffVec = new THREE.Vector3();
@@ -9691,11 +9733,11 @@
             node.userData.force.add(_centerVec);
           }
 
-          // Boundary force
+          // Boundary force (reuse _centerVec to avoid GC pressure)
           if (distFromCenter > physics.maxRadius) {
             const pushBack = (distFromCenter - physics.maxRadius) * physics.boundaryForce;
-            const direction = pos.clone().normalize().multiplyScalar(-pushBack);
-            node.userData.force.add(direction);
+            _centerVec.copy(pos).normalize().multiplyScalar(-pushBack);
+            node.userData.force.add(_centerVec);
           }
         }
 
