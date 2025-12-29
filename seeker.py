@@ -623,14 +623,18 @@ CATEGORIES:
 - reconcile_orphans: Connecting isolated nodes, linking experiences, reducing fragmentation
 - curate: Optimizing, cleaning, organizing my memory or graph structure
 - self_modify: Changing my own code, adding capabilities to myself
+- install: Installing new tools, capabilities, or templates from external sources (aitmpl, MCP servers)
+- code: Writing code, implementing features, creating programs (NOT installing existing tools)
 - search: Learning about EXTERNAL topics in the world (not about myself)
 
 CRITICAL DISTINCTION:
 - "What can I do?" / "My capabilities" / "My limits" → introspect (about MYSELF)
 - "What is machine learning?" / "How does X work?" → search (about EXTERNAL world)
+- "Install a capability" / "Get a tool" / "Add MCP server" → install (getting EXISTING tools)
+- "Write code for X" / "Implement feature Y" / "Build Z" → code (CREATING new code)
 - Even if the desire mentions external concepts, if the CORE QUESTION is about MY abilities/limits/nature → introspect
 
-Reply with ONLY one word: introspect, reconcile_orphans, curate, self_modify, or search"""
+Reply with ONLY one word: introspect, reconcile_orphans, curate, self_modify, install, code, or search"""
 
         try:
             # Acquire LLM lock to prevent concurrent calls with Dreamer
@@ -651,7 +655,7 @@ Reply with ONLY one word: introspect, reconcile_orphans, curate, self_modify, or
             strategy = response.strip().lower().replace('"', '').replace("'", "")
 
             # Validate response
-            valid_strategies = ["introspect", "reconcile_orphans", "curate", "self_modify", "search"]
+            valid_strategies = ["introspect", "reconcile_orphans", "curate", "self_modify", "install", "code", "search"]
             if strategy in valid_strategies:
                 print(f"🧠 LLM classified '{description[:40]}...' as: {strategy}")
                 return strategy
@@ -815,6 +819,20 @@ Reply with ONLY one word: introspect, reconcile_orphans, curate, self_modify, or
         # Research → web search
         if intent == "research":
             return "search"
+
+        # INSTALL DETECTION (check before creation → code routing)
+        # Desires about installing capabilities should use the install strategy
+        # even if BYRD classified them as "creation" intent.
+        # This routes to aitmpl search instead of coder.
+        install_keywords = [
+            "install", "add capability", "get capability", "acquire capability",
+            "add tool", "get tool", "acquire tool", "new capability", "new tool",
+            "capability from", "tool from", "install from", "aitmpl", "template",
+            "first capability", "another capability", "more capabilities"
+        ]
+        if intent == "creation" and any(kw in desc_lower for kw in install_keywords):
+            print(f"🔧 Install desire (classified as creation) → install strategy: {description[:50]}")
+            return "install"
 
         # Creation → code generation
         if intent == "creation":
