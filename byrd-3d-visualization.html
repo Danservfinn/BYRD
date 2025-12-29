@@ -99,6 +99,125 @@
       background: #c7d2fe;
     }
 
+    /* Node type filter toggles */
+    .stat-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-size: 11px;
+    }
+    .stat-toggle:hover {
+      background: rgba(0, 0, 0, 0.05);
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+    .stat-toggle.active .stat-dot {
+      opacity: 1;
+    }
+    .stat-toggle:not(.active) {
+      opacity: 0.4;
+    }
+    .stat-toggle:not(.active) .stat-dot {
+      background: #9ca3af !important;
+    }
+    .stat-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .stat-label {
+      color: #475569;
+    }
+    .stat-count {
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    /* Advanced filter panel */
+    .filter-panel {
+      position: fixed;
+      bottom: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 400px;
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+      backdrop-filter: blur(12px);
+      z-index: 150;
+      padding: 16px;
+    }
+    .filter-panel.hidden {
+      display: none;
+    }
+    .filter-section {
+      margin-bottom: 12px;
+    }
+    .filter-section:last-child {
+      margin-bottom: 0;
+    }
+    .filter-section-title {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      margin-bottom: 6px;
+    }
+    .filter-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .filter-input {
+      flex: 1;
+      padding: 6px 10px;
+      font-size: 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      background: white;
+    }
+    .filter-input:focus {
+      outline: none;
+      border-color: #818cf8;
+    }
+    .filter-select {
+      padding: 6px 10px;
+      font-size: 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      background: white;
+      cursor: pointer;
+    }
+    .filter-range {
+      flex: 1;
+      height: 4px;
+      -webkit-appearance: none;
+      background: #e2e8f0;
+      border-radius: 2px;
+    }
+    .filter-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: #6366f1;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    .filter-value {
+      font-size: 11px;
+      color: #64748b;
+      min-width: 30px;
+      text-align: right;
+    }
+
     /* Tooltip - Light theme */
     .node-tooltip {
       position: fixed;
@@ -671,18 +790,103 @@
 
   <!-- UI Overlay: Bottom Center - Controls -->
   <div class="ui-overlay bottom-4 left-1/2 -translate-x-1/2">
-    <!-- Stats Row -->
-    <div id="stats" class="flex items-center justify-center gap-3 px-4 py-2 mb-2 bg-white/90 border border-slate-200 rounded-lg text-xs font-mono shadow">
-      <span class="stat-type text-amber-600" data-type="belief">Beliefs: <span id="belief-count">0</span></span>
-      <span class="stat-type text-rose-600" data-type="desire">Desires: <span id="desire-count">0</span></span>
-      <span class="stat-type text-green-600" data-type="goal">Goals: <span id="goal-count">0</span></span>
-      <span class="stat-type text-purple-600" data-type="reflection">Reflect: <span id="reflection-count">0</span></span>
-      <span class="stat-type text-sky-600" data-type="experience">Exp: <span id="exp-count">0</span></span>
-      <span class="text-slate-400">Nodes: <span id="node-count">0</span></span>
+    <!-- Stats Row with Clickable Type Filters -->
+    <div id="stats" class="flex items-center justify-center gap-2 px-4 py-2 mb-2 bg-white/90 border border-slate-200 rounded-lg text-xs font-mono shadow">
+      <!-- Filter button -->
+      <button onclick="toggleFilterPanel()" class="stat-toggle-btn px-2 py-1 rounded bg-indigo-100 border border-indigo-300 text-indigo-700 hover:bg-indigo-200" title="Advanced filters">
+        <span>🔍</span>
+      </button>
+      <!-- Type toggles -->
+      <button class="stat-toggle active" data-type="belief" onclick="toggleTypeFilter('belief')" title="Toggle beliefs">
+        <span class="stat-dot" style="background: #d97706"></span>
+        <span class="stat-label">Beliefs</span>
+        <span class="stat-count" id="belief-count">0</span>
+      </button>
+      <button class="stat-toggle active" data-type="desire" onclick="toggleTypeFilter('desire')" title="Toggle desires">
+        <span class="stat-dot" style="background: #be123c"></span>
+        <span class="stat-label">Desires</span>
+        <span class="stat-count" id="desire-count">0</span>
+      </button>
+      <button class="stat-toggle active" data-type="goal" onclick="toggleTypeFilter('goal')" title="Toggle goals">
+        <span class="stat-dot" style="background: #16a34a"></span>
+        <span class="stat-label">Goals</span>
+        <span class="stat-count" id="goal-count">0</span>
+      </button>
+      <button class="stat-toggle active" data-type="reflection" onclick="toggleTypeFilter('reflection')" title="Toggle reflections">
+        <span class="stat-dot" style="background: #047857"></span>
+        <span class="stat-label">Reflect</span>
+        <span class="stat-count" id="reflection-count">0</span>
+      </button>
+      <button class="stat-toggle active" data-type="experience" onclick="toggleTypeFilter('experience')" title="Toggle experiences">
+        <span class="stat-dot" style="background: #0369a1"></span>
+        <span class="stat-label">Exp</span>
+        <span class="stat-count" id="exp-count">0</span>
+      </button>
+      <span class="text-slate-400 mx-1">|</span>
+      <!-- Quick actions -->
+      <button onclick="showAllTypes()" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-600" title="Show all types">All</button>
+      <button onclick="hideAllTypes()" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-600" title="Hide all types">None</button>
+      <span class="text-slate-400 mx-1">|</span>
+      <!-- Status counts -->
+      <span class="text-slate-500">Showing: <span id="filter-status" class="text-slate-700">0/0</span></span>
       <span class="text-indigo-600">Dreams: <span id="dream-count">0</span></span>
       <span class="text-teal-600">Seeks: <span id="seek-count">0</span></span>
-      <span class="text-orange-600">Mutations: <span id="mutation-count">0</span></span>
       <span id="custom-types-container" class="contents"></span>
+    </div>
+
+    <!-- Advanced Filter Panel (hidden by default) -->
+    <div id="filter-panel" class="filter-panel hidden">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm font-semibold text-slate-700">Advanced Filters</span>
+        <button onclick="toggleFilterPanel()" class="text-slate-400 hover:text-slate-600 text-lg leading-none">&times;</button>
+      </div>
+
+      <!-- Search -->
+      <div class="filter-section">
+        <div class="filter-section-title">Search</div>
+        <div class="filter-row">
+          <input type="text" id="node-search" class="filter-input" placeholder="Filter by content..."
+                 oninput="setSearchFilter(this.value)">
+          <button onclick="clearSearch()" class="text-slate-400 hover:text-slate-600 text-sm">Clear</button>
+        </div>
+      </div>
+
+      <!-- Time Range -->
+      <div class="filter-section">
+        <div class="filter-section-title">Time Range</div>
+        <select id="recency-filter" class="filter-select w-full" onchange="setRecencyFilter(this.value)">
+          <option value="all">All Time</option>
+          <option value="1h">Last Hour</option>
+          <option value="24h">Last 24 Hours</option>
+          <option value="7d">Last 7 Days</option>
+          <option value="30d">Last 30 Days</option>
+        </select>
+      </div>
+
+      <!-- Min Importance -->
+      <div class="filter-section">
+        <div class="filter-section-title">Min Importance</div>
+        <div class="filter-row">
+          <input type="range" id="importance-filter" class="filter-range" min="0" max="100" value="0"
+                 oninput="setImportanceFilter(this.value)">
+          <span id="importance-value" class="filter-value">0%</span>
+        </div>
+      </div>
+
+      <!-- Min Connections -->
+      <div class="filter-section">
+        <div class="filter-section-title">Min Connections</div>
+        <div class="filter-row">
+          <input type="range" id="connection-filter" class="filter-range" min="0" max="10" value="0"
+                 oninput="setConnectionFilter(this.value)">
+          <span id="connection-value" class="filter-value">0</span>
+        </div>
+      </div>
+
+      <!-- Reset filters button -->
+      <button onclick="resetAllFilters()" class="w-full mt-2 px-3 py-2 text-xs rounded bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200">
+        Reset All Filters
+      </button>
     </div>
 
     <!-- Control Buttons Row -->
@@ -1531,6 +1735,224 @@
       feeding_received: 'external',
       connection_created: 'other'
     };
+
+    // ==========================================================================
+    // NODE TYPE FILTERS - Toggle visibility of different node types
+    // ==========================================================================
+    const nodeTypeFilters = {
+      belief: true,
+      desire: true,
+      goal: true,
+      experience: true,
+      reflection: true,
+      capability: true,
+      insight: true,
+      prediction: true,
+      task: true,
+      identity: true,
+      operatingsystem: true,
+      crystal: true
+    };
+
+    // Advanced filter state
+    const advancedFilters = {
+      recency: 'all',        // 'all', '1h', '24h', '7d', '30d'
+      minImportance: 0,      // 0-1
+      minConnections: 0,     // 0+
+      searchQuery: ''        // text search
+    };
+
+    function isTypeVisible(type) {
+      const normalizedType = (type || 'experience').toLowerCase();
+      return nodeTypeFilters[normalizedType] !== false;
+    }
+
+    function toggleTypeFilter(type) {
+      nodeTypeFilters[type] = !nodeTypeFilters[type];
+
+      // Update button visual state
+      const btn = document.querySelector(`.stat-toggle[data-type="${type}"]`);
+      if (btn) {
+        btn.classList.toggle('active', nodeTypeFilters[type]);
+      }
+
+      // Apply filter to all nodes
+      applyAllFilters();
+    }
+
+    function showAllTypes() {
+      Object.keys(nodeTypeFilters).forEach(type => nodeTypeFilters[type] = true);
+      document.querySelectorAll('.stat-toggle').forEach(btn => btn.classList.add('active'));
+      applyAllFilters();
+    }
+
+    function hideAllTypes() {
+      Object.keys(nodeTypeFilters).forEach(type => nodeTypeFilters[type] = false);
+      document.querySelectorAll('.stat-toggle').forEach(btn => btn.classList.remove('active'));
+      applyAllFilters();
+    }
+
+    function applyAllFilters() {
+      const now = Date.now();
+      const recencyMs = {
+        'all': Infinity,
+        '1h': 60 * 60 * 1000,
+        '24h': 24 * 60 * 60 * 1000,
+        '7d': 7 * 24 * 60 * 60 * 1000,
+        '30d': 30 * 24 * 60 * 60 * 1000
+      };
+
+      let visibleCount = 0;
+
+      nodes3D.forEach(node => {
+        const data = node.userData;
+        const type = (data.type || 'experience').toLowerCase();
+
+        // Skip OS node - always visible
+        if (type === 'operatingsystem') {
+          node.visible = true;
+          visibleCount++;
+          return;
+        }
+
+        // Type filter
+        if (!isTypeVisible(type)) {
+          node.visible = false;
+          return;
+        }
+
+        // Recency filter
+        if (advancedFilters.recency !== 'all') {
+          const nodeTime = new Date(data.timestamp || data.created_at || 0).getTime();
+          if (nodeTime > 0 && (now - nodeTime) > recencyMs[advancedFilters.recency]) {
+            node.visible = false;
+            return;
+          }
+        }
+
+        // Importance filter
+        const importance = data.confidence || data.intensity || data.importance || 0.5;
+        if (importance < advancedFilters.minImportance) {
+          node.visible = false;
+          return;
+        }
+
+        // Connection filter
+        const connCount = connectionCounts.get(data.id) || 0;
+        if (connCount < advancedFilters.minConnections) {
+          node.visible = false;
+          return;
+        }
+
+        // Search filter
+        if (advancedFilters.searchQuery) {
+          const content = (data.content || data.description || '').toLowerCase();
+          if (!content.includes(advancedFilters.searchQuery)) {
+            node.visible = false;
+            return;
+          }
+        }
+
+        node.visible = true;
+        visibleCount++;
+      });
+
+      // Update relationship visibility
+      updateRelationshipVisibility();
+
+      // Update visible count display
+      const filterStatus = document.getElementById('filter-status');
+      if (filterStatus) {
+        filterStatus.textContent = `${visibleCount}/${nodes3D.length}`;
+      }
+    }
+
+    function updateRelationshipVisibility() {
+      // Hide connection lines where either endpoint is hidden
+      connections3D.forEach(conn => {
+        const nodeA = nodes3D.find(n => n.userData.id === conn.userData.nodeA);
+        const nodeB = nodes3D.find(n => n.userData.id === conn.userData.nodeB);
+        conn.visible = (nodeA?.visible !== false) && (nodeB?.visible !== false);
+      });
+
+      // Also update graph mode relationship lines
+      if (graphState.relationshipLines) {
+        graphState.relationshipLines.forEach(line => {
+          const sourceId = line.userData?.sourceId;
+          const targetId = line.userData?.targetId;
+          const sourceMesh = graphState.nodeIdToMesh?.get(sourceId);
+          const targetMesh = graphState.nodeIdToMesh?.get(targetId);
+          line.visible = (sourceMesh?.visible !== false) && (targetMesh?.visible !== false);
+        });
+      }
+    }
+
+    function setRecencyFilter(value) {
+      advancedFilters.recency = value;
+      applyAllFilters();
+    }
+
+    function setImportanceFilter(value) {
+      advancedFilters.minImportance = value / 100;
+      const display = document.getElementById('importance-value');
+      if (display) display.textContent = value + '%';
+      applyAllFilters();
+    }
+
+    function setConnectionFilter(value) {
+      advancedFilters.minConnections = parseInt(value);
+      const display = document.getElementById('connection-value');
+      if (display) display.textContent = value;
+      applyAllFilters();
+    }
+
+    function setSearchFilter(value) {
+      advancedFilters.searchQuery = value.toLowerCase().trim();
+      applyAllFilters();
+    }
+
+    function clearSearch() {
+      advancedFilters.searchQuery = '';
+      const input = document.getElementById('node-search');
+      if (input) input.value = '';
+      applyAllFilters();
+    }
+
+    function resetAllFilters() {
+      // Reset type filters
+      Object.keys(nodeTypeFilters).forEach(type => nodeTypeFilters[type] = true);
+      document.querySelectorAll('.stat-toggle').forEach(btn => btn.classList.add('active'));
+
+      // Reset advanced filters
+      advancedFilters.recency = 'all';
+      advancedFilters.minImportance = 0;
+      advancedFilters.minConnections = 0;
+      advancedFilters.searchQuery = '';
+
+      // Reset UI controls
+      const searchInput = document.getElementById('node-search');
+      const recencySelect = document.getElementById('recency-filter');
+      const importanceSlider = document.getElementById('importance-filter');
+      const connectionSlider = document.getElementById('connection-filter');
+      const importanceValue = document.getElementById('importance-value');
+      const connectionValue = document.getElementById('connection-value');
+
+      if (searchInput) searchInput.value = '';
+      if (recencySelect) recencySelect.value = 'all';
+      if (importanceSlider) importanceSlider.value = 0;
+      if (connectionSlider) connectionSlider.value = 0;
+      if (importanceValue) importanceValue.textContent = '0%';
+      if (connectionValue) connectionValue.textContent = '0';
+
+      applyAllFilters();
+    }
+
+    function toggleFilterPanel() {
+      const panel = document.getElementById('filter-panel');
+      if (panel) {
+        panel.classList.toggle('hidden');
+      }
+    }
 
     // Type highlight state
     let highlightedType = null;  // Currently highlighted type, null = none
@@ -2706,55 +3128,62 @@
         this.initialized = false;
       }
 
-      initialize(catPosition) {
-        if (this.initialized) return;
+      initialize(catModel) {
+        if (this.initialized || !catModel) return;
 
-        // Create whisker cylinders (much more visible than lines)
+        this.catModel = catModel;
+
+        // Create whisker cylinders as children of cat model
         for (let i = 0; i < this.whiskerCount; i++) {
           const side = i < 6 ? -1 : 1;
           const index = i % 6;
 
-          // Base positions on cat face
-          const angleSpread = (index - 2.5) * 0.15;
-          const baseX = side * 0.8;
-          const baseY = 0.2 + Math.abs(index - 2.5) * 0.1;
-          const baseZ = 1.2;
+          // Whisker positions in cat's local space (relative to muzzle)
+          const angleSpread = (index - 2.5) * 0.1;
+          const baseY = 0.1 + Math.abs(index - 2.5) * 0.05;
+          const baseZ = 0.4; // Front of face
 
-          // Initial whisker as cylinder
-          const whiskerLength = 3;
-          const geometry = new THREE.CylinderGeometry(0.02, 0.01, whiskerLength, 6);
-          geometry.rotateZ(Math.PI / 2); // Rotate to point sideways
+          // Tapered whisker cylinder
+          const whiskerLength = 0.8;
+          const geometry = new THREE.CylinderGeometry(0.006, 0.002, whiskerLength, 6);
+          geometry.rotateZ(Math.PI / 2); // Point along X axis
+          geometry.translate(whiskerLength / 2, 0, 0); // Origin at base
 
           const material = new THREE.MeshStandardMaterial({
             color: 0xd4af37,
             emissive: 0xd4af37,
-            emissiveIntensity: 0.3,
+            emissiveIntensity: 0.6,
             transparent: true,
-            opacity: 0.8,
-            roughness: 0.3,
-            metalness: 0.5
+            opacity: 0.9,
+            roughness: 0.2,
+            metalness: 0.7
           });
 
           const whisker = new THREE.Mesh(geometry, material);
-          whisker.position.set(baseX + side * 1.5, baseY, baseZ);
-          whisker.rotation.y = side > 0 ? -0.2 : 0.2;
+
+          // Position at cat's muzzle (local coordinates)
+          whisker.position.set(side * 0.08, baseY, baseZ);
+
+          // Angle outward from face
+          whisker.rotation.y = side > 0 ? -0.5 : 0.5;
           whisker.rotation.z = angleSpread;
+          whisker.rotation.x = (index - 2.5) * 0.03;
 
           whisker.userData = {
-            basePosition: new THREE.Vector3(baseX, baseY, baseZ),
             side: side,
             index: index,
-            angleSpread: angleSpread,
-            targetNode: null,
-            extendFactor: 0
+            baseRotY: whisker.rotation.y,
+            baseRotZ: angleSpread,
+            baseRotX: whisker.rotation.x
           };
 
           this.whiskers.push(whisker);
-          this.scene.add(whisker);
+          // Add as child of cat - whiskers follow automatically
+          catModel.add(whisker);
         }
 
         this.initialized = true;
-        console.log('Whiskers initialized:', this.whiskerCount, 'whiskers');
+        console.log('Whiskers attached to cat:', this.whiskerCount);
       }
 
       update(delta, state, catModel, accessedNodeIds = []) {
@@ -3248,7 +3677,7 @@
         this.eyeMeshes = eyeMeshes;
 
         if (catModel) {
-          this.whiskerController.initialize(catModel.position);
+          this.whiskerController.initialize(catModel);
           this.particleSystem.initialize(catModel.position);
           this.initialized = true;
           console.log('Cat Animation Controller initialized');
@@ -5273,7 +5702,7 @@
         console.log(`Created ${relsCreated} relationship lines`);
 
         // Update counts
-        nodeCountEl.textContent = nodes3D.length;
+        if (nodeCountEl) nodeCountEl.textContent = nodes3D.length;
 
         // Set mode
         graphState.mode = 'graph';
@@ -6017,7 +6446,7 @@
 
     // Update rendered node counts to match actual nodes3D array
     function updateRenderedCounts() {
-      const counts = { belief: 0, desire: 0, reflection: 0, experience: 0 };
+      const counts = { belief: 0, desire: 0, goal: 0, reflection: 0, experience: 0 };
 
       nodes3D.forEach(node => {
         const type = node.userData.type?.toLowerCase();
@@ -6026,11 +6455,23 @@
         }
       });
 
-      document.getElementById('belief-count').textContent = counts.belief;
-      document.getElementById('desire-count').textContent = counts.desire;
-      document.getElementById('reflection-count').textContent = counts.reflection;
-      document.getElementById('exp-count').textContent = counts.experience;
-      document.getElementById('node-count').textContent = nodes3D.length;
+      // Safely update count elements (they may not exist)
+      const beliefEl = document.getElementById('belief-count');
+      const desireEl = document.getElementById('desire-count');
+      const goalEl = document.getElementById('goal-count');
+      const reflectionEl = document.getElementById('reflection-count');
+      const expEl = document.getElementById('exp-count');
+      const filterStatusEl = document.getElementById('filter-status');
+
+      if (beliefEl) beliefEl.textContent = counts.belief;
+      if (desireEl) desireEl.textContent = counts.desire;
+      if (goalEl) goalEl.textContent = counts.goal;
+      if (reflectionEl) reflectionEl.textContent = counts.reflection;
+      if (expEl) expEl.textContent = counts.experience;
+
+      // Update filter status
+      const visibleCount = nodes3D.filter(n => n.visible !== false).length;
+      if (filterStatusEl) filterStatusEl.textContent = `${visibleCount}/${nodes3D.length}`;
     }
 
     // Phase 4: Enhanced camera transition with callback
@@ -6727,17 +7168,17 @@
 
         dreamCount = data.dream_count || 0;
         seekCount = data.seek_count || 0;
-        dreamCountEl.textContent = dreamCount;
-        seekCountEl.textContent = seekCount;
+        if (dreamCountEl) dreamCountEl.textContent = dreamCount;
+        if (seekCountEl) seekCountEl.textContent = seekCount;
 
-        // Update memory stats
+        // Update memory stats (safely - elements may not exist)
         const stats = data.memory_stats || {};
-        expCountEl.textContent = stats.Experience || 0;
-        beliefCountEl.textContent = stats.Belief || 0;
-        reflectionCountEl.textContent = stats.Reflection || 0;
-        desireCountEl.textContent = stats.Desire || 0;
-        goalCountEl.textContent = stats.Goal || 0;
-        mutationCountEl.textContent = stats.Mutation || 0;
+        if (expCountEl) expCountEl.textContent = stats.Experience || 0;
+        if (beliefCountEl) beliefCountEl.textContent = stats.Belief || 0;
+        if (reflectionCountEl) reflectionCountEl.textContent = stats.Reflection || 0;
+        if (desireCountEl) desireCountEl.textContent = stats.Desire || 0;
+        if (goalCountEl) goalCountEl.textContent = stats.Goal || 0;
+        if (mutationCountEl) mutationCountEl.textContent = stats.Mutation || 0;
 
         // Update custom node types dynamically
         updateCustomTypeStats(stats);
@@ -6995,7 +7436,7 @@
               if (nodeIndex > -1) nodes3D.splice(nodeIndex, 1);
               fadeOutAndRemove(nodeToRemove);
               connectionCounts.delete(deprecatedId);
-              nodeCountEl.textContent = nodes3D.length;
+              if (nodeCountEl) nodeCountEl.textContent = nodes3D.length;
             }
             updateStatus('Identity facet retired', 'gray');
           }
@@ -9564,6 +10005,9 @@
 
         console.log(`Loaded ${totalCreated} nodes and ${relsCreated} relationships from database`);
         updateStatus(`Loaded ${totalCreated} nodes`, 'green');
+
+        // Apply any active filters and update filter status
+        applyAllFilters();
 
       } catch (error) {
         console.error('Error loading existing graph:', error);
