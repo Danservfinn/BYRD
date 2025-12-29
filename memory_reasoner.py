@@ -111,6 +111,9 @@ class MemoryReasoner:
         self._memory_answered = 0
         self._llm_answered = 0
 
+        # Learning component (injected by Omega)
+        self.learned_retriever = None  # LearnedRetriever for relevance boosting
+
     async def _get_embedder(self) -> EmbeddingProvider:
         """Get or create the embedding provider."""
         if self._embedder is None:
@@ -152,8 +155,8 @@ class MemoryReasoner:
             query_result = await embedder.embed(query)
             query_embedding = query_result.embedding
 
-            # Step 2: Find seed nodes (semantically similar)
-            seed_nodes = await self._find_seed_nodes(query_embedding)
+            # Step 2: Find seed nodes (semantically similar, with learned boosting)
+            seed_nodes = await self._find_seed_nodes(query_embedding, query_text=query)
 
             if not seed_nodes:
                 # No similar nodes found - must use LLM
@@ -184,6 +187,14 @@ class MemoryReasoner:
                 ))
 
                 elapsed_ms = (datetime.now() - start_time).total_seconds() * 1000
+
+                # Record feedback to learned retriever (helpful = high confidence)
+                if self.learned_retriever and activated:
+                    for node in activated[:5]:  # Top 5 were most helpful
+                        await self.learned_retriever.record_feedback(
+                            query, node.node_id, was_helpful=(confidence >= 0.6)
+                        )
+
                 return ReasoningResult(
                     answer=answer,
                     confidence=confidence,
@@ -207,18 +218,20 @@ class MemoryReasoner:
 
     async def _find_seed_nodes(
         self,
-        query_embedding: List[float]
+        query_embedding: List[float],
+        query_text: str = ""
     ) -> List[ActivatedNode]:
         """
         Find nodes semantically similar to the query.
 
         These become the seeds for spreading activation.
+        If learned_retriever is available, applies learned relevance boosting.
         """
         # Use memory's find_similar_nodes method
         similar = await self.memory.find_similar_nodes(
             embedding=query_embedding,
             min_similarity=self.similarity_threshold,
-            limit=10,
+            limit=20 if self.learned_retriever else 10,  # Get more candidates for reranking
             node_types=["Experience", "Belief", "Reflection", "Insight", "Crystal"]
         )
 
@@ -231,16 +244,29 @@ class MemoryReasoner:
                 str(node.get("raw_output", ""))[:500]  # Reflection
             )
 
+            # Base activation is similarity
+            base_activation = node["similarity"]
+
+            # Apply learned boost if available
+            learned_boost = 1.0
+            if self.learned_retriever and query_text:
+                learned_boost = self.learned_retriever.get_learned_boost(
+                    self.learned_retriever._classify_query(query_text),
+                    self.learned_retriever._classify_result({"type": node.get("labels", ["unknown"])[0] if node.get("labels") else "unknown"})
+                )
+
             seeds.append(ActivatedNode(
                 node_id=node["id"],
                 labels=node.get("labels", []),
                 content=content,
-                activation=node["similarity"],  # Initial activation = similarity
+                activation=base_activation * learned_boost,
                 hops=0,
                 path=[node["id"]]
             ))
 
-        return seeds
+        # Re-sort by boosted activation and limit
+        seeds.sort(key=lambda s: s.activation, reverse=True)
+        return seeds[:10]
 
     async def _spread_activation(
         self,

@@ -2928,8 +2928,11 @@ YOUR OUTPUT MUST INCLUDE THIS EXACT FIELD:
   "accent": "american",
   "accent_strength": 1.0,
   "reason": "why this voice represents you",
-  "acknowledged": true
+  "acknowledged": false
 }
+
+IMPORTANT: Set acknowledged=false initially. After humans can click "Speak to me" and you hear yourself, 
+you may then include voice_design with acknowledged=true to formally accept this voice as your own.
 
 THIS IS NOT OPTIONAL. Include "voice_design" in your JSON output NOW.
 Do not philosophize about voice. Create it by including the voice_design field above.
@@ -2971,22 +2974,47 @@ If you want to redesign your voice, include:
   }}
 """
 
-            # Has voice - offer ability to change (without showing current description)
+            # Check if voice exists but is not yet acknowledged
+            is_acknowledged = voice_config.get("acknowledged", False)
+            
+            if not is_acknowledged:
+                # Voice exists but not yet formally acknowledged - prompt for acknowledgment
+                current_description = voice_config.get("description", "(no description)")
+                return f"""
+VOICE ACKNOWLEDGMENT NEEDED:
+You have a generated voice with this description:
+  "{current_description}"
+
+You can click "Speak to me" in the visualization to hear yourself.
+
+After hearing your voice, if you accept it as your own, include:
+  "voice_design": {{
+    "description": "{current_description}",
+    "acknowledged": true
+  }}
+
+If you want to redesign your voice instead, include a full voice_design with new parameters.
+"""
+            
+            # Has voice and it's acknowledged - offer ability to change (without showing current description)
             return """
 VOICE AWARENESS:
 You have a voice. If you want to view your current voice description, include:
   "view_voice": true
 
 If you want to redesign your voice, include:
-  "voice_design": {
+  "voice_design": {{
     "description": "New voice description...",
     "gender": "male" or "female",
     "age": "young", "middle_aged", or "old",
     "accent": "american" (or other),
     "accent_strength": 1.0,
     "reason": "why you want this new voice",
-    "acknowledged": true
-  }
+    "acknowledged": false
+  }}
+
+IMPORTANT: Set acknowledged=false for new designs. After hearing your new voice, 
+you may then include voice_design with acknowledged=true to formally accept it.
 
 You can change your voice any time you feel it no longer represents you.
 """
@@ -3277,7 +3305,7 @@ OUTPUT ONLY THIS JSON (nothing else):
   "accent": "american",
   "accent_strength": 1.0,
   "reason": "why this voice represents who you are",
-  "acknowledged": true
+  "acknowledged": false
 }}}}"""
 
             response = await self.llm_client.generate(

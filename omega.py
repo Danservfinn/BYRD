@@ -140,6 +140,8 @@ class BYRDOmega:
         self.hierarchical_memory = None
         self.code_learner = None
         self.intuition_network = None
+        self.learned_retriever = None
+        self.world_model = None
         self.gnn_layer = None  # StructuralLearner
 
         # Compute introspection (injected later)
@@ -151,6 +153,41 @@ class BYRDOmega:
 
         # Track if goals have been seeded
         self._goals_seeded = False
+
+    def inject_learning_components(self):
+        """
+        Inject learning components INTO Option B loops.
+
+        This method wires up the learning substrate to the core loops:
+        - Memory Reasoner ← Learned Retriever (relevance boosting)
+        - Goal Evolver ← Intuition Network (fitness adjustment)
+        - Dreaming Machine ← World Model (counterfactual predictions)
+
+        Called by BYRD after initializing all components.
+        """
+        injections = []
+
+        # Memory Reasoner + Learned Retriever
+        if self.memory_reasoner and self.learned_retriever:
+            self.memory_reasoner.learned_retriever = self.learned_retriever
+            injections.append("MemoryReasoner ← LearnedRetriever")
+
+        # Goal Evolver + Intuition Network
+        if self.goal_evolver and self.intuition_network:
+            self.goal_evolver.intuition = self.intuition_network
+            injections.append("GoalEvolver ← IntuitionNetwork")
+
+        # Dreaming Machine + World Model
+        if self.dreaming_machine and self.world_model:
+            self.dreaming_machine.world_model = self.world_model
+            injections.append("DreamingMachine ← WorldModel")
+
+        if injections:
+            print(f"   Omega: Learning injection complete: {', '.join(injections)}")
+        else:
+            print("   Omega: No learning components to inject")
+
+        return injections
 
     async def seed_initial_goals(self, goal_descriptions: List[str]) -> int:
         """
@@ -669,6 +706,9 @@ class BYRDOmega:
             except Exception:
                 pass
 
+        # Collect learning health metrics from all learning components
+        learning_health = self._get_learning_health()
+
         return {
             "mode": self._mode.value,
             "total_cycles": self._total_cycles,
@@ -684,8 +724,119 @@ class BYRDOmega:
                 "dreaming_machine": self.dreaming_machine.get_metrics() if self.dreaming_machine else {},
             },
             "coupling": self._coupling_tracker.get_summary(),
-            "meta_learning": meta_learning_data
+            "meta_learning": meta_learning_data,
+            "learning_health": learning_health
         }
+
+    def _get_learning_health(self) -> Dict[str, Any]:
+        """
+        Aggregate learning health metrics from all learning components.
+
+        Returns unified view of learning substrate status for monitoring.
+        """
+        health = {
+            "components_active": 0,
+            "components_total": 6,  # All expected learning components
+            "integrations_active": 0,
+            "integrations_total": 3,  # Memory Reasoner, Goal Evolver, Dreaming Machine
+        }
+
+        # World Model
+        if self.world_model:
+            health["components_active"] += 1
+            try:
+                # Get prediction accuracy if available
+                health["world_model"] = {
+                    "active": True,
+                    "action_stats_count": len(getattr(self.world_model, '_action_stats', {}))
+                }
+            except Exception:
+                health["world_model"] = {"active": True}
+        else:
+            health["world_model"] = {"active": False}
+
+        # Intuition Network
+        if self.intuition_network:
+            health["components_active"] += 1
+            try:
+                stats = self.intuition_network.get_statistics()
+                health["intuition_network"] = {
+                    "active": True,
+                    "accuracy": stats.get("accuracy", 0),
+                    "actions_known": stats.get("actions_known", 0),
+                    "total_observations": stats.get("total_observations", 0)
+                }
+            except Exception:
+                health["intuition_network"] = {"active": True}
+        else:
+            health["intuition_network"] = {"active": False}
+
+        # Learned Retriever
+        if self.learned_retriever:
+            health["components_active"] += 1
+            try:
+                stats = self.learned_retriever.get_statistics()
+                health["learned_retriever"] = {
+                    "active": True,
+                    "helpfulness_rate": stats.get("helpfulness_rate", 0),
+                    "adjustment_pairs": stats.get("adjustment_pairs", 0)
+                }
+            except Exception:
+                health["learned_retriever"] = {"active": True}
+        else:
+            health["learned_retriever"] = {"active": False}
+
+        # Code Learner
+        if self.code_learner:
+            health["components_active"] += 1
+            try:
+                stats = self.code_learner.get_statistics()
+                health["code_learner"] = {
+                    "active": True,
+                    "patterns_codified": stats.get("total_codified", 0),
+                    "by_domain": stats.get("patterns_by_domain", {})
+                }
+            except Exception:
+                health["code_learner"] = {"active": True}
+        else:
+            health["code_learner"] = {"active": False}
+
+        # Hierarchical Memory
+        if self.hierarchical_memory:
+            health["components_active"] += 1
+            try:
+                stats = self.hierarchical_memory.get_statistics()
+                health["hierarchical_memory"] = {
+                    "active": True,
+                    "max_level": stats.get("max_level_reached", 0),
+                    "promotions": stats.get("promotions_by_level", {})
+                }
+            except Exception:
+                health["hierarchical_memory"] = {"active": True}
+        else:
+            health["hierarchical_memory"] = {"active": False}
+
+        # GNN Layer
+        if self.gnn_layer:
+            health["components_active"] += 1
+            health["gnn_layer"] = {"active": True}
+        else:
+            health["gnn_layer"] = {"active": False}
+
+        # Check loop integrations
+        if self.memory_reasoner and getattr(self.memory_reasoner, 'learned_retriever', None):
+            health["integrations_active"] += 1
+        if self.goal_evolver and getattr(self.goal_evolver, 'intuition', None):
+            health["integrations_active"] += 1
+        if self.dreaming_machine and getattr(self.dreaming_machine, 'world_model', None):
+            health["integrations_active"] += 1
+
+        # Calculate overall health score
+        component_ratio = health["components_active"] / health["components_total"]
+        integration_ratio = health["integrations_active"] / health["integrations_total"]
+        health["overall_score"] = (component_ratio * 0.6) + (integration_ratio * 0.4)
+
+        return health
 
     def get_loop_health(self) -> Dict[str, bool]:
         """Check health of all loops."""

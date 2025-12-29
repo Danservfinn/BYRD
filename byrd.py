@@ -446,6 +446,29 @@ class BYRD:
                 except Exception as e:
                     learning_components_status.append(f"StructuralLearner: {e}")
 
+                try:
+                    from learned_retriever import LearnedRetriever
+                    learned_retriever = LearnedRetriever(
+                        self.memory,
+                        config=option_b_config.get("learned_retriever", {})
+                    )
+                    if self.omega:
+                        self.omega.learned_retriever = learned_retriever
+                    learning_components_status.append("LearnedRetriever: initialized")
+                except Exception as e:
+                    learning_components_status.append(f"LearnedRetriever: {e}")
+
+                # Assign world_model to omega for injection
+                if self.omega and hasattr(self, 'world_model'):
+                    self.omega.world_model = self.world_model
+                    learning_components_status.append("WorldModel: assigned to Omega")
+
+                # Inject learning components INTO Option B loops
+                if self.omega:
+                    injections = self.omega.inject_learning_components()
+                    if injections:
+                        learning_components_status.append(f"Loop injections: {len(injections)}")
+
                 print("🔮 Option B (Omega): enabled - Five Compounding Loops active")
                 print("   WorldModel: initialized")
                 print("   SafetyMonitor: pending async init")

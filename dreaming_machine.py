@@ -110,6 +110,9 @@ class DreamingMachine:
         self._transfers_attempted = 0
         self._insights_created = 0
 
+        # Learning component (injected by Omega)
+        self.world_model = None  # WorldModel for prediction-based counterfactuals
+
     async def dream_cycle(self) -> Dict[str, Any]:
         """
         Run a complete dreaming cycle.
@@ -191,11 +194,70 @@ class DreamingMachine:
     ) -> List[GeneratedInsight]:
         """
         Generate counterfactual scenarios for a single experience.
+
+        If world_model is available, uses its prediction capabilities for
+        more grounded counterfactual reasoning.
         """
         content = experience.get("content", "")
         exp_id = experience.get("id", "")
 
-        prompt = f"""Analyze this experience and generate {self.cf_variations} counterfactual scenarios.
+        # Try to extract action and context from experience for world model
+        action = experience.get("action", content[:100])
+        context = experience.get("context", {})
+
+        # If world_model available, use it for prediction-grounded counterfactuals
+        world_model_predictions = []
+        if self.world_model:
+            try:
+                # Generate alternative actions with LLM first
+                alt_prompt = f"""Given this experience, suggest {self.cf_variations} alternative actions that could have been taken:
+
+Experience: {content}
+
+List {self.cf_variations} alternative actions (one per line, just the action):"""
+
+                alt_response = await self.llm_client.query(alt_prompt, max_tokens=200)
+                alt_actions = [line.strip() for line in alt_response.strip().split("\n") if line.strip()][:self.cf_variations]
+
+                # Get world model predictions for each alternative
+                for alt_action in alt_actions:
+                    prediction = await self.world_model.predict_outcome(alt_action, context)
+                    world_model_predictions.append({
+                        "action": alt_action,
+                        "predicted_outcome": prediction.predicted_outcome,
+                        "confidence": prediction.confidence,
+                        "reasoning": prediction.reasoning
+                    })
+            except Exception as e:
+                logger.debug(f"World model prediction failed: {e}")
+
+        # Build prompt with world model context if available
+        if world_model_predictions:
+            wm_context = "\n".join([
+                f"- Alternative: {p['action']}\n  World model prediction: {p['predicted_outcome']} (confidence: {p['confidence']:.0%})"
+                for p in world_model_predictions
+            ])
+            prompt = f"""Analyze this experience and generate insights from these alternative scenarios.
+
+Experience: {content}
+
+World Model Predictions for alternatives:
+{wm_context}
+
+For each alternative, extract an insight about what to do in similar situations.
+
+Format:
+COUNTERFACTUAL 1:
+Alternative: [action from above]
+Predicted outcome: [outcome from world model + your analysis]
+Insight: [lesson learned]
+
+COUNTERFACTUAL 2:
+...
+"""
+        else:
+            # Fallback to pure LLM counterfactuals
+            prompt = f"""Analyze this experience and generate {self.cf_variations} counterfactual scenarios.
 
 Experience: {content}
 
@@ -227,7 +289,8 @@ COUNTERFACTUAL 2:
                 type=EventType.COUNTERFACTUAL_GENERATED,
                 data={
                     "experience_id": exp_id,
-                    "count": len(insights)
+                    "count": len(insights),
+                    "used_world_model": bool(world_model_predictions)
                 }
             ))
 

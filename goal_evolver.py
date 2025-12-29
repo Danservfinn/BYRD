@@ -126,6 +126,9 @@ class GoalEvolver:
         self._total_goals_completed = 0
         self._total_capability_delta = 0.0
 
+        # Learning component (injected by Omega)
+        self.intuition = None  # IntuitionNetwork for fitness adjustment
+
     async def get_current_population(self) -> List[EvolvedGoal]:
         """Get the current goal population from memory."""
         goals = await self.memory.get_active_goals(limit=self.population_size * 2)
@@ -213,7 +216,8 @@ class GoalEvolver:
         goal_id: str,
         completed: bool,
         capability_delta: float,
-        resources_spent: float = 1.0
+        resources_spent: float = 1.0,
+        goal_description: str = ""
     ):
         """
         Evaluate a goal's fitness based on its outcome.
@@ -223,6 +227,7 @@ class GoalEvolver:
             completed: Whether the goal was completed
             capability_delta: Change in capability from pursuing this goal
             resources_spent: Resources spent (for efficiency calculation)
+            goal_description: Goal description for intuition learning
         """
         # Calculate fitness components
         completion_score = 1.0 if completed else 0.0
@@ -230,12 +235,36 @@ class GoalEvolver:
         efficiency_score = delta_score / max(0.1, resources_spent)  # Avoid div by zero
         efficiency_score = min(1.0, efficiency_score)
 
-        # Weighted fitness
-        fitness = (
+        # Objective fitness
+        objective_fitness = (
             self.fitness_weights.completion * completion_score +
             self.fitness_weights.capability_delta * delta_score +
             self.fitness_weights.efficiency * efficiency_score
         )
+
+        # Blend with intuition if available
+        fitness = objective_fitness
+        if self.intuition and goal_description:
+            try:
+                intuition_score = await self.intuition.score_action(
+                    situation=f"pursuing goal: {goal_description[:200]}",
+                    action="pursue_goal"
+                )
+                # Blend: 70% objective, 30% intuition
+                fitness = 0.7 * objective_fitness + 0.3 * intuition_score.score
+            except Exception as e:
+                logger.debug(f"Intuition scoring failed: {e}")
+
+        # Record outcome to intuition network for learning
+        if self.intuition and goal_description:
+            try:
+                await self.intuition.record_outcome(
+                    situation=f"pursuing goal: {goal_description[:200]}",
+                    action="pursue_goal",
+                    success=completed and capability_delta > 0
+                )
+            except Exception as e:
+                logger.debug(f"Intuition recording failed: {e}")
 
         # Update in memory
         await self.memory.update_goal_fitness(
