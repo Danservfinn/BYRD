@@ -277,6 +277,7 @@ class GoalEvolver:
         Aggressively filters chain-of-thought reasoning that models produce.
         """
         import json as json_module
+        import re
         text = text.strip()
 
         # Try to parse as JSON first (most reliable)
@@ -287,59 +288,114 @@ class GoalEvolver:
                 end = text.rindex('}') + 1
                 json_str = text[start:end]
                 data = json_module.loads(json_str)
-                # Look for goal field
-                for key in ['goal', 'new_goal', 'output', 'result', 'combined_goal']:
-                    if key in data and isinstance(data[key], str):
-                        return data[key].strip()[:200]
+                # Look for goal field (check nested too)
+                for key in ['goal', 'new_goal', 'output', 'result', 'combined_goal', 'mutated_goal']:
+                    if key in data:
+                        val = data[key]
+                        if isinstance(val, str) and len(val) > 10:
+                            # Recursively clean if it contains reasoning
+                            return self._clean_goal_text(val)[:200]
+                        elif isinstance(val, dict):
+                            # Nested: {"output": {"goal": "..."}}
+                            for subkey in ['goal', 'description', 'combined_goal']:
+                                if subkey in val and isinstance(val[subkey], str):
+                                    return self._clean_goal_text(val[subkey])[:200]
             except:
                 pass
 
+        # Check if this is chain-of-thought (very common with GLM/DeepSeek)
+        if self._is_chain_of_thought(text):
+            return self._extract_from_chain_of_thought(text)
+
+        return self._clean_goal_text(text)[:200]
+
+    def _is_chain_of_thought(self, text: str) -> bool:
+        """Check if text is LLM chain-of-thought reasoning."""
         # Markers that indicate reasoning (not a goal)
-        reasoning_markers = [
+        cot_starters = [
             "1.", "2.", "3.", "**", "- ", "* ", "Let me", "I need to",
             "The user", "Analyze", "First", "Looking at", "Based on",
-            "Analysis:", "Goal 1", "Goal 2", "Combined", "Output must",
-            "I will", "I should", "The new goal should", "I need", "want"
+            "Analysis:", "Goal 1", "Goal 2", "Output must", "Input:",
+            "I will", "I should", "The new goal should", "I need",
+            "Task:", "Objective:", "Processing:", "Brainstorm"
         ]
 
-        # Check if text is reasoning (too long or has markers)
-        is_reasoning = (
-            len(text) > 250 or
-            any(text.startswith(m) for m in reasoning_markers) or
-            text.count('\n') > 2 or
-            ":" in text[:50]  # Likely has a label like "Analysis:"
+        return (
+            len(text) > 200 or
+            any(text.lstrip().startswith(m) for m in cot_starters) or
+            text.count('\n') > 3 or
+            "**" in text[:100] or  # Markdown headers
+            text.count('*') > 4    # Bullet points or emphasis
         )
 
-        if is_reasoning:
-            # Try to find a goal-like sentence
-            # Look for lines that start with action verbs
-            action_verbs = ['implement', 'create', 'build', 'develop', 'improve',
-                           'optimize', 'research', 'identify', 'track', 'measure',
-                           'analyze', 'extract', 'consolidate', 'achieve', 'verify']
+    def _extract_from_chain_of_thought(self, text: str) -> str:
+        """Extract the actual goal from chain-of-thought reasoning."""
+        import re
 
-            lines = text.split('\n')
-            for line in lines:
-                line = line.strip().strip('*').strip('-').strip('"').strip()
-                lower = line.lower()
-                # Check if line starts with action verb and is reasonable length
-                if any(lower.startswith(v) for v in action_verbs) and 20 < len(line) < 200:
-                    return line
+        # Strategy 1: Look for explicit goal labels
+        goal_patterns = [
+            r'(?:combined[_\s]?goal|new[_\s]?goal|mutated[_\s]?goal|final[_\s]?goal)[:\s]*["\']?([^"\'\n]{20,150})["\']?',
+            r'(?:goal|output)[:\s]*["\']([^"\']{20,150})["\']',
+            r'["\']([^"\']{30,150})["\'](?:\s*$|\s*\})',  # Quoted at end
+        ]
 
-            # Look for quoted goal
-            import re
-            quotes = re.findall(r'"([^"]{20,150})"', text)
-            for q in quotes:
-                if not any(q.startswith(m) for m in reasoning_markers):
-                    return q
+        for pattern in goal_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                goal = match.group(1).strip()
+                if not self._is_chain_of_thought(goal):
+                    return self._clean_goal_text(goal)
 
-            # Last resort: extract keywords and create synthetic goal
-            keywords = self._extract_keywords(text)
-            if keywords:
-                return f"Improve capability in: {', '.join(keywords[:3])}"
+        # Strategy 2: Look for lines starting with action verbs
+        action_verbs = [
+            'implement', 'create', 'build', 'develop', 'improve', 'optimize',
+            'research', 'identify', 'track', 'measure', 'analyze', 'extract',
+            'consolidate', 'achieve', 'verify', 'design', 'establish', 'write',
+            'test', 'evaluate', 'document', 'map', 'find', 'run', 'double'
+        ]
 
-            return "Continue capability improvement"
+        lines = text.split('\n')
+        for line in lines:
+            cleaned = line.strip().lstrip('*-•123456789.()').strip().strip('"\'').strip()
+            lower = cleaned.lower()
+            # Check if line starts with action verb and is reasonable length
+            if any(lower.startswith(v) for v in action_verbs) and 15 < len(cleaned) < 180:
+                if not self._is_chain_of_thought(cleaned):
+                    return cleaned
 
-        return text[:200]
+        # Strategy 3: Look for any quoted text that looks like a goal
+        quotes = re.findall(r'["\']([^"\']{20,150})["\']', text)
+        for q in quotes:
+            q = q.strip()
+            if not self._is_chain_of_thought(q) and len(q) > 20:
+                return q
+
+        # Strategy 4: Extract keywords and create synthetic goal
+        keywords = self._extract_keywords(text)
+        if keywords:
+            return f"Improve capability in: {', '.join(keywords[:3])}"
+
+        return "Continue capability improvement"
+
+    def _clean_goal_text(self, text: str) -> str:
+        """Clean up goal text, removing common artifacts."""
+        import re
+        text = text.strip()
+
+        # Remove markdown formatting
+        text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)  # **bold**
+        text = re.sub(r'\*([^*]+)\*', r'\1', text)      # *italic*
+
+        # Remove leading bullets/numbers
+        text = re.sub(r'^[\s\-\*•\d\.]+', '', text).strip()
+
+        # Remove trailing punctuation artifacts
+        text = text.rstrip('.,;:')
+
+        # Collapse whitespace
+        text = ' '.join(text.split())
+
+        return text
 
     def _extract_keywords(self, text: str) -> list:
         """Extract key action words from reasoning text."""
@@ -372,12 +428,12 @@ class GoalEvolver:
         desc1 = self._extract_goal_sentence(parent1.description)
         desc2 = self._extract_goal_sentence(parent2.description)
 
-        prompt = f"""Combine these goals into one new goal. Reply with JSON only.
+        prompt = f"""Combine these two goals into ONE new goal. Output JSON only, no explanation.
 
-Goal 1: {desc1}
-Goal 2: {desc2}
+Goal A: {desc1}
+Goal B: {desc2}
 
-Reply ONLY with: {{"goal": "your single sentence goal here"}}"""
+{{"goal": "<your combined goal here, 1-2 sentences max>"}}"""
 
         try:
             new_description = await self.llm_client.query(prompt, max_tokens=100)
@@ -410,11 +466,11 @@ Reply ONLY with: {{"goal": "your single sentence goal here"}}"""
         # Extract core intent from potentially corrupted description
         original = self._extract_goal_sentence(goal.description)
 
-        prompt = f"""Create a variation of this goal. Reply with JSON only.
+        prompt = f"""Create a variation of this goal with a new angle. Output JSON only, no explanation.
 
 Original: {original}
 
-Reply ONLY with: {{"goal": "your variation here"}}"""
+{{"goal": "<your variation here, 1-2 sentences max>"}}"""
 
         try:
             mutated = await self.llm_client.query(prompt, max_tokens=100)
