@@ -2180,8 +2180,8 @@
       controls.dampingFactor = 0.05;
       controls.minDistance = 5;          // Get very close to nodes
       controls.maxDistance = 500;        // See entire mind space
-      controls.autoRotate = true;
-      controls.autoRotateSpeed = 0.03;  // Slowed to 10% of original
+      controls.autoRotate = false;  // Off by default - user can toggle with 'R'
+      controls.autoRotateSpeed = 0.03;  // Slow rotation when enabled
       controls.maxPolarAngle = Math.PI * 0.95;  // Almost full vertical range
       controls.minPolarAngle = Math.PI * 0.05;
       controls.enablePan = true;         // Enable right-click panning
@@ -5839,7 +5839,8 @@
       selectedNode = null;
       selectedNodeIndex = -1;
       hideDetailPanel();
-      resetCamera();
+      // Don't reset camera - let user keep their current view
+      // User can press 'H' for home/reset if they want to return to default view
     }
 
     // Type filtering: Highlight all nodes of a specific type
@@ -5967,7 +5968,7 @@
       return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
     }
 
-    // Phase 4: Reset camera to default view
+    // Phase 4: Reset camera to default view (triggered by 'H' key)
     function resetCamera() {
       showCameraIndicator('Resetting view');
       animateCameraTo(
@@ -5976,7 +5977,7 @@
         1000,
         () => {
           hideCameraIndicator();
-          controls.autoRotate = true;
+          // Don't change autoRotate - respect user's current setting
         }
       );
     }
