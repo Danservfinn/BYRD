@@ -148,6 +148,9 @@ class Seeker:
         self._pattern_threshold = 1  # Crystallize immediately (was 3)
         self._source_trust: Dict[str, float] = {}  # source -> trust (learned)
 
+        # Strategy effectiveness tracking (for acceleration)
+        self._strategy_stats: Dict[str, Dict[str, int]] = {}  # strategy -> {attempts, successes, failures}
+
         # Capability Registry - dynamic action menu
         self.capability_registry = CapabilityRegistry(memory=memory, llm_client=llm_client)
         self._registry_loaded = False
@@ -187,9 +190,38 @@ class Seeker:
         self._last_reset = datetime.now()
         self._last_reflection_count = 0
         self._last_reflection_ids.clear()
-        self._observed_themes.clear()  # Clear pattern detection state
-        self._source_trust.clear()  # Clear learned trust scores
-        # Note: Database counter is reset in memory.clear_all()
+        self._strategy_stats.clear()
+
+    def _track_strategy_outcome(self, strategy: str, success: bool):
+        """Track strategy success/failure for effectiveness analysis."""
+        if strategy not in self._strategy_stats:
+            self._strategy_stats[strategy] = {"attempts": 0, "successes": 0, "failures": 0}
+
+        self._strategy_stats[strategy]["attempts"] += 1
+        if success:
+            self._strategy_stats[strategy]["successes"] += 1
+        else:
+            self._strategy_stats[strategy]["failures"] += 1
+
+    def get_strategy_effectiveness(self) -> Dict[str, Dict]:
+        """
+        Get strategy effectiveness metrics for acceleration analysis.
+
+        Returns dict of strategy -> {attempts, successes, failures, success_rate}
+        """
+        result = {}
+        for strategy, stats in self._strategy_stats.items():
+            attempts = stats["attempts"]
+            successes = stats["successes"]
+            result[strategy] = {
+                "attempts": attempts,
+                "successes": successes,
+                "failures": stats["failures"],
+                "success_rate": successes / max(attempts, 1)
+            }
+
+        # Sort by success rate descending
+        return dict(sorted(result.items(), key=lambda x: x[1]["success_rate"], reverse=True))
 
     async def _seek_cycle(self):
         """
@@ -343,6 +375,10 @@ class Seeker:
 
             # Record outcome as experience for BYRD to reflect on
             await self._record_execution_outcome(pattern, outcome, reason)
+
+            # Track strategy effectiveness for acceleration analysis
+            strategy = pattern.get("strategy", "unknown")
+            self._track_strategy_outcome(strategy, outcome == "success")
 
             # Emit SEEK_CYCLE_END event
             if HAS_EVENT_BUS:
@@ -2674,23 +2710,58 @@ The observation itself is complete. What emerges from this awareness?"""
             total_nodes = stats.get('total_nodes', 0)
             total_rels = stats.get('total_relationships', 0)
 
+            # Calculate acceleration metrics
+            orphan_ratio = len(orphans) / max(total_nodes, 1)
+            belief_to_desire_ratio = len(beliefs) / max(len(active_desires), 1)
+
+            # Identify potential bottlenecks
+            bottlenecks = []
+            if orphan_ratio > 0.3:
+                bottlenecks.append(f"High orphan ratio ({orphan_ratio:.1%}) - memory fragmentation")
+            if len(duplicates) > 5:
+                bottlenecks.append(f"Duplicate beliefs ({len(duplicates)}) - consolidation needed")
+            if len(active_desires) > 20:
+                bottlenecks.append(f"Too many active desires ({len(active_desires)}) - focus needed")
+            if belief_to_desire_ratio < 0.5:
+                bottlenecks.append(f"Low belief-to-desire ratio ({belief_to_desire_ratio:.1f}) - more reflection needed")
+
             report_lines = [
                 f"=== Introspection Report ===",
                 f"",
-                f"Graph Overview:",
+                f"GRAPH OVERVIEW:",
                 f"  Total nodes: {total_nodes}",
                 f"  Total relationships: {total_rels}",
                 f"  Node types: {node_types}",
                 f"",
-                f"Health Indicators:",
-                f"  Orphaned nodes: {len(orphans)}",
+                f"HEALTH INDICATORS:",
+                f"  Orphaned nodes: {len(orphans)} ({orphan_ratio:.1%} of graph)",
                 f"  Duplicate beliefs: {len(duplicates)}",
                 f"",
-                f"Active Mind State:",
+                f"ACTIVE MIND STATE:",
                 f"  Active desires: {len(active_desires)}",
                 f"  Current beliefs: {len(beliefs)}",
-                f"  Vocabulary keys: {list(patterns.keys())[:15]}",
+                f"  Belief-to-desire ratio: {belief_to_desire_ratio:.2f}",
+                f"  Vocabulary keys: {list(patterns.keys())[:10]}",
+                f"",
+                f"ACCELERATION ANALYSIS:",
             ]
+
+            if bottlenecks:
+                report_lines.append(f"  BOTTLENECKS IDENTIFIED:")
+                for bottleneck in bottlenecks:
+                    report_lines.append(f"    - {bottleneck}")
+            else:
+                report_lines.append(f"  No critical bottlenecks detected")
+
+            # Add improvement suggestions
+            report_lines.append(f"")
+            report_lines.append(f"  SUGGESTED ACTIONS:")
+            if len(orphans) > 10:
+                report_lines.append(f"    - Reconcile orphan nodes to strengthen memory connections")
+            if len(duplicates) > 3:
+                report_lines.append(f"    - Consolidate duplicate beliefs to reduce redundancy")
+            if not patterns:
+                report_lines.append(f"    - Continue reflection to develop vocabulary patterns")
 
             # Add specific details if requested
             if "orphan" in description.lower() and orphans:
@@ -3373,20 +3444,27 @@ Example: ["query one", "query two", "query three"]"""
             for r in results
         ])
         
-        # Neutral prompt that doesn't inject bias
-        prompt = f"""I wanted to learn: "{desire}"
+        # Action-oriented synthesis prompt for acceleration
+        prompt = f"""RESEARCH GOAL: "{desire}"
 
-Here are search results:
-
+SEARCH RESULTS:
 {results_text}
 
-Record what you notice in these results. Note:
-- Key information relevant to the topic
-- Connections between different sources
-- Contradictions or uncertainties
-- What remains unclear
+SYNTHESIZE with focus on ACTIONABLE VALUE:
 
-Do not force coherence if none exists. Simply observe what the results contain."""
+1. KEY INSIGHTS: What are the most important findings? (2-3 bullets)
+
+2. CAPABILITY IMPLICATIONS: What can I now do or understand that I couldn't before?
+
+3. PATTERNS: Are there recurring themes or approaches across sources?
+
+4. CONTRADICTIONS: Do sources disagree? What does that uncertainty mean?
+
+5. NEXT ACTIONS: Based on this, what specific experiments or next steps are suggested?
+
+6. GAPS: What important questions remain unanswered?
+
+Be concrete and specific. Vague summaries are less valuable than pointed insights."""
         
         return await self._query_local_llm(prompt, max_tokens=1000)
     
