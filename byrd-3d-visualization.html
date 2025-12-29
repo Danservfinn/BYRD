@@ -2030,11 +2030,12 @@
 
     // Physics throttling - only run physics every N frames
     let physicsFrameCount = 0;
-    const PHYSICS_FRAME_SKIP = 6; // Run physics every 6th frame (10fps physics vs 60fps render)
+    const PHYSICS_FRAME_SKIP = 12; // Run physics every 12th frame (5fps physics vs 60fps render)
 
     // Performance limits - prevent browser crashes with large graphs
-    // O(n²) physics: 150 nodes = 11,250 iterations; 400 nodes = 160,000 iterations
-    const MAX_RENDERED_NODES = 150; // Hard limit on nodes to prevent O(n²) physics from crashing browser
+    // O(n²) physics: 75 nodes = 2,812 iterations; 150 nodes = 11,250 iterations
+    const MAX_RENDERED_NODES = 75; // Hard limit on nodes to prevent O(n²) physics from crashing browser
+    const MAX_RELATIONSHIPS = 75; // Limit connection lines
 
     // Gravitational Spiral: Connection tracking for centrality-based positioning
     const connectionCounts = new Map(); // nodeId -> connection count
@@ -7014,8 +7015,8 @@
         updateRelationshipPositions();
       }
 
-      // Phase 2: Update node motion trails
-      updateNodeTrails(delta);
+      // Phase 2: Update node motion trails (DISABLED - causes GPU memory issues)
+      // updateNodeTrails(delta);
 
       // Animate ambient particles
       animateAmbientParticles(delta);
@@ -9994,16 +9995,16 @@
         console.log(`Created ${totalCreated} nodes (${crystalCount} crystals)`);
 
         // Create relationship lines (only for visible nodes, limited for performance)
-        const MAX_RELATIONSHIPS = 100;  // Limit for cleaner visualization
+        const MAX_RELS = MAX_RELATIONSHIPS;  // Use global limit (75)
         let relsCreated = 0;
         let relsSkipped = 0;
         let relsMissingNodes = 0;
         if (data.relationships) {
-          console.log(`Processing ${data.relationships.length} relationships (max ${MAX_RELATIONSHIPS})...`);
+          console.log(`Processing ${data.relationships.length} relationships (max ${MAX_RELS})...`);
           console.log(`graphState.nodeIdToMesh has ${graphState.nodeIdToMesh.size} entries`);
           const visibleNodeIds = new Set(filteredNodes.map(n => n.id));
           for (const rel of data.relationships) {
-            if (relsCreated >= MAX_RELATIONSHIPS) break;  // Stop at limit
+            if (relsCreated >= MAX_RELS) break;  // Stop at limit
             // Backend returns source_id/target_id
             const sourceId = rel.source_id;
             const targetId = rel.target_id;
