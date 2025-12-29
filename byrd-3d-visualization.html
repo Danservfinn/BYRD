@@ -2210,6 +2210,7 @@
       window.addEventListener('keydown', onKeyDown);
       window.addEventListener('keyup', onKeyUp);
       renderer.domElement.addEventListener('mousemove', onMouseMove);
+      renderer.domElement.addEventListener('mousedown', onMouseDown);
       renderer.domElement.addEventListener('click', onMouseClick);
       renderer.domElement.addEventListener('dblclick', onDoubleClick);
 
@@ -5762,13 +5763,34 @@
       }
     }
 
+    // Track mouse position for drag detection
+    let mouseDownPos = { x: 0, y: 0 };
+    let isDragging = false;
+    const DRAG_THRESHOLD = 5; // pixels
+
+    function onMouseDown(event) {
+      mouseDownPos.x = event.clientX;
+      mouseDownPos.y = event.clientY;
+      isDragging = false;
+    }
+
     function onMouseClick(event) {
       if (isTransitioning) return;
+
+      // Check if this was a drag (rotation) rather than a click
+      const dx = event.clientX - mouseDownPos.x;
+      const dy = event.clientY - mouseDownPos.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance > DRAG_THRESHOLD) {
+        // This was a drag, not a click - don't trigger selection/deselection
+        return;
+      }
 
       if (hoveredNode) {
         selectNode(hoveredNode);
       } else {
-        // Click on empty space - deselect
+        // Click on empty space - deselect (but don't reset camera)
         deselectNode();
       }
     }
