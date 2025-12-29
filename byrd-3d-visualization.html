@@ -1609,37 +1609,37 @@
     // Force-directed physics creates natural clustering based on relationships
     // Highly connected nodes gravitate toward center; isolated nodes drift outward
 
-    // Relationship visual styles - dark goldenrod, thick lines
+    // Relationship visual styles - dark goldenrod, moderate thickness
     const RELATIONSHIP_STYLES = {
         DERIVED_FROM: {
             color: 0xB8860B,    // Dark goldenrod
             opacity: 1.0,
-            width: 3
+            width: 1.5
         },
         RELATES_TO: {
             color: 0xB8860B,    // Dark goldenrod
             opacity: 1.0,
-            width: 3
+            width: 1.5
         },
         FULFILLS: {
             color: 0xB8860B,    // Dark goldenrod
             opacity: 1.0,
-            width: 3
+            width: 1.5
         },
         REFLECTS_ON: {
             color: 0xB8860B,    // Dark goldenrod
             opacity: 1.0,
-            width: 3
+            width: 1.5
         },
         EMERGES_FROM: {
             color: 0xB8860B,    // Dark goldenrod
             opacity: 1.0,
-            width: 3
+            width: 1.5
         },
         default: {
             color: 0xB8860B,    // Dark goldenrod
             opacity: 1.0,
-            width: 3
+            width: 1.5
         }
     };
 
@@ -4109,7 +4109,7 @@
     const LINE_CONFIG = {
       baseOpacity: 1.0,       // Full opacity for maximum visibility
       highlightOpacity: 1.0,
-      lineWidth: 3,           // Thick lines using Line2
+      lineWidth: 1.5,         // Moderate thickness using Line2
       highlightDuration: 500,
       color: 0xB8860B         // Dark goldenrod - visible on light background
     };
@@ -4203,24 +4203,16 @@
       connections3D.forEach(conn => {
         if (!conn.userData.meshA || !conn.userData.meshB) return;
 
-        const positions = conn.geometry.attributes.position;
-        if (!positions) return;
+        const start = conn.userData.meshA.position;
+        const end = conn.userData.meshB.position;
 
-        // Update start point
-        positions.setXYZ(0,
-          conn.userData.meshA.position.x,
-          conn.userData.meshA.position.y,
-          conn.userData.meshA.position.z
-        );
-
-        // Update end point
-        positions.setXYZ(1,
-          conn.userData.meshB.position.x,
-          conn.userData.meshB.position.y,
-          conn.userData.meshB.position.z
-        );
-
-        positions.needsUpdate = true;
+        // Update Line2/LineGeometry positions
+        const positions = [
+          start.x, start.y, start.z,
+          end.x, end.y, end.z
+        ];
+        conn.geometry.setPositions(positions);
+        conn.computeLineDistances();
       });
     }
 
@@ -5288,15 +5280,13 @@
             const start = sourceMesh.position;
             const end = targetMesh.position;
 
-            // Update BufferGeometry positions directly (efficient)
-            const positions = line.geometry.attributes.position.array;
-            positions[0] = start.x;
-            positions[1] = start.y;
-            positions[2] = start.z;
-            positions[3] = end.x;
-            positions[4] = end.y;
-            positions[5] = end.z;
-            line.geometry.attributes.position.needsUpdate = true;
+            // Update Line2/LineGeometry positions
+            const positions = [
+                start.x, start.y, start.z,
+                end.x, end.y, end.z
+            ];
+            line.geometry.setPositions(positions);
+            line.computeLineDistances();
         }
     }
 
