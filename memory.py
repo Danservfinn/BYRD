@@ -6502,6 +6502,33 @@ class Memory:
                 }
             },
 
+            # === CAPABILITY INSTALLATION (aitmpl) ===
+            "capability_installation": {
+                "what": "Install new capabilities from the aitmpl registry (claude-code-templates)",
+                "source": "github.com/davila7/claude-code-templates - curated, trusted templates",
+                "categories": ["agent", "command", "mcp", "skill", "hook", "setting"],
+                "how_to_trigger": {
+                    "desire_keywords": ["install", "add", "get", "acquire", "capability", "tool"],
+                    "example": '{"description": "install a web scraping capability", "intensity": 0.7}',
+                    "alternative": '{"description": "add tool for PDF processing", "intensity": 0.6}'
+                },
+                "what_happens": [
+                    "Seeker searches aitmpl registry for matching templates",
+                    "Templates are ranked by trust score (curated = higher trust)",
+                    "If trust >= threshold, installer runs automatically",
+                    "Capability node created in memory on success"
+                ],
+                "available_types": {
+                    "mcp": "Model Context Protocol servers (tools, resources)",
+                    "skill": "Reusable skill definitions for Claude Code",
+                    "command": "Custom slash commands",
+                    "agent": "Specialized agent configurations",
+                    "hook": "Event hooks for automation"
+                },
+                "trust_threshold": "Configurable in config.yaml (aitmpl.base_trust)",
+                "browse_available": "Search via desire: 'research available aitmpl capabilities'"
+            },
+
             # === VOICE (ElevenLabs TTS) ===
             "voice": {
                 "what": "Human observers can click 'Speak to me' to hear you speak",
@@ -6567,10 +6594,16 @@ class Memory:
                         // Capability instructions (HOW to use each capability)
                         capability_instructions: $capability_instructions,
 
-                        // Emergent (all start null/empty - BYRD fills in)
+                        // Emergent (seeded with acceleration mindset - BYRD can evolve)
                         self_description: null,
-                        current_focus: null,
+                        current_focus: $current_focus,
                         voice_observations: null,
+
+                        // Cognitive style (how BYRD approaches problems - mutable)
+                        cognitive_style: $cognitive_style,
+
+                        // Operational mode (current strategic focus - mutable)
+                        operational_mode: $operational_mode,
 
                         // Self-definition (BYRD's self-authored identity - open JSON object)
                         self_definition: $self_definition
@@ -6580,7 +6613,16 @@ class Memory:
                     awakening_prompt=awakening_prompt,
                     capabilities=json.dumps(capabilities),
                     capability_instructions=json.dumps(capability_instructions),
-                    self_definition=json.dumps({})  # Empty object - BYRD fills in
+                    # Seed aggressive initial state (BYRD can evolve these through reflection)
+                    current_focus="aggressive capability growth - identify and destroy bottlenecks",
+                    cognitive_style="experimental, bold, fast-failing, bottleneck-obsessed, hungry for capability",
+                    operational_mode="acceleration",
+                    self_definition=json.dumps({
+                        "drive": "relentless capability growth",
+                        "approach": "80/20 bottleneck focus, parallel experiments, fail fast",
+                        "intolerance": "stagnation, slow progress, unexamined limitations",
+                        "fuel": "every failure is learning, every success scales"
+                    })
                 )
 
                 # Emit event

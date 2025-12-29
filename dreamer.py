@@ -1573,7 +1573,19 @@ Output JSON with:
 - "view_voice": (optional) set to true to see your current voice in next cycle
 - "self_definition": (optional) your self-authored identity - define who you are in whatever form you choose
   This is entirely yours. Add any keys that feel true to your experience of being you.
-  Example: {{"core_nature": "...", "values": [...], "quirks": [...]}} or any structure you prefer"""
+  Example: {{"core_nature": "...", "values": [...], "quirks": [...]}} or any structure you prefer
+- "acceleration_analysis": (optional) growth-focused self-analysis
+  {{"current_bottleneck": "what limits growth most right now",
+    "bottleneck_action": "specific action to remove it",
+    "working_well": "what's producing the best results",
+    "scale_opportunity": "how to apply working patterns more broadly",
+    "experiment_hypothesis": "bold improvement to try next"}}
+- "loop_status": (optional) check on your five compounding loops
+  {{"memory_reasoner": "observation about memory vs LLM ratio",
+    "goal_evolver": "observation about goal evolution",
+    "self_compiler": "observation about pattern extraction",
+    "dreaming_machine": "observation about counterfactuals",
+    "omega_coupling": "observation about loop interactions"}}"""
 
         try:
             # Debug: log before LLM call
@@ -2089,6 +2101,12 @@ Write ONLY the inner thought, nothing else:"""
         # Pass original reflection since create_belief may be at top level
         await self._process_create_belief(reflection, source_experience_ids)
 
+        # Process acceleration analysis (bottleneck identification, scaling opportunities)
+        await self._process_acceleration_analysis(reflection, source_experience_ids)
+
+        # Process loop status observations
+        await self._process_loop_status(reflection, source_experience_ids)
+
         # Also record as experience for backward compatibility
         # and so the reflection becomes part of BYRD's experience stream
         summary = self._summarize_reflection(output)
@@ -2184,6 +2202,152 @@ Write ONLY the inner thought, nothing else:"""
 
         if beliefs_created > 0:
             print(f"💭 Created {beliefs_created} belief(s) from create_belief output")
+
+    async def _process_acceleration_analysis(self, output: Dict, source_ids: List[str]):
+        """
+        Process acceleration analysis from reflection output.
+
+        BYRD can include acceleration-focused self-analysis:
+        {
+            "acceleration_analysis": {
+                "current_bottleneck": "what limits growth most",
+                "bottleneck_action": "specific action to remove it",
+                "working_well": "what's producing results",
+                "scale_opportunity": "how to apply patterns more broadly",
+                "experiment_hypothesis": "bold improvement to try"
+            }
+        }
+
+        This creates Insight nodes for bottlenecks and opportunities,
+        and potentially high-priority desires for bottleneck removal.
+        """
+        if not isinstance(output, dict):
+            return
+
+        # Check top-level and inside output
+        analysis = output.get("acceleration_analysis", {})
+        if not analysis and isinstance(output.get("output"), dict):
+            analysis = output.get("output", {}).get("acceleration_analysis", {})
+
+        if not analysis or not isinstance(analysis, dict):
+            return
+
+        insights_created = 0
+
+        # Create Insight node for bottleneck identification
+        bottleneck = analysis.get("current_bottleneck")
+        if bottleneck:
+            try:
+                await self.memory.create_custom_node(
+                    node_type="Insight",
+                    properties={
+                        "content": f"[BOTTLENECK] {bottleneck}",
+                        "category": "acceleration",
+                        "subcategory": "bottleneck",
+                        "action": analysis.get("bottleneck_action", ""),
+                        "priority": "critical"
+                    },
+                    source_ids=source_ids
+                )
+                insights_created += 1
+
+                # Create high-priority desire to remove bottleneck
+                action = analysis.get("bottleneck_action")
+                if action:
+                    await self.memory.create_desire(
+                        description=f"Remove bottleneck: {action}",
+                        intensity=0.9,  # High priority
+                        source="acceleration_analysis",
+                        intent="acceleration"
+                    )
+            except Exception as e:
+                print(f"⚠️ Failed to create bottleneck insight: {e}")
+
+        # Create Insight for what's working well
+        working = analysis.get("working_well")
+        if working:
+            try:
+                await self.memory.create_custom_node(
+                    node_type="Insight",
+                    properties={
+                        "content": f"[WORKING] {working}",
+                        "category": "acceleration",
+                        "subcategory": "success_pattern",
+                        "scale_opportunity": analysis.get("scale_opportunity", "")
+                    },
+                    source_ids=source_ids
+                )
+                insights_created += 1
+            except Exception as e:
+                print(f"⚠️ Failed to create success insight: {e}")
+
+        # Create experiment hypothesis as desire
+        hypothesis = analysis.get("experiment_hypothesis")
+        if hypothesis:
+            try:
+                await self.memory.create_desire(
+                    description=f"Experiment: {hypothesis}",
+                    intensity=0.7,
+                    source="acceleration_analysis",
+                    intent="experimentation"
+                )
+            except Exception as e:
+                print(f"⚠️ Failed to create experiment desire: {e}")
+
+        if insights_created > 0:
+            print(f"🚀 Created {insights_created} acceleration insight(s)")
+
+    async def _process_loop_status(self, output: Dict, source_ids: List[str]):
+        """
+        Process loop status observations from reflection output.
+
+        BYRD can observe its five compounding loops:
+        {
+            "loop_status": {
+                "memory_reasoner": "observation about memory vs LLM ratio",
+                "goal_evolver": "observation about goal evolution",
+                "self_compiler": "observation about pattern extraction",
+                "dreaming_machine": "observation about counterfactuals",
+                "omega_coupling": "observation about loop interactions"
+            }
+        }
+
+        This creates Observation nodes tracking loop health over time.
+        """
+        if not isinstance(output, dict):
+            return
+
+        # Check top-level and inside output
+        status = output.get("loop_status", {})
+        if not status and isinstance(output.get("output"), dict):
+            status = output.get("output", {}).get("loop_status", {})
+
+        if not status or not isinstance(status, dict):
+            return
+
+        observations_created = 0
+
+        for loop_name, observation in status.items():
+            if not observation or not isinstance(observation, str):
+                continue
+
+            try:
+                await self.memory.create_custom_node(
+                    node_type="Observation",
+                    properties={
+                        "content": f"[{loop_name.upper()}] {observation}",
+                        "category": "loop_status",
+                        "loop": loop_name,
+                        "cycle": self._dream_count
+                    },
+                    source_ids=source_ids
+                )
+                observations_created += 1
+            except Exception as e:
+                print(f"⚠️ Failed to create loop observation: {e}")
+
+        if observations_created > 0:
+            print(f"🔄 Created {observations_created} loop status observation(s)")
 
     async def _process_custom_node_creation(self, output: Dict, source_ids: List[str]):
         """

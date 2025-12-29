@@ -63,10 +63,15 @@ class EvolvedGoal:
 
 @dataclass
 class FitnessWeights:
-    """Weights for the fitness function components."""
-    completion: float = 0.4
-    capability_delta: float = 0.4
-    efficiency: float = 0.2
+    """
+    Weights for the fitness function components.
+
+    ACCELERATION-TUNED: Favors capability_delta over mere completion.
+    Goals that produce growth are more fit than goals that just complete.
+    """
+    completion: float = 0.3          # Reduced: completion alone isn't enough
+    capability_delta: float = 0.5    # Increased: growth is the primary signal
+    efficiency: float = 0.2          # Maintained: resource efficiency matters
 
 
 class GoalEvolver:
@@ -101,11 +106,11 @@ class GoalEvolver:
         self.mutation_rate = self.config.get("mutation_rate", 0.2)
         self.crossover_rate = self.config.get("crossover_rate", 0.6)
 
-        # Fitness weights
+        # Fitness weights (acceleration-tuned defaults)
         weights_config = self.config.get("fitness_weights", {})
         self.fitness_weights = FitnessWeights(
-            completion=weights_config.get("completion", 0.4),
-            capability_delta=weights_config.get("capability_delta", 0.4),
+            completion=weights_config.get("completion", 0.3),       # Growth > completion
+            capability_delta=weights_config.get("capability_delta", 0.5),  # Primary signal
             efficiency=weights_config.get("efficiency", 0.2)
         )
 
