@@ -1526,24 +1526,33 @@ class Memory:
         return desire_id
     
     async def get_unfulfilled_desires(
-        self, 
+        self,
         type: Optional[str] = None,
-        limit: int = 20
+        limit: int = 20,
+        max_attempts: int = 5
     ) -> List[Dict]:
-        """Get unfulfilled desires, sorted by intensity."""
+        """
+        Get unfulfilled desires, sorted by intensity.
+
+        Excludes:
+        - Desires with status='needs_reflection' (should reflect first)
+        - Desires with attempt_count >= max_attempts (too many failures)
+        """
         query = """
             MATCH (d:Desire {fulfilled: false})
-            WHERE $type IS NULL OR d.type = $type
+            WHERE ($type IS NULL OR d.type = $type)
+            AND coalesce(d.status, 'active') <> 'needs_reflection'
+            AND coalesce(d.attempt_count, 0) < $max_attempts
             RETURN d
             ORDER BY d.intensity DESC
             LIMIT $limit
         """
         
         async with self.driver.session() as session:
-            result = await session.run(query, type=type, limit=limit)
+            result = await session.run(query, type=type, limit=limit, max_attempts=max_attempts)
             records = await result.data()
             return [r["d"] for r in records]
-    
+
     async def fulfill_desire(
         self,
         desire_id: str,
