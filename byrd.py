@@ -202,6 +202,7 @@ class BYRD:
         # Build dreamer config including quantum settings
         dreamer_config = self.config.get("dreamer", {})
         dreamer_config["quantum"] = quantum_config
+        dreamer_config["self_modification"] = self.config.get("self_modification", {})
 
         self.dreamer = Dreamer(
             memory=self.memory,
