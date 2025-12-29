@@ -146,7 +146,7 @@ The Agent Coder (`agent_coder.py`) is BYRD's autonomous coding system. It uses a
 | Feature | Description |
 |---------|-------------|
 | **Tools** | `read_file`, `write_file`, `edit_file`, `list_files`, `search_code`, `run_python`, `finish` |
-| **Safeguards** | Loop detection (primary), 100-step limit (fallback), file change limit |
+| **Safeguards** | Loop detection (no step limit), file change limit (10 files max) |
 | **Loop Detection** | Detects repeated tool+args (3x) or ping-pong patterns (A-B-A-B) |
 | **Constitutional** | Cannot modify protected files; dangerous patterns blocked |
 | **Provenance** | All changes traced to originating desire |

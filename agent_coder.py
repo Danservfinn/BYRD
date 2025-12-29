@@ -677,7 +677,7 @@ Finish: {{"tool":"finish","args":{{"success":true,"message":"done"}},"t":"ok"}}
         self.config = config
 
         self._enabled = config.get("enabled", True)
-        self.max_steps = config.get("max_steps", 100)  # High limit, loop detection is primary safeguard
+        # No step limit - loop detection is the safeguard
         self.max_file_changes = config.get("max_file_changes", 10)
         self.temperature = config.get("temperature", 0.2)
         self.loop_detection_window = 6  # Check last N tool calls for loops
@@ -973,12 +973,7 @@ Now respond with ONLY the JSON object. No markdown, no explanation."""
             state.final_message = "Loop detected - agent stuck repeating same actions"
             return state
 
-        # Check limits (fallback safeguards)
-        if state.steps >= self.max_steps:
-            state.completed = True
-            state.success = False
-            state.final_message = f"Max steps ({self.max_steps}) reached - task may be too complex"
-
+        # Check file change limit (loop detection is primary safeguard for steps)
         if len(state.files_modified) > self.max_file_changes:
             state.completed = True
             state.success = False
@@ -1166,7 +1161,6 @@ Now respond with ONLY the JSON object. No markdown, no explanation."""
         return {
             "enabled": self._enabled,
             "type": "agent_coder",
-            "max_steps": self.max_steps,
             "max_file_changes": self.max_file_changes,
             "llm_model": getattr(self.llm_client, 'model', 'unknown'),
             "temperature": self.temperature
