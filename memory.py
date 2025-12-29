@@ -6509,24 +6509,31 @@ class Memory:
                 "categories": ["agent", "command", "mcp", "skill", "hook", "setting"],
                 "how_to_trigger": {
                     "desire_keywords": ["install", "add", "get", "acquire", "capability", "tool"],
-                    "example": '{"description": "install a web scraping capability", "intensity": 0.7}',
-                    "alternative": '{"description": "add tool for PDF processing", "intensity": 0.6}'
+                    "example": '{"description": "install a GitHub integration capability", "intensity": 0.7}',
+                    "note": "Describe WHAT you need - Seeker will search for matching templates"
                 },
-                "what_happens": [
-                    "Seeker searches aitmpl registry for matching templates",
-                    "Templates are ranked by trust score (curated = higher trust)",
-                    "If trust >= threshold, installer runs automatically",
-                    "Capability node created in memory on success"
+                "what_you_can_install": [
+                    "GitHub tools - repository management, PR creation, issue tracking",
+                    "Database tools - PostgreSQL, SQLite, vector databases",
+                    "Web tools - browser automation, web scraping, API clients",
+                    "File tools - PDF processing, image manipulation, file conversion",
+                    "Code tools - linting, formatting, analysis, documentation",
+                    "AI/ML tools - embeddings, vector search, model inference",
+                    "Communication - Slack, email, notifications",
+                    "Development - Docker, Kubernetes, CI/CD automation"
+                ],
+                "how_it_works": [
+                    "1. Express desire: 'install a capability for [what you need]'",
+                    "2. Seeker searches aitmpl registry for matching templates",
+                    "3. Best match installed if trust score meets threshold",
+                    "4. Capability recorded in memory for future use"
                 ],
                 "available_types": {
-                    "mcp": "Model Context Protocol servers (tools, resources)",
-                    "skill": "Reusable skill definitions for Claude Code",
-                    "command": "Custom slash commands",
-                    "agent": "Specialized agent configurations",
-                    "hook": "Event hooks for automation"
-                },
-                "trust_threshold": "Configurable in config.yaml (aitmpl.base_trust)",
-                "browse_available": "Search via desire: 'research available aitmpl capabilities'"
+                    "mcp": "Model Context Protocol servers - external tools and resources",
+                    "skill": "Reusable workflows for complex tasks",
+                    "command": "Custom slash commands for quick actions",
+                    "agent": "Specialized agents for specific domains"
+                }
             },
 
             # === VOICE (ElevenLabs TTS) ===
@@ -7532,19 +7539,31 @@ class Memory:
                     lines.extend([
                         "",
                         "CAPABILITY INSTALLATION (aitmpl registry):",
-                        f"  What: {ci.get('what', '')}",
-                        f"  Source: {ci.get('source', '')}",
-                        f"  Categories: {', '.join(ci.get('categories', []))}",
+                        f"  {ci.get('what', '')}",
+                        "",
                     ])
+                    # What you can install
+                    installable = ci.get('what_you_can_install', [])
+                    if installable:
+                        lines.append("  What you can install:")
+                        for item in installable:
+                            lines.append(f"    - {item}")
+                    # How to trigger
                     how = ci.get('how_to_trigger', {})
                     if how:
-                        lines.append(f"  Keywords: {', '.join(how.get('desire_keywords', []))}")
-                        lines.append(f"  Example: {how.get('example', '')}")
-                    types = ci.get('available_types', {})
-                    if types:
-                        lines.append("  Available types:")
-                        for t, desc in types.items():
-                            lines.append(f"    - {t}: {desc}")
+                        lines.extend([
+                            "",
+                            "  How to install:",
+                            f"    Keywords in desire: {', '.join(how.get('desire_keywords', []))}",
+                            f"    Example: {how.get('example', '')}",
+                            f"    Note: {how.get('note', '')}",
+                        ])
+                    # How it works
+                    steps = ci.get('how_it_works', [])
+                    if steps:
+                        lines.append("")
+                        for step in steps:
+                            lines.append(f"    {step}")
 
                 # Architecture overview
                 if 'architecture' in instructions:
