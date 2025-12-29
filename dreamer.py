@@ -3198,7 +3198,9 @@ You can change your voice any time you feel it no longer represents you.
             # 3. An already-generated voice exists
             is_acknowledgment = False
             is_pure_acknowledgment = False
-            
+            voice_id = None  # Initialize to avoid UnboundLocalError
+            generation_status = "pending"
+
             if acknowledged and current_voice_config:
                 current_description = current_voice_config.get("description", "")
                 current_voice_id = current_voice_config.get("voice_id")
