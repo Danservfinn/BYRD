@@ -675,6 +675,7 @@
     <div id="stats" class="flex items-center justify-center gap-3 px-4 py-2 mb-2 bg-white/90 border border-slate-200 rounded-lg text-xs font-mono shadow">
       <span class="stat-type text-amber-600" data-type="belief">Beliefs: <span id="belief-count">0</span></span>
       <span class="stat-type text-rose-600" data-type="desire">Desires: <span id="desire-count">0</span></span>
+      <span class="stat-type text-green-600" data-type="goal">Goals: <span id="goal-count">0</span></span>
       <span class="stat-type text-purple-600" data-type="reflection">Reflect: <span id="reflection-count">0</span></span>
       <span class="stat-type text-sky-600" data-type="experience">Exp: <span id="exp-count">0</span></span>
       <span class="text-slate-400">Nodes: <span id="node-count">0</span></span>
@@ -743,6 +744,7 @@
     <div id="heat-legend" class="hidden mt-2 flex items-center justify-center gap-3 px-3 py-1.5 bg-white/80 border border-slate-200 rounded-lg text-[10px] font-mono">
       <div class="flex items-center gap-1" title="Belief"><div class="w-2 h-2 rounded" style="background: #d97706;"></div><span class="text-slate-600">Belief</span></div>
       <div class="flex items-center gap-1" title="Desire"><div class="w-2 h-2 rounded" style="background: #be123c;"></div><span class="text-slate-600">Desire</span></div>
+      <div class="flex items-center gap-1" title="Goal"><div class="w-2 h-2 rounded" style="background: #16a34a;"></div><span class="text-slate-600">Goal</span></div>
       <div class="flex items-center gap-1" title="Reflection"><div class="w-2 h-2 rounded" style="background: #047857;"></div><span class="text-slate-600">Reflect</span></div>
       <div class="flex items-center gap-1" title="Experience"><div class="w-2 h-2 rounded-full" style="background: #0369a1;"></div><span class="text-slate-600">Exp</span></div>
       <div class="flex items-center gap-1" title="Capability"><div class="w-2 h-2 rounded" style="background: #6d28d9;"></div><span class="text-slate-600">Cap</span></div>
@@ -1407,6 +1409,7 @@
     const NODE_COLORS = {
       belief: { color: 0xd97706, emissive: 0xfbbf24, label: 'Belief' },       // Amber - convictions (matches legend)
       desire: { color: 0xbe123c, emissive: 0xf43f5e, label: 'Desire' },       // Dark rose (matches legend)
+      goal: { color: 0x16a34a, emissive: 0x4ade80, label: 'Goal' },           // Green - aspirational targets
       identity: { color: 0xec4899, emissive: 0xf472b6, label: 'Identity' },    // Pink - emergent identity facets
       experience: { color: 0x0369a1, emissive: 0x0ea5e9, label: 'Experience' }, // Sky blue (matches legend)
       capability: { color: 0x6d28d9, emissive: 0xa855f7, label: 'Capability' }, // Dark violet (matches legend)
@@ -1426,7 +1429,7 @@
 
     // System node types (cannot be created by BYRD, have fixed colors)
     const SYSTEM_NODE_TYPES = new Set([
-      'Experience', 'Belief', 'Desire', 'Reflection', 'Capability', 'Mutation',
+      'Experience', 'Belief', 'Desire', 'Goal', 'Reflection', 'Capability', 'Mutation',
       'Identity', 'QuantumMoment', 'SystemState', 'Prediction', 'Task', 'Crystal',
       'OperatingSystem', 'OSTemplate', 'Seed', 'Constraint', 'Strategy'
     ]);
@@ -1511,6 +1514,7 @@
       dream_cycle_end: 'dream_cycle',
       belief_created: 'belief',
       desire_created: 'desire',
+      goal_created: 'goal',
       experience_created: 'experience',
       reflection_created: 'reflection',
       capability_created: 'other',
@@ -2081,6 +2085,7 @@
     const beliefCountEl = document.getElementById('belief-count');
     const reflectionCountEl = document.getElementById('reflection-count');
     const desireCountEl = document.getElementById('desire-count');
+    const goalCountEl = document.getElementById('goal-count');
     const mutationCountEl = document.getElementById('mutation-count');
     const customTypesContainer = document.getElementById('custom-types-container');
     const btnToggleLog = document.getElementById('btn-toggle-log');
@@ -2278,6 +2283,7 @@
       'seek_cycle_start':      { to: CatState.SEEKING,    duration: 400 },
       'seek_cycle_end':        { to: CatState.IDLE,       duration: 600 },
       'desire_created':        { to: CatState.ALERT,      duration: 200, returnTo: CatState.IDLE, returnAfter: 2000 },
+      'goal_created':          { to: CatState.ALERT,      duration: 200, returnTo: CatState.IDLE, returnAfter: 1500 },
       'desire_fulfilled':      { to: CatState.SATISFIED,  duration: 300, returnTo: CatState.IDLE, returnAfter: 3000 },
       'desire_stuck':          { to: CatState.FRUSTRATED, duration: 500, returnTo: CatState.IDLE, returnAfter: 4000 },
       'desire_attempt_failed': { to: CatState.FRUSTRATED, duration: 400, returnTo: CatState.IDLE, returnAfter: 2500 },
@@ -3084,6 +3090,11 @@
         earRotateToward: true,
         bodyLean: true
       },
+      'goal_created': {
+        eyeAction: 'brighten',
+        earTwitch: true,
+        bodyLean: true
+      },
       'desire_fulfilled': {
         eyeAction: 'squint',
         purrActivate: true,
@@ -3473,6 +3484,7 @@
             break;
           case 'desire_created':
           case 'belief_created':
+          case 'goal_created':
           case 'awakening':
             this.playChime();
             break;
@@ -3974,6 +3986,10 @@
           break;
         case 'desire':
           geometry = new THREE.OctahedronGeometry(size, 0);
+          break;
+        case 'goal':
+          // Goals use dodecahedron - 12 pentagon faces, represents aspirational growth
+          geometry = new THREE.DodecahedronGeometry(size * 0.9, 0);
           break;
         case 'reflection':
           geometry = new THREE.TetrahedronGeometry(size, 0);
@@ -6651,6 +6667,7 @@
         beliefCountEl.textContent = stats.Belief || 0;
         reflectionCountEl.textContent = stats.Reflection || 0;
         desireCountEl.textContent = stats.Desire || 0;
+        goalCountEl.textContent = stats.Goal || 0;
         mutationCountEl.textContent = stats.Mutation || 0;
 
         // Update custom node types dynamically
@@ -6811,6 +6828,11 @@
         case 'desire_created':
           createNode3D('desire', event.data?.description, event.data?.id, event.data?.intensity || 0.5);
           updateStatus('New desire emerged', 'rose');
+          break;
+
+        case 'goal_created':
+          createNode3D('goal', event.data?.description, event.data?.id, event.data?.fitness || 0.5);
+          updateStatus('New goal created', 'green');
           break;
 
         case 'experience_created':
@@ -7513,6 +7535,7 @@
         dream_cycle_end: 'text-indigo-500',
         belief_created: 'text-amber-600',
         desire_created: 'text-rose-600',
+        goal_created: 'text-green-600',
         experience_created: 'text-blue-600',
         reflection_created: 'text-emerald-600',
         capability_created: 'text-purple-600',
@@ -7535,6 +7558,7 @@
         dream_cycle_end: '💭',
         belief_created: '◆',
         desire_created: '♥',
+        goal_created: '⬢',
         experience_created: '●',
         reflection_created: '✦',
         capability_created: '★',
@@ -7592,7 +7616,7 @@
 
       const typeIcons = {
         dream_cycle_start: '💭', dream_cycle_end: '💭', belief_created: '◆',
-        desire_created: '♥', experience_created: '●', reflection_created: '✦',
+        desire_created: '♥', goal_created: '⬢', experience_created: '●', reflection_created: '✦',
         capability_created: '★', node_type_discovered: '🆕', custom_node_created: '✧',
         seek_started: '🔍', narrator_update: '🎙', inner_voice: '💭',
         awakening: '🌅', system_started: '▶', system_reset: '🔄',
@@ -7720,6 +7744,7 @@
           <span class="px-2 py-1 bg-amber-50 text-amber-700 rounded">Beliefs: ${stats.Belief || 0}</span>
           <span class="px-2 py-1 bg-purple-50 text-purple-700 rounded">Reflect: ${stats.Reflection || 0}</span>
           <span class="px-2 py-1 bg-rose-50 text-rose-700 rounded">Desires: ${stats.Desire || 0}</span>
+          <span class="px-2 py-1 bg-green-50 text-green-700 rounded">Goals: ${stats.Goal || 0}</span>
         </div>
       `;
 
@@ -7867,7 +7892,7 @@
       narrativeHtml += '</div>';
 
       // Custom types section (compact)
-      const systemTypes = ['Experience', 'Belief', 'Desire', 'Reflection', 'Capability', 'Mutation', 'Identity', 'QuantumMoment', 'SystemState'];
+      const systemTypes = ['Experience', 'Belief', 'Desire', 'Goal', 'Reflection', 'Capability', 'Mutation', 'Identity', 'QuantumMoment', 'SystemState'];
       const customTypes = Object.entries(stats).filter(([k]) => !systemTypes.includes(k));
       let customHtml = '';
       if (customTypes.length > 0) {
@@ -8430,7 +8455,7 @@
             </h3>
             <div class="bg-purple-50 rounded-lg p-4 border border-purple-200 text-center">
               <div class="text-sm text-slate-500 italic">
-                No custom node types created yet. BYRD uses system types: Experience, Belief, Desire, Reflection, Capability, Mutation.
+                No custom node types created yet. BYRD uses system types: Experience, Belief, Desire, Goal, Reflection, Capability, Mutation.
               </div>
             </div>
           </div>
