@@ -4694,8 +4694,8 @@
     }
 
     // Update connection positions when nodes move
-    // PERF: Reuse positions array to avoid GC pressure (was creating new array every frame per connection)
-    const _connPositions = new Float32Array(6);
+    // PERF: Reuse positions array to avoid GC pressure
+    const _connPositions = [0, 0, 0, 0, 0, 0];
 
     function updateConnectionPositions() {
       for (const conn of connections3D) {
@@ -5774,7 +5774,7 @@
      * Update relationship line positions when nodes move
      */
     // PERF: Reuse positions array for relationship lines
-    const _relPositions = new Float32Array(6);
+    const _relPositions = [0, 0, 0, 0, 0, 0];
 
     function updateRelationshipPositions() {
         for (const line of graphState.relationshipLines) {
