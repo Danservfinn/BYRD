@@ -63,11 +63,9 @@ else:
 echo ""
 echo -e "${GREEN}Starting server on http://${HOST}:${PORT}${NC}"
 echo ""
-echo "To expose via Cloudflare Tunnel, run in another terminal:"
-echo -e "${BLUE}  cloudflared tunnel --url http://localhost:${PORT}${NC}"
-echo ""
-echo "Then set the tunnel URL in BYRD's environment:"
-echo -e "${BLUE}  export HOME_VOICE_URL=https://your-tunnel.trycloudflare.com${NC}"
+echo "To expose remotely, use a reverse proxy or tunnel service."
+echo "Then set the URL in BYRD's environment:"
+echo -e "${BLUE}  export HOME_VOICE_URL=https://your-server-url${NC}"
 echo ""
 
 # Start server
