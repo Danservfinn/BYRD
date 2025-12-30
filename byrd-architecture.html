@@ -2,95 +2,51 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BYRD Unified AGI Architecture</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    :root {
-      --void-deep: #0a0a0f;
-      --void-mid: #0f0f1a;
-      --void-light: #1a1a2e;
-      --glass-bg: rgba(15, 23, 42, 0.8);
-      --glass-border: rgba(148, 163, 184, 0.1);
-
-      /* Component colors */
-      --color-memory: #3b82f6;
-      --color-kernel: #a78bfa;
-      --color-dreamer: #a855f7;
-      --color-seeker: #3b82f6;
-      --color-actor: #06b6d4;
-      --color-coder: #10b981;
-      --color-voice: #ec4899;
-      --color-agi: #f59e0b;
-      --color-learning: #818cf8;
-      --color-omega: #ef4444;
-      --color-graphiti: #10b981;
-      --color-dispatcher: #06b6d4;
-      --color-instance: #6366f1;
-    }
-
     body {
       margin: 0;
-      overflow-x: hidden;
-      background: radial-gradient(ellipse at 50% 0%, var(--void-light) 0%, var(--void-mid) 40%, var(--void-deep) 100%);
+      overflow: hidden;
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
       font-family: 'Inter', system-ui, sans-serif;
-      color: #e2e8f0;
-      min-height: 100vh;
     }
 
-    /* Glass Panel */
     .glass-panel {
-      background: var(--glass-bg);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid var(--glass-border);
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(139, 92, 246, 0.3);
       border-radius: 12px;
-      box-shadow:
-        0 4px 6px -1px rgba(0, 0, 0, 0.3),
-        0 0 0 1px rgba(255, 255, 255, 0.05),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
     }
 
-    /* Gradient Title */
     .sacred-title {
       background: linear-gradient(90deg, #a78bfa, #818cf8, #6366f1);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
-      text-shadow: 0 0 30px rgba(139, 92, 246, 0.5);
     }
 
-    /* Glowing Component Box */
+    /* Component styling */
     .component-box {
       cursor: pointer;
       transition: all 0.3s ease;
     }
 
-    .component-box .box-bg {
-      transition: all 0.3s ease;
-    }
-
-    .component-box .box-outline {
-      transition: all 0.3s ease;
-    }
-
     .component-box:hover .box-bg {
-      filter: brightness(1.3);
+      filter: brightness(1.2);
     }
 
     .component-box:hover .box-outline {
       stroke-width: 2.5;
+      filter: drop-shadow(0 0 8px currentColor);
     }
 
     .component-box.selected .box-outline {
       stroke-width: 3;
+      filter: drop-shadow(0 0 12px currentColor);
     }
-
-    /* Glow filter definitions handled in SVG defs */
 
     /* Flow line animations */
     .flow-line {
@@ -107,7 +63,7 @@
     }
 
     .flow-line.dimmed {
-      opacity: 0.1;
+      opacity: 0.15;
     }
 
     .flow-line.highlighted {
@@ -121,7 +77,12 @@
       pointer-events: none;
     }
 
-    /* Status indicators with glow */
+    .flow-label.highlighted {
+      fill: #e2e8f0;
+      font-weight: 600;
+    }
+
+    /* Status indicators */
     .status-dot {
       animation: pulse 2s infinite;
     }
@@ -144,12 +105,11 @@
     .loop-card:hover {
       border-color: rgba(139, 92, 246, 0.5);
       background: rgba(30, 27, 75, 0.8);
-      box-shadow: 0 0 15px rgba(139, 92, 246, 0.2);
     }
 
     .loop-card.selected {
       border-color: rgba(139, 92, 246, 0.8);
-      box-shadow: 0 0 25px rgba(139, 92, 246, 0.4);
+      box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
     }
 
     /* Mode indicator */
@@ -159,6 +119,7 @@
 
     .mode-indicator.active {
       transform: scale(1.1);
+      box-shadow: 0 0 15px currentColor;
     }
 
     /* Metric bar */
@@ -173,7 +134,6 @@
       height: 100%;
       border-radius: 3px;
       transition: width 0.5s ease;
-      box-shadow: 0 0 10px currentColor;
     }
 
     /* Scrollbar */
@@ -200,136 +160,47 @@
     .legend-line {
       width: 24px;
       height: 2px;
-      box-shadow: 0 0 8px currentColor;
     }
 
-    /* Layer separator */
-    .layer-label {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 10px;
-      font-weight: 500;
-      letter-spacing: 2px;
-      fill: #475569;
-      text-shadow: 0 0 10px currentColor;
+    /* Coupling indicator */
+    .coupling-line {
+      stroke-dasharray: 4 2;
+      opacity: 0.4;
     }
 
-    /* Particle canvas */
-    #particle-canvas {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 5;
-    }
-
-    /* Mono font for numbers */
-    .mono {
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    /* Mobile responsive */
-    @media (max-width: 1023px) {
-      .desktop-only {
-        display: none !important;
-      }
-    }
-
-    @media (max-width: 767px) {
-      .header-text {
-        font-size: 1rem !important;
-      }
-
-      .header-subtitle {
-        display: none;
-      }
-
-      .side-panel {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        top: auto;
-        width: 100% !important;
-        max-height: 40vh;
-        border-radius: 16px 16px 0 0;
-        transform: translateY(calc(100% - 50px));
-        transition: transform 0.3s ease;
-        z-index: 100;
-      }
-
-      .side-panel.expanded {
-        transform: translateY(0);
-      }
-
-      .side-panel-handle {
-        display: block;
-        width: 40px;
-        height: 4px;
-        background: rgba(255,255,255,0.3);
-        border-radius: 2px;
-        margin: 8px auto 16px;
-      }
-
-      .flowchart-container {
-        left: 4px !important;
-        right: 4px !important;
-        bottom: 60px !important;
-      }
-
-      .legend-container {
-        display: none;
-      }
-    }
-
-    @media (min-width: 768px) {
-      .side-panel-handle {
-        display: none;
-      }
-    }
-
-    /* Touch interactions */
-    @media (hover: none) {
-      .component-box:active .box-bg {
-        filter: brightness(1.3);
-      }
-
-      .component-box:active .box-outline {
-        stroke-width: 2.5;
-      }
+    .coupling-line.multiplicative {
+      stroke-width: 3;
+      opacity: 0.8;
+      filter: drop-shadow(0 0 4px currentColor);
     }
   </style>
 </head>
 <body>
-  <!-- Particle Canvas -->
-  <canvas id="particle-canvas"></canvas>
-
   <!-- Header -->
-  <div class="fixed top-0 left-0 right-0 p-3 md:p-4 z-50">
-    <div class="glass-panel px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
-      <div class="flex items-center gap-3 md:gap-4">
+  <div class="fixed top-0 left-0 right-0 p-4 z-50">
+    <div class="glass-panel px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-4">
         <a href="byrd-3d-visualization.html" class="text-violet-400 hover:text-violet-300 transition-colors">
-          <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
           </svg>
         </a>
         <div>
-          <h1 class="text-lg md:text-2xl font-bold sacred-title header-text">BYRD Unified AGI Architecture</h1>
-          <p class="text-xs text-slate-500 mt-0.5 header-subtitle">v4.0 — Hybrid Voice + Dual Instance + Graphiti Temporal KG</p>
+          <h1 class="text-2xl font-bold sacred-title">BYRD Unified AGI Architecture</h1>
+          <p class="text-xs text-slate-500 mt-0.5">Core Components + AGI Execution + Learning + Compute Self-Awareness</p>
         </div>
       </div>
-      <div class="flex items-center gap-2 md:gap-4">
+      <div class="flex items-center gap-4">
         <!-- Current Mode -->
-        <div id="current-mode" class="flex items-center gap-2 px-2 md:px-3 py-1 md:py-1.5 rounded-lg bg-violet-500/20 border border-violet-500/30">
-          <span class="w-2 h-2 rounded-full bg-violet-400 animate-pulse" style="box-shadow: 0 0 10px #a78bfa;"></span>
-          <span class="text-violet-300 text-xs md:text-sm font-medium mono">AWAKE</span>
+        <div id="current-mode" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-violet-500/20 border border-violet-500/30">
+          <span class="w-2 h-2 rounded-full bg-violet-400 animate-pulse"></span>
+          <span class="text-violet-300 text-sm font-medium">AWAKE</span>
         </div>
-        <div id="system-status" class="hidden md:flex items-center gap-2 text-sm">
+        <div id="system-status" class="flex items-center gap-2 text-sm">
           <span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
           <span class="text-slate-400">Loading...</span>
         </div>
-        <button onclick="toggleAnimation()" id="anim-toggle" class="hidden md:block px-3 py-1.5 bg-violet-500/20 border border-violet-500/50 rounded-lg text-violet-300 hover:bg-violet-500/30 text-sm transition-colors">
+        <button onclick="toggleAnimation()" id="anim-toggle" class="px-3 py-1.5 bg-violet-500/20 border border-violet-500/50 rounded-lg text-violet-300 hover:bg-violet-500/30 text-sm transition-colors">
           Pause Flow
         </button>
       </div>
@@ -337,60 +208,10 @@
   </div>
 
   <!-- Main Flowchart -->
-  <div class="flowchart-container fixed top-20 md:top-24 left-4 right-4 md:right-80 bottom-16 md:bottom-20 flex items-center justify-center overflow-auto">
-    <svg id="flowchart" viewBox="0 0 1150 850" class="w-full h-full" style="max-width: 1400px;">
+  <div class="fixed top-24 left-4 right-80 bottom-20 flex items-center justify-center overflow-auto">
+    <svg id="flowchart" viewBox="0 0 1100 720" class="w-full h-full max-w-6xl">
       <defs>
-        <!-- Glow filters for each component color -->
-        <filter id="glow-blue" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="4" result="blur"/>
-          <feFlood flood-color="#3b82f6" flood-opacity="0.6"/>
-          <feComposite in2="blur" operator="in"/>
-          <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        <filter id="glow-violet" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="4" result="blur"/>
-          <feFlood flood-color="#a855f7" flood-opacity="0.6"/>
-          <feComposite in2="blur" operator="in"/>
-          <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        <filter id="glow-cyan" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="4" result="blur"/>
-          <feFlood flood-color="#06b6d4" flood-opacity="0.6"/>
-          <feComposite in2="blur" operator="in"/>
-          <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        <filter id="glow-green" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="4" result="blur"/>
-          <feFlood flood-color="#10b981" flood-opacity="0.6"/>
-          <feComposite in2="blur" operator="in"/>
-          <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        <filter id="glow-pink" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="4" result="blur"/>
-          <feFlood flood-color="#ec4899" flood-opacity="0.6"/>
-          <feComposite in2="blur" operator="in"/>
-          <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        <filter id="glow-amber" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="4" result="blur"/>
-          <feFlood flood-color="#f59e0b" flood-opacity="0.6"/>
-          <feComposite in2="blur" operator="in"/>
-          <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        <filter id="glow-indigo" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="4" result="blur"/>
-          <feFlood flood-color="#6366f1" flood-opacity="0.6"/>
-          <feComposite in2="blur" operator="in"/>
-          <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        <filter id="glow-red" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="4" result="blur"/>
-          <feFlood flood-color="#ef4444" flood-opacity="0.6"/>
-          <feComposite in2="blur" operator="in"/>
-          <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-
-        <!-- Arrowhead markers with glow -->
+        <!-- Arrowhead markers -->
         <marker id="arrow-violet" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
           <polygon points="0 0, 10 3.5, 0 7" fill="#a78bfa"/>
         </marker>
@@ -415,512 +236,492 @@
         <marker id="arrow-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
           <polygon points="0 0, 10 3.5, 0 7" fill="#f97316"/>
         </marker>
-        <marker id="arrow-indigo" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-          <polygon points="0 0, 10 3.5, 0 7" fill="#6366f1"/>
-        </marker>
-        <marker id="arrow-emerald" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-          <polygon points="0 0, 10 3.5, 0 7" fill="#10b981"/>
-        </marker>
 
         <!-- Gradients for component boxes -->
         <linearGradient id="grad-memory" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" style="stop-color:#1e3a5f;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#0f172a;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
         </linearGradient>
         <linearGradient id="grad-kernel" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" style="stop-color:#4c1d95;stop-opacity:1" />
           <stop offset="100%" style="stop-color:#1e1b4b;stop-opacity:1" />
         </linearGradient>
-        <linearGradient id="grad-dreamer" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#581c87;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#1e1b4b;stop-opacity:1" />
+        <linearGradient id="grad-compiler" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#881337;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
         </linearGradient>
-        <linearGradient id="grad-seeker" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#1d4ed8;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#1e1b4b;stop-opacity:1" />
+        <linearGradient id="grad-reasoner" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#164e63;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
         </linearGradient>
-        <linearGradient id="grad-actor" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#0891b2;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#1e1b4b;stop-opacity:1" />
+        <linearGradient id="grad-evolver" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#14532d;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
         </linearGradient>
-        <linearGradient id="grad-coder" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#059669;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#1e1b4b;stop-opacity:1" />
+        <linearGradient id="grad-dreaming" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#78350f;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
         </linearGradient>
-        <linearGradient id="grad-voice" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#be185d;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#1e1b4b;stop-opacity:1" />
-        </linearGradient>
-        <linearGradient id="grad-agi" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#854d0e;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#1e1b4b;stop-opacity:1" />
-        </linearGradient>
-        <linearGradient id="grad-learning" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#4338ca;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#1e1b4b;stop-opacity:1" />
+        <linearGradient id="grad-integration" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#134e4a;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
         </linearGradient>
         <linearGradient id="grad-omega" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" style="stop-color:#7f1d1d;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#1e1b4b;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
         </linearGradient>
-        <linearGradient id="grad-graphiti" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#065f46;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#1e1b4b;stop-opacity:1" />
+
+        <!-- New gradients for complete architecture -->
+        <linearGradient id="grad-dreamer" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#581c87;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
         </linearGradient>
-        <linearGradient id="grad-dispatcher" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#0e7490;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#1e1b4b;stop-opacity:1" />
+        <linearGradient id="grad-seeker" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#1d4ed8;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
         </linearGradient>
-        <linearGradient id="grad-instance" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id="grad-actor" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#0891b2;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="grad-coder" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#059669;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="grad-voice" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#be185d;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="grad-agi" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#854d0e;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="grad-learning" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" style="stop-color:#4338ca;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#1e1b4b;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
         </linearGradient>
-        <linearGradient id="grad-loop" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#164e63;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#1e1b4b;stop-opacity:1" />
-        </linearGradient>
-      </defs>
-
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- LAYER 1: INFRASTRUCTURE -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-
-      <!-- Layer separator line -->
-      <line x1="50" y1="115" x2="1100" y2="115" stroke="url(#layer-gradient-1)" stroke-width="1" opacity="0.3"/>
-      <defs>
-        <linearGradient id="layer-gradient-1" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stop-color="#3b82f6" stop-opacity="0"/>
-          <stop offset="50%" stop-color="#3b82f6" stop-opacity="1"/>
-          <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
+        <linearGradient id="grad-classifier" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#0d9488;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
         </linearGradient>
       </defs>
-      <text x="575" y="30" text-anchor="middle" class="layer-label" fill="#3b82f6" opacity="0.6">INFRASTRUCTURE LAYER</text>
 
-      <!-- UNIFIED MEMORY (Neo4j) -->
-      <g class="component-box" data-module="Memory" onclick="selectModule('Memory')">
-        <rect class="box-bg" x="200" y="45" width="280" height="60" rx="10" fill="url(#grad-memory)"/>
-        <rect class="box-outline" x="200" y="45" width="280" height="60" rx="10" fill="none" stroke="#3b82f6" stroke-width="2" filter="url(#glow-blue)"/>
-        <text x="340" y="70" text-anchor="middle" fill="#3b82f6" font-weight="700" font-size="13">UNIFIED MEMORY</text>
-        <text x="340" y="85" text-anchor="middle" fill="#64748b" font-size="9">(Neo4j Graph)</text>
-        <text x="340" y="98" text-anchor="middle" fill="#475569" font-size="7">Experiences · Reflections · Beliefs · Desires · Crystals</text>
-        <circle class="status-dot" cx="465" cy="57" r="4" fill="#22c55e" data-status="Memory" style="filter: drop-shadow(0 0 4px #22c55e);"/>
-      </g>
+      <!-- Philosophy Quote -->
+      <text x="500" y="25" text-anchor="middle" fill="#64748b" font-size="11" font-style="italic">
+        "Desires emerge from reflection, not programming. A system that truly wants must change itself."
+      </text>
 
-      <!-- KERNEL -->
-      <g class="component-box" data-module="Kernel" onclick="selectModule('Kernel')">
-        <rect class="box-bg" x="500" y="45" width="100" height="60" rx="8" fill="url(#grad-kernel)"/>
-        <rect class="box-outline" x="500" y="45" width="100" height="60" rx="8" fill="none" stroke="#a78bfa" stroke-width="1.5" filter="url(#glow-violet)"/>
-        <text x="550" y="68" text-anchor="middle" fill="#a78bfa" font-weight="600" font-size="11">KERNEL</text>
-        <text x="550" y="82" text-anchor="middle" fill="#64748b" font-size="8">agi_seed.yaml</text>
-        <text x="550" y="95" text-anchor="middle" fill="#475569" font-size="7">identity · goals</text>
-        <circle class="status-dot" cx="587" cy="57" r="3" fill="#a78bfa" data-status="Kernel"/>
-      </g>
+      <!-- Flow Lines (drawn first, behind components) -->
+      <g id="flow-lines">
+        <!-- Memory feeds all components -->
+        <path class="flow-line" d="M550,105 L125,140" stroke="#3b82f6" stroke-width="1.5" fill="none" marker-end="url(#arrow-blue)" data-from="Memory" data-to="Dreamer"/>
+        <path class="flow-line" d="M550,105 L265,140" stroke="#3b82f6" stroke-width="1.5" fill="none" marker-end="url(#arrow-blue)" data-from="Memory" data-to="Seeker"/>
+        <path class="flow-line" d="M550,105 L395,140" stroke="#3b82f6" stroke-width="1.5" fill="none" marker-end="url(#arrow-blue)" data-from="Memory" data-to="Actor"/>
+        <path class="flow-line" d="M550,105 L515,140" stroke="#3b82f6" stroke-width="1.5" fill="none" marker-end="url(#arrow-blue)" data-from="Memory" data-to="Coder"/>
 
-      <!-- DUAL INSTANCE MANAGER (NEW) -->
-      <g class="component-box" data-module="DualInstanceManager" onclick="selectModule('DualInstanceManager')">
-        <rect class="box-bg" x="620" y="45" width="240" height="60" rx="8" fill="url(#grad-instance)"/>
-        <rect class="box-outline" x="620" y="45" width="240" height="60" rx="8" fill="none" stroke="#6366f1" stroke-width="1.5" filter="url(#glow-indigo)"/>
-        <text x="740" y="65" text-anchor="middle" fill="#6366f1" font-weight="600" font-size="11">DUAL INSTANCE MANAGER</text>
-        <!-- Instance A -->
-        <rect x="632" y="72" width="55" height="26" rx="4" fill="rgba(99, 102, 241, 0.2)" stroke="#6366f1" stroke-width="0.5"/>
-        <text x="659" y="85" text-anchor="middle" fill="#6366f1" font-size="7" font-weight="500">PRIMARY</text>
-        <text x="659" y="94" text-anchor="middle" fill="#475569" font-size="6">A</text>
-        <!-- Instance B -->
-        <rect x="693" y="72" width="55" height="26" rx="4" fill="rgba(99, 102, 241, 0.2)" stroke="#6366f1" stroke-width="0.5"/>
-        <text x="720" y="85" text-anchor="middle" fill="#6366f1" font-size="7" font-weight="500">ENRICH</text>
-        <text x="720" y="94" text-anchor="middle" fill="#475569" font-size="6">B</text>
-        <!-- Rate limit -->
-        <text x="800" y="88" text-anchor="middle" fill="#475569" font-size="8">960/hr</text>
-        <circle class="status-dot" cx="847" cy="57" r="3" fill="#6366f1" data-status="DualInstanceManager"/>
-      </g>
+        <!-- Core Components to Memory (feedback) -->
+        <path class="flow-line" d="M125,140 L420,72" stroke="#a855f7" stroke-width="1" fill="none" marker-end="url(#arrow-violet)" data-from="Dreamer" data-to="Memory"/>
+        <path class="flow-line" d="M265,140 L450,72" stroke="#3b82f6" stroke-width="1" fill="none" marker-end="url(#arrow-blue)" data-from="Seeker" data-to="Memory"/>
 
-      <!-- SELF-MODEL -->
-      <g class="component-box" data-module="SelfModel" onclick="selectModule('SelfModel')">
-        <rect class="box-bg" x="880" y="45" width="100" height="60" rx="8" fill="url(#grad-agi)"/>
-        <rect class="box-outline" x="880" y="45" width="100" height="60" rx="8" fill="none" stroke="#fbbf24" stroke-width="1.5" filter="url(#glow-amber)"/>
-        <text x="930" y="65" text-anchor="middle" fill="#fbbf24" font-weight="600" font-size="10">SELF-MODEL</text>
-        <text x="930" y="79" text-anchor="middle" fill="#64748b" font-size="8">Bayesian</text>
-        <text x="930" y="92" text-anchor="middle" fill="#475569" font-size="7">7 capabilities</text>
-        <circle class="status-dot" cx="967" cy="57" r="3" fill="#fbbf24" data-status="SelfModel"/>
-      </g>
+        <!-- Kernel to Memory -->
+        <path class="flow-line" d="M700,72 L680,72" stroke="#a78bfa" stroke-width="1.5" fill="none" marker-end="url(#arrow-violet)" data-from="Kernel" data-to="Memory"/>
 
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- LAYER 2: CORE PROCESSING -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- Self-Model connection -->
+        <path class="flow-line" d="M810,72 L790,72" stroke="#fbbf24" stroke-width="1" fill="none" data-from="SelfModel" data-to="Kernel"/>
 
-      <line x1="50" y1="195" x2="1100" y2="195" stroke="url(#layer-gradient-2)" stroke-width="1" opacity="0.3"/>
-      <defs>
-        <linearGradient id="layer-gradient-2" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stop-color="#a855f7" stop-opacity="0"/>
-          <stop offset="50%" stop-color="#a855f7" stop-opacity="1"/>
-          <stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>
-        </linearGradient>
-      </defs>
-      <text x="575" y="130" text-anchor="middle" class="layer-label" fill="#a855f7" opacity="0.6">CORE PROCESSING LAYER</text>
-
-      <!-- DREAMER -->
-      <g class="component-box" data-module="Dreamer" onclick="selectModule('Dreamer')">
-        <rect class="box-bg" x="60" y="145" width="130" height="45" rx="8" fill="url(#grad-dreamer)"/>
-        <rect class="box-outline" x="60" y="145" width="130" height="45" rx="8" fill="none" stroke="#a855f7" stroke-width="1.5" filter="url(#glow-violet)"/>
-        <text x="125" y="165" text-anchor="middle" fill="#a855f7" font-weight="600" font-size="11">DREAMER</text>
-        <text x="125" y="180" text-anchor="middle" fill="#64748b" font-size="8">Continuous reflection</text>
-        <circle class="status-dot" cx="177" cy="155" r="3" fill="#22c55e" data-status="Dreamer"/>
-      </g>
-
-      <!-- SEEKER -->
-      <g class="component-box" data-module="Seeker" onclick="selectModule('Seeker')">
-        <rect class="box-bg" x="200" y="145" width="130" height="45" rx="8" fill="url(#grad-seeker)"/>
-        <rect class="box-outline" x="200" y="145" width="130" height="45" rx="8" fill="none" stroke="#3b82f6" stroke-width="1.5" filter="url(#glow-blue)"/>
-        <text x="265" y="165" text-anchor="middle" fill="#3b82f6" font-weight="600" font-size="11">SEEKER</text>
-        <text x="265" y="180" text-anchor="middle" fill="#64748b" font-size="8">Desire fulfillment</text>
-        <circle class="status-dot" cx="317" cy="155" r="3" fill="#22c55e" data-status="Seeker"/>
-      </g>
-
-      <!-- ACTOR -->
-      <g class="component-box" data-module="Actor" onclick="selectModule('Actor')">
-        <rect class="box-bg" x="340" y="145" width="110" height="45" rx="8" fill="url(#grad-actor)"/>
-        <rect class="box-outline" x="340" y="145" width="110" height="45" rx="8" fill="none" stroke="#06b6d4" stroke-width="1.5" filter="url(#glow-cyan)"/>
-        <text x="395" y="165" text-anchor="middle" fill="#06b6d4" font-weight="600" font-size="11">ACTOR</text>
-        <text x="395" y="180" text-anchor="middle" fill="#64748b" font-size="8">Claude API</text>
-        <circle class="status-dot" cx="437" cy="155" r="3" fill="#22c55e" data-status="Actor"/>
-      </g>
-
-      <!-- CODER -->
-      <g class="component-box" data-module="Coder" onclick="selectModule('Coder')">
-        <rect class="box-bg" x="460" y="145" width="110" height="45" rx="8" fill="url(#grad-coder)"/>
-        <rect class="box-outline" x="460" y="145" width="110" height="45" rx="8" fill="none" stroke="#10b981" stroke-width="1.5" filter="url(#glow-green)"/>
-        <text x="515" y="165" text-anchor="middle" fill="#10b981" font-weight="600" font-size="11">CODER</text>
-        <text x="515" y="180" text-anchor="middle" fill="#64748b" font-size="8">Self-modification</text>
-        <circle class="status-dot" cx="557" cy="155" r="3" fill="#22c55e" data-status="Coder"/>
-      </g>
-
-      <!-- HYBRID VOICE (NEW - expanded) -->
-      <g class="component-box" data-module="HybridVoice" onclick="selectModule('HybridVoice')">
-        <rect class="box-bg" x="580" y="145" width="180" height="45" rx="8" fill="url(#grad-voice)"/>
-        <rect class="box-outline" x="580" y="145" width="180" height="45" rx="8" fill="none" stroke="#ec4899" stroke-width="1.5" filter="url(#glow-pink)"/>
-        <text x="670" y="163" text-anchor="middle" fill="#ec4899" font-weight="600" font-size="11">HYBRID VOICE</text>
-        <!-- Home TTS indicator -->
-        <rect x="595" y="170" width="40" height="14" rx="3" fill="rgba(236, 72, 153, 0.2)" stroke="#ec4899" stroke-width="0.5"/>
-        <text x="615" y="180" text-anchor="middle" fill="#ec4899" font-size="6">HOME</text>
-        <!-- Cloud indicator -->
-        <rect x="640" y="170" width="40" height="14" rx="3" fill="rgba(236, 72, 153, 0.15)" stroke="#ec4899" stroke-width="0.5"/>
-        <text x="660" y="180" text-anchor="middle" fill="#94a3b8" font-size="6">CLOUD</text>
-        <text x="720" y="180" text-anchor="middle" fill="#475569" font-size="7">Chatterbox + 11Labs</text>
-        <circle class="status-dot" cx="747" cy="155" r="3" fill="#22c55e" data-status="HybridVoice"/>
-      </g>
-
-      <!-- SELF-MODIFIER -->
-      <g class="component-box" data-module="SelfModifier" onclick="selectModule('SelfModifier')">
-        <rect class="box-bg" x="770" y="145" width="110" height="45" rx="8" fill="url(#grad-omega)"/>
-        <rect class="box-outline" x="770" y="145" width="110" height="45" rx="8" fill="none" stroke="#ef4444" stroke-width="1.5" filter="url(#glow-red)"/>
-        <text x="825" y="165" text-anchor="middle" fill="#ef4444" font-weight="600" font-size="10">SELF-MODIFIER</text>
-        <text x="825" y="180" text-anchor="middle" fill="#64748b" font-size="7">Provenance-tracked</text>
-        <circle class="status-dot" cx="867" cy="155" r="3" fill="#22c55e" data-status="SelfModifier"/>
-      </g>
-
-      <!-- SAFETY MONITOR -->
-      <g class="component-box" data-module="SafetyMonitor" onclick="selectModule('SafetyMonitor')">
-        <rect class="box-bg" x="890" y="145" width="90" height="45" rx="8" fill="rgba(239, 68, 68, 0.15)"/>
-        <rect class="box-outline" x="890" y="145" width="90" height="45" rx="8" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="4,2"/>
-        <text x="935" y="163" text-anchor="middle" fill="#ef4444" font-weight="600" font-size="9">SAFETY</text>
-        <text x="935" y="176" text-anchor="middle" fill="#ef4444" font-size="8">MONITOR</text>
-        <text x="935" y="187" text-anchor="middle" fill="#64748b" font-size="6">PROTECTED</text>
-        <circle class="status-dot" cx="967" cy="155" r="3" fill="#ef4444" data-status="SafetyMonitor"/>
-      </g>
-
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- LAYER 3: AGI EXECUTION -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-
-      <line x1="50" y1="290" x2="1100" y2="290" stroke="url(#layer-gradient-3)" stroke-width="1" opacity="0.3"/>
-      <defs>
-        <linearGradient id="layer-gradient-3" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stop-color="#f59e0b" stop-opacity="0"/>
-          <stop offset="50%" stop-color="#f59e0b" stop-opacity="1"/>
-          <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
-        </linearGradient>
-      </defs>
-      <text x="575" y="210" text-anchor="middle" class="layer-label" fill="#f59e0b" opacity="0.6">AGI EXECUTION LAYER</text>
-
-      <!-- AGI RUNNER -->
-      <g class="component-box" data-module="AGIRunner" onclick="selectModule('AGIRunner')">
-        <rect class="box-bg" x="60" y="225" width="320" height="60" rx="10" fill="url(#grad-agi)"/>
-        <rect class="box-outline" x="60" y="225" width="320" height="60" rx="10" fill="none" stroke="#f59e0b" stroke-width="2" filter="url(#glow-amber)"/>
-        <text x="220" y="245" text-anchor="middle" fill="#f59e0b" font-weight="700" font-size="11">AGI RUNNER — 8-Step Cycle</text>
-        <!-- 8 step mini boxes -->
-        <g transform="translate(70, 252)">
-          <rect x="0" y="0" width="32" height="18" rx="2" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
-          <text x="16" y="12" text-anchor="middle" fill="#f59e0b" font-size="6">ASSESS</text>
-          <rect x="36" y="0" width="32" height="18" rx="2" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
-          <text x="52" y="12" text-anchor="middle" fill="#f59e0b" font-size="6">IDENT</text>
-          <rect x="72" y="0" width="32" height="18" rx="2" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
-          <text x="88" y="12" text-anchor="middle" fill="#f59e0b" font-size="6">GEN</text>
-          <rect x="108" y="0" width="32" height="18" rx="2" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
-          <text x="124" y="12" text-anchor="middle" fill="#f59e0b" font-size="6">PRED</text>
-          <rect x="144" y="0" width="32" height="18" rx="2" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
-          <text x="160" y="12" text-anchor="middle" fill="#f59e0b" font-size="6">VER</text>
-          <rect x="180" y="0" width="32" height="18" rx="2" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
-          <text x="196" y="12" text-anchor="middle" fill="#f59e0b" font-size="6">EXEC</text>
-          <rect x="216" y="0" width="32" height="18" rx="2" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
-          <text x="232" y="12" text-anchor="middle" fill="#f59e0b" font-size="6">MEAS</text>
-          <rect x="252" y="0" width="32" height="18" rx="2" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
-          <text x="268" y="12" text-anchor="middle" fill="#f59e0b" font-size="6">LEARN</text>
-        </g>
-        <circle class="status-dot" cx="367" cy="237" r="4" fill="#22c55e" data-status="AGIRunner"/>
-      </g>
-
-      <!-- OUTCOME DISPATCHER (NEW) -->
-      <g class="component-box" data-module="OutcomeDispatcher" onclick="selectModule('OutcomeDispatcher')">
-        <rect class="box-bg" x="390" y="225" width="140" height="60" rx="8" fill="url(#grad-dispatcher)"/>
-        <rect class="box-outline" x="390" y="225" width="140" height="60" rx="8" fill="none" stroke="#06b6d4" stroke-width="1.5" filter="url(#glow-cyan)"/>
-        <text x="460" y="245" text-anchor="middle" fill="#06b6d4" font-weight="600" font-size="10">OUTCOME</text>
-        <text x="460" y="258" text-anchor="middle" fill="#06b6d4" font-weight="600" font-size="10">DISPATCHER</text>
-        <text x="460" y="275" text-anchor="middle" fill="#475569" font-size="7">→ 7 learning paths</text>
-        <circle class="status-dot" cx="517" cy="237" r="3" fill="#06b6d4" data-status="OutcomeDispatcher"/>
-      </g>
-
-      <!-- GRAPHITI LAYER (NEW) -->
-      <g class="component-box" data-module="GraphitiLayer" onclick="selectModule('GraphitiLayer')">
-        <rect class="box-bg" x="540" y="225" width="160" height="60" rx="8" fill="url(#grad-graphiti)"/>
-        <rect class="box-outline" x="540" y="225" width="160" height="60" rx="8" fill="none" stroke="#10b981" stroke-width="1.5" filter="url(#glow-green)"/>
-        <text x="620" y="245" text-anchor="middle" fill="#10b981" font-weight="600" font-size="10">GRAPHITI LAYER</text>
-        <text x="620" y="260" text-anchor="middle" fill="#64748b" font-size="8">Temporal Knowledge Graph</text>
-        <text x="620" y="275" text-anchor="middle" fill="#475569" font-size="7">Bi-temporal: valid + tx time</text>
-        <circle class="status-dot" cx="687" cy="237" r="3" fill="#10b981" data-status="GraphitiLayer"/>
-      </g>
-
-      <!-- LEARNING SUBSTRATE -->
-      <g class="component-box" data-module="LearningSubstrate" onclick="selectModule('LearningSubstrate')">
-        <rect class="box-bg" x="710" y="225" width="200" height="60" rx="10" fill="url(#grad-learning)"/>
-        <rect class="box-outline" x="710" y="225" width="200" height="60" rx="10" fill="none" stroke="#818cf8" stroke-width="1.5" filter="url(#glow-violet)"/>
-        <text x="810" y="243" text-anchor="middle" fill="#818cf8" font-weight="600" font-size="10">LEARNING SUBSTRATE</text>
-        <!-- Mini components -->
-        <rect x="720" y="250" width="45" height="14" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
-        <text x="742" y="260" text-anchor="middle" fill="#818cf8" font-size="6">Intuition</text>
-        <rect x="770" y="250" width="35" height="14" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
-        <text x="787" y="260" text-anchor="middle" fill="#818cf8" font-size="6">GNN</text>
-        <rect x="810" y="250" width="45" height="14" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
-        <text x="832" y="260" text-anchor="middle" fill="#818cf8" font-size="6">HierMem</text>
-        <rect x="860" y="250" width="40" height="14" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
-        <text x="880" y="260" text-anchor="middle" fill="#818cf8" font-size="6">Code</text>
-        <text x="810" y="278" text-anchor="middle" fill="#64748b" font-size="7">L0→L4 Abstraction</text>
-        <circle class="status-dot" cx="897" cy="237" r="3" fill="#22c55e" data-status="LearningSubstrate"/>
-      </g>
-
-      <!-- CAPABILITY EVALUATOR -->
-      <g class="component-box" data-module="CapabilityEvaluator" onclick="selectModule('CapabilityEvaluator')">
-        <rect class="box-bg" x="920" y="225" width="80" height="60" rx="8" fill="url(#grad-agi)"/>
-        <rect class="box-outline" x="920" y="225" width="80" height="60" rx="8" fill="none" stroke="#f59e0b" stroke-width="1.5" filter="url(#glow-amber)"/>
-        <text x="960" y="245" text-anchor="middle" fill="#f59e0b" font-weight="600" font-size="8">CAPABILITY</text>
-        <text x="960" y="256" text-anchor="middle" fill="#f59e0b" font-weight="600" font-size="8">EVALUATOR</text>
-        <text x="960" y="270" text-anchor="middle" fill="#64748b" font-size="7">Ground truth</text>
-        <text x="960" y="280" text-anchor="middle" fill="#475569" font-size="6">7 test suites</text>
-        <circle class="status-dot" cx="987" cy="237" r="3" fill="#f59e0b" data-status="CapabilityEvaluator"/>
-      </g>
-
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- LAYER 4: COMPOUNDING LOOPS -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-
-      <line x1="50" y1="380" x2="1100" y2="380" stroke="url(#layer-gradient-4)" stroke-width="1" opacity="0.3"/>
-      <defs>
-        <linearGradient id="layer-gradient-4" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stop-color="#22c55e" stop-opacity="0"/>
-          <stop offset="50%" stop-color="#22c55e" stop-opacity="1"/>
-          <stop offset="100%" stop-color="#22c55e" stop-opacity="0"/>
-        </linearGradient>
-      </defs>
-      <text x="575" y="305" text-anchor="middle" class="layer-label" fill="#22c55e" opacity="0.6">COMPOUNDING LOOPS LAYER</text>
-
-      <!-- MEMORY REASONER -->
-      <g class="component-box" data-module="MemoryReasoner" onclick="selectModule('MemoryReasoner')">
-        <rect class="box-bg" x="60" y="320" width="150" height="55" rx="8" fill="url(#grad-loop)"/>
-        <rect class="box-outline" x="60" y="320" width="150" height="55" rx="8" fill="none" stroke="#06b6d4" stroke-width="1.5" filter="url(#glow-cyan)"/>
-        <text x="135" y="342" text-anchor="middle" fill="#06b6d4" font-weight="600" font-size="10">MEMORY REASONER</text>
-        <text x="135" y="356" text-anchor="middle" fill="#64748b" font-size="8">Spreading Activation</text>
-        <text x="135" y="368" text-anchor="middle" fill="#475569" font-size="7">memory_ratio metric</text>
-        <circle class="status-dot" cx="197" cy="332" r="3" fill="#22c55e" data-status="MemoryReasoner"/>
-      </g>
-
-      <!-- SELF-COMPILER -->
-      <g class="component-box" data-module="SelfCompiler" onclick="selectModule('SelfCompiler')">
-        <rect class="box-bg" x="220" y="320" width="150" height="55" rx="8" fill="url(#grad-omega)"/>
-        <rect class="box-outline" x="220" y="320" width="150" height="55" rx="8" fill="none" stroke="#f43f5e" stroke-width="1.5"/>
-        <text x="295" y="342" text-anchor="middle" fill="#f43f5e" font-weight="600" font-size="10">SELF-COMPILER</text>
-        <text x="295" y="356" text-anchor="middle" fill="#64748b" font-size="8">Pattern Library</text>
-        <text x="295" y="368" text-anchor="middle" fill="#475569" font-size="7">patterns_created metric</text>
-        <circle class="status-dot" cx="357" cy="332" r="3" fill="#22c55e" data-status="SelfCompiler"/>
-      </g>
-
-      <!-- GOAL EVOLVER -->
-      <g class="component-box" data-module="GoalEvolver" onclick="selectModule('GoalEvolver')">
-        <rect class="box-bg" x="380" y="320" width="150" height="55" rx="8" fill="url(#grad-coder)"/>
-        <rect class="box-outline" x="380" y="320" width="150" height="55" rx="8" fill="none" stroke="#22c55e" stroke-width="1.5" filter="url(#glow-green)"/>
-        <text x="455" y="342" text-anchor="middle" fill="#22c55e" font-weight="600" font-size="10">GOAL EVOLVER</text>
-        <text x="455" y="356" text-anchor="middle" fill="#64748b" font-size="8">Evolutionary Selection</text>
-        <text x="455" y="368" text-anchor="middle" fill="#475569" font-size="7">avg_fitness metric</text>
-        <circle class="status-dot" cx="517" cy="332" r="3" fill="#22c55e" data-status="GoalEvolver"/>
-      </g>
-
-      <!-- DREAMING MACHINE -->
-      <g class="component-box" data-module="DreamingMachine" onclick="selectModule('DreamingMachine')">
-        <rect class="box-bg" x="540" y="320" width="150" height="55" rx="8" fill="url(#grad-agi)"/>
-        <rect class="box-outline" x="540" y="320" width="150" height="55" rx="8" fill="none" stroke="#fbbf24" stroke-width="1.5" filter="url(#glow-amber)"/>
-        <text x="615" y="342" text-anchor="middle" fill="#fbbf24" font-weight="600" font-size="10">DREAMING MACHINE</text>
-        <text x="615" y="356" text-anchor="middle" fill="#64748b" font-size="8">Counterfactuals</text>
-        <text x="615" y="368" text-anchor="middle" fill="#475569" font-size="7">insights_extracted metric</text>
-        <circle class="status-dot" cx="677" cy="332" r="3" fill="#22c55e" data-status="DreamingMachine"/>
-      </g>
-
-      <!-- INTEGRATION MIND -->
-      <g class="component-box" data-module="IntegrationMind" onclick="selectModule('IntegrationMind')">
-        <rect class="box-bg" x="700" y="320" width="150" height="55" rx="8" fill="url(#grad-loop)"/>
-        <rect class="box-outline" x="700" y="320" width="150" height="55" rx="8" fill="none" stroke="#14b8a6" stroke-width="1.5"/>
-        <text x="775" y="342" text-anchor="middle" fill="#14b8a6" font-weight="600" font-size="10">INTEGRATION MIND</text>
-        <text x="775" y="356" text-anchor="middle" fill="#64748b" font-size="8">Cross-Loop Synergy</text>
-        <text x="775" y="368" text-anchor="middle" fill="#475569" font-size="7">coupling_correlation metric</text>
-        <circle class="status-dot" cx="837" cy="332" r="3" fill="#22c55e" data-status="IntegrationMind"/>
-      </g>
-
-      <!-- Critical Coupling Arc -->
-      <path d="M370,360 C400,400 510,400 540,360" stroke="#22c55e" stroke-width="2" fill="none" opacity="0.6" stroke-dasharray="4 2"/>
-      <text x="455" y="410" text-anchor="middle" fill="#22c55e" font-size="8" font-weight="500">MULTIPLICATIVE COUPLING</text>
-
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- LAYER 5: ORCHESTRATION -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-
-      <line x1="50" y1="480" x2="1100" y2="480" stroke="url(#layer-gradient-5)" stroke-width="1" opacity="0.3"/>
-      <defs>
-        <linearGradient id="layer-gradient-5" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stop-color="#ef4444" stop-opacity="0"/>
-          <stop offset="50%" stop-color="#ef4444" stop-opacity="1"/>
-          <stop offset="100%" stop-color="#ef4444" stop-opacity="0"/>
-        </linearGradient>
-      </defs>
-      <text x="575" y="435" text-anchor="middle" class="layer-label" fill="#ef4444" opacity="0.6">ORCHESTRATION LAYER</text>
-
-      <!-- BYRD OMEGA -->
-      <g class="component-box" data-module="Omega" onclick="selectModule('Omega')">
-        <rect class="box-bg" x="280" y="450" width="440" height="75" rx="12" fill="url(#grad-omega)"/>
-        <rect class="box-outline" x="280" y="450" width="440" height="75" rx="12" fill="none" stroke="#ef4444" stroke-width="2" filter="url(#glow-red)"/>
-        <text x="500" y="475" text-anchor="middle" fill="#ef4444" font-weight="700" font-size="14">BYRD OMEGA</text>
-        <text x="500" y="492" text-anchor="middle" fill="#64748b" font-size="10">(Master Orchestrator)</text>
-        <text x="500" y="510" text-anchor="middle" fill="#475569" font-size="8">Mode Controller · Safety Monitor · Coupling Tracker · Training Hooks</text>
-        <circle class="status-dot" cx="705" cy="462" r="4" fill="#22c55e" data-status="Omega" style="filter: drop-shadow(0 0 6px #22c55e);"/>
-      </g>
-
-      <!-- Mode Transition Diagram -->
-      <g transform="translate(60, 450)">
-        <text x="70" y="0" text-anchor="middle" fill="#64748b" font-size="9" font-weight="600">MODE TRANSITIONS</text>
-
-        <rect id="mode-awake" x="20" y="10" width="60" height="22" rx="4" fill="rgba(139, 92, 246, 0.3)" stroke="#a78bfa" stroke-width="1.5" class="mode-indicator active"/>
-        <text x="50" y="25" text-anchor="middle" fill="#a78bfa" font-size="8" font-weight="600">AWAKE</text>
-
-        <path d="M50,35 L50,42" stroke="#64748b" stroke-width="1" fill="none"/>
-
-        <rect id="mode-dreaming" x="20" y="45" width="60" height="22" rx="4" fill="rgba(251, 191, 36, 0.15)" stroke="#64748b" stroke-width="1"/>
-        <text x="50" y="60" text-anchor="middle" fill="#64748b" font-size="8">DREAMING</text>
-
-        <path d="M50,70 L50,77" stroke="#64748b" stroke-width="1" fill="none"/>
-
-        <rect id="mode-evolving" x="20" y="80" width="60" height="22" rx="4" fill="rgba(34, 197, 94, 0.15)" stroke="#64748b" stroke-width="1"/>
-        <text x="50" y="95" text-anchor="middle" fill="#64748b" font-size="8">EVOLVING</text>
-
-        <path d="M50,105 L50,112" stroke="#64748b" stroke-width="1" fill="none"/>
-
-        <rect id="mode-compiling" x="20" y="115" width="60" height="22" rx="4" fill="rgba(244, 63, 94, 0.15)" stroke="#64748b" stroke-width="1"/>
-        <text x="50" y="130" text-anchor="middle" fill="#64748b" font-size="8">COMPILING</text>
-
-        <path d="M85,130 C110,110 110,30 85,15" stroke="#64748b" stroke-width="1" fill="none" stroke-dasharray="3 2"/>
-      </g>
-
-      <!-- COMPUTE INTROSPECTOR -->
-      <g class="component-box" data-module="ComputeIntrospector" onclick="selectModule('ComputeIntrospector')">
-        <rect class="box-bg" x="860" y="320" width="120" height="55" rx="8" fill="rgba(139, 92, 246, 0.15)"/>
-        <rect class="box-outline" x="860" y="320" width="120" height="55" rx="8" fill="none" stroke="#8b5cf6" stroke-width="1.5"/>
-        <text x="920" y="342" text-anchor="middle" fill="#8b5cf6" font-weight="600" font-size="9">COMPUTE</text>
-        <text x="920" y="354" text-anchor="middle" fill="#8b5cf6" font-weight="600" font-size="9">INTROSPECTOR</text>
-        <text x="920" y="368" text-anchor="middle" fill="#64748b" font-size="7">Resource Awareness</text>
-        <circle class="status-dot" cx="967" cy="332" r="3" fill="#8b5cf6" data-status="ComputeIntrospector"/>
-      </g>
-
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- FLOW LINES (drawn behind components visually) -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <g id="flow-lines" opacity="0.7">
-        <!-- Memory to Core Components -->
-        <path class="flow-line" d="M340,105 L125,145" stroke="#3b82f6" stroke-width="1.5" fill="none" marker-end="url(#arrow-blue)" data-from="Memory" data-to="Dreamer"/>
-        <path class="flow-line" d="M340,105 L265,145" stroke="#3b82f6" stroke-width="1.5" fill="none" marker-end="url(#arrow-blue)" data-from="Memory" data-to="Seeker"/>
-        <path class="flow-line" d="M340,105 L395,145" stroke="#3b82f6" stroke-width="1.5" fill="none" marker-end="url(#arrow-blue)" data-from="Memory" data-to="Actor"/>
-
-        <!-- Dreamer to Seeker -->
+        <!-- Dreamer to Seeker flow -->
         <path class="flow-line" d="M190,167 L200,167" stroke="#a855f7" stroke-width="1.5" fill="none" marker-end="url(#arrow-violet)" data-from="Dreamer" data-to="Seeker"/>
+        <text class="flow-label" x="195" y="178" font-size="7">desires</text>
 
-        <!-- Seeker to AGI Runner -->
-        <path class="flow-line" d="M265,190 L220,225" stroke="#3b82f6" stroke-width="1" fill="none" marker-end="url(#arrow-blue)" data-from="Seeker" data-to="AGIRunner"/>
+        <!-- Seeker to Desire Classifier -->
+        <path class="flow-line" d="M265,195 L265,228" stroke="#3b82f6" stroke-width="1.5" fill="none" marker-end="url(#arrow-blue)" data-from="Seeker" data-to="DesireClassifier"/>
 
-        <!-- AGI Runner to Outcome Dispatcher -->
-        <path class="flow-line" d="M380,255 L390,255" stroke="#f59e0b" stroke-width="1.5" fill="none" marker-end="url(#arrow-orange)" data-from="AGIRunner" data-to="OutcomeDispatcher"/>
+        <!-- Desire Classifier routing arrows -->
+        <path class="flow-line" d="M430,273 L420,273" stroke="#14b8a6" stroke-width="1.5" fill="none" marker-end="url(#arrow-teal)" data-from="DesireClassifier" data-to="AGIRunner"/>
+        <text class="flow-label" x="405" y="280" font-size="6">capability</text>
 
-        <!-- Outcome Dispatcher fan-out to learning paths -->
-        <path class="flow-line" d="M460,285 L460,320" stroke="#06b6d4" stroke-width="1" fill="none" marker-end="url(#arrow-cyan)" data-from="OutcomeDispatcher" data-to="GoalEvolver"/>
-        <path class="flow-line" d="M530,255 L540,255" stroke="#06b6d4" stroke-width="1.5" fill="none" marker-end="url(#arrow-cyan)" data-from="OutcomeDispatcher" data-to="GraphitiLayer"/>
-        <path class="flow-line" d="M460,285 L620,285" stroke="#06b6d4" stroke-width="1" fill="none" data-from="OutcomeDispatcher" data-to="GraphitiLayer"/>
+        <!-- AGI Runner to Learning Substrate -->
+        <path class="flow-line" d="M420,273 L580,273" stroke="#f59e0b" stroke-width="1" fill="none" marker-end="url(#arrow-orange)" data-from="AGIRunner" data-to="LearningSubstrate"/>
 
-        <!-- Graphiti to Learning Substrate -->
-        <path class="flow-line" d="M700,255 L710,255" stroke="#10b981" stroke-width="1.5" fill="none" marker-end="url(#arrow-emerald)" data-from="GraphitiLayer" data-to="LearningSubstrate"/>
-
-        <!-- Learning Substrate to Loops -->
-        <path class="flow-line" d="M810,285 L615,320" stroke="#818cf8" stroke-width="1" fill="none" marker-end="url(#arrow-violet)" data-from="LearningSubstrate" data-to="DreamingMachine"/>
-        <path class="flow-line" d="M810,285 L775,320" stroke="#818cf8" stroke-width="1" fill="none" marker-end="url(#arrow-violet)" data-from="LearningSubstrate" data-to="IntegrationMind"/>
+        <!-- AGI Runner to Capability Evaluator -->
+        <path class="flow-line" d="M420,273 L810,273" stroke="#f59e0b" stroke-width="1" fill="none" marker-end="url(#arrow-orange)" data-from="AGIRunner" data-to="CapabilityEvaluator"/>
 
         <!-- Loops to Omega -->
-        <path class="flow-line" d="M135,375 L400,450" stroke="#06b6d4" stroke-width="1" fill="none" marker-end="url(#arrow-cyan)" data-from="MemoryReasoner" data-to="Omega"/>
-        <path class="flow-line" d="M295,375 L430,450" stroke="#f43f5e" stroke-width="1" fill="none" marker-end="url(#arrow-rose)" data-from="SelfCompiler" data-to="Omega"/>
-        <path class="flow-line" d="M455,375 L480,450" stroke="#22c55e" stroke-width="1" fill="none" marker-end="url(#arrow-green)" data-from="GoalEvolver" data-to="Omega"/>
-        <path class="flow-line" d="M615,375 L530,450" stroke="#fbbf24" stroke-width="1" fill="none" marker-end="url(#arrow-amber)" data-from="DreamingMachine" data-to="Omega"/>
-        <path class="flow-line" d="M775,375 L600,450" stroke="#14b8a6" stroke-width="1" fill="none" marker-end="url(#arrow-teal)" data-from="IntegrationMind" data-to="Omega"/>
+        <path class="flow-line" d="M140,420 L400,460" stroke="#06b6d4" stroke-width="1" fill="none" marker-end="url(#arrow-cyan)" data-from="MemoryReasoner" data-to="Omega"/>
+        <path class="flow-line" d="M310,420 L430,460" stroke="#f43f5e" stroke-width="1" fill="none" marker-end="url(#arrow-rose)" data-from="SelfCompiler" data-to="Omega"/>
+        <path class="flow-line" d="M480,420 L480,460" stroke="#22c55e" stroke-width="1" fill="none" marker-end="url(#arrow-green)" data-from="GoalEvolver" data-to="Omega"/>
+        <path class="flow-line" d="M650,420 L550,460" stroke="#fbbf24" stroke-width="1" fill="none" marker-end="url(#arrow-amber)" data-from="DreamingMachine" data-to="Omega"/>
+        <path class="flow-line" d="M820,420 L600,460" stroke="#14b8a6" stroke-width="1" fill="none" marker-end="url(#arrow-teal)" data-from="IntegrationMind" data-to="Omega"/>
 
-        <!-- Dual Instance Manager connections -->
-        <path class="flow-line" d="M740,105 L220,225" stroke="#6366f1" stroke-width="1" fill="none" marker-end="url(#arrow-indigo)" data-from="DualInstanceManager" data-to="AGIRunner"/>
-        <path class="flow-line" d="M740,105 L620,225" stroke="#6366f1" stroke-width="1" fill="none" marker-end="url(#arrow-indigo)" data-from="DualInstanceManager" data-to="GraphitiLayer"/>
+        <!-- AGI Runner to Loops -->
+        <path class="flow-line" d="M240,318 L140,350" stroke="#f59e0b" stroke-width="1" fill="none" marker-end="url(#arrow-orange)" data-from="AGIRunner" data-to="MemoryReasoner"/>
+        <path class="flow-line" d="M240,318 L310,350" stroke="#f59e0b" stroke-width="1" fill="none" marker-end="url(#arrow-orange)" data-from="AGIRunner" data-to="SelfCompiler"/>
+        <path class="flow-line" d="M240,318 L480,350" stroke="#f59e0b" stroke-width="1" fill="none" marker-end="url(#arrow-orange)" data-from="AGIRunner" data-to="GoalEvolver"/>
 
-        <!-- Omega training hooks -->
-        <path class="flow-line" d="M500,450 L810,285" stroke="#ef4444" stroke-width="1" fill="none" marker-end="url(#arrow-rose)" data-from="Omega" data-to="LearningSubstrate"/>
+        <!-- Learning Substrate to Loops -->
+        <path class="flow-line" d="M690,318 L650,350" stroke="#818cf8" stroke-width="1" fill="none" marker-end="url(#arrow-violet)" data-from="LearningSubstrate" data-to="DreamingMachine"/>
+        <path class="flow-line" d="M690,318 L820,350" stroke="#818cf8" stroke-width="1" fill="none" marker-end="url(#arrow-violet)" data-from="LearningSubstrate" data-to="IntegrationMind"/>
+
+        <!-- Self-Modifier connection -->
+        <path class="flow-line" d="M765,195 L765,228" stroke="#ef4444" stroke-width="1" fill="none" marker-end="url(#arrow-rose)" data-from="SelfModifier" data-to="Omega"/>
+
+        <!-- Omega training hooks feedback -->
+        <path class="flow-line" d="M500,460 L690,318" stroke="#ef4444" stroke-width="1" fill="none" marker-end="url(#arrow-rose)" data-from="Omega" data-to="LearningSubstrate"/>
+        <text class="flow-label" x="600" y="385" font-size="7">training hooks</text>
       </g>
 
+      <!-- Component Boxes -->
+      <g id="components">
+        <!-- ROW 1: UNIFIED MEMORY (top center) + KERNEL -->
+        <g class="component-box" data-module="Memory" onclick="selectModule('Memory')">
+          <rect class="box-bg" x="420" y="40" width="260" height="65" rx="10" fill="url(#grad-memory)"/>
+          <rect class="box-outline" x="420" y="40" width="260" height="65" rx="10" fill="none" stroke="#3b82f6" stroke-width="2"/>
+          <text x="550" y="65" text-anchor="middle" fill="#3b82f6" font-weight="700" font-size="14">UNIFIED MEMORY</text>
+          <text x="550" y="80" text-anchor="middle" fill="#64748b" font-size="10">(Neo4j Graph)</text>
+          <text x="550" y="95" text-anchor="middle" fill="#475569" font-size="8">Experiences · Reflections · Beliefs · Desires · Capabilities · Crystals</text>
+          <circle class="status-dot" cx="665" cy="52" r="4" fill="#22c55e" data-status="Memory"/>
+        </g>
+
+        <!-- THE KERNEL (top right) -->
+        <g class="component-box" data-module="Kernel" onclick="selectModule('Kernel')">
+          <rect class="box-bg" x="700" y="40" width="90" height="65" rx="8" fill="url(#grad-kernel)"/>
+          <rect class="box-outline" x="700" y="40" width="90" height="65" rx="8" fill="none" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="745" y="60" text-anchor="middle" fill="#a78bfa" font-weight="600" font-size="11">KERNEL</text>
+          <text x="745" y="73" text-anchor="middle" fill="#64748b" font-size="8">identity</text>
+          <text x="745" y="84" text-anchor="middle" fill="#64748b" font-size="8">values</text>
+          <text x="745" y="95" text-anchor="middle" fill="#64748b" font-size="8">constraints</text>
+          <circle class="status-dot" cx="777" cy="52" r="3" fill="#a78bfa" data-status="Kernel"/>
+        </g>
+
+        <!-- SELF-MODEL (Operating System) -->
+        <g class="component-box" data-module="SelfModel" onclick="selectModule('SelfModel')">
+          <rect class="box-bg" x="810" y="40" width="90" height="65" rx="8" fill="url(#grad-agi)"/>
+          <rect class="box-outline" x="810" y="40" width="90" height="65" rx="8" fill="none" stroke="#fbbf24" stroke-width="1.5"/>
+          <text x="855" y="58" text-anchor="middle" fill="#fbbf24" font-weight="600" font-size="10">SELF-MODEL</text>
+          <text x="855" y="71" text-anchor="middle" fill="#64748b" font-size="8">Bayesian</text>
+          <text x="855" y="82" text-anchor="middle" fill="#64748b" font-size="8">Capability</text>
+          <text x="855" y="93" text-anchor="middle" fill="#64748b" font-size="8">Tracking</text>
+          <circle class="status-dot" cx="887" cy="52" r="3" fill="#fbbf24" data-status="SelfModel"/>
+        </g>
+
+        <!-- ROW 2: CORE COMPONENTS (Dreamer, Seeker, Actor, Coder, Voice) -->
+        <!-- Section Label -->
+        <text x="60" y="130" fill="#64748b" font-size="10" font-weight="600">CORE COMPONENTS</text>
+
+        <!-- DREAMER -->
+        <g class="component-box" data-module="Dreamer" onclick="selectModule('Dreamer')">
+          <rect class="box-bg" x="60" y="140" width="130" height="55" rx="8" fill="url(#grad-dreamer)"/>
+          <rect class="box-outline" x="60" y="140" width="130" height="55" rx="8" fill="none" stroke="#a855f7" stroke-width="1.5"/>
+          <text x="125" y="162" text-anchor="middle" fill="#a855f7" font-weight="600" font-size="11">DREAMER</text>
+          <text x="125" y="176" text-anchor="middle" fill="#64748b" font-size="8">Continuous reflection</text>
+          <text x="125" y="187" text-anchor="middle" fill="#475569" font-size="7">Forms beliefs & desires</text>
+          <circle class="status-dot" cx="177" cy="152" r="3" fill="#22c55e" data-status="Dreamer"/>
+        </g>
+
+        <!-- SEEKER -->
+        <g class="component-box" data-module="Seeker" onclick="selectModule('Seeker')">
+          <rect class="box-bg" x="200" y="140" width="130" height="55" rx="8" fill="url(#grad-seeker)"/>
+          <rect class="box-outline" x="200" y="140" width="130" height="55" rx="8" fill="none" stroke="#3b82f6" stroke-width="1.5"/>
+          <text x="265" y="162" text-anchor="middle" fill="#3b82f6" font-weight="600" font-size="11">SEEKER</text>
+          <text x="265" y="176" text-anchor="middle" fill="#64748b" font-size="8">Desire fulfillment</text>
+          <text x="265" y="187" text-anchor="middle" fill="#475569" font-size="7">Strategy routing</text>
+          <circle class="status-dot" cx="317" cy="152" r="3" fill="#22c55e" data-status="Seeker"/>
+        </g>
+
+        <!-- ACTOR -->
+        <g class="component-box" data-module="Actor" onclick="selectModule('Actor')">
+          <rect class="box-bg" x="340" y="140" width="110" height="55" rx="8" fill="url(#grad-actor)"/>
+          <rect class="box-outline" x="340" y="140" width="110" height="55" rx="8" fill="none" stroke="#06b6d4" stroke-width="1.5"/>
+          <text x="395" y="162" text-anchor="middle" fill="#06b6d4" font-weight="600" font-size="11">ACTOR</text>
+          <text x="395" y="176" text-anchor="middle" fill="#64748b" font-size="8">Claude API</text>
+          <text x="395" y="187" text-anchor="middle" fill="#475569" font-size="7">Complex reasoning</text>
+          <circle class="status-dot" cx="437" cy="152" r="3" fill="#22c55e" data-status="Actor"/>
+        </g>
+
+        <!-- CODER -->
+        <g class="component-box" data-module="Coder" onclick="selectModule('Coder')">
+          <rect class="box-bg" x="460" y="140" width="110" height="55" rx="8" fill="url(#grad-coder)"/>
+          <rect class="box-outline" x="460" y="140" width="110" height="55" rx="8" fill="none" stroke="#10b981" stroke-width="1.5"/>
+          <text x="515" y="162" text-anchor="middle" fill="#10b981" font-weight="600" font-size="11">CODER</text>
+          <text x="515" y="176" text-anchor="middle" fill="#64748b" font-size="8">Autonomous coding</text>
+          <text x="515" y="187" text-anchor="middle" fill="#475569" font-size="7">Self-modification</text>
+          <circle class="status-dot" cx="557" cy="152" r="3" fill="#22c55e" data-status="Coder"/>
+        </g>
+
+        <!-- VOICE -->
+        <g class="component-box" data-module="Voice" onclick="selectModule('Voice')">
+          <rect class="box-bg" x="580" y="140" width="100" height="55" rx="8" fill="url(#grad-voice)"/>
+          <rect class="box-outline" x="580" y="140" width="100" height="55" rx="8" fill="none" stroke="#ec4899" stroke-width="1.5"/>
+          <text x="630" y="162" text-anchor="middle" fill="#ec4899" font-weight="600" font-size="11">VOICE</text>
+          <text x="630" y="176" text-anchor="middle" fill="#64748b" font-size="8">ElevenLabs</text>
+          <text x="630" y="187" text-anchor="middle" fill="#475569" font-size="7">Text-to-speech</text>
+          <circle class="status-dot" cx="667" cy="152" r="3" fill="#22c55e" data-status="Voice"/>
+        </g>
+
+        <!-- ROW 3: AGI EXECUTION ENGINE + DESIRE CLASSIFIER + LEARNING SUBSTRATE -->
+        <!-- Section Label -->
+        <text x="60" y="218" fill="#64748b" font-size="10" font-weight="600">AGI EXECUTION ENGINE</text>
+
+        <!-- AGI RUNNER (8-step improvement cycle) -->
+        <g class="component-box" data-module="AGIRunner" onclick="selectModule('AGIRunner')">
+          <rect class="box-bg" x="60" y="228" width="360" height="90" rx="10" fill="url(#grad-agi)"/>
+          <rect class="box-outline" x="60" y="228" width="360" height="90" rx="10" fill="none" stroke="#f59e0b" stroke-width="2"/>
+          <text x="240" y="250" text-anchor="middle" fill="#f59e0b" font-weight="700" font-size="12">AGI RUNNER - 8-Step Improvement Cycle</text>
+          <!-- 8 step boxes -->
+          <rect x="70" y="258" width="40" height="24" rx="3" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
+          <text x="90" y="274" text-anchor="middle" fill="#f59e0b" font-size="7" font-weight="500">ASSESS</text>
+          <rect x="113" y="258" width="40" height="24" rx="3" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
+          <text x="133" y="274" text-anchor="middle" fill="#f59e0b" font-size="7" font-weight="500">IDENTIFY</text>
+          <rect x="156" y="258" width="42" height="24" rx="3" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
+          <text x="177" y="274" text-anchor="middle" fill="#f59e0b" font-size="7" font-weight="500">GENERATE</text>
+          <rect x="201" y="258" width="40" height="24" rx="3" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
+          <text x="221" y="274" text-anchor="middle" fill="#f59e0b" font-size="7" font-weight="500">PREDICT</text>
+          <rect x="244" y="258" width="38" height="24" rx="3" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
+          <text x="263" y="274" text-anchor="middle" fill="#f59e0b" font-size="7" font-weight="500">VERIFY</text>
+          <rect x="285" y="258" width="42" height="24" rx="3" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
+          <text x="306" y="274" text-anchor="middle" fill="#f59e0b" font-size="7" font-weight="500">EXECUTE</text>
+          <rect x="330" y="258" width="42" height="24" rx="3" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
+          <text x="351" y="274" text-anchor="middle" fill="#f59e0b" font-size="7" font-weight="500">MEASURE</text>
+          <rect x="375" y="258" width="36" height="24" rx="3" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
+          <text x="393" y="274" text-anchor="middle" fill="#f59e0b" font-size="7" font-weight="500">LEARN</text>
+          <!-- Arrows between steps -->
+          <path d="M110,270 L113,270" stroke="#f59e0b" stroke-width="0.5" fill="none"/>
+          <path d="M153,270 L156,270" stroke="#f59e0b" stroke-width="0.5" fill="none"/>
+          <path d="M198,270 L201,270" stroke="#f59e0b" stroke-width="0.5" fill="none"/>
+          <path d="M241,270 L244,270" stroke="#f59e0b" stroke-width="0.5" fill="none"/>
+          <path d="M282,270 L285,270" stroke="#f59e0b" stroke-width="0.5" fill="none"/>
+          <path d="M327,270 L330,270" stroke="#f59e0b" stroke-width="0.5" fill="none"/>
+          <path d="M372,270 L375,270" stroke="#f59e0b" stroke-width="0.5" fill="none"/>
+          <text x="240" y="305" text-anchor="middle" fill="#64748b" font-size="8">Bayesian capability assessment → hypothesis generation → prediction → verification → measurement → update priors</text>
+          <circle class="status-dot" cx="407" cy="240" r="4" fill="#22c55e" data-status="AGIRunner"/>
+        </g>
+
+        <!-- DESIRE CLASSIFIER -->
+        <g class="component-box" data-module="DesireClassifier" onclick="selectModule('DesireClassifier')">
+          <rect class="box-bg" x="430" y="228" width="140" height="90" rx="8" fill="url(#grad-classifier)"/>
+          <rect class="box-outline" x="430" y="228" width="140" height="90" rx="8" fill="none" stroke="#14b8a6" stroke-width="1.5"/>
+          <text x="500" y="250" text-anchor="middle" fill="#14b8a6" font-weight="600" font-size="11">DESIRE CLASSIFIER</text>
+          <text x="500" y="268" text-anchor="middle" fill="#64748b" font-size="8">Routes desires by type</text>
+          <text x="500" y="283" text-anchor="middle" fill="#475569" font-size="7">philosophical → dreamer</text>
+          <text x="500" y="294" text-anchor="middle" fill="#475569" font-size="7">capability → AGI runner</text>
+          <text x="500" y="305" text-anchor="middle" fill="#475569" font-size="7">action → seeker</text>
+          <circle class="status-dot" cx="557" cy="240" r="3" fill="#22c55e" data-status="DesireClassifier"/>
+        </g>
+
+        <!-- LEARNING SUBSTRATE Label -->
+        <text x="590" y="218" fill="#64748b" font-size="10" font-weight="600">LEARNING SUBSTRATE</text>
+
+        <!-- LEARNING SUBSTRATE BOX -->
+        <g class="component-box" data-module="LearningSubstrate" onclick="selectModule('LearningSubstrate')">
+          <rect class="box-bg" x="580" y="228" width="220" height="90" rx="10" fill="url(#grad-learning)"/>
+          <rect class="box-outline" x="580" y="228" width="220" height="90" rx="10" fill="none" stroke="#818cf8" stroke-width="1.5"/>
+          <text x="690" y="248" text-anchor="middle" fill="#818cf8" font-weight="600" font-size="11">LEARNING COMPONENTS</text>
+          <!-- Mini component labels -->
+          <rect x="590" y="256" width="60" height="18" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
+          <text x="620" y="268" text-anchor="middle" fill="#818cf8" font-size="6">Intuition Net</text>
+          <rect x="655" y="256" width="60" height="18" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
+          <text x="685" y="268" text-anchor="middle" fill="#818cf8" font-size="6">GNN Layer</text>
+          <rect x="720" y="256" width="70" height="18" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
+          <text x="755" y="268" text-anchor="middle" fill="#818cf8" font-size="6">Learned Retr.</text>
+          <rect x="590" y="278" width="60" height="18" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
+          <text x="620" y="290" text-anchor="middle" fill="#818cf8" font-size="6">Code Learner</text>
+          <rect x="655" y="278" width="75" height="18" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
+          <text x="692" y="290" text-anchor="middle" fill="#818cf8" font-size="6">Hierarchical Mem</text>
+          <rect x="735" y="278" width="55" height="18" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
+          <text x="762" y="290" text-anchor="middle" fill="#818cf8" font-size="6">World Model</text>
+          <text x="690" y="308" text-anchor="middle" fill="#64748b" font-size="7">L0→L4 Abstraction | Pattern Codification</text>
+          <circle class="status-dot" cx="787" cy="240" r="3" fill="#22c55e" data-status="LearningSubstrate"/>
+        </g>
+
+        <!-- CAPABILITY EVALUATOR (small) -->
+        <g class="component-box" data-module="CapabilityEvaluator" onclick="selectModule('CapabilityEvaluator')">
+          <rect class="box-bg" x="810" y="228" width="90" height="90" rx="8" fill="url(#grad-agi)"/>
+          <rect class="box-outline" x="810" y="228" width="90" height="90" rx="8" fill="none" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="855" y="248" text-anchor="middle" fill="#f59e0b" font-weight="600" font-size="9">CAPABILITY</text>
+          <text x="855" y="260" text-anchor="middle" fill="#f59e0b" font-weight="600" font-size="9">EVALUATOR</text>
+          <text x="855" y="278" text-anchor="middle" fill="#64748b" font-size="7">Ground truth</text>
+          <text x="855" y="289" text-anchor="middle" fill="#64748b" font-size="7">testing via</text>
+          <text x="855" y="300" text-anchor="middle" fill="#64748b" font-size="7">held-out suites</text>
+          <text x="855" y="312" text-anchor="middle" fill="#475569" font-size="6">7 capabilities</text>
+          <circle class="status-dot" cx="887" cy="240" r="3" fill="#22c55e" data-status="CapabilityEvaluator"/>
+        </g>
+
+        <!-- ROW 4: OPTION B FIVE COMPOUNDING LOOPS -->
+        <!-- Section Label -->
+        <text x="60" y="340" fill="#64748b" font-size="10" font-weight="600">OPTION B: FIVE COMPOUNDING LOOPS</text>
+
+        <!-- LOOP 1: MEMORY REASONER -->
+        <g class="component-box" data-module="MemoryReasoner" onclick="selectModule('MemoryReasoner')">
+          <rect class="box-bg" x="60" y="350" width="160" height="70" rx="8" fill="url(#grad-reasoner)"/>
+          <rect class="box-outline" x="60" y="350" width="160" height="70" rx="8" fill="none" stroke="#06b6d4" stroke-width="1.5"/>
+          <text x="140" y="372" text-anchor="middle" fill="#06b6d4" font-weight="600" font-size="10">MEMORY REASONER</text>
+          <text x="140" y="386" text-anchor="middle" fill="#64748b" font-size="8">Spreading Activation</text>
+          <text x="140" y="400" text-anchor="middle" fill="#475569" font-size="7">Answer from graph → save LLM</text>
+          <text x="140" y="412" text-anchor="middle" fill="#475569" font-size="7">memory_ratio metric</text>
+          <circle class="status-dot" cx="207" cy="362" r="3" fill="#22c55e" data-status="MemoryReasoner"/>
+        </g>
+
+        <!-- LOOP 2: SELF-COMPILER -->
+        <g class="component-box" data-module="SelfCompiler" onclick="selectModule('SelfCompiler')">
+          <rect class="box-bg" x="230" y="350" width="160" height="70" rx="8" fill="url(#grad-compiler)"/>
+          <rect class="box-outline" x="230" y="350" width="160" height="70" rx="8" fill="none" stroke="#f43f5e" stroke-width="1.5"/>
+          <text x="310" y="372" text-anchor="middle" fill="#f43f5e" font-weight="600" font-size="10">SELF-COMPILER</text>
+          <text x="310" y="386" text-anchor="middle" fill="#64748b" font-size="8">Pattern Library</text>
+          <text x="310" y="400" text-anchor="middle" fill="#475569" font-size="7">Extract patterns from success</text>
+          <text x="310" y="412" text-anchor="middle" fill="#475569" font-size="7">patterns_created metric</text>
+          <circle class="status-dot" cx="377" cy="362" r="3" fill="#22c55e" data-status="SelfCompiler"/>
+        </g>
+
+        <!-- LOOP 3: GOAL EVOLVER -->
+        <g class="component-box" data-module="GoalEvolver" onclick="selectModule('GoalEvolver')">
+          <rect class="box-bg" x="400" y="350" width="160" height="70" rx="8" fill="url(#grad-evolver)"/>
+          <rect class="box-outline" x="400" y="350" width="160" height="70" rx="8" fill="none" stroke="#22c55e" stroke-width="1.5"/>
+          <text x="480" y="372" text-anchor="middle" fill="#22c55e" font-weight="600" font-size="10">GOAL EVOLVER</text>
+          <text x="480" y="386" text-anchor="middle" fill="#64748b" font-size="8">Evolutionary Selection</text>
+          <text x="480" y="400" text-anchor="middle" fill="#475569" font-size="7">Goals evolve via fitness</text>
+          <text x="480" y="412" text-anchor="middle" fill="#475569" font-size="7">avg_fitness metric</text>
+          <circle class="status-dot" cx="547" cy="362" r="3" fill="#22c55e" data-status="GoalEvolver"/>
+        </g>
+
+        <!-- LOOP 4: DREAMING MACHINE -->
+        <g class="component-box" data-module="DreamingMachine" onclick="selectModule('DreamingMachine')">
+          <rect class="box-bg" x="570" y="350" width="160" height="70" rx="8" fill="url(#grad-dreaming)"/>
+          <rect class="box-outline" x="570" y="350" width="160" height="70" rx="8" fill="none" stroke="#fbbf24" stroke-width="1.5"/>
+          <text x="650" y="372" text-anchor="middle" fill="#fbbf24" font-weight="600" font-size="10">DREAMING MACHINE</text>
+          <text x="650" y="386" text-anchor="middle" fill="#64748b" font-size="8">Counterfactuals</text>
+          <text x="650" y="400" text-anchor="middle" fill="#475569" font-size="7">1 experience → N variations</text>
+          <text x="650" y="412" text-anchor="middle" fill="#475569" font-size="7">insights_extracted metric</text>
+          <circle class="status-dot" cx="717" cy="362" r="3" fill="#22c55e" data-status="DreamingMachine"/>
+        </g>
+
+        <!-- LOOP 5: INTEGRATION MIND -->
+        <g class="component-box" data-module="IntegrationMind" onclick="selectModule('IntegrationMind')">
+          <rect class="box-bg" x="740" y="350" width="160" height="70" rx="8" fill="url(#grad-integration)"/>
+          <rect class="box-outline" x="740" y="350" width="160" height="70" rx="8" fill="none" stroke="#14b8a6" stroke-width="1.5"/>
+          <text x="820" y="372" text-anchor="middle" fill="#14b8a6" font-weight="600" font-size="10">INTEGRATION MIND</text>
+          <text x="820" y="386" text-anchor="middle" fill="#64748b" font-size="8">Cross-Loop Synergy</text>
+          <text x="820" y="400" text-anchor="middle" fill="#475569" font-size="7">Emergent behaviors</text>
+          <text x="820" y="412" text-anchor="middle" fill="#475569" font-size="7">coupling_correlation metric</text>
+          <circle class="status-dot" cx="887" cy="362" r="3" fill="#22c55e" data-status="IntegrationMind"/>
+        </g>
+
+        <!-- Critical Coupling Indicator -->
+        <g>
+          <path class="coupling-line multiplicative" d="M390,385 C420,420 540,420 570,385" stroke="#22c55e" stroke-width="2" fill="none"/>
+          <text x="480" y="435" text-anchor="middle" fill="#22c55e" font-size="8" font-weight="600">MULTIPLICATIVE COUPLING</text>
+          <text x="480" y="446" text-anchor="middle" fill="#64748b" font-size="7">Goal Evolver → Self-Compiler</text>
+        </g>
+
+        <!-- BYRD OMEGA (bottom center) -->
+        <g class="component-box" data-module="Omega" onclick="selectModule('Omega')">
+          <rect class="box-bg" x="330" y="460" width="340" height="85" rx="12" fill="url(#grad-omega)"/>
+          <rect class="box-outline" x="330" y="460" width="340" height="85" rx="12" fill="none" stroke="#ef4444" stroke-width="2"/>
+          <text x="500" y="485" text-anchor="middle" fill="#ef4444" font-weight="700" font-size="14">BYRD OMEGA</text>
+          <text x="500" y="502" text-anchor="middle" fill="#64748b" font-size="10">(Master Orchestrator)</text>
+          <text x="500" y="520" text-anchor="middle" fill="#475569" font-size="8">Mode Controller · Safety Monitor · Coupling Tracker · Kill Criteria</text>
+          <text x="500" y="535" text-anchor="middle" fill="#475569" font-size="8">Training Hooks: GNN every cycle | Memory L4 every 10 | Codification every 20</text>
+          <circle class="status-dot" cx="655" cy="472" r="4" fill="#22c55e" data-status="Omega"/>
+        </g>
+
+        <!-- SELF-MODIFIER -->
+        <g class="component-box" data-module="SelfModifier" onclick="selectModule('SelfModifier')">
+          <rect class="box-bg" x="700" y="140" width="130" height="55" rx="8" fill="url(#grad-omega)"/>
+          <rect class="box-outline" x="700" y="140" width="130" height="55" rx="8" fill="none" stroke="#ef4444" stroke-width="1.5"/>
+          <text x="765" y="162" text-anchor="middle" fill="#ef4444" font-weight="600" font-size="10">SELF-MODIFIER</text>
+          <text x="765" y="176" text-anchor="middle" fill="#64748b" font-size="8">Provenance-tracked</text>
+          <text x="765" y="187" text-anchor="middle" fill="#475569" font-size="7">Constitutional checks</text>
+          <circle class="status-dot" cx="817" cy="152" r="3" fill="#22c55e" data-status="SelfModifier"/>
+        </g>
+
+        <!-- SAFETY MONITOR (Protected) -->
+        <g class="component-box" data-module="SafetyMonitor" onclick="selectModule('SafetyMonitor')">
+          <rect class="box-bg" x="840" y="140" width="100" height="55" rx="8" fill="rgba(239, 68, 68, 0.15)"/>
+          <rect class="box-outline" x="840" y="140" width="100" height="55" rx="8" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="4,2"/>
+          <text x="890" y="162" text-anchor="middle" fill="#ef4444" font-weight="600" font-size="9">SAFETY</text>
+          <text x="890" y="174" text-anchor="middle" fill="#ef4444" font-weight="600" font-size="9">MONITOR</text>
+          <text x="890" y="187" text-anchor="middle" fill="#64748b" font-size="7">PROTECTED</text>
+          <circle class="status-dot" cx="927" cy="152" r="3" fill="#ef4444" data-status="SafetyMonitor"/>
+        </g>
+
+        <!-- COMPUTE INTROSPECTOR -->
+        <g class="component-box" data-module="ComputeIntrospector" onclick="selectModule('ComputeIntrospector')">
+          <rect class="box-bg" x="960" y="140" width="100" height="55" rx="8" fill="rgba(139, 92, 246, 0.15)"/>
+          <rect class="box-outline" x="960" y="140" width="100" height="55" rx="8" fill="none" stroke="#8b5cf6" stroke-width="1.5"/>
+          <text x="1010" y="162" text-anchor="middle" fill="#8b5cf6" font-weight="600" font-size="9">COMPUTE</text>
+          <text x="1010" y="174" text-anchor="middle" fill="#8b5cf6" font-weight="600" font-size="9">INTROSPECTOR</text>
+          <text x="1010" y="187" text-anchor="middle" fill="#64748b" font-size="7">Resource Awareness</text>
+          <circle class="status-dot" cx="1047" cy="152" r="3" fill="#8b5cf6" data-status="ComputeIntrospector"/>
+        </g>
+
+        <!-- Mode Transition Diagram (left side, adjusted position) -->
+        <g transform="translate(20, 450)">
+          <text x="60" y="0" text-anchor="middle" fill="#64748b" font-size="10" font-weight="600">MODE TRANSITIONS</text>
+
+          <!-- AWAKE -->
+          <rect id="mode-awake" x="20" y="15" width="80" height="30" rx="6" fill="rgba(139, 92, 246, 0.2)" stroke="#a78bfa" stroke-width="1.5" class="mode-indicator active"/>
+          <text x="60" y="35" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="600">AWAKE</text>
+
+          <!-- Arrow down -->
+          <path d="M60,48 L60,58" stroke="#64748b" stroke-width="1" fill="none" marker-end="url(#arrow-violet)"/>
+
+          <!-- DREAMING -->
+          <rect id="mode-dreaming" x="20" y="60" width="80" height="30" rx="6" fill="rgba(251, 191, 36, 0.1)" stroke="#64748b" stroke-width="1" class="mode-indicator"/>
+          <text x="60" y="80" text-anchor="middle" fill="#64748b" font-size="10">DREAMING</text>
+
+          <!-- Arrow down -->
+          <path d="M60,93 L60,103" stroke="#64748b" stroke-width="1" fill="none" marker-end="url(#arrow-violet)"/>
+
+          <!-- EVOLVING -->
+          <rect id="mode-evolving" x="20" y="105" width="80" height="30" rx="6" fill="rgba(34, 197, 94, 0.1)" stroke="#64748b" stroke-width="1" class="mode-indicator"/>
+          <text x="60" y="125" text-anchor="middle" fill="#64748b" font-size="10">EVOLVING</text>
+
+          <!-- Arrow down -->
+          <path d="M60,138 L60,148" stroke="#64748b" stroke-width="1" fill="none" marker-end="url(#arrow-violet)"/>
+
+          <!-- COMPILING -->
+          <rect id="mode-compiling" x="20" y="150" width="80" height="30" rx="6" fill="rgba(244, 63, 94, 0.1)" stroke="#64748b" stroke-width="1" class="mode-indicator"/>
+          <text x="60" y="170" text-anchor="middle" fill="#64748b" font-size="10">COMPILING</text>
+
+          <!-- Return arrow -->
+          <path d="M105,165 C140,140 140,50 105,25" stroke="#64748b" stroke-width="1" fill="none" stroke-dasharray="3 2"/>
+        </g>
+      </g>
     </svg>
   </div>
 
   <!-- Side Panel -->
-  <div class="side-panel glass-panel fixed top-24 right-4 bottom-4 w-72 overflow-hidden flex flex-col gap-3 p-4">
-    <div class="side-panel-handle"></div>
+  <div class="fixed top-24 right-4 bottom-4 w-72 overflow-hidden flex flex-col gap-3">
+    <!-- Architecture Layers Panel -->
+    <div class="glass-panel p-4 flex-1 overflow-y-auto">
+      <h2 class="text-lg font-semibold text-white mb-3">Architecture Layers</h2>
 
-    <h2 class="text-lg font-semibold text-white mb-2">Architecture Layers</h2>
+      <!-- Core Components -->
+      <h3 class="text-xs font-semibold text-slate-500 mb-2">CORE COMPONENTS</h3>
+      <div id="core-list" class="space-y-1 mb-4">
+        <!-- Populated by JS -->
+      </div>
 
-    <!-- Infrastructure -->
-    <h3 class="text-xs font-semibold text-slate-500 mb-1">INFRASTRUCTURE</h3>
-    <div id="infra-list" class="space-y-1 mb-3"></div>
+      <!-- AGI Execution Engine -->
+      <h3 class="text-xs font-semibold text-slate-500 mb-2">AGI EXECUTION ENGINE</h3>
+      <div id="agi-list" class="space-y-1 mb-4">
+        <!-- Populated by JS -->
+      </div>
 
-    <!-- Core Components -->
-    <h3 class="text-xs font-semibold text-slate-500 mb-1">CORE PROCESSING</h3>
-    <div id="core-list" class="space-y-1 mb-3"></div>
+      <!-- Option B Loops -->
+      <h3 class="text-xs font-semibold text-slate-500 mb-2">OPTION B LOOPS</h3>
+      <div id="loops-list" class="space-y-1 mb-4">
+        <!-- Populated by JS -->
+      </div>
 
-    <!-- AGI Execution Engine -->
-    <h3 class="text-xs font-semibold text-slate-500 mb-1">AGI EXECUTION</h3>
-    <div id="agi-list" class="space-y-1 mb-3"></div>
+      <!-- Metrics -->
+      <h3 class="text-xs font-semibold text-slate-500 mt-4 mb-2">ACCELERATION METRICS</h3>
+      <div id="metrics-panel" class="space-y-2">
+        <!-- Populated by JS -->
+      </div>
+    </div>
 
-    <!-- Option B Loops -->
-    <h3 class="text-xs font-semibold text-slate-500 mb-1">COMPOUNDING LOOPS</h3>
-    <div id="loops-list" class="space-y-1 mb-3"></div>
-
-    <!-- Metrics -->
-    <h3 class="text-xs font-semibold text-slate-500 mt-2 mb-1">ACCELERATION METRICS</h3>
-    <div id="metrics-panel" class="space-y-2 flex-1 overflow-y-auto"></div>
-
-    <!-- Kill Criteria -->
-    <div class="mt-auto pt-3 border-t border-slate-700/50">
+    <!-- Kill Criteria Panel -->
+    <div class="glass-panel p-3">
       <h3 class="text-sm font-semibold text-white mb-2">Kill Criteria</h3>
       <div id="kill-criteria" class="space-y-1 text-xs">
         <div class="flex justify-between items-center">
@@ -940,7 +741,7 @@
   </div>
 
   <!-- Selected Module Detail -->
-  <div id="selected-detail" class="fixed bottom-20 left-4 right-4 md:right-80 hidden z-40">
+  <div id="selected-detail" class="fixed bottom-20 left-4 right-80 hidden">
     <div class="glass-panel p-4">
       <div class="flex items-start justify-between">
         <div>
@@ -959,37 +760,33 @@
   </div>
 
   <!-- Legend -->
-  <div class="legend-container fixed bottom-4 left-4 right-4 md:right-80">
+  <div class="fixed bottom-4 left-4 right-80">
     <div class="glass-panel px-4 py-2">
       <div class="flex items-center justify-between flex-wrap gap-2">
         <div class="flex gap-3 flex-wrap">
           <div class="legend-item">
             <div class="legend-line" style="background: #3b82f6;"></div>
-            <span>Memory</span>
+            <span>Memory Flow</span>
           </div>
           <div class="legend-item">
             <div class="legend-line" style="background: #f59e0b;"></div>
-            <span>AGI</span>
+            <span>AGI Runner</span>
           </div>
           <div class="legend-item">
-            <div class="legend-line" style="background: #06b6d4;"></div>
-            <span>Dispatch</span>
+            <div class="legend-line" style="background: #818cf8;"></div>
+            <span>Learning</span>
           </div>
           <div class="legend-item">
-            <div class="legend-line" style="background: #10b981;"></div>
-            <span>Graphiti</span>
-          </div>
-          <div class="legend-item">
-            <div class="legend-line" style="background: #6366f1;"></div>
-            <span>Instance</span>
+            <div class="legend-line" style="background: #22c55e;"></div>
+            <span>Multiplicative</span>
           </div>
           <div class="legend-item">
             <div class="legend-line" style="background: #ef4444;"></div>
-            <span>Omega</span>
+            <span>Safety/Omega</span>
           </div>
         </div>
-        <div class="text-xs text-slate-500 mono">
-          v4.0 — Glowing Nodes
+        <div class="text-xs text-slate-500">
+          ARCHITECTURE.md v3.2
         </div>
       </div>
     </div>
@@ -1006,42 +803,8 @@
     let selectedModule = null;
     let animationPaused = false;
 
-    // Component information - v4.0 with new components
+    // Component information based on ARCHITECTURE.md v3.2
     const LOOP_INFO = {
-      // Infrastructure
-      Memory: {
-        name: 'Unified Memory',
-        description: 'Neo4j graph database. Single source of truth: Experiences, Reflections, Beliefs, Desires, Capabilities, Crystals.',
-        color: '#3b82f6',
-        mechanism: 'All state, all learning, all provenance stored in graph. Semantic search + hierarchical summaries.',
-        successMetric: 'Graph connectivity',
-        plateauWarning: 'N/A'
-      },
-      Kernel: {
-        name: 'Kernel',
-        description: 'Python config from kernel/agi_seed.yaml. Defines awakening_prompt, identity, values, constraints.',
-        color: '#a78bfa',
-        mechanism: 'Loaded at startup to ground BYRD in core identity and seed Goal Evolver',
-        successMetric: 'Identity coherence',
-        plateauWarning: 'N/A'
-      },
-      DualInstanceManager: {
-        name: 'Dual Instance Manager',
-        description: 'Manages two concurrent GLM-4.7 instances. Instance A: Primary (Dreamer, Seeker, Actor). Instance B: Enrichment (Graphiti, CapEval).',
-        color: '#6366f1',
-        mechanism: '960 prompts/hr total capacity, token bucket burst handling, component-based routing',
-        successMetric: 'Utilization balance',
-        plateauWarning: 'N/A'
-      },
-      SelfModel: {
-        name: 'Self-Model',
-        description: 'Bayesian capability tracking using Beta distribution. Tracks 7 capabilities with uncertainty-driven exploration.',
-        color: '#fbbf24',
-        mechanism: 'Success/failure → update alpha/beta → posterior mean + uncertainty → exploration targeting',
-        successMetric: 'Uncertainty reduction',
-        plateauWarning: 'N/A'
-      },
-
       // Core Components
       Dreamer: {
         name: 'Dreamer',
@@ -1069,101 +832,77 @@
       },
       Coder: {
         name: 'Coder',
-        description: 'Autonomous coding agent via Claude Code CLI. Post-validates against constitutional constraints.',
+        description: 'Autonomous coding agent via Claude Code CLI. Post-validates against constitutional constraints. Auto-rollback on protected file touch.',
         color: '#10b981',
         mechanism: 'Code request → generate → constitutional check → apply/rollback',
         successMetric: 'Modification success rate',
         plateauWarning: 'N/A'
       },
-      HybridVoice: {
-        name: 'Hybrid Voice',
-        description: 'Two-tier voice synthesis: Home Mac (Chatterbox TTS, free/unlimited) + Cloud (ElevenLabs, credit-limited). Automatic fallback with emotion tag support.',
+      Voice: {
+        name: 'Voice',
+        description: 'ElevenLabs TTS integration. Voice Design API for creating unique voices. Voice emerges through self-reflection.',
         color: '#ec4899',
-        mechanism: 'Home-first → health check → fallback to cloud → credit reserve management',
-        successMetric: 'Home success rate',
-        plateauWarning: 'N/A'
-      },
-      SelfModifier: {
-        name: 'Self-Modifier',
-        description: 'Enables BYRD to modify its own code. Verifies modification traces to emergent desire. Creates checkpoints.',
-        color: '#ef4444',
-        mechanism: 'Desire verification → checkpoint → modify → health check → record experience',
-        successMetric: 'Safe modifications',
-        plateauWarning: 'N/A'
-      },
-      SafetyMonitor: {
-        name: 'Safety Monitor',
-        description: 'PROTECTED component. Observes patterns without blocking. BYRD learns what is "safe" from outcome correlation.',
-        color: '#ef4444',
-        mechanism: 'Pattern observation → outcome tracking → belief formation from success/failure',
-        successMetric: 'Pattern-outcome correlation learned',
+        mechanism: 'Text-to-speech with emergent voice characteristics',
+        successMetric: 'Voice coherence',
         plateauWarning: 'N/A'
       },
 
       // AGI Execution Engine
       AGIRunner: {
         name: 'AGI Runner',
-        description: '8-step improvement cycle: ASSESS → IDENTIFY → GENERATE → PREDICT → VERIFY → EXECUTE → MEASURE → LEARN.',
+        description: '8-step improvement cycle: ASSESS → IDENTIFY → GENERATE → PREDICT → VERIFY → EXECUTE → MEASURE → LEARN. Closes the loop between assessment and learning.',
         color: '#f59e0b',
-        mechanism: 'Bayesian assessment → hypothesis → prediction → safety verification → execution → measurement → prior update',
+        mechanism: 'Bayesian capability assessment → hypothesis generation → prediction storage → safety verification → execution → ground-truth measurement → prior update',
         successMetric: 'Capability improvement rate',
         plateauWarning: 'Flat for 10+ cycles'
       },
-      OutcomeDispatcher: {
-        name: 'Outcome Dispatcher',
-        description: 'Routes task outcomes to 7 learning components for multi-path learning. Non-blocking async dispatch.',
-        color: '#06b6d4',
-        mechanism: 'Task outcome → parallel dispatch to all learners → Graphiti async queue',
-        successMetric: 'Dispatch success rate',
+      DesireClassifier: {
+        name: 'Desire Classifier',
+        description: 'Routes desires to appropriate handlers: philosophical→dreamer, capability→AGI runner, action→seeker, meta→AGI runner.',
+        color: '#14b8a6',
+        mechanism: 'Keyword-based classification with confidence scoring and routing statistics',
+        successMetric: 'Routing accuracy',
         plateauWarning: 'N/A'
-      },
-      GraphitiLayer: {
-        name: 'Graphiti Layer',
-        description: 'Temporal knowledge graph with bi-temporal tracking. Extracts entities and relationships from experiences with contradiction detection.',
-        color: '#10b981',
-        mechanism: 'Episodes → Entity extraction (Instance B) → Relationship mapping → Neo4j storage',
-        successMetric: 'Entity extraction rate',
-        plateauWarning: 'Queue backup > 100'
       },
       LearningSubstrate: {
         name: 'Learning Substrate',
-        description: 'Six learning components: HierarchicalMemory (L0-L4), IntuitionNetwork, GNN, CodeLearner, LearnedRetriever, EmergentCategories.',
+        description: 'Six learning components wired into Omega training hooks: HierarchicalMemory (L0-L4), IntuitionNetwork, StructuralLearner (GNN), CodeLearner, LearnedRetriever, EmergentCategories.',
         color: '#818cf8',
-        mechanism: 'GNN every cycle | Memory L4 every 10 | Codification every 20 | Pattern threshold: 10+ uses, 80%+ success',
-        successMetric: 'gnn.loss, patterns_codified',
+        mechanism: 'GNN every cycle | HierarchicalMemory every 10 cycles | CodeLearner every 20 cycles | Pattern codification (10+ uses, 80%+ success)',
+        successMetric: 'Training metrics in /api/metrics: gnn.loss, hierarchical_memory.consolidation_run, code_learner.patterns_codified',
         plateauWarning: 'No new patterns for 100 cycles'
       },
       CapabilityEvaluator: {
         name: 'Capability Evaluator',
-        description: 'Ground-truth measurement with held-out test suites for 7 capabilities.',
+        description: 'Ground-truth measurement with held-out test suites for 7 capabilities: reasoning, memory, learning, research, self_modification, prediction, metacognition.',
         color: '#f59e0b',
         mechanism: 'Held-out test suites → objective measurement → Bayesian update',
         successMetric: 'Test coverage',
         plateauWarning: 'N/A'
       },
 
-      // Option B Loops
+      // Option B Compounding Loops
+      SelfCompiler: {
+        name: 'Self-Compiler',
+        description: 'Extracts reusable patterns from successful modifications, making future modifications more likely to succeed.',
+        color: '#f43f5e',
+        mechanism: 'Pattern library grows → future problems have more relevant patterns → higher success rate → more patterns extracted',
+        successMetric: 'patterns_created > 0',
+        plateauWarning: 'Flat at < 40%'
+      },
       MemoryReasoner: {
         name: 'Memory Reasoner',
         description: 'Graph-based reasoning using spreading activation. Answers queries from memory before calling LLM.',
         color: '#06b6d4',
-        mechanism: 'More experiences → richer graph → more queries answered from memory',
+        mechanism: 'More experiences → richer graph → more queries answered from memory → LLM calls reserved for novel problems',
         successMetric: 'memory_ratio > 50%',
         plateauWarning: 'Flat at < 30%'
       },
-      SelfCompiler: {
-        name: 'Self-Compiler',
-        description: 'Extracts reusable patterns from successful modifications.',
-        color: '#f43f5e',
-        mechanism: 'Pattern library grows → future problems have more relevant patterns',
-        successMetric: 'patterns_created > 0',
-        plateauWarning: 'Flat at < 40%'
-      },
       GoalEvolver: {
         name: 'Goal Evolver',
-        description: 'Evolutionary goal optimization. Goals compete and evolve based on fitness.',
+        description: 'Evolutionary goal optimization. Goals compete and evolve based on fitness selection.',
         color: '#22c55e',
-        mechanism: 'Fitness-weighted selection → better goals survive',
+        mechanism: 'Fitness-weighted selection → better goals survive → system pursues more valuable objectives',
         successMetric: 'avg_fitness increasing',
         plateauWarning: 'Fitness flat for 5+ generations'
       },
@@ -1177,27 +916,67 @@
       },
       IntegrationMind: {
         name: 'Integration Mind',
-        description: 'Meta-orchestration layer. Measures coupling between loops.',
+        description: 'Meta-orchestration layer. Measures coupling between loops and allocates resources based on mode.',
         color: '#14b8a6',
         mechanism: 'If loops reinforce each other, combined value > sum of parts',
         successMetric: 'coupling_correlation > 0.3',
         plateauWarning: 'None observed after week 4'
       },
 
-      // Orchestration
+      // Infrastructure
+      Memory: {
+        name: 'Unified Memory',
+        description: 'Neo4j graph database. Single source of truth: Experiences, Reflections, Beliefs, Desires, Capabilities, Crystals, OperatingSystem.',
+        color: '#3b82f6',
+        mechanism: 'All state, all learning, all provenance stored in graph. Semantic search + hierarchical summaries.',
+        successMetric: 'Graph connectivity',
+        plateauWarning: 'N/A'
+      },
+      Kernel: {
+        name: 'Kernel',
+        description: 'Python config from kernel/agi_seed.yaml. Defines awakening_prompt, identity, values, constraints, initial_goals. Informs OS at awakening.',
+        color: '#a78bfa',
+        mechanism: 'Loaded at startup to ground BYRD in core identity and seed Goal Evolver',
+        successMetric: 'Identity coherence',
+        plateauWarning: 'N/A'
+      },
+      SelfModel: {
+        name: 'Self-Model',
+        description: 'Bayesian capability tracking using Beta distribution. Tracks 7 capabilities with uncertainty-driven exploration.',
+        color: '#fbbf24',
+        mechanism: 'Success/failure → update alpha/beta → posterior mean + uncertainty → exploration targeting',
+        successMetric: 'Uncertainty reduction',
+        plateauWarning: 'N/A'
+      },
       Omega: {
         name: 'BYRD Omega',
-        description: 'Master orchestrator. Mode controller, safety monitor, coupling tracker, kill criteria. Training hooks every cycle.',
+        description: 'Master orchestrator. Mode controller, safety monitor, coupling tracker, kill criteria. Training hooks every cycle (GNN), every 10 (Memory L4), every 20 (Codification).',
         color: '#ef4444',
         mechanism: 'AWAKE→DREAMING→EVOLVING→COMPILING mode transitions with resource allocation',
         successMetric: 'System health',
         plateauWarning: 'N/A'
       },
+      SelfModifier: {
+        name: 'Self-Modifier',
+        description: 'Enables BYRD to modify its own code. Verifies modification traces to emergent desire. Creates checkpoints, runs health checks.',
+        color: '#ef4444',
+        mechanism: 'Desire verification → checkpoint → modify → health check → record experience',
+        successMetric: 'Safe modifications',
+        plateauWarning: 'N/A'
+      },
+      SafetyMonitor: {
+        name: 'Safety Monitor',
+        description: 'PROTECTED component. Observes patterns without blocking (emergence-preserving). BYRD learns what is "safe" from outcome correlation.',
+        color: '#ef4444',
+        mechanism: 'Pattern observation → outcome tracking → BYRD forms beliefs from success/failure correlations',
+        successMetric: 'Pattern-outcome correlation learned',
+        plateauWarning: 'N/A'
+      },
       ComputeIntrospector: {
         name: 'Compute Introspector',
-        description: 'Resource awareness, token tracking, and bottleneck detection.',
+        description: 'Resource awareness, token tracking, and bottleneck detection. BYRD knows its computational substrate.',
         color: '#8b5cf6',
-        mechanism: 'Resource snapshots → token budgets → bottleneck analysis',
+        mechanism: 'Resource snapshots → token budgets → bottleneck analysis → resource alerts',
         successMetric: 'Budget adherence',
         plateauWarning: 'N/A'
       }
@@ -1205,189 +984,37 @@
 
     // Flow connections for highlighting
     const FLOW_CONNECTIONS = {
-      Memory: ['Dreamer', 'Seeker', 'Actor', 'Coder', 'Kernel', 'GraphitiLayer'],
-      Kernel: ['Memory', 'SelfModel'],
-      DualInstanceManager: ['AGIRunner', 'GraphitiLayer', 'CapabilityEvaluator'],
+      // Infrastructure layer
+      Memory: ['Dreamer', 'Seeker', 'Actor', 'Coder', 'Kernel', 'SelfModel'],
+      Kernel: ['Memory'],
       SelfModel: ['Kernel', 'AGIRunner', 'CapabilityEvaluator'],
+
+      // Core Components
       Dreamer: ['Memory', 'Seeker'],
-      Seeker: ['Memory', 'AGIRunner', 'OutcomeDispatcher'],
+      Seeker: ['Memory', 'DesireClassifier', 'AGIRunner'],
       Actor: ['Memory'],
       Coder: ['Memory', 'SelfModifier', 'SafetyMonitor'],
-      HybridVoice: ['Memory'],
-      SelfModifier: ['Coder', 'SafetyMonitor', 'Omega'],
-      SafetyMonitor: ['SelfModifier', 'Omega'],
-      AGIRunner: ['OutcomeDispatcher', 'LearningSubstrate', 'CapabilityEvaluator', 'MemoryReasoner', 'SelfCompiler', 'GoalEvolver'],
-      OutcomeDispatcher: ['GraphitiLayer', 'LearningSubstrate', 'GoalEvolver', 'MemoryReasoner', 'SelfCompiler', 'DreamingMachine', 'IntegrationMind'],
-      GraphitiLayer: ['LearningSubstrate', 'Memory'],
+      Voice: ['Memory'],
+
+      // AGI Execution Engine
+      AGIRunner: ['LearningSubstrate', 'CapabilityEvaluator', 'MemoryReasoner', 'SelfCompiler', 'GoalEvolver'],
+      DesireClassifier: ['Dreamer', 'Seeker', 'AGIRunner'],
       LearningSubstrate: ['DreamingMachine', 'IntegrationMind', 'Omega'],
       CapabilityEvaluator: ['AGIRunner', 'SelfModel'],
-      MemoryReasoner: ['AGIRunner', 'Omega', 'Memory'],
+
+      // Option B Loops
       SelfCompiler: ['AGIRunner', 'Omega', 'GoalEvolver'],
+      MemoryReasoner: ['AGIRunner', 'Omega', 'Memory'],
       GoalEvolver: ['AGIRunner', 'Omega', 'SelfCompiler'],
       DreamingMachine: ['LearningSubstrate', 'Omega'],
       IntegrationMind: ['LearningSubstrate', 'Omega'],
-      Omega: ['SelfCompiler', 'MemoryReasoner', 'GoalEvolver', 'DreamingMachine', 'IntegrationMind', 'LearningSubstrate', 'SelfModifier'],
-      ComputeIntrospector: ['Omega', 'SelfModifier', 'Dreamer']
+
+      // Safety & Orchestration
+      Omega: ['SelfCompiler', 'MemoryReasoner', 'GoalEvolver', 'DreamingMachine', 'IntegrationMind', 'LearningSubstrate', 'SelfModifier', 'ComputeIntrospector'],
+      SelfModifier: ['Coder', 'SafetyMonitor', 'Omega', 'ComputeIntrospector'],
+      SafetyMonitor: ['SelfModifier', 'Omega'],
+      ComputeIntrospector: ['Omega', 'SelfModifier', 'Dreamer', 'Seeker']
     };
-
-    // ========================================================================
-    // PARTICLE SYSTEM
-    // ========================================================================
-    const canvas = document.getElementById('particle-canvas');
-    const ctx = canvas.getContext('2d');
-    let particles = [];
-    let lastActivityTime = Date.now();
-
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
-
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-
-    class DataParticle {
-      constructor(startX, startY, endX, endY, color) {
-        this.x = startX;
-        this.y = startY;
-        this.startX = startX;
-        this.startY = startY;
-        this.endX = endX;
-        this.endY = endY;
-        this.color = color;
-        this.progress = 0;
-        this.speed = 0.005 + Math.random() * 0.01;
-        this.size = 2 + Math.random() * 2;
-        this.trail = [];
-        this.maxTrailLength = 8;
-      }
-
-      update() {
-        this.progress += this.speed;
-
-        // Store trail position
-        this.trail.push({ x: this.x, y: this.y });
-        if (this.trail.length > this.maxTrailLength) {
-          this.trail.shift();
-        }
-
-        // Bezier curve for smooth movement
-        const t = this.progress;
-        const midX = (this.startX + this.endX) / 2;
-        const midY = (this.startY + this.endY) / 2 - 30;
-
-        this.x = (1-t)*(1-t)*this.startX + 2*(1-t)*t*midX + t*t*this.endX;
-        this.y = (1-t)*(1-t)*this.startY + 2*(1-t)*t*midY + t*t*this.endY;
-
-        return this.progress < 1;
-      }
-
-      draw(ctx) {
-        // Draw trail
-        for (let i = 0; i < this.trail.length; i++) {
-          const alpha = (i / this.trail.length) * 0.5;
-          ctx.beginPath();
-          ctx.arc(this.trail[i].x, this.trail[i].y, this.size * (i / this.trail.length), 0, Math.PI * 2);
-          ctx.fillStyle = this.color.replace(')', `, ${alpha})`).replace('rgb', 'rgba');
-          ctx.fill();
-        }
-
-        // Draw particle with glow
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fillStyle = this.color;
-        ctx.fill();
-
-        // Glow effect
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size * 2, 0, Math.PI * 2);
-        ctx.fillStyle = this.color.replace(')', ', 0.3)').replace('rgb', 'rgba');
-        ctx.fill();
-      }
-    }
-
-    function spawnParticle(fromModule, toModule, color) {
-      const fromEl = document.querySelector(`[data-module="${fromModule}"] .box-outline`);
-      const toEl = document.querySelector(`[data-module="${toModule}"] .box-outline`);
-
-      if (!fromEl || !toEl) return;
-
-      const svg = document.getElementById('flowchart');
-      const svgRect = svg.getBoundingClientRect();
-      const viewBox = svg.viewBox.baseVal;
-
-      const fromRect = fromEl.getBoundingClientRect();
-      const toRect = toEl.getBoundingClientRect();
-
-      const scaleX = svgRect.width / viewBox.width;
-      const scaleY = svgRect.height / viewBox.height;
-
-      const startX = fromRect.left + fromRect.width / 2;
-      const startY = fromRect.top + fromRect.height / 2;
-      const endX = toRect.left + toRect.width / 2;
-      const endY = toRect.top + toRect.height / 2;
-
-      particles.push(new DataParticle(startX, startY, endX, endY, color));
-      lastActivityTime = Date.now();
-    }
-
-    function spawnAmbientParticles() {
-      // Spawn ambient particles along main paths when idle
-      const timeSinceActivity = Date.now() - lastActivityTime;
-      if (timeSinceActivity > 2000 && particles.length < 15) {
-        const paths = [
-          { from: 'Memory', to: 'Dreamer', color: 'rgb(59, 130, 246)' },
-          { from: 'Dreamer', to: 'Seeker', color: 'rgb(168, 85, 247)' },
-          { from: 'Seeker', to: 'AGIRunner', color: 'rgb(59, 130, 246)' },
-          { from: 'AGIRunner', to: 'OutcomeDispatcher', color: 'rgb(245, 158, 11)' },
-          { from: 'OutcomeDispatcher', to: 'GraphitiLayer', color: 'rgb(6, 182, 212)' },
-          { from: 'LearningSubstrate', to: 'Omega', color: 'rgb(129, 140, 248)' }
-        ];
-
-        const randomPath = paths[Math.floor(Math.random() * paths.length)];
-        spawnParticle(randomPath.from, randomPath.to, randomPath.color);
-      }
-    }
-
-    function animate() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      particles = particles.filter(p => {
-        const alive = p.update();
-        if (alive) p.draw(ctx);
-        return alive;
-      });
-
-      // Mobile: reduce particle spawning
-      const isMobile = window.innerWidth < 768;
-      if (!isMobile || Math.random() > 0.5) {
-        spawnAmbientParticles();
-      }
-
-      requestAnimationFrame(animate);
-    }
-
-    animate();
-
-    // Spawn particles on events
-    function onSystemEvent(eventType, data) {
-      switch(eventType) {
-        case 'BELIEF_CREATED':
-          spawnParticle('Dreamer', 'Memory', 'rgb(168, 85, 247)');
-          break;
-        case 'DESIRE_CREATED':
-          spawnParticle('Dreamer', 'Seeker', 'rgb(236, 72, 153)');
-          break;
-        case 'DREAM_CYCLE':
-          spawnParticle('Memory', 'Dreamer', 'rgb(59, 130, 246)');
-          spawnParticle('Dreamer', 'Memory', 'rgb(168, 85, 247)');
-          break;
-        case 'AGI_CYCLE':
-          spawnParticle('Seeker', 'AGIRunner', 'rgb(245, 158, 11)');
-          spawnParticle('AGIRunner', 'LearningSubstrate', 'rgb(245, 158, 11)');
-          break;
-      }
-    }
 
     // ========================================================================
     // SELECTION & HIGHLIGHTING
@@ -1395,6 +1022,7 @@
     function selectModule(name) {
       selectedModule = name;
 
+      // Highlight component boxes
       document.querySelectorAll('.component-box').forEach(box => {
         box.classList.remove('selected');
         if (box.dataset.module === name) {
@@ -1402,6 +1030,7 @@
         }
       });
 
+      // Highlight connected flows
       const connected = FLOW_CONNECTIONS[name] || [];
       document.querySelectorAll('.flow-line').forEach(line => {
         const from = line.dataset.from;
@@ -1415,6 +1044,7 @@
         }
       });
 
+      // Highlight sidebar card
       document.querySelectorAll('.loop-card').forEach(card => {
         card.classList.remove('selected');
         if (card.dataset.module === name) {
@@ -1422,7 +1052,8 @@
         }
       });
 
-      const info = LOOP_INFO[name] || { name, description: 'Component of BYRD system.' };
+      // Show detail panel
+      const info = LOOP_INFO[name] || { name, description: 'Component of BYRD Omega system.' };
 
       document.getElementById('detail-name').textContent = info.name || name;
       document.getElementById('detail-desc').textContent = info.description;
@@ -1435,13 +1066,14 @@
         statsHtml += `<span class="text-green-400">Success:</span> ${info.successMetric}`;
       }
       if (info.plateauWarning && info.plateauWarning !== 'N/A') {
-        statsHtml += ` | <span class="text-yellow-400">Warning:</span> ${info.plateauWarning}`;
+        statsHtml += ` &nbsp;|&nbsp; <span class="text-yellow-400">Warning:</span> ${info.plateauWarning}`;
       }
       document.getElementById('detail-stats').innerHTML = statsHtml;
 
+      // Show metric bar for loops
       let metricHtml = '';
       if (['SelfCompiler', 'MemoryReasoner', 'GoalEvolver', 'DreamingMachine', 'IntegrationMind'].includes(name)) {
-        const value = Math.random() * 70 + 30;
+        const value = Math.random() * 70 + 30; // Simulated for now
         metricHtml = `
           <div class="text-xs text-slate-400 mb-1">Loop Health</div>
           <div class="metric-bar">
@@ -1452,12 +1084,6 @@
       document.getElementById('detail-metric').innerHTML = metricHtml;
 
       document.getElementById('selected-detail').classList.remove('hidden');
-
-      // Spawn particles to show connections
-      const connections = FLOW_CONNECTIONS[name] || [];
-      connections.slice(0, 3).forEach((target, i) => {
-        setTimeout(() => spawnParticle(name, target, info.color), i * 200);
-      });
     }
 
     function deselectModule() {
@@ -1492,9 +1118,10 @@
     async function fetchStatus() {
       try {
         const response = await fetch(`${API_BASE}/api/status`);
-        if (!response.ok) throw new Error('Failed to fetch');
+        if (!response.ok) throw new Error('Failed to fetch status');
         return await response.json();
       } catch (e) {
+        console.error('Status fetch error:', e);
         return null;
       }
     }
@@ -1502,9 +1129,10 @@
     async function fetchOmegaMetrics() {
       try {
         const response = await fetch(`${API_BASE}/api/omega/metrics`);
-        if (!response.ok) throw new Error('Failed to fetch');
+        if (!response.ok) throw new Error('Failed to fetch omega metrics');
         return await response.json();
       } catch (e) {
+        console.error('Omega metrics fetch error:', e);
         return null;
       }
     }
@@ -1512,58 +1140,44 @@
     function updateModeIndicator(mode) {
       const modeEl = document.getElementById('current-mode');
       const modeColors = {
-        'AWAKE': { bg: 'bg-violet-400', text: 'text-violet-300', glow: '#a78bfa' },
-        'DREAMING': { bg: 'bg-amber-400', text: 'text-amber-300', glow: '#fbbf24' },
-        'EVOLVING': { bg: 'bg-green-400', text: 'text-green-300', glow: '#22c55e' },
-        'COMPILING': { bg: 'bg-rose-400', text: 'text-rose-300', glow: '#f43f5e' },
-        'disabled': { bg: 'bg-slate-400', text: 'text-slate-300', glow: '#64748b' }
+        'AWAKE': { bg: 'bg-violet-400', border: 'border-violet-500/30', text: 'text-violet-300' },
+        'DREAMING': { bg: 'bg-amber-400', border: 'border-amber-500/30', text: 'text-amber-300' },
+        'EVOLVING': { bg: 'bg-green-400', border: 'border-green-500/30', text: 'text-green-300' },
+        'COMPILING': { bg: 'bg-rose-400', border: 'border-rose-500/30', text: 'text-rose-300' },
+        'disabled': { bg: 'bg-slate-400', border: 'border-slate-500/30', text: 'text-slate-300' },
+        'error': { bg: 'bg-red-400', border: 'border-red-500/30', text: 'text-red-300' }
       };
 
       const colors = modeColors[mode?.toUpperCase()] || modeColors['disabled'];
       const displayMode = mode?.toUpperCase() || 'DISABLED';
 
       modeEl.innerHTML = `
-        <span class="w-2 h-2 rounded-full ${colors.bg} animate-pulse" style="box-shadow: 0 0 10px ${colors.glow};"></span>
-        <span class="${colors.text} text-xs md:text-sm font-medium mono">${displayMode}</span>
+        <span class="w-2 h-2 rounded-full ${colors.bg} animate-pulse"></span>
+        <span class="${colors.text} text-sm font-medium">${displayMode}</span>
       `;
+      modeEl.className = `flex items-center gap-2 px-3 py-1.5 rounded-lg bg-opacity-20 ${colors.border}`;
 
+      // Update mode transition diagram
       ['awake', 'dreaming', 'evolving', 'compiling'].forEach(m => {
         const modeRect = document.getElementById(`mode-${m}`);
         if (modeRect) {
           modeRect.classList.toggle('active', m === mode?.toLowerCase());
-          if (m === mode?.toLowerCase()) {
-            modeRect.setAttribute('fill', modeColors[mode.toUpperCase()].glow.replace('#', 'rgba(').slice(0, -1) + ', 0.3)');
-          }
         }
       });
     }
 
     function renderUI(statusData, omegaData) {
-      // Infrastructure list
-      const infraList = document.getElementById('infra-list');
-      const infraComponents = ['Memory', 'Kernel', 'DualInstanceManager', 'SelfModel'];
-      infraList.innerHTML = infraComponents.map(name => {
-        const info = LOOP_INFO[name];
-        return `
-          <div class="loop-card py-2" data-module="${name}" onclick="selectModule('${name}')">
-            <div class="flex items-center justify-between">
-              <span class="font-medium text-xs" style="color: ${info.color}">${info.name}</span>
-              <span class="w-2 h-2 rounded-full bg-green-500" style="box-shadow: 0 0 4px #22c55e;"></span>
-            </div>
-          </div>
-        `;
-      }).join('');
-
       // Core Components list
       const coreList = document.getElementById('core-list');
-      const coreComponents = ['Dreamer', 'Seeker', 'Actor', 'Coder', 'HybridVoice', 'SelfModifier'];
+      const coreComponents = ['Dreamer', 'Seeker', 'Actor', 'Coder', 'Voice'];
+
       coreList.innerHTML = coreComponents.map(name => {
         const info = LOOP_INFO[name];
         return `
           <div class="loop-card py-2" data-module="${name}" onclick="selectModule('${name}')">
             <div class="flex items-center justify-between">
               <span class="font-medium text-xs" style="color: ${info.color}">${info.name}</span>
-              <span class="w-2 h-2 rounded-full bg-green-500" style="box-shadow: 0 0 4px #22c55e;"></span>
+              <span class="w-2 h-2 rounded-full bg-green-500"></span>
             </div>
           </div>
         `;
@@ -1571,44 +1185,49 @@
 
       // AGI Execution Engine list
       const agiList = document.getElementById('agi-list');
-      const agiComponents = ['AGIRunner', 'OutcomeDispatcher', 'GraphitiLayer', 'LearningSubstrate', 'CapabilityEvaluator'];
+      const agiComponents = ['AGIRunner', 'DesireClassifier', 'LearningSubstrate', 'CapabilityEvaluator', 'ComputeIntrospector'];
+
       agiList.innerHTML = agiComponents.map(name => {
         const info = LOOP_INFO[name];
         return `
           <div class="loop-card py-2" data-module="${name}" onclick="selectModule('${name}')">
             <div class="flex items-center justify-between">
               <span class="font-medium text-xs" style="color: ${info.color}">${info.name}</span>
-              <span class="w-2 h-2 rounded-full bg-green-500" style="box-shadow: 0 0 4px #22c55e;"></span>
+              <span class="w-2 h-2 rounded-full bg-green-500"></span>
             </div>
           </div>
         `;
       }).join('');
 
-      // Loops list
+      // Option B Loops list
       const loopsList = document.getElementById('loops-list');
       const loops = ['MemoryReasoner', 'SelfCompiler', 'GoalEvolver', 'DreamingMachine', 'IntegrationMind'];
+
       loopsList.innerHTML = loops.map(name => {
         const info = LOOP_INFO[name];
+        // Get loop health from Omega data if available
         const loopData = omegaData?.loops?.[name] || {};
-        const isHealthy = loopData.is_healthy !== false;
+        const isHealthy = loopData.is_healthy !== false; // Default to healthy if no data
+
         return `
           <div class="loop-card py-2" data-module="${name}" onclick="selectModule('${name}')">
             <div class="flex items-center justify-between">
               <span class="font-medium text-xs" style="color: ${info.color}">${info.name}</span>
-              <span class="w-2 h-2 rounded-full ${isHealthy ? 'bg-green-500' : 'bg-red-500'}" style="box-shadow: 0 0 4px ${isHealthy ? '#22c55e' : '#ef4444'};"></span>
+              <span class="w-2 h-2 rounded-full ${isHealthy ? 'bg-green-500' : 'bg-red-500'}"></span>
             </div>
             <div class="text-xs text-slate-600">${info.successMetric}</div>
           </div>
         `;
       }).join('');
 
-      // Metrics panel
+      // Metrics panel - use real Omega data if available
       const metricsPanel = document.getElementById('metrics-panel');
       const improvementRate = omegaData?.growth_rate ?? 0;
       const capabilityScore = omegaData?.capability_score ?? 0;
       const criticalCoupling = omegaData?.critical_coupling ?? 0;
       const totalCycles = omegaData?.total_cycles ?? 0;
 
+      // Format improvement rate as percentage
       const improvementPct = (improvementRate * 100).toFixed(1);
       const capabilityPct = (capabilityScore * 100).toFixed(0);
       const couplingPct = (criticalCoupling * 100).toFixed(0);
@@ -1617,52 +1236,89 @@
         <div>
           <div class="flex justify-between text-xs mb-1">
             <span class="text-slate-400">Improvement Rate</span>
-            <span class="text-violet-400 mono">${improvementPct > 0 ? '+' : ''}${improvementPct}%</span>
+            <span class="text-violet-400">${improvementPct > 0 ? '+' : ''}${improvementPct}%</span>
           </div>
           <div class="metric-bar">
-            <div class="metric-fill" style="width: ${Math.min(100, Math.abs(improvementRate) * 100)}%; background: #a78bfa; box-shadow: 0 0 10px #a78bfa;"></div>
+            <div class="metric-fill" style="width: ${Math.min(100, Math.abs(improvementRate) * 100)}%; background: #a78bfa"></div>
           </div>
         </div>
         <div>
           <div class="flex justify-between text-xs mb-1">
             <span class="text-slate-400">Capability Score</span>
-            <span class="text-green-400 mono">${capabilityPct}%</span>
+            <span class="text-green-400">${capabilityPct}%</span>
           </div>
           <div class="metric-bar">
-            <div class="metric-fill" style="width: ${capabilityPct}%; background: #22c55e; box-shadow: 0 0 10px #22c55e;"></div>
+            <div class="metric-fill" style="width: ${capabilityPct}%; background: #22c55e"></div>
           </div>
         </div>
         <div>
           <div class="flex justify-between text-xs mb-1">
-            <span class="text-slate-400">Goal→Compiler</span>
-            <span class="text-amber-400 mono">r=${(criticalCoupling).toFixed(2)}</span>
+            <span class="text-slate-400">Goal→Compiler Coupling</span>
+            <span class="text-amber-400">r=${(criticalCoupling).toFixed(2)}</span>
           </div>
           <div class="metric-bar">
-            <div class="metric-fill" style="width: ${couplingPct}%; background: #fbbf24; box-shadow: 0 0 10px #fbbf24;"></div>
+            <div class="metric-fill" style="width: ${couplingPct}%; background: #fbbf24"></div>
           </div>
         </div>
         <div>
           <div class="flex justify-between text-xs mb-1">
-            <span class="text-slate-400">Omega Cycles</span>
-            <span class="text-cyan-400 mono">${totalCycles}</span>
+            <span class="text-slate-400">Total Omega Cycles</span>
+            <span class="text-cyan-400">${totalCycles}</span>
           </div>
-          <div class="text-xs text-slate-600">${omegaData?.enabled ? 'Active' : 'Disabled'}</div>
+          <div class="text-xs text-slate-600">${omegaData?.enabled ? 'Active' : 'Disabled'} ${omegaData?.improvement_trajectory ? `(${omegaData.improvement_trajectory})` : ''}</div>
         </div>
       `;
 
+      // Update mode indicator
       if (omegaData) {
         updateModeIndicator(omegaData.mode);
       }
 
-      // Update system status
+      // Update loop health status dots in the SVG
+      loops.forEach(name => {
+        const loopData = omegaData?.loops?.[name] || {};
+        const isHealthy = loopData.is_healthy !== false;
+        const statusDot = document.querySelector(`[data-status="${name}"]`);
+        if (statusDot) {
+          statusDot.setAttribute('fill', isHealthy ? '#22c55e' : '#ef4444');
+        }
+      });
+
+      // Update Omega status dot
+      const omegaDot = document.querySelector('[data-status="Omega"]');
+      if (omegaDot) {
+        omegaDot.setAttribute('fill', omegaData?.enabled ? '#22c55e' : '#64748b');
+      }
+
+      // System status
       const statusEl = document.getElementById('system-status');
       const running = statusData?.running;
-      if (statusEl) {
-        statusEl.innerHTML = `
-          <span class="w-2 h-2 rounded-full ${running ? 'bg-green-500' : 'bg-yellow-500'} animate-pulse" style="box-shadow: 0 0 6px ${running ? '#22c55e' : '#fbbf24'};"></span>
-          <span class="text-slate-400">${running ? `Running (${statusData?.dream_count || 0} dreams)` : 'Stopped'}</span>
-        `;
-      }
+      statusEl.innerHTML = `
+        <span class="w-2 h-2 rounded-full ${running ? 'bg-green-500' : 'bg-yellow-500'} animate-pulse"></span>
+        <span class="text-slate-400">${running ? `Running (${statusData?.dream_count || 0} dreams)` : 'Stopped'}</span>
+      `;
+
+      // Update kill criteria based on Omega trajectory
+      const killCriteria = document.getElementById('kill-criteria');
+      const trajectory = omegaData?.improvement_trajectory || 'unknown';
+      const trajectoryStatus = trajectory === 'improving' ? 'text-green-400' :
+                               trajectory === 'plateau' ? 'text-yellow-400' :
+                               trajectory === 'declining' ? 'text-red-400' : 'text-slate-400';
+
+      killCriteria.innerHTML = `
+        <div class="flex justify-between items-center">
+          <span class="text-slate-400">Zero growth</span>
+          <span class="${trajectoryStatus}">${trajectory === 'declining' ? 'WARNING' : 'OK'} (4 week limit)</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-slate-400">LLM efficiency</span>
+          <span class="${capabilityScore > 0.3 ? 'text-green-400' : 'text-yellow-400'}">${capabilityScore > 0.3 ? 'OK' : 'WARN'} (6 week limit)</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-slate-400">All loops failing</span>
+          <span class="text-green-400">OK (4 week limit)</span>
+        </div>
+      `;
     }
 
     async function refresh() {
@@ -1675,35 +1331,20 @@
     }
 
     // ========================================================================
-    // MOBILE INTERACTIONS
-    // ========================================================================
-    const sidePanel = document.querySelector('.side-panel');
-    if (sidePanel) {
-      const handle = sidePanel.querySelector('.side-panel-handle');
-      if (handle) {
-        handle.addEventListener('click', () => {
-          sidePanel.classList.toggle('expanded');
-        });
-      }
-    }
-
-    // ========================================================================
     // INITIALIZATION
     // ========================================================================
     document.addEventListener('DOMContentLoaded', async () => {
       await refresh();
+
+      // Auto-refresh every 10 seconds for live metrics
       setInterval(refresh, 10000);
 
+      // Keyboard shortcuts
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
           deselectModule();
         }
       });
-
-      // Simulate some initial activity
-      setTimeout(() => onSystemEvent('DREAM_CYCLE'), 1000);
-      setTimeout(() => onSystemEvent('BELIEF_CREATED'), 2500);
-      setTimeout(() => onSystemEvent('AGI_CYCLE'), 4000);
     });
   </script>
 </body>

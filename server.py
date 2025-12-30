@@ -566,6 +566,18 @@ class OmegaMetricsResponse(BaseModel):
 # REST ENDPOINTS
 # =============================================================================
 
+# Import version marker for deployment verification
+from memory import MEMORY_VERSION, Memory
+
+@app.get("/api/version")
+async def get_version():
+    """Get deployed code version for verification."""
+    return {
+        "memory_version": MEMORY_VERSION,
+        "has_create_custom_node": hasattr(Memory, 'create_custom_node'),
+        "has_create_desire": hasattr(Memory, 'create_desire')
+    }
+
 @app.get("/api/status", response_model=StatusResponse)
 async def get_status():
     """Get current BYRD status."""
@@ -2153,6 +2165,152 @@ async def get_crystal(crystal_id: str):
         return crystal
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/orphans")
+async def get_orphans(
+    limit: int = 50,
+    min_content_length: int = 20,
+    include_taxonomy: bool = False
+):
+    """
+    Get orphaned experiences from memory.
+
+    These are isolated Experience nodes with no connections to other nodes.
+    They represent disconnected content that hasn't been integrated into
+    BYRD's knowledge graph.
+
+    Parameters:
+        limit: Maximum number of orphans to return
+        min_content_length: Filter out very short orphans (noise)
+        include_taxonomy: If true, use OrphanTaxonomyClassifier to categorize
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+        orphans = await byrd_instance.memory.get_orphaned_experiences(
+            limit=limit,
+            min_content_length=min_content_length
+        )
+
+        result = {
+            "orphans": orphans,
+            "count": len(orphans),
+            "taxonomy": None
+        }
+
+        # Optionally apply taxonomy classification
+        if include_taxonomy and orphans:
+            try:
+                from orphan_taxonomy import OrphanTaxonomyClassifier
+                classifier = OrphanTaxonomyClassifier()
+                
+                # Classify each orphan
+                classified_nodes = []
+                for orphan in orphans:
+                    orphan_node = await classifier.classify_orphan(orphan)
+                    classified_nodes.append(orphan_node)
+                
+                # Generate report
+                report = classifier.generate_report(
+                    classified_nodes,
+                    total_orphans=len(classified_nodes)
+                )
+                
+                result["taxonomy"] = {
+                    "category_distribution": report.category_distribution,
+                    "feasibility_distribution": report.feasibility_distribution,
+                    "priority_distribution": report.priority_distribution,
+                    "critical_nodes": [
+                        {
+                            "id": node.id,
+                            "content": node.content[:200],
+                            "priority": node.priority.value if node.priority else None,
+                            "recommended_action": node.recommended_action
+                        }
+                        for node in report.critical_nodes
+                    ],
+                    "immediate_actions": report.immediate_actions
+                }
+            except ImportError:
+                # Taxonomy module not available, return raw orphans
+                pass
+            except Exception as e:
+                # Taxonomy failed, return raw orphans
+                print(f"Taxonomy classification failed: {e}")
+
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/orphans/stats")
+async def get_orphan_stats():
+    """
+    Get statistics about orphaned experiences.
+
+    Returns metrics like: total orphans, by type, age distribution,
+    reconciliation attempts, etc.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+        
+        # Get connection statistics
+        conn_stats = await byrd_instance.memory.get_connection_statistics()
+        exp_stats = conn_stats.get("experiences", {})
+        
+        # Get a sample of orphans for type distribution
+        orphans = await byrd_instance.memory.get_orphaned_experiences(limit=500)
+        
+        # Calculate type distribution
+        type_dist = {}
+        age_dist = {"<1hr": 0, "1-24hr": 0, "1-7days": 0, ">7days": 0}
+        
+        from datetime import datetime, timedelta
+        now = datetime.now()
+        
+        for orphan in orphans:
+            # Type distribution
+            otype = orphan.get("type", "unknown")
+            type_dist[otype] = type_dist.get(otype, 0) + 1
+            
+            # Age distribution
+            try:
+                ts = orphan.get("timestamp")
+                if ts:
+                    if isinstance(ts, str):
+                        ts = datetime.fromisoformat(ts.replace('Z', '+00:00'))
+                    age_hours = (now - ts).total_seconds() / 3600
+                    if age_hours < 1:
+                        age_dist["<1hr"] += 1
+                    elif age_hours < 24:
+                        age_dist["1-24hr"] += 1
+                    elif age_hours < 168:  # 7 days
+                        age_dist["1-7days"] += 1
+                    else:
+                        age_dist[">7days"] += 1
+            except Exception:
+                pass
+        
+        return {
+            "total_orphans": exp_stats.get("orphaned", 0),
+            "connected_experiences": exp_stats.get("connected", 0),
+            "orphan_rate": exp_stats.get("orphan_rate", 0.0),
+            "type_distribution": type_dist,
+            "age_distribution": age_dist,
+            "sample_size": len(orphans)
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

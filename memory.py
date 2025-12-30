@@ -8,6 +8,9 @@ BYRD can create experiences, beliefs, desires, and reflections with any type
 value. We do not constrain what categories BYRD can use.
 """
 
+# Version marker for deployment verification
+MEMORY_VERSION = "2025-12-30-fix-v2"
+
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
@@ -3864,11 +3867,11 @@ class Memory:
     # =========================================================================
 
     # Configuration for connection heuristic
-    # BYPASS SOLUTION ACTIVATED: More aggressive settings to resolve orphan bottleneck
+    # DEADLOCK BREAK ACTIVATED: Aggressive settings to resolve 7-cycle orphan bottleneck
     CONNECTION_HEURISTIC_CONFIG = {
-        "similarity_threshold": 0.08,     # Lowered threshold to catch more matches (was 0.3)
-        "max_connections_per_run": 50,    # Increased batch size for faster orphan clearing (was 10)
-        "min_content_length": 10,        # Lowered to include shorter experiences (was 20)
+        "similarity_threshold": 0.05,     # Lowered further to catch more matches (was 0.08)
+        "max_connections_per_run": 200,   # BREAK DEADLOCK: Increased from 50 to prevent bottleneck
+        "min_content_length": 5,          # Lowered to include more nodes (was 10)
         "relationship_type": "SEMANTICALLY_RELATED",
     }
 
