@@ -5,7 +5,7 @@ type: metadata
 ontological_relations: []
 tags: [seeker, pattern-detection, emergence, research, capabilities]
 created_at: 2025-12-23T02:10:00Z
-updated_at: 2025-12-23T03:00:00Z
+updated_at: 2025-12-30T00:00:00Z
 uuid: f3c45d60-3456-6789-abcd-ef0123456789
 ---
 
@@ -249,3 +249,15 @@ These handlers still exist for capability execution but are now invoked through 
 - Max 3 capability installs per day
 - Cooldown resets at midnight
 - `_installs_today` counter tracks usage
+
+## Bug Fixes (2025-12-30)
+
+### Phase 4 Orphan Reconciliation Crash
+- **Issue**: `_extract_batch_themes()` used `re.split()` but `re` was not imported
+- **Error**: `name 're' is not defined`
+- **Fix**: Added `import re` to seeker.py imports
+
+### Umbrella Belief Lookup Failures
+- **Issue**: `_get_or_create_type_belief()` searched for `exp_type` in belief content, but umbrella beliefs don't contain the exact type name
+- **Example**: `"action_outcome" in "I learn from outcomes..."` = False
+- **Fix**: Added explicit `[UMBRELLA:type]` markers to belief content for reliable lookup

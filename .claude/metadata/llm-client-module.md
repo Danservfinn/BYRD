@@ -5,7 +5,7 @@ type: metadata
 ontological_relations: []
 tags: [llm, ollama, openrouter, zai, providers, abstraction]
 created_at: 2025-12-24T00:00:00Z
-updated_at: 2025-12-24T00:00:00Z
+updated_at: 2025-12-30T00:00:00Z
 uuid: a1b2c3d4-5678-90ab-cdef-llmclient0001
 ---
 
@@ -57,3 +57,11 @@ response = await client.generate(prompt, max_tokens=500)
 - `generate(prompt, max_tokens)` - Generate completion
 - `get_provider()` - Return current provider name
 - `is_local()` - Check if using local inference
+
+## Bug Fixes (2025-12-30)
+
+### NoneType Await Error
+- **Issue**: `generate()` used `await self._cache.get(prompt)` but `SemanticCache.get()` is synchronous
+- **Error**: `object NoneType can't be used in 'await' expression` (when cache miss returns None)
+- **Impact**: All coder executions failed with "LLM error"
+- **Fix**: Changed to `self._cache.get(prompt)` (removed erroneous await)
