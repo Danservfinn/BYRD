@@ -2863,8 +2863,8 @@ Write ONLY the inner thought, nothing else:"""
                     action = self._clean_drive_description(raw_action)
                     await self.memory.create_desire(
                         description=f"Remove bottleneck: {action}",
+                        type="acceleration",
                         intensity=0.9,  # High priority
-                        source="acceleration_analysis",
                         intent="acceleration"
                     )
             except Exception as e:
@@ -2895,8 +2895,8 @@ Write ONLY the inner thought, nothing else:"""
                 hypothesis = self._clean_drive_description(raw_hypothesis)
                 await self.memory.create_desire(
                     description=f"Experiment: {hypothesis}",
+                    type="experimentation",
                     intensity=0.7,
-                    source="acceleration_analysis",
                     intent="experimentation"
                 )
             except Exception as e:

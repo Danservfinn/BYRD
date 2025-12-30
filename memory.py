@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
 import json
+import logging
 import re
 import time
 from neo4j import GraphDatabase, AsyncGraphDatabase
@@ -19,6 +20,8 @@ import hashlib
 
 from event_bus import event_bus, Event, EventType
 from quantum_randomness import get_quantum_float
+
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================
@@ -1524,7 +1527,60 @@ class Memory:
         ))
 
         return desire_id
-    
+
+    async def create_custom_node(
+        self,
+        node_type: str,
+        properties: Dict[str, Any],
+        source_ids: Optional[List[str]] = None
+    ) -> str:
+        """
+        Create a custom node of any type with arbitrary properties.
+
+        This enables dynamic ontology expansion - BYRD can create new node types
+        as needed without schema changes.
+
+        Args:
+            node_type: The Neo4j label (e.g., "Insight", "Observation", "Question")
+            properties: Dictionary of properties to set on the node
+            source_ids: Optional list of node IDs to link as sources
+
+        Returns:
+            The generated node ID
+        """
+        # Generate ID from content if present, otherwise from type + timestamp
+        content = properties.get("content", "")
+        node_id = self._generate_id(content or f"{node_type}_{datetime.now().isoformat()}")
+
+        # Build dynamic property string for Cypher
+        prop_keys = list(properties.keys())
+        prop_assignments = ", ".join([f"{k}: ${k}" for k in prop_keys])
+
+        async with self.driver.session() as session:
+            # Create the node with dynamic type
+            cypher = f"""
+                CREATE (n:{node_type} {{
+                    id: $id,
+                    created_at: datetime(),
+                    {prop_assignments}
+                }})
+                RETURN n
+            """
+            params = {"id": node_id, **properties}
+            await session.run(cypher, **params)
+
+            # Link to source nodes if provided
+            if source_ids:
+                await session.run("""
+                    MATCH (n {id: $node_id})
+                    MATCH (s)
+                    WHERE s.id IN $source_ids
+                    CREATE (n)-[:DERIVED_FROM]->(s)
+                """, node_id=node_id, source_ids=source_ids)
+
+        logger.debug("Created custom %s node: %s", node_type, node_id[:16])
+        return node_id
+
     async def get_unfulfilled_desires(
         self,
         type: Optional[str] = None,
