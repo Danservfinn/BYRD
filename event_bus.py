@@ -70,6 +70,8 @@ class EventType(Enum):
     CODER_FAILED = "coder_failed"
     CODER_VALIDATION_FAILED = "coder_validation_failed"
     CODER_BYPASSED = "coder_bypassed"  # Code execution failed, used graph bypass
+    CODER_STEP = "coder_step"  # Individual step/tool usage during coder execution
+    CODER_TOOL_RESULT = "coder_tool_result"  # Result of a tool execution
     SYNTHETIC_ACTION = "synthetic_action"  # Graph-based action created without code execution
 
     # System events
@@ -133,6 +135,19 @@ class EventType(Enum):
     VOICE_CREATED = "voice_created"                  # BYRD generated a unique voice via Voice Design
     VOICE_REDESIGNED = "voice_redesigned"            # BYRD redesigned their voice
     VOICE_ACKNOWLEDGED = "voice_acknowledged"        # BYRD formally acknowledged this voice as their own
+
+    # Voice Chat events (instant voice responses)
+    VOICE_CHAT_STARTED = "voice_chat_started"        # Human initiated voice chat
+    VOICE_CHAT_RESPONSE = "voice_chat_response"      # BYRD responded with voice
+
+    # Observer Message events (BYRD-initiated communication)
+    OBSERVER_MESSAGE = "observer_message"            # BYRD sent a message to observer
+    OBSERVER_MESSAGE_READ = "observer_message_read"  # Human read the message
+
+    # Hybrid Voice Provider events
+    VOICE_PROVIDER_CHANGED = "voice_provider_changed"  # Active provider switched
+    VOICE_HOME_OFFLINE = "voice_home_offline"          # Home Mac went offline
+    VOICE_HOME_ONLINE = "voice_home_online"            # Home Mac came online
 
     # Prediction events (belief validation loop)
     PREDICTION_CREATED = "prediction_created"          # Testable hypothesis from belief

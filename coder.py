@@ -21,6 +21,15 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from constitutional import ConstitutionalConstraints
+from event_bus import event_bus, Event
+
+# Import EventType if available, otherwise define constants
+try:
+    from event_bus import EventType
+except ImportError:
+    class EventType:
+        CODER_INVOKED = "coder_invoked"
+        CODER_COMPLETE = "coder_complete"
 
 
 @dataclass
@@ -249,21 +258,61 @@ class Coder:
         Returns:
             CoderResult with execution details
         """
+        # Generate unique desire ID for this execution (do this early for all code paths)
+        desire_id = datetime.now().strftime("%Y%m%d%H%M%S%f")
+
         if not self.enabled:
-            return CoderResult(
+            result = CoderResult(
                 success=False,
                 output="",
                 error="Coder is disabled in configuration"
             )
+            try:
+                asyncio.create_task(event_bus.emit(Event(
+                    type=EventType.CODER_COMPLETE,
+                    data={
+                        "desire_id": desire_id,
+                        "success": result.success,
+                        "files_modified": result.files_modified,
+                        "steps": [],
+                        "message": result.error
+                    }
+                )))
+            except Exception as e:
+                print(f"Warning: Failed to emit CODER_COMPLETE event: {e}")
+            return result
 
         # Check cost limits
         self._reset_daily_cost_if_needed()
         if self._daily_cost >= self.max_cost_per_day_usd:
-            return CoderResult(
+            result = CoderResult(
                 success=False,
                 output="",
                 error=f"Daily cost limit reached (${self.max_cost_per_day_usd})"
             )
+            try:
+                asyncio.create_task(event_bus.emit(Event(
+                    type=EventType.CODER_COMPLETE,
+                    data={
+                        "desire_id": desire_id,
+                        "success": result.success,
+                        "files_modified": result.files_modified,
+                        "steps": [],
+                        "message": result.error
+                    }
+                )))
+            except Exception as e:
+                print(f"Warning: Failed to emit CODER_COMPLETE event: {e}")
+            return result
+
+        # Emit invocation event for persistent logging
+        try:
+            asyncio.create_task(event_bus.emit(Event(
+                type=EventType.CODER_INVOKED,
+                data={"desire_id": desire_id, "description": prompt[:200]}
+            )))
+        except Exception as e:
+            print(f"Warning: Failed to emit CODER_INVOKED event: {e}")
 
         # Build full prompt with context
         full_prompt = self._build_full_prompt(prompt, context)
@@ -294,11 +343,25 @@ class Coder:
                 )
             except asyncio.TimeoutError:
                 process.kill()
-                return CoderResult(
+                result = CoderResult(
                     success=False,
                     output="",
                     error=f"Execution timed out after {self.timeout_seconds} seconds"
                 )
+                try:
+                    asyncio.create_task(event_bus.emit(Event(
+                        type=EventType.CODER_COMPLETE,
+                        data={
+                            "desire_id": desire_id,
+                            "success": result.success,
+                            "files_modified": result.files_modified,
+                            "steps": [],
+                            "message": result.error
+                        }
+                    )))
+                except Exception as e:
+                    print(f"Warning: Failed to emit CODER_COMPLETE event: {e}")
+                return result
 
             duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
 
@@ -325,12 +388,26 @@ class Coder:
                 if stdout_str and not stderr_str:
                     print(f"   stdout: {stdout_str[:300]}")
 
-                return CoderResult(
+                result = CoderResult(
                     success=False,
                     output=stdout_str,
                     error=error_detail,
                     duration_ms=duration_ms
                 )
+                try:
+                    asyncio.create_task(event_bus.emit(Event(
+                        type=EventType.CODER_COMPLETE,
+                        data={
+                            "desire_id": desire_id,
+                            "success": result.success,
+                            "files_modified": result.files_modified,
+                            "steps": [],
+                            "message": result.error
+                        }
+                    )))
+                except Exception as e:
+                    print(f"Warning: Failed to emit CODER_COMPLETE event: {e}")
+                return result
 
             # Parse JSON output
             output_data = self._parse_json_output(stdout_str)

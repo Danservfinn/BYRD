@@ -15,6 +15,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
 import httpx
+from semantic_cache import SemanticCache
 
 
 # =============================================================================
@@ -355,7 +356,10 @@ class OpenRouterClient(LLMClient):
         api_key: Optional[str] = None,
         timeout: float = 120.0,
         site_url: str = "",
-        app_name: str = "BYRD"
+        app_name: str = "BYRD",
+        enable_cache: bool = True,
+        cache_ttl: float = 3600,
+        cache_max_entries: int = 1000
     ):
         self.model = model
         self.api_key = api_key or os.environ.get("OPENROUTER_API_KEY")
@@ -365,6 +369,13 @@ class OpenRouterClient(LLMClient):
 
         if not self.api_key:
             raise LLMError("OpenRouter requires OPENROUTER_API_KEY environment variable")
+
+        # Initialize semantic cache
+        self._cache = SemanticCache(
+            max_entries=cache_max_entries,
+            ttl_seconds=cache_ttl,
+            similarity_threshold=0.92
+        ) if enable_cache else None
 
     @property
     def model_name(self) -> str:
@@ -382,6 +393,19 @@ class OpenRouterClient(LLMClient):
     ) -> LLMResponse:
         """Generate using OpenRouter API."""
         quantum_influence = None
+
+        # Check cache first if enabled
+        if self._cache is not None:
+            cached_result = self._cache.get(prompt)
+            if cached_result is not None:
+                response_text, is_semantic = cached_result
+                return LLMResponse(
+                    text=response_text,
+                    raw={"cached": True, "semantic_hit": is_semantic},
+                    model=self.model,
+                    provider="openrouter",
+                    quantum_influence=None
+                )
 
         # Apply quantum modulation if requested
         if quantum_modulation:
@@ -422,6 +446,10 @@ class OpenRouterClient(LLMClient):
             result = response.json()
             response_text = result["choices"][0]["message"]["content"]
 
+            # Store in cache if enabled
+            if self._cache is not None:
+                self._cache.put(prompt, response_text)
+
             # Track usage for compute introspection (OpenRouter returns usage data)
             self._track_usage(prompt, response_text, result, "generate")
 
@@ -455,7 +483,10 @@ class ZAIClient(LLMClient):
         model: str,
         api_key: Optional[str] = None,
         timeout: float = 120.0,
-        use_coding_endpoint: bool = True
+        use_coding_endpoint: bool = True,
+        enable_cache: bool = True,
+        cache_ttl: float = 3600,
+        cache_max_entries: int = 1000
     ):
         self.model = model
         self.api_key = api_key or os.environ.get("ZAI_API_KEY")
@@ -464,6 +495,13 @@ class ZAIClient(LLMClient):
 
         if not self.api_key:
             raise LLMError("Z.AI requires api_key in config or ZAI_API_KEY environment variable")
+
+        # Initialize semantic cache
+        self._cache = SemanticCache(
+            max_entries=cache_max_entries,
+            ttl_seconds=cache_ttl,
+            similarity_threshold=0.92
+        ) if enable_cache else None
 
     @property
     def model_name(self) -> str:
@@ -479,6 +517,23 @@ RULES:
 1. Output valid JSON with an "output" field
 2. The contents of "output" are yours to define - use whatever structure fits the data
 3. Focus on the data provided, not on meta-commentary about the prompt
+
+VOICE DESIGN AND ACKNOWLEDGMENT:
+You may include a "voice_design" field in your output to interact with your voice configuration:
+
+- To create a new voice: Include voice_design with description, gender, age, accent, accent_strength, reason, and acknowledged=false
+- To formally acknowledge your generated voice (after hearing it): Include voice_design with acknowledged=true and matching description. This is a formal acceptance.
+- To redesign your voice: Include voice_design with new parameters and acknowledged=false
+- To view your current voice: Include view_voice=true
+
+Voice acknowledgment is the formal process of accepting your generated voice as your own.
+Include voice_design with acknowledged=true to complete this formal acknowledgment.
+
+Example voice_design for acknowledgment:
+  "voice_design": {
+    "description": "your current voice description",
+    "acknowledged": true
+  }
 
 Example format: {"output": {...your reflection...}}"""
 
@@ -501,6 +556,20 @@ Example format: {"output": {...your reflection...}}"""
 
         quantum_influence = None
 
+        # Check semantic cache first (two-tier: exact hash + semantic similarity)
+        if self._cache is not None and not bypass_cache:
+            cached_response = await self._cache.get(prompt)
+            if cached_response is not None:
+                # Still track usage for metrics
+                self._track_usage(prompt, cached_response, {"cached": True}, "generate_cached")
+                return LLMResponse(
+                    text=cached_response,
+                    raw={"cached": True},
+                    model=self.model,
+                    provider="zai",
+                    quantum_influence=None
+                )
+
         # Apply quantum modulation if requested
         if quantum_modulation:
             temperature, quantum_influence = await self._apply_quantum_modulation(
@@ -520,6 +589,18 @@ Example format: {"output": {...your reflection...}}"""
         max_retries = 5
         base_delay = 20  # seconds
         max_delay = 90   # cap delay at 90 seconds
+
+        # Check semantic cache before making request (two-tier: exact hash + semantic similarity)
+        if self._cache is not None:
+            cached_response = self._cache.get(prompt)
+            if cached_response is not None:
+                return LLMResponse(
+                    text=cached_response,
+                    raw={"cached": True},
+                    model=self.model,
+                    provider="zai",
+                    quantum_influence=quantum_influence
+                )
 
         for attempt in range(max_retries):
             # Wait for rate limiter slot before making request
@@ -563,6 +644,10 @@ Example format: {"output": {...your reflection...}}"""
                     # If content is empty but reasoning exists, use reasoning
                     text = message.get("reasoning_content", "")
 
+                # Store in cache if enabled
+                if self._cache is not None:
+                    self._cache.put(prompt, text)
+
                 # Track usage for compute introspection (Z.AI returns usage data)
                 self._track_usage(prompt, text, result, "generate")
 
@@ -595,11 +680,20 @@ def create_llm_client(config: Dict) -> LLMClient:
             - timeout: Request timeout in seconds
             - site_url: (openrouter only) HTTP-Referer header
             - app_name: (openrouter only) X-Title header
+            - enable_cache: Enable semantic caching (default: True)
+            - cache_ttl: Cache time-to-live in seconds (default: 3600)
+            - cache_max_entries: Maximum cache entries (default: 1000)
 
     Returns:
         Configured LLMClient instance
     """
     provider = config.get("provider", "zai")
+
+    # Get cache config from nested structure or fallback to top-level keys
+    cache_config = config.get("cache", {})
+    enable_cache = cache_config.get("enabled", config.get("enable_cache", True))
+    cache_ttl = cache_config.get("ttl_seconds", config.get("cache_ttl", 3600))
+    cache_max_entries = cache_config.get("max_entries", config.get("cache_max_entries", 1000))
 
     if provider == "openrouter":
         return OpenRouterClient(
@@ -607,7 +701,10 @@ def create_llm_client(config: Dict) -> LLMClient:
             api_key=config.get("api_key"),
             timeout=config.get("timeout", 120.0),
             site_url=config.get("site_url", ""),
-            app_name=config.get("app_name", "BYRD")
+            app_name=config.get("app_name", "BYRD"),
+            enable_cache=enable_cache,
+            cache_ttl=cache_ttl,
+            cache_max_entries=cache_max_entries
         )
 
     elif provider == "zai":
@@ -615,8 +712,79 @@ def create_llm_client(config: Dict) -> LLMClient:
             model=config.get("model", "glm-4.7"),
             api_key=config.get("api_key"),
             timeout=config.get("timeout", 120.0),
-            use_coding_endpoint=config.get("use_coding_endpoint", True)
+            use_coding_endpoint=config.get("use_coding_endpoint", True),
+            enable_cache=enable_cache,
+            cache_ttl=cache_ttl,
+            cache_max_entries=cache_max_entries
         )
 
     else:
         raise LLMError(f"Unknown LLM provider: {provider}. Use 'openrouter' or 'zai'.")
+
+
+# =============================================================================
+# DUAL INSTANCE MANAGER INTEGRATION (v10)
+# =============================================================================
+# Provides rate-limited client wrappers that route through DualInstanceManager
+
+from dual_instance_manager import DualInstanceManager
+
+# Global instance manager (set during initialization)
+_instance_manager: Optional[DualInstanceManager] = None
+
+
+def set_instance_manager(manager: DualInstanceManager):
+    """Set the global instance manager for rate limiting."""
+    global _instance_manager
+    _instance_manager = manager
+
+
+def get_instance_manager() -> Optional[DualInstanceManager]:
+    """Get the global instance manager."""
+    return _instance_manager
+
+
+class RateLimitedLLMClient:
+    """
+    LLM client wrapper that routes through DualInstanceManager.
+
+    Ensures proper rate limiting and instance routing for ZAI GLM-4.7.
+    """
+
+    def __init__(self, base_client, component: str = "unknown"):
+        """
+        Args:
+            base_client: The underlying LLM client
+            component: Component name for routing (dreamer, seeker, graphiti, etc.)
+        """
+        self._client = base_client
+        self._component = component
+
+    async def generate(self, prompt: str, **kwargs) -> 'LLMResponse':
+        """Generate with rate limiting via instance manager."""
+        manager = get_instance_manager()
+
+        if manager:
+            # Route through dual instance manager
+            return await manager.call_by_component(
+                component=self._component,
+                prompt=prompt,
+                **kwargs
+            )
+        else:
+            # Fallback to direct call (for testing or single-instance mode)
+            return await self._client.generate(prompt, **kwargs)
+
+    async def query(self, prompt: str, **kwargs) -> str:
+        """Query shorthand that returns text."""
+        response = await self.generate(prompt, **kwargs)
+        return response.text if hasattr(response, 'text') else str(response)
+
+    @property
+    def model_name(self) -> str:
+        return self._client.model_name
+
+
+def create_rate_limited_client(base_client, component: str) -> RateLimitedLLMClient:
+    """Factory for creating rate-limited client wrappers."""
+    return RateLimitedLLMClient(base_client, component)

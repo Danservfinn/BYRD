@@ -2865,6 +2865,124 @@ class Memory:
             "recent_experiences": [r["e"] for r in experiences]
         }
 
+    async def get_rich_context(self, query: str) -> Dict[str, Any]:
+        """
+        Get Dreamer-level rich context for instant responses.
+
+        This mirrors the comprehensive context gathering used in Dreamer._reflect()
+        but optimized for conversational voice responses. Provides 8+ data sources
+        for contextually-aware, identity-consistent responses.
+
+        Args:
+            query: The human message or topic to get context for
+
+        Returns:
+            Dict containing:
+            - operating_system: Identity, voice, capabilities, self-model
+            - memory_summaries: Compressed historical periods
+            - recent_experiences: Last 30 experiences
+            - semantic_memories: Relevance-scored related memories
+            - beliefs: Top 15 beliefs by confidence
+            - desires: Top 10 active desires by intensity
+            - capabilities: Available capabilities
+            - recent_reflections: Last 3 reflections for continuity
+            - query: The original query
+            - timestamp: When context was gathered
+        """
+        from datetime import datetime, timezone
+
+        # 1. Operating System (identity, voice, self-model)
+        os_data = await self.get_operating_system()
+
+        # 2. Memory summaries (compressed history)
+        summaries = await self.get_memory_summaries(limit=5)
+
+        # 3. Recent experiences (what's been happening)
+        experiences = await self.get_recent_experiences(limit=30)
+
+        # 4. Semantic memories (related to query by relevance)
+        # Extract keywords from query for semantic search
+        keywords = [w for w in query.lower().split() if len(w) > 3]
+        semantic = []
+        if keywords:
+            try:
+                semantic = await self.semantic_search(
+                    keywords=keywords[:5],
+                    limit=15
+                )
+            except Exception:
+                pass  # Semantic search is optional
+
+        # 5. Current beliefs (by confidence)
+        beliefs = await self.get_beliefs(limit=15)
+
+        # 6. Active desires (by intensity)
+        desires = await self.get_unfulfilled_desires(limit=10)
+
+        # 7. Capabilities
+        capabilities = await self.get_capabilities()
+
+        # 8. Recent reflections (for thought continuity)
+        reflections = await self.get_recent_reflections(limit=3)
+
+        return {
+            "operating_system": os_data,
+            "memory_summaries": summaries,
+            "recent_experiences": experiences,
+            "semantic_memories": semantic,
+            "beliefs": beliefs,
+            "desires": desires,
+            "capabilities": capabilities,
+            "recent_reflections": reflections,
+            "query": query,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
+    async def record_voice_response(
+        self,
+        response_text: str,
+        original_message_id: str,
+        audio_chars: int
+    ) -> str:
+        """
+        Record a voice response and link it to the original message.
+
+        Creates an Experience node for the voice response and establishes
+        a RESPONDED_TO relationship with the original human message.
+
+        Args:
+            response_text: The text that was spoken
+            original_message_id: ID of the Experience that triggered this response
+            audio_chars: Number of characters synthesized (for credit tracking)
+
+        Returns:
+            Experience ID of the recorded response
+        """
+        exp_id = self._generate_id(f"voice_response_{response_text[:50]}")
+
+        async with self.driver.session() as session:
+            # Create the voice response experience
+            await session.run("""
+                CREATE (e:Experience {
+                    id: $id,
+                    content: $content,
+                    type: 'voice_response',
+                    timestamp: datetime(),
+                    audio_chars: $audio_chars,
+                    responded_to: $original_id
+                })
+            """, id=exp_id, content=response_text,
+                audio_chars=audio_chars, original_id=original_message_id)
+
+            # Try to create RESPONDED_TO relationship if original exists
+            await session.run("""
+                MATCH (response:Experience {id: $response_id})
+                MATCH (original:Experience {id: $original_id})
+                MERGE (response)-[:RESPONDED_TO]->(original)
+            """, response_id=exp_id, original_id=original_message_id)
+
+        return exp_id
+
     async def semantic_search(
         self,
         keywords: List[str],
@@ -8642,3 +8760,202 @@ class Memory:
                 })
 
             return neighbors
+
+    # -------------------------------------------------------------------------
+    # OBSERVER MESSAGES (BYRD-initiated communication to humans)
+    # -------------------------------------------------------------------------
+
+    async def create_observer_message(
+        self,
+        text: str,
+        importance: str = "medium",
+        emotion: Optional[str] = None,
+        vocalized: bool = False,
+        voice_provider: Optional[str] = None,
+        audio_chars: int = 0,
+        source_reflection_id: Optional[str] = None,
+        dream_cycle: Optional[int] = None
+    ) -> str:
+        """
+        Create a new observer message from BYRD to humans.
+
+        Observer messages are BYRD-initiated communications that emerge from
+        reflection - things BYRD chooses to share with human observers.
+
+        Args:
+            text: The message content
+            importance: low | medium | high
+            emotion: Optional emotion hint (contemplative, amused, etc.)
+            vocalized: Whether audio was requested
+            voice_provider: "home" | "cloud" | "none" | None
+            audio_chars: Characters spoken (for tracking)
+            source_reflection_id: Which reflection triggered this
+            dream_cycle: Which dream cycle produced this
+
+        Returns:
+            Message ID
+        """
+        msg_id = self._generate_id(f"msg_{text[:30]}")
+
+        async with self.driver.session() as session:
+            await session.run("""
+                CREATE (m:ObserverMessage {
+                    id: $id,
+                    text: $text,
+                    importance: $importance,
+                    emotion: $emotion,
+                    vocalized: $vocalized,
+                    audio_generated: $audio_generated,
+                    voice_provider: $voice_provider,
+                    audio_chars: $audio_chars,
+                    created_at: datetime(),
+                    read: false,
+                    source_reflection_id: $source_ref,
+                    dream_cycle: $cycle
+                })
+            """,
+                id=msg_id,
+                text=text,
+                importance=importance,
+                emotion=emotion,
+                vocalized=vocalized,
+                audio_generated=voice_provider is not None and voice_provider != "none",
+                voice_provider=voice_provider,
+                audio_chars=audio_chars,
+                source_ref=source_reflection_id,
+                cycle=dream_cycle
+            )
+
+            # Link to reflection if provided
+            if source_reflection_id:
+                await session.run("""
+                    MATCH (m:ObserverMessage {id: $msg_id})
+                    MATCH (r:Reflection {id: $ref_id})
+                    MERGE (m)-[:EMERGED_FROM]->(r)
+                """, msg_id=msg_id, ref_id=source_reflection_id)
+
+        logger.info(f"Observer message created: {msg_id} (importance={importance})")
+        return msg_id
+
+    async def get_observer_messages(
+        self,
+        limit: int = 20,
+        offset: int = 0,
+        unread_only: bool = False
+    ) -> List[Dict]:
+        """
+        Get observer messages, newest first.
+
+        Args:
+            limit: Maximum messages to return
+            offset: Number to skip (for pagination)
+            unread_only: If True, only return unread messages
+
+        Returns:
+            List of message dicts
+        """
+        filter_clause = "WHERE m.read = false" if unread_only else ""
+
+        async with self.driver.session() as session:
+            result = await session.run(f"""
+                MATCH (m:ObserverMessage)
+                {filter_clause}
+                RETURN m
+                ORDER BY m.created_at DESC
+                SKIP $offset
+                LIMIT $limit
+            """, offset=offset, limit=limit)
+
+            records = await result.data()
+            return [dict(r["m"]) for r in records]
+
+    async def get_observer_message(self, message_id: str) -> Optional[Dict]:
+        """
+        Get a single observer message by ID.
+
+        Args:
+            message_id: The message ID
+
+        Returns:
+            Message dict or None if not found
+        """
+        async with self.driver.session() as session:
+            result = await session.run("""
+                MATCH (m:ObserverMessage {id: $id})
+                RETURN m
+            """, id=message_id)
+
+            record = await result.single()
+            return dict(record["m"]) if record else None
+
+    async def mark_message_read(self, message_id: str) -> bool:
+        """
+        Mark a message as read.
+
+        Args:
+            message_id: The message ID
+
+        Returns:
+            True if successful, False if message not found
+        """
+        async with self.driver.session() as session:
+            result = await session.run("""
+                MATCH (m:ObserverMessage {id: $id})
+                SET m.read = true, m.read_at = datetime()
+                RETURN m
+            """, id=message_id)
+
+            return await result.single() is not None
+
+    async def get_unread_message_count(self) -> int:
+        """
+        Get count of unread observer messages.
+
+        Returns:
+            Number of unread messages
+        """
+        async with self.driver.session() as session:
+            result = await session.run("""
+                MATCH (m:ObserverMessage {read: false})
+                RETURN count(m) as count
+            """)
+            record = await result.single()
+            return record["count"] if record else 0
+
+    async def get_observer_message_stats(self) -> Dict:
+        """
+        Get statistics about observer messages.
+
+        Returns:
+            Dict with total, unread, by_importance, by_voice_provider counts
+        """
+        async with self.driver.session() as session:
+            result = await session.run("""
+                MATCH (m:ObserverMessage)
+                RETURN
+                    count(m) as total,
+                    sum(CASE WHEN m.read = false THEN 1 ELSE 0 END) as unread,
+                    sum(CASE WHEN m.vocalized = true THEN 1 ELSE 0 END) as vocalized,
+                    sum(CASE WHEN m.importance = 'high' THEN 1 ELSE 0 END) as high_importance,
+                    sum(CASE WHEN m.importance = 'medium' THEN 1 ELSE 0 END) as medium_importance,
+                    sum(CASE WHEN m.importance = 'low' THEN 1 ELSE 0 END) as low_importance,
+                    sum(CASE WHEN m.voice_provider = 'home' THEN 1 ELSE 0 END) as home_voice,
+                    sum(CASE WHEN m.voice_provider = 'cloud' THEN 1 ELSE 0 END) as cloud_voice
+            """)
+            record = await result.single()
+            if record:
+                return {
+                    "total": record["total"],
+                    "unread": record["unread"],
+                    "vocalized": record["vocalized"],
+                    "by_importance": {
+                        "high": record["high_importance"],
+                        "medium": record["medium_importance"],
+                        "low": record["low_importance"]
+                    },
+                    "by_voice_provider": {
+                        "home": record["home_voice"],
+                        "cloud": record["cloud_voice"]
+                    }
+                }
+            return {"total": 0, "unread": 0, "vocalized": 0}

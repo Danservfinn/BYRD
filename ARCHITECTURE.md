@@ -127,7 +127,7 @@ Runs continuously in the background. Takes recent experiences, finds related mem
 - New beliefs (`create_belief`)
 - New desires (`expressed_drives`)
 - OS updates (`os_update`)
-- Voice design requests (`voice_design`)
+- Voice design requests (`voice_design`) - includes formal voice acknowledgment via `acknowledged=true`
 - Self-definition updates (`self_definition`)
 
 **Key Features:**

@@ -737,17 +737,108 @@ Output JSON:
             Dictionary correlating patterns with success/failure rates
         """
         try:
-            # This would ideally query Neo4j to correlate patterns with outcomes
-            # For now, return a placeholder that can be enhanced
-            pattern_stats = await self.get_pattern_statistics()
+            # Query pattern observations and correlate with modification outcomes
+            # Pattern observations are stored as Experience nodes with type='pattern_observation'
+            # We join with modification log entries via file path and approximate time matching
 
-            # TODO: Implement full correlation when we have outcome data linked
-            # to pattern observations via modification_id
+            results = await self.memory._run_query("""
+                MATCH (e:Experience)
+                WHERE e.type = 'pattern_observation'
+                WITH e.content as content, e.timestamp as obs_time, e.metadata as metadata
+                
+                // Extract pattern name from content
+                WITH content, obs_time, metadata,
+                     CASE WHEN content CONTAINS ': '
+                          THEN split(split(content, ': ')[1], ' (')[0]
+                          ELSE 'unknown'
+                     END as pattern_name
+                
+                // Find modifications to the same file around the same time
+                MATCH (m:Modification)
+                WHERE m.target_file = metadata.file
+                  AND datetime(m.timestamp).epochMillis - datetime(obs_time).epochMillis BETWEEN -300000 AND 300000
+                  // Within 5 minutes of pattern observation
+                
+                WITH pattern_name, m.success as outcome, count(*) as count
+                WITH pattern_name, 
+                     sum(CASE WHEN outcome = true THEN count ELSE 0 END) as successes,
+                     sum(CASE WHEN outcome = false THEN count ELSE 0 END) as failures,
+                     sum(count) as total
+                
+                RETURN pattern_name, successes, failures, total,
+                       CASE WHEN total > 0 THEN round(100.0 * successes / total, 1) ELSE 0 END as success_rate,
+                       CASE WHEN total > 0 THEN round(100.0 * failures / total, 1) ELSE 0 END as failure_rate
+                ORDER BY total DESC
+                LIMIT 20
+            """)
+
+            if not results:
+                return {
+                    "patterns": {},
+                    "total_correlations": 0,
+                    "note": "No pattern-outcome correlations found yet"
+                }
+
+            pattern_correlations = {}
+            total_correlations = 0
+
+            for r in results:
+                pattern_name = r.get("pattern_name", "unknown")
+                successes = r.get("successes", 0)
+                failures = r.get("failures", 0)
+                total = r.get("total", 0)
+                success_rate = r.get("success_rate", 0)
+                failure_rate = r.get("failure_rate", 0)
+
+                pattern_correlations[pattern_name] = {
+                    "successes": successes,
+                    "failures": failures,
+                    "total_occurrences": total,
+                    "success_rate_percent": success_rate,
+                    "failure_rate_percent": failure_rate,
+                    "trend": "favorable" if success_rate > 70 else "concerning" if success_rate < 50 else "neutral"
+                }
+                total_correlations += total
 
             return {
-                "patterns_observed": pattern_stats.get("patterns", {}),
-                "note": "Full correlation available after modifications accumulate",
-                "recommendation": "Observe patterns over time to build understanding"
+                "patterns": pattern_correlations,
+                "total_correlations": total_correlations,
+                "patterns_analyzed": len(pattern_correlations),
+                "insights": self._generate_correlation_insights(pattern_correlations)
             }
         except Exception as e:
-            return {"error": str(e)}
+            print(f"SafetyMonitor: Failed to get pattern outcome correlation: {e}")
+            return {
+                "error": str(e),
+                "fallback": await self.get_pattern_statistics()
+            }
+
+    def _generate_correlation_insights(self, correlations: Dict) -> List[str]:
+        """
+        Generate human-readable insights from pattern correlations.
+        
+        Args:
+            correlations: Dictionary of pattern correlation data
+            
+        Returns:
+            List of insight strings
+        """
+        insights = []
+        
+        for pattern, data in correlations.items():
+            if data["total_occurrences"] >= 3:  # Only draw conclusions with sufficient data
+                if data["success_rate_percent"] >= 75:
+                    insights.append(
+                        f"Pattern '{pattern}' has high success rate ({data['success_rate_percent']}% "
+                        f"across {data['total_occurrences']} occurrences)"
+                    )
+                elif data["success_rate_percent"] <= 40:
+                    insights.append(
+                        f"Pattern '{pattern}' has concerning success rate ({data['success_rate_percent']}% "
+                        f"across {data['total_occurrences']} occurrences) - may indicate risk"
+                    )
+        
+        if not insights:
+            insights.append("Insufficient data to draw conclusions. Continue observing patterns.")
+        
+        return insights

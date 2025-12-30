@@ -36,7 +36,7 @@ BYRD is built on three insights:
 - 🔧 **Self-Modification**: Safe code modification with provenance tracking
 - 🔍 **Research**: Autonomous web research via DuckDuckGo
 - 💎 **Memory Crystallization**: Unified concepts from related memories
-- 🎙️ **Voice Design**: Dynamic voice generation via ElevenLabs
+- 🎙️ **Voice Design**: Dynamic voice generation via ElevenLabs with formal acknowledgment through voice_design field
 
 ### AGI Execution Engine (NEW)
 - 🚀 **AGI Runner**: 8-step improvement cycle (ASSESS→IDENTIFY→GENERATE→PREDICT→VERIFY→EXECUTE→MEASURE→LEARN)

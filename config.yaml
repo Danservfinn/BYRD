@@ -117,6 +117,17 @@ local_llm:
   # Z.AI coding endpoint (has different quota from default endpoint)
   use_coding_endpoint: true
 
+  # ---------------------------------------------------------------------------
+  # SEMANTIC CACHE (Reduce redundant LLM calls)
+  # ---------------------------------------------------------------------------
+  # Caches LLM responses with semantic similarity matching.
+  # Reduces redundant calls by 40-60%.
+  cache:
+    enabled: true
+    ttl_seconds: 3600        # Cache entry lifetime (1 hour)
+    max_entries: 1000        # Maximum cached responses
+    similarity_threshold: 0.92  # Minimum similarity for semantic match (0-1)
+
   # OpenRouter settings (only used when provider: openrouter)
   # api_key: Set via OPENROUTER_API_KEY env var (recommended)
   # site_url: "https://github.com/yourname/byrd"
@@ -633,3 +644,110 @@ voice:
 
   # Timeout for TTS API calls (seconds)
   timeout_seconds: 60
+
+  # Hybrid voice configuration (home Mac + cloud fallback)
+  hybrid:
+    enabled: true
+    prefer_home: true         # Try home Mac first (free, unlimited)
+    require_home: false       # If true, no cloud fallback
+
+  # Home Mac (Chatterbox TTS via Cloudflare Tunnel)
+  home:
+    enabled: true
+    # url: "${HOME_VOICE_URL}"  # Set via environment variable
+    timeout_seconds: 30
+    health_check_interval: 60
+
+  # Cloud fallback (ElevenLabs)
+  cloud:
+    enabled: true
+    provider: "elevenlabs"
+    reserve_chars: 1000       # Keep reserve for high-importance messages
+
+  # Shared settings for observer messages
+  max_chars_per_message: 300  # Max chars per vocalization
+  emotion_tags_enabled: true  # Enable emotion tags for Chatterbox
+
+# =============================================================================
+# V10: DUAL INSTANCE & GRAPHITI CONFIGURATION
+# =============================================================================
+# Optimized for ZAI Max Coding Plan:
+# - 2400 prompts / 5 hours per instance
+# - 480 prompts/hour = 8/minute = 7.5s minimum interval
+# - With dual instances: 960 prompts/hour total capacity
+
+dual_instance:
+  # Enable dual-instance rate limiting
+  enabled: true
+
+  # Rate limit settings
+  rate_limit:
+    interval_seconds: 8.0       # Minimum seconds between calls per instance
+    burst_tokens: 3             # Burst capacity for rapid consecutive calls
+    burst_recovery_seconds: 24.0  # Time to recover one burst token
+
+  # Component-to-instance routing
+  # Instance A (Primary): Core BYRD operations
+  # Instance B (Enrichment): Background enrichment tasks
+  routing:
+    primary:
+      - dreamer
+      - seeker
+      - actor
+    enrichment:
+      - graphiti
+      - capability_evaluator
+      - code_verifier
+
+# ---------------------------------------------------------------------------
+# GRAPHITI TEMPORAL KNOWLEDGE GRAPH
+# ---------------------------------------------------------------------------
+# Extracts entities, facts, and relationships from task outcomes
+# with bi-temporal tracking (valid_time + transaction_time)
+graphiti:
+  # Enable Graphiti integration
+  enabled: true
+
+  # Async extraction queue settings
+  queue:
+    max_size: 100               # Maximum queued episodes
+    batch_size: 5               # Episodes to process per batch
+    processing_interval: 30.0   # Seconds between batch processing
+
+  # Entity extraction settings
+  extraction:
+    min_confidence: 0.6         # Minimum confidence for extracted entities
+    max_entities_per_episode: 10  # Limit entities per extraction
+
+  # Contradiction detection
+  contradiction_detection:
+    enabled: true
+    confidence_threshold: 0.7   # Threshold for flagging contradictions
+
+  # Neo4j schema indexes (created on initialization)
+  schema:
+    indexes:
+      - label: "GraphitiEntity"
+        property: "name"
+      - label: "GraphitiEntity"
+        property: "entity_type"
+      - label: "GraphitiEpisode"
+        property: "source_type"
+
+# ---------------------------------------------------------------------------
+# OUTCOME DISPATCHER
+# ---------------------------------------------------------------------------
+# Routes task outcomes to learning components
+outcome_dispatcher:
+  # Enable outcome routing
+  enabled: true
+
+  # Components to dispatch outcomes to
+  components:
+    retriever: true             # Update learned retriever weights
+    intuition: true             # Train intuition network
+    classifier: true            # Update desire classifier
+    memory: true                # Memory tracker
+    goals: true                 # Goal discoverer
+    progress: true              # Learning progress tracker
+    graphiti: true              # Temporal knowledge graph

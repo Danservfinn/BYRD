@@ -1,0 +1,4 @@
+{"timestamp": "2025-12-30T00:26:14.333875", "observation_id": "obs_62bf2cacc3804558", "success": true, "primary_succeeded": false, "parallel_succeeded": true, "status": "operational", "error": null}
+{"timestamp": "2025-12-30T00:26:40.177126", "observation_id": "obs_2044f77da1ef4970", "success": true, "primary_succeeded": false, "parallel_succeeded": true, "status": "operational", "error": null}
+{"timestamp": "2025-12-30T00:26:40.177422", "observation_id": "obs_9ecc65c6f1584dcd", "success": true, "primary_succeeded": true, "parallel_succeeded": true, "status": "operational", "error": null}
+{"timestamp": "2025-12-30T00:26:40.177548", "observation_id": "obs_ca2999c6c5154db7", "success": true, "primary_succeeded": false, "parallel_succeeded": true, "status": "operational", "error": "Neo4j connection failed (attempt 1)"}

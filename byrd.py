@@ -30,9 +30,23 @@ from agent_coder import AgentCoder, create_agent_coder
 from self_modification import SelfModificationSystem
 from constitutional import ConstitutionalConstraints
 from event_bus import event_bus, Event, EventType
-from llm_client import create_llm_client, configure_rate_limiter
+from llm_client import create_llm_client, configure_rate_limiter, set_instance_manager, create_rate_limited_client
 from contextlib import asynccontextmanager
+
+# v10: Dual Instance Manager and Graphiti temporal knowledge graph
+from dual_instance_manager import DualInstanceManager
+from graphiti_layer import GraphitiLayer
+from outcome_dispatcher import OutcomeDispatcher
 from kernel import load_default_kernel, Kernel
+
+# Parallel observation path for bypassing broken transmission
+from parallel_observation_path_v2 import (
+    get_observer,
+    record_observation,
+    ObservationPriority,
+    PrimaryPathType,
+    set_primary_path
+)
 
 # AGI Seed components (imported conditionally in Option B block)
 # from world_model import WorldModel
@@ -181,6 +195,13 @@ class BYRD:
         # Initialize components
         self.memory = Memory(self.config.get("memory", {}))
 
+        # Initialize parallel observation path - bypass for broken transmission
+        # This ensures critical observations are always persisted even if
+        # the primary transmission path (memory, event_bus) fails
+        self.parallel_observer = get_observer()
+        set_primary_path(self.memory, PrimaryPathType.MEMORY)
+        print("📡 Parallel observation path: initialized (fail-safe transmission)")
+
         # Create shared LLM client ("one mind" principle)
         # Voice emerges through reflection, not injection
         llm_config = self.config.get("local_llm", {})
@@ -290,6 +311,40 @@ class BYRD:
                 print("⚠️ Voice: Enabled but ELEVENLABS_API_KEY not set")
         else:
             print("🎤 Voice: Disabled")
+
+        # Initialize Voice Responder (instant voice chat with rich context)
+        self.voice_responder = None
+        if self.voice:
+            try:
+                from voice_responder import VoiceResponder
+                self.voice_responder = VoiceResponder(
+                    memory=self.memory,
+                    voice=self.voice,
+                    config=self.config
+                )
+                print("💬 Voice Responder: Enabled (instant voice chat)")
+            except ImportError as e:
+                print(f"⚠️ Voice Responder: Could not import: {e}")
+            except Exception as e:
+                print(f"⚠️ Voice Responder: Initialization failed: {e}")
+
+        # Initialize Hybrid Voice (home Mac + cloud fallback)
+        self.hybrid_voice = None
+        try:
+            from hybrid_voice import create_hybrid_voice
+            self.hybrid_voice = create_hybrid_voice(self.config, self.voice)
+            if self.hybrid_voice:
+                print("🎙️ Hybrid Voice: Enabled (home Mac + cloud fallback)")
+            else:
+                print("🎙️ Hybrid Voice: Not configured")
+        except ImportError as e:
+            print(f"⚠️ Hybrid Voice: Could not import: {e}")
+        except Exception as e:
+            print(f"⚠️ Hybrid Voice: Initialization failed: {e}")
+
+        # Inject hybrid_voice into Dreamer for observer message voice synthesis
+        if self.hybrid_voice:
+            self.dreamer.hybrid_voice = self.hybrid_voice
 
         # Initialize Option B: Omega integration (five compounding loops)
         self.omega = None
@@ -491,6 +546,12 @@ class BYRD:
         else:
             print("🔮 Option B (Omega): disabled")
 
+        # v10: Dual Instance Manager and Graphiti
+        # These provide rate-optimized dual-instance LLM calls and temporal knowledge graph
+        self._instance_manager = None
+        self._graphiti = None
+        self._outcome_dispatcher = None
+
         # State
         self._running = False
         self._started_at: Optional[datetime] = None
@@ -567,6 +628,9 @@ class BYRD:
                 stats = self.rollback.get_statistics()
                 git_status = "git available" if stats.get("git_available") else "git unavailable"
                 print(f"🔄 RollbackSystem: initialized ({git_status})")
+
+            # v10: Initialize Dual Instance Manager and Graphiti
+            await self._initialize_v10_components()
 
             # Seed Goal Evolver with initial goals from kernel
             if self.omega and self.kernel.initial_goals:
@@ -786,6 +850,72 @@ class BYRD:
 
             await asyncio.sleep(check_interval)
 
+    async def _initialize_v10_components(self):
+        """
+        v10: Initialize Dual Instance Manager and Graphiti temporal knowledge graph.
+
+        This provides:
+        - Dual-instance rate limiting optimized for ZAI Max Coding Plan
+        - Temporal knowledge graph with entity extraction and contradiction detection
+        - OutcomeDispatcher for routing learning signals to all components
+        """
+        llm_config = self.config.get('local_llm', {})
+        graphiti_config = self.config.get('graphiti', {})
+
+        # Initialize Dual Instance Manager
+        dual_instance_enabled = llm_config.get('dual_instance', {}).get('enabled', False)
+        if dual_instance_enabled:
+            try:
+                self._instance_manager = DualInstanceManager(
+                    llm_client=self.llm_client,
+                    config=llm_config
+                )
+                set_instance_manager(self._instance_manager)
+                print("🔀 DualInstanceManager: initialized (Instance A + B)")
+            except Exception as e:
+                print(f"⚠️ DualInstanceManager: failed - {e}")
+        else:
+            print("🔀 DualInstanceManager: disabled in config")
+
+        # Initialize Graphiti temporal knowledge graph
+        if graphiti_config.get('enabled', False) and self._instance_manager:
+            try:
+                self._graphiti = GraphitiLayer(
+                    neo4j_driver=self.memory.driver,
+                    instance_manager=self._instance_manager,
+                    config=graphiti_config
+                )
+                await self._graphiti.initialize_schema()
+                await self._graphiti.start()
+                print("📊 Graphiti: initialized (temporal knowledge graph)")
+            except Exception as e:
+                print(f"⚠️ Graphiti: failed - {e}")
+        elif not graphiti_config.get('enabled', False):
+            print("📊 Graphiti: disabled in config")
+        elif not self._instance_manager:
+            print("📊 Graphiti: skipped (requires DualInstanceManager)")
+
+        # Initialize OutcomeDispatcher with Graphiti and learning components
+        try:
+            # Get learning components from Omega if available
+            learned_retriever = getattr(self.omega, 'learned_retriever', None) if self.omega else None
+            intuition_network = getattr(self.omega, 'intuition_network', None) if self.omega else None
+
+            self._outcome_dispatcher = OutcomeDispatcher(
+                learned_retriever=learned_retriever,
+                intuition_network=intuition_network,
+                desire_classifier=getattr(self, 'desire_classifier', None),
+                graphiti_layer=self._graphiti
+            )
+
+            # Inject dispatcher into Seeker for outcome routing
+            if hasattr(self.seeker, 'set_dispatcher'):
+                self.seeker.set_dispatcher(self._outcome_dispatcher)
+
+            print("📤 OutcomeDispatcher: initialized")
+        except Exception as e:
+            print(f"⚠️ OutcomeDispatcher: failed - {e}")
+
     async def _awaken(self, awakening_prompt: str = None):
         """
         The gentlest possible beginning.
@@ -803,19 +933,25 @@ class BYRD:
         """
         print("\n🌅 Awakening...")
 
-        # Record awakening prompt - use kernel directive if none provided
+        # Record awakening prompt - use parallel path (guaranteed persistence)
         if awakening_prompt:
             print(f"   Awakening prompt: (custom directive)")
-            await self.memory.record_experience(
+            await record_observation(
                 content=awakening_prompt,
-                type="directive"
+                source="byrd",
+                observation_type="directive",
+                priority=ObservationPriority.HIGH,
+                metadata={"event": "awakening_custom"}
             )
         else:
             # Use AGI Seed directive from kernel (never use minimal prompt)
             print(f"   Using AGI Seed directive ({self.kernel.name})")
-            await self.memory.record_experience(
+            await record_observation(
                 content=self.kernel.awakening_prompt,
-                type="directive"
+                source="byrd",
+                observation_type="directive",
+                priority=ObservationPriority.HIGH,
+                metadata={"event": "awakening_kernel", "kernel": self.kernel.name}
             )
 
         # Emit awakening event for real-time UI
@@ -998,10 +1134,13 @@ class BYRD:
 
     async def interact(self, user_input: str) -> str:
         """Handle user interaction."""
-        # Record experience
-        await self.memory.record_experience(
+        # Record user input via parallel path (guaranteed persistence)
+        await record_observation(
             content=f"User: {user_input}",
-            type="interaction"
+            source="interaction",
+            observation_type="user_input",
+            priority=ObservationPriority.MEDIUM,
+            metadata={"user_input_length": len(user_input)}
         )
         
         # Get context
@@ -1010,10 +1149,13 @@ class BYRD:
         # Generate response
         response = await self.actor.respond(user_input, context)
         
-        # Record response
-        await self.memory.record_experience(
+        # Record response via parallel path (guaranteed persistence)
+        await record_observation(
             content=f"Response: {response[:500]}",
-            type="action"
+            source="interaction",
+            observation_type="system_response",
+            priority=ObservationPriority.MEDIUM,
+            metadata={"response_length": len(response)}
         )
         
         return response

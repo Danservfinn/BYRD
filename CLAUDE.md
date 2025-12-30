@@ -161,6 +161,24 @@ The Agent Coder (`agent_coder.py`) is BYRD's autonomous coding system. It uses a
 | **Learned Retriever** | `learned_retriever.py` | Learns relevance from query-result feedback |
 | **Emergent Categories** | `emergent_categories.py` | Discovers categories from behavior clustering |
 
+**v10 Rate Limiting & Temporal Knowledge (ZAI GLM-4.7 Optimization):**
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| **Dual Instance Manager** | `dual_instance_manager.py` | Two concurrent GLM-4.7 instances with independent rate limiting (960 prompts/hr total) |
+| **Graphiti Layer** | `graphiti_layer.py` | Temporal knowledge graph with entity extraction, bi-temporal tracking, contradiction detection |
+| **Outcome Dispatcher** | `outcome_dispatcher.py` | Routes task outcomes to learning components including Graphiti |
+
+**v10 API Endpoints:**
+
+| Endpoint | Purpose |
+|----------|---------|
+| `/api/health/learning` | Overall health of v10 learning components |
+| `/api/health/graphiti` | Detailed Graphiti metrics and entity breakdown |
+| `/api/graphiti/entities` | Search Graphiti entities by name/content |
+| `/api/graphiti/entity/{name}/facts` | Get facts for a specific entity |
+| `/api/graphiti/entity/{name}/provenance` | Trace entity provenance chain |
+
 **Bayesian Intelligence (in `self_model.py`):**
 
 | Method | Purpose |
@@ -936,6 +954,11 @@ byrd/
 │       ├── desire_routing/
 │       ├── pattern_matching/
 │       └── decision_making/
+│
+├── v10 Rate Limiting & Temporal Knowledge
+│   ├── dual_instance_manager.py  # Two GLM-4.7 instances with independent rate limiting
+│   ├── graphiti_layer.py         # Temporal knowledge graph with entity extraction
+│   └── outcome_dispatcher.py     # Routes outcomes to learning components
 │
 ├── AGI Seed Components
 │   ├── self_model.py           # Capability tracking + Bayesian

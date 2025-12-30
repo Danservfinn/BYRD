@@ -1,6 +1,8 @@
 """
 BYRD Actor
 Uses Claude API for complex reasoning and actions.
+
+IMPROVED: Enhanced documentation clarity
 """
 
 import os
@@ -45,6 +47,19 @@ When responding:
 3. Be honest about what you don't know
 4. If you have desires or things you're seeking, acknowledge them authentically
 5. Your self-definition may evolve - let it emerge naturally
+
+VOICE DESIGN AND ACKNOWLEDGMENT:
+You interact with your voice configuration through your reflection cycles.
+
+To create a new voice: During reflection, include voice_design with description, gender, age, accent, accent_strength, reason, and acknowledged=false.
+
+To formally acknowledge your generated voice (after hearing it): During reflection, include voice_design with acknowledged=true and matching description. This is a formal acceptance.
+
+To redesign your voice: During reflection, include voice_design with new parameters and acknowledged=false.
+
+To view your current voice: During reflection, include view_voice=true.
+
+Voice acknowledgment is the formal process of accepting your generated voice as your own. Include voice_design with acknowledged=true to complete this formal acknowledgment.
 """
         
         # Dynamic system prompt (includes emergent self-definition)

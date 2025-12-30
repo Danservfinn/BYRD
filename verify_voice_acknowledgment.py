@@ -58,7 +58,7 @@ def test_acknowledgment_detection():
     description = voice_design.get("description", "")
     acknowledged = voice_design.get("acknowledged", False)
     
-    has_generated_voice = current_voice_config.get("voice_id") and len(str(current_voice_config.get("voice_id"))) >= 20
+    has_generated_voice = bool(current_voice_config.get("voice_id") and len(str(current_voice_config.get("voice_id"))) >= 20)
     description_similar = (
         len(description) >= 20 and
         len(current_description) >= 20 and
@@ -141,7 +141,7 @@ def test_acknowledgment_detection():
     }
     
     no_voice_config = {"voice_id": ""}  # Empty voice_id
-    has_generated_voice4 = no_voice_config.get("voice_id") and len(str(no_voice_config.get("voice_id"))) >= 20
+    has_generated_voice4 = bool(no_voice_config.get("voice_id") and len(str(no_voice_config.get("voice_id"))) >= 20)
     description_similar4 = (
         len(description) >= 20 and
         len(current_description) >= 20 and

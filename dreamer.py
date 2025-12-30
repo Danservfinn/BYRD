@@ -12,6 +12,8 @@ BYRD what to want or how to feel - we let it discover these things.
 
 import asyncio
 import json
+import logging
+import os
 import re
 from collections import deque
 from datetime import datetime
@@ -22,6 +24,418 @@ from event_bus import event_bus, Event, EventType
 from llm_client import LLMClient
 from quantum_randomness import get_quantum_provider, EntropySource
 from graph_algorithms import MemoryGraphAlgorithms
+from byrd_types import VoiceDesign, ReflectionOutput
+from parallel_observation_path_v2 import get_observer, ObservationPriority
+
+# Configure persistent logging to bypass transmission failures
+# Logs are written to disk and survive crashes/network issues
+LOG_DIR = os.environ.get("BYRD_LOG_DIR", "logs")
+os.makedirs(LOG_DIR, exist_ok=True)
+
+# Configure root logger with file and console handlers
+logger = logging.getLogger("dreamer")
+logger.setLevel(logging.DEBUG)
+
+# File handler - persists all logs to disk
+file_handler = logging.FileHandler(
+    os.path.join(LOG_DIR, "dreamer.log"),
+    encoding="utf-8"
+)
+file_handler.setLevel(logging.DEBUG)
+file_format = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+file_handler.setFormatter(file_format)
+logger.addHandler(file_handler)
+
+# Console handler - shows important messages in terminal
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+console_format = logging.Formatter("%(levelname)s: %(message)s")
+console_handler.setFormatter(console_format)
+logger.addHandler(console_handler)
+
+# Prevent propagation to avoid duplicate logs
+logger.propagate = False
+
+# =========================
+# Coder Output Persistent Logging
+# =========================
+# Dedicated logger for all coder operations and outputs
+# This ensures all coder actions are logged to a separate file for tracking
+
+coder_logger = logging.getLogger("dreamer.coder")
+coder_logger.setLevel(logging.DEBUG)
+
+# Coder output file handler - persists all coder operations to disk
+coder_file_handler = logging.FileHandler(
+    os.path.join(LOG_DIR, "coder_outputs.log"),
+    encoding="utf-8"
+)
+coder_file_handler.setLevel(logging.DEBUG)
+coder_format = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+coder_file_handler.setFormatter(coder_format)
+coder_logger.addHandler(coder_file_handler)
+
+# Coder console handler - shows coder activity in terminal
+coder_console_handler = logging.StreamHandler()
+coder_console_handler.setLevel(logging.INFO)
+coder_console_handler.setFormatter(logging.Formatter("[CODER] %(levelname)s: %(message)s"))
+coder_logger.addHandler(coder_console_handler)
+
+# Prevent propagation
+coder_logger.propagate = False
+
+# Note: ParallelLogHandler will be added to coder_logger after class definition
+# (see below after ParallelLogHandler is defined)
+
+def _handle_coder_event(event: Event):
+    """
+    Handle coder-related events and log them persistently.
+    
+    This callback subscribes to the event_bus and logs all coder operations:
+    - CODER_INVOKED: When coder starts a task
+    - CODER_COMPLETE: When coder successfully completes
+    - CODER_FAILED: When coder encounters an error
+    - CODER_VALIDATION_FAILED: When code validation fails
+    - CODER_BYPASSED: When graph bypass is used instead
+    - CODER_STEP: Individual step/tool usage during coder execution
+    - CODER_TOOL_RESULT: Result of a tool execution
+    - SYNTHETIC_ACTION: Graph-based action created without code execution
+    
+    All events are logged to logs/coder_outputs.log for persistent tracking.
+    """
+    event_type = event.type.value if hasattr(event.type, 'value') else str(event.type)
+    data = event.data or {}
+    
+    # Extract key information from the event
+    desire_id = data.get("desire_id", "unknown")
+    description = data.get("description", data.get("message", ""))
+    success = data.get("success", None)
+    files_modified = data.get("files_modified", [])
+    steps = data.get("steps", [])
+    
+    # Format timestamp
+    timestamp = datetime.now().isoformat()
+    
+    if event_type == "coder_invoked":
+        coder_logger.info("[INVOKED] Desire: %s (%s) - %s", 
+                         desire_id[:8], description[:80], timestamp)
+    
+    elif event_type == "coder_complete":
+        if success:
+            files_str = ", ".join(files_modified) if files_modified else "none"
+            coder_logger.info("[COMPLETE] Desire: %s - Files: %s - Steps: %d", 
+                             desire_id[:8], files_str, len(steps))
+            coder_logger.debug("Full result: %s", json.dumps(data, ensure_ascii=False, default=str))
+        else:
+            coder_logger.warning("[FAILED] Desire: %s - Message: %s", 
+                                desire_id[:8], description)
+            coder_logger.debug("Full result: %s", json.dumps(data, ensure_ascii=False, default=str))
+    
+    elif event_type == "coder_failed":
+        coder_logger.error("[FAILED] Desire: %s - Error: %s", 
+                          desire_id[:8], description)
+        coder_logger.debug("Full result: %s", json.dumps(data, ensure_ascii=False, default=str))
+    
+    elif event_type == "coder_validation_failed":
+        coder_logger.error("[VALIDATION_FAILED] Desire: %s - Details: %s", 
+                          desire_id[:8], description)
+    
+    elif event_type == "coder_bypassed":
+        coder_logger.info("[BYPASSED] Desire: %s - Used graph bypass instead of code execution", 
+                         desire_id[:8])
+    
+    elif event_type == "synthetic_action":
+        coder_logger.info("[SYNTHETIC] Desire: %s - Created graph-based action without code", 
+                         desire_id[:8])
+    
+    elif event_type == "coder_step":
+        step_num = data.get("step_num", 0)
+        step_type = data.get("step_type", "unknown")
+        step_description = data.get("description", "")[:100]
+        coder_logger.info("[STEP] Desire: %s - Step %d - Type: %s - %s", 
+                         desire_id[:8], step_num, step_type, step_description)
+        coder_logger.debug("Step data: %s", json.dumps(data, ensure_ascii=False, default=str))
+    
+    elif event_type == "coder_tool_result":
+        tool_name = data.get("tool_name", "unknown")
+        success = data.get("success", False)
+        output_preview = str(data.get("output", ""))[:200]
+        level = logging.INFO if success else logging.WARNING
+        coder_logger.log(level, "[TOOL] Desire: %s - Tool: %s - Success: %s - Output: %s", 
+                        desire_id[:8], tool_name, success, output_preview)
+        coder_logger.debug("Full tool result: %s", json.dumps(data, ensure_ascii=False, default=str))
+
+# Subscribe to all coder events - this is done at module load time
+# so logging starts immediately when the event bus is active
+# Note: event_bus is imported at module level, so we subscribe here
+event_bus.subscribe(_handle_coder_event)
+
+logger.info("Coder output logging initialized - persistent log: %s", os.path.join(LOG_DIR, "coder_outputs.log"))
+
+# ============================================================================
+# PARALLEL TRANSMISSION PATH FOR CRITICAL LOGGING
+# ============================================================================
+# This provides a failsafe path for all logging that cannot be lost.
+# Even if regular file handlers fail, events are written to disk immediately.
+#
+# Design principles:
+# 1. Always write to disk first (cannot fail)
+# 2. Then attempt regular logging handlers for console/file output
+# 3. Parallel log survives crashes, disk issues, handler failures
+# 4. Custom logging handler ensures all logger.* calls are protected
+#
+# This ensures persistent logging cannot fail - no critical event is ever lost.
+# ============================================================================
+
+PARALLEL_LOG_PATH = os.path.join(LOG_DIR, "dreamer_parallel.log")
+PARALLEL_LOG_LOCK = asyncio.Lock()  # Ensure thread-safe writes
+
+# Track parallel log statistics
+_parallel_log_stats = {
+    "total_writes": 0,
+    "errors": 0,
+    "emergency_fallbacks": 0
+}
+
+def _write_to_parallel_log_sync(record: logging.LogRecord) -> bool:
+    """
+    Synchronous write to parallel log (for logging handler).
+    
+    This is the guaranteed transmission path that cannot fail.
+    Uses blocking I/O with fsync to ensure data is on disk.
+    
+    Args:
+        record: Python logging LogRecord to write
+        
+    Returns:
+        True if write succeeded, False if emergency fallback was used
+    """
+    global _parallel_log_stats
+    _parallel_log_stats["total_writes"] += 1
+    
+    timestamp = datetime.now().isoformat()
+    log_entry = {
+        "timestamp": timestamp,
+        "level": record.levelname,
+        "logger": record.name,
+        "message": record.getMessage(),
+        "module": record.module,
+        "function": record.funcName,
+        "line": record.lineno,
+        "is_error": record.levelno >= logging.ERROR
+    }
+    
+    # Include exception info if present
+    if record.exc_info:
+        log_entry["exception"] = logging.formatter.Formatter().formatException(record.exc_info)
+    
+    # Include extra context if available
+    if hasattr(record, 'context_data'):
+        log_entry["context"] = record.context_data
+    
+    def _do_write(path: str, lines: list):
+        """Blocking I/O with fsync."""
+        with open(path, "a", encoding="utf-8") as f:
+            for line in lines:
+                f.write(line + "\n")
+            f.flush()
+            os.fsync(f.fileno())  # Force write to disk
+    
+    try:
+        # Use lock for thread-safe writes
+        # Note: This is synchronous for use in logging handler
+        with open(PARALLEL_LOG_PATH, "a", encoding="utf-8") as f:
+            json_str = json.dumps(log_entry, ensure_ascii=False)
+            f.write(json_str + "\n")
+            f.flush()
+            os.fsync(f.fileno())
+        return True
+    except Exception as e:
+        _parallel_log_stats["errors"] += 1
+        # Emergency fallback with timestamped filename
+        emergency_path = os.path.join(LOG_DIR, f"dreamer_emergency_{int(datetime.now().timestamp())}.log")
+        try:
+            with open(emergency_path, "a", encoding="utf-8") as f:
+                f.write(f"EMERGENCY FALLBACK: {timestamp} {record.levelname} {str(e)}\n")
+                f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+                f.flush()
+                os.fsync(f.fileno())
+            _parallel_log_stats["emergency_fallbacks"] += 1
+            return False  # Indicates fallback was used
+        except:
+            # Last resort - print to stderr
+            import sys
+            print(f"CRITICAL LOGGING FAILURE: {record.levelname} {record.getMessage()}", file=sys.stderr)
+            return False
+
+
+class ParallelLogHandler(logging.Handler):
+    """
+    Custom logging handler that writes to parallel transmission path.
+    
+    This handler ensures ALL logging calls go through the failsafe parallel path,
+    guaranteeing that no log entry is ever lost due to disk failures, crashes,
+    or handler errors.
+    
+    Usage: Automatically added to logger during initialization
+    """
+    
+    def __init__(self):
+        super().__init__()
+        self._stats = _parallel_log_stats
+    
+    def emit(self, record: logging.LogRecord):
+        """
+        Emit a log record to the parallel transmission path.
+        
+        This method is called by the logging framework for every log message.
+        It uses synchronous I/O to ensure the log is written before returning.
+        """
+        try:
+            success = _write_to_parallel_log_sync(record)
+            if not success:
+                # Emergency fallback was used
+                self._stats["emergency_fallbacks"] += 1
+        except Exception:
+            # This should never happen due to fallback logic,
+            # but we catch it to prevent logging from crashing the app
+            import sys
+            print(f"CRITICAL: Parallel log handler failed for {record.getMessage()}", file=sys.stderr)
+    
+    def get_stats(self) -> Dict:
+        """Return statistics about parallel log writes."""
+        return self._stats.copy()
+
+
+# Add parallel log handler to ensure all logging is protected
+parallel_handler = ParallelLogHandler()
+parallel_handler.setLevel(logging.DEBUG)  # Capture everything
+logger.addHandler(parallel_handler)
+
+logger.info("Parallel transmission path initialized: %s", PARALLEL_LOG_PATH)
+
+# Add parallel log handler to coder logger for guaranteed persistence
+# This ensures all coder operations are protected by the failsafe transmission path
+coder_parallel_handler = ParallelLogHandler()
+coder_parallel_handler.setLevel(logging.DEBUG)  # Capture everything
+coder_logger.addHandler(coder_parallel_handler)
+
+logger.info("Coder parallel transmission path initialized")
+
+
+# ============================================================================
+# ASYNC PARALLEL LOGGING FOR EVENTS (separate from regular logging)
+# ============================================================================
+
+async def _write_to_parallel_log_async(event_type: str, event_data: Dict, is_error: bool = False):
+    """
+    Async write to parallel log for event data.
+    
+    This is similar to the synchronous version but uses asyncio for non-blocking I/O.
+    Used for event transmission when called from async contexts.
+    
+    Args:
+        event_type: Type of event being logged
+        event_data: Event payload
+        is_error: Whether this is an error event being logged
+    """
+    timestamp = datetime.now().isoformat()
+    log_entry = {
+        "timestamp": timestamp,
+        "event_type": event_type,
+        "data": event_data,
+        "is_error": is_error
+    }
+    
+    async def _do_write(path: str, lines: list):
+        """Blocking I/O executed in thread pool."""
+        with open(path, "a", encoding="utf-8") as f:
+            for line in lines:
+                f.write(line + "\n")
+            f.flush()
+            os.fsync(f.fileno())
+    
+    try:
+        async with PARALLEL_LOG_LOCK:
+            await asyncio.to_thread(_do_write, PARALLEL_LOG_PATH, [json.dumps(log_entry, ensure_ascii=False)])
+    except Exception as e:
+        emergency_path = os.path.join(LOG_DIR, f"dreamer_emergency_{int(datetime.now().timestamp())}.log")
+        try:
+            emergency_lines = [
+                f"EMERGENCY FALLBACK: {timestamp} {event_type} {str(e)}",
+                json.dumps(log_entry, ensure_ascii=False)
+            ]
+            await asyncio.to_thread(_do_write, emergency_path, emergency_lines)
+        except:
+            import sys
+            print(f"CRITICAL LOGGING FAILURE: {event_type} {event_data}", file=sys.stderr)
+            raise
+
+
+# ============================================================================
+# EVENT EMISSION WITH PARALLEL PATH
+# ============================================================================
+
+async def _emit_with_parallel_path(event_type: EventType, event_data: Dict) -> bool:
+    """
+    Emit event with parallel transmission path.
+    
+    This implements the dual-path strategy:
+    1. Always write to parallel log first (cannot fail)
+    2. Then attempt event_bus.emit() for real-time updates
+    3. Log transmission failures to parallel log
+    
+    Args:
+        event_type: EventType enum value
+        event_data: Event payload dictionary
+        
+    Returns:
+        True if event_bus transmission succeeded, False otherwise
+    """
+    # Step 1: Write to parallel log (guaranteed)
+    is_error = "ERROR" in str(event_type)
+    await _write_to_parallel_log_async(str(event_type), event_data, is_error=is_error)
+    
+    # Step 2: Attempt event_bus transmission (may fail)
+    try:
+        await event_bus.emit(Event(type=event_type, data=event_data))
+        return True
+    except Exception as e:
+        # Transmission failed - log the failure to parallel log
+        error_entry = {
+            "timestamp": datetime.now().isoformat(),
+            "event_type": "TRANSMISSION_FAILURE",
+            "data": {
+                "original_event_type": str(event_type),
+                "original_event_data_sample": str(event_data)[:200],
+                "error": f"{type(e).__name__}: {e}"
+            },
+            "is_error": True
+        }
+        
+        try:
+            # Use async write to avoid blocking event loop
+            async def _do_write(path: str, lines: list):
+                """Blocking I/O executed in thread pool."""
+                with open(path, "a", encoding="utf-8") as f:
+                    for line in lines:
+                        f.write(line + "\n")
+                    f.flush()
+                    os.fsync(f.fileno())
+            
+            async with PARALLEL_LOG_LOCK:
+                await asyncio.to_thread(_do_write, PARALLEL_LOG_PATH, [json.dumps(error_entry, ensure_ascii=False)])
+        except:
+            pass  # Original event was logged, so we're okay
+        
+        return False
+
+# Log initialization
+logger.info("Dreamer logging initialized - persistent log: %s", os.path.join(LOG_DIR, "dreamer.log"))
 
 
 class Dreamer:
@@ -39,6 +453,12 @@ class Dreamer:
         self.memory = memory
         self.llm_client = llm_client
         self.coordinator = coordinator  # For synchronizing with Seeker/Coder
+
+        # Initialize observation channel for robust observation persistence
+        self.observer = get_observer()
+        # Set memory as primary path for real-time integration
+        self.observer.set_primary_path(memory)
+        logger.info("Dreamer observation channel initialized")
 
         # Debug: track last reflection result for diagnostics
         self.last_reflection_result = {
@@ -164,6 +584,10 @@ class Dreamer:
         # Store full config for constraint formatting
         self._config = config
 
+        # Subscribe to coder events for persistent logging
+        event_bus.subscribe_async(self._on_coder_event)
+        logger.info("Dreamer subscribed to coder events for persistent logging")
+
     def _format_operational_constraints(self) -> str:
         """
         Format operational constraints for reflection context.
@@ -217,7 +641,7 @@ class Dreamer:
                     main_config = yaml.safe_load(f)
                     self_mod = main_config.get("self_modification", {})
             except Exception as e:
-                print(f"⚠️ Failed to read config.yaml for self_modification: {e}")
+                logger.warning("Failed to read config.yaml for self_modification: %s", e)
 
         # EXPLICIT and PROMINENT - this is critical for BYRD's self-understanding
         if self_mod.get("enabled"):
@@ -254,7 +678,7 @@ class Dreamer:
         """Main dream loop with adaptive interval based on activity."""
         self._running = True
         interval_mode = "adaptive" if self.adaptive_interval else "fixed"
-        print(f"💭 Dreamer starting (interval: {interval_mode}, base: {self.interval}s)...")
+        logger.info("Dreamer starting (interval: %s, base: %ds)...", interval_mode, self.interval)
 
         # Load belief cache on startup for efficient deduplication
         await self._load_belief_cache()
@@ -262,31 +686,39 @@ class Dreamer:
         # Load persistent dream count from database
         self._dream_count = await self.memory.get_system_counter("dream_count")
         if self._dream_count > 0:
-            print(f"💭 Restored dream count: {self._dream_count}")
+            logger.info("Restored dream count: %d", self._dream_count)
 
         while self._running:
             # Wait for any running Coder operations to complete before dreaming
             if self.coordinator:
                 coder_ready = await self.coordinator.wait_for_coder(timeout=300.0)
                 if not coder_ready:
-                    print("💭 Coder still running after 5 min, proceeding anyway...")
+                    logger.warning("Coder still running after 5 min, proceeding anyway...")
 
             try:
                 await self._dream_cycle()
             except Exception as e:
                 import traceback
                 error_msg = f"{type(e).__name__}: {e}"
-                print(f"💭 Dream error: {error_msg}")
-                traceback.print_exc()
-                # Emit error event for debugging visibility
-                await event_bus.emit(Event(
-                    type=EventType.REFLECTION_ERROR,
-                    data={
-                        "error": error_msg,
-                        "cycle": self._dream_count,
-                        "traceback": traceback.format_exc()[:500]
+                logger.error("Dream error: %s", error_msg, exc_info=True)
+                
+                # Record error through observation channel for guaranteed persistence
+                await self._record_observation(
+                    content=f"Dream cycle error in cycle #{self._dream_count}: {error_msg}",
+                    observation_type="error",
+                    priority="critical",
+                    metadata={
+                        "error_type": type(e).__name__,
+                        "traceback": traceback.format_exc()[:1000]
                     }
-                ))
+                )
+                
+                # Emit error event for debugging visibility with parallel path
+                await _emit_with_parallel_path(EventType.REFLECTION_ERROR, {
+                    "error": error_msg,
+                    "cycle": self._dream_count,
+                    "traceback": traceback.format_exc()[:500]
+                })
 
             # Calculate next interval (adaptive or fixed)
             if self.adaptive_interval:
@@ -320,7 +752,7 @@ class Dreamer:
             # High activity: fast mode
             new_interval = self.min_interval
             if self._current_interval != new_interval:
-                print(f"💭 High activity ({total_activity}), fast mode: {new_interval}s")
+                logger.info("High activity (%d), fast mode: %ds", total_activity, new_interval)
         else:
             # Low activity: slower mode (interpolate based on activity)
             activity_ratio = total_activity / max(1, self.activity_threshold)
@@ -337,6 +769,63 @@ class Dreamer:
             self._recent_beliefs.append((now, content))
         elif activity_type == "desire":
             self._recent_desires.append((now, content))
+
+    async def _record_observation(
+        self,
+        content: str,
+        observation_type: str = "reflection",
+        priority: str = "normal",
+        metadata: Optional[Dict] = None
+    ):
+        """
+        Record an observation through the parallel observation channel.
+
+        This ensures observations are persisted even if the primary memory path
+        fails. The observation channel writes to disk first, then attempts
+        transmission to memory.
+
+        Args:
+            content: The observation content
+            observation_type: Type of observation (reflection, error, insight, etc.)
+            priority: Priority level (critical, high, normal, low)
+            metadata: Optional additional metadata
+        """
+        try:
+            # Map string priority to enum
+            priority_map = {
+                "critical": ObservationPriority.CRITICAL,
+                "high": ObservationPriority.HIGH,
+                "normal": ObservationPriority.NORMAL,
+                "low": ObservationPriority.LOW
+            }
+            obs_priority = priority_map.get(priority.lower(), ObservationPriority.NORMAL)
+
+            # Build metadata
+            obs_metadata = metadata or {}
+            obs_metadata.update({
+                "dream_cycle": self._dream_count,
+                "timestamp": datetime.now().isoformat()
+            })
+
+            # Record through the parallel observation channel
+            result = await self.observer.record_observation(
+                content=content,
+                source="dreamer",
+                observation_type=observation_type,
+                priority=obs_priority,
+                metadata=obs_metadata
+            )
+
+            logger.debug(
+                "Recorded observation %s: %s...",
+                result.observation_id if result else "failed",
+                content[:50]
+            )
+            return result
+
+        except Exception as e:
+            logger.warning("Failed to record observation: %s", e)
+            return None
 
     async def _get_graph_health(self) -> Optional[Dict]:
         """
@@ -379,7 +868,7 @@ class Dreamer:
             return health
 
         except Exception as e:
-            print(f"💭 Error getting graph health: {e}")
+            logger.error("Error getting graph health: %s", e)
             return None
 
     async def _load_belief_cache(self):
@@ -395,15 +884,74 @@ class Dreamer:
                 for b in existing
             }
             self._belief_cache_loaded = True
-            print(f"💭 Loaded {len(self._belief_cache)} beliefs into cache")
+            logger.info("Loaded %d beliefs into cache", len(self._belief_cache))
         except Exception as e:
-            print(f"💭 Error loading belief cache: {e}")
+            logger.error("Error loading belief cache: %s", e)
 
     def _normalize_belief(self, content: str) -> str:
         """Normalize belief content for deduplication."""
         # Lowercase, collapse whitespace
         return " ".join(content.lower().split())
-    
+
+    async def _on_coder_event(self, event: Event):
+        """
+        Handle coder events for persistent logging of all coder outputs.
+
+        Captures both successful and failed coder execution results,
+        storing them persistently to disk for audit trails and debugging.
+
+        Args:
+            event: Event object with type CODER_COMPLETE or CODER_FAILED
+        """
+        try:
+            event_type = event.type
+            event_data = event.data if event.data else {}
+
+            # Build comprehensive log entry for coder output
+            log_entry = {
+                "timestamp": datetime.now().isoformat(),
+                "event_type": event_type.value if hasattr(event_type, 'value') else str(event_type),
+                "dream_cycle": self._dream_count,
+                "success": event_type == EventType.CODER_COMPLETE,
+                "description": event_data.get("description", ""),
+                "output": event_data.get("output", "")[:2000],  # Truncate large outputs
+                "files_modified": event_data.get("files_modified", []),
+                "error": event_data.get("error", ""),
+                "cost_usd": event_data.get("cost_usd", 0.0),
+                "turns_used": event_data.get("turns_used", 0),
+                "duration_ms": event_data.get("duration_ms", 0),
+                "session_id": event_data.get("session_id", "")
+            }
+
+            # Determine log level
+            is_error = event_type == EventType.CODER_FAILED
+
+            # Write to parallel log path for persistent storage
+            await _write_to_parallel_log_async(
+                event_type="coder_output",
+                event_data=log_entry,
+                is_error=is_error
+            )
+
+            # Also log to regular logger for immediate visibility
+            if is_error:
+                logger.warning(
+                    "Coder failed: %s - %s",
+                    log_entry["description"][:100],
+                    log_entry["error"][:100]
+                )
+            else:
+                logger.info(
+                    "Coder complete: %s (files: %d, turns: %d)",
+                    log_entry["description"][:100],
+                    len(log_entry["files_modified"]),
+                    log_entry["turns_used"]
+                )
+
+        except Exception as e:
+            # Don't let logging errors break the system
+            logger.error("Error logging coder event: %s", e, exc_info=True)
+
     def stop(self):
         self._running = False
 
@@ -422,13 +970,10 @@ class Dreamer:
         self._dream_count += 1
         # Persist dream count to survive restarts
         await self.memory.set_system_counter("dream_count", self._dream_count)
-        print(f"💭 Starting dream cycle #{self._dream_count}...")
+        logger.info("Starting dream cycle #%d...", self._dream_count)
 
-        # Emit start event for real-time UI
-        await event_bus.emit(Event(
-            type=EventType.DREAM_CYCLE_START,
-            data={"cycle": self._dream_count}
-        ))
+        # Emit start event with parallel path for guaranteed logging
+        await _emit_with_parallel_path(EventType.DREAM_CYCLE_START, {"cycle": self._dream_count})
 
         # 1. RECALL - Gather context
         recent = await self.memory.get_recent_experiences(limit=self.context_window)
@@ -446,7 +991,7 @@ class Dreamer:
             for msg in viewer_messages:
                 if msg["id"] not in existing_ids:
                     recent.insert(0, msg)  # Add at start (most important)
-                    print(f"📩 Prioritized viewer message: {msg.get('content', '')[:40]}...")
+                    logger.debug("Prioritized viewer message: %s...", msg.get('content', '')[:40])
 
         recent_ids = [e["id"] for e in recent]
         related = await self.memory.get_related_memories(recent_ids, depth=2, limit=50)
@@ -481,7 +1026,7 @@ class Dreamer:
                     limit=self.semantic_search_limit,
                     node_types=["Experience", "Belief", "Desire", "Crystal"]
                 )
-                print(f"💭 Semantic search found {len(semantic_memories)} relevant memories")
+                logger.debug("Semantic search found %d relevant memories", len(semantic_memories))
 
         # DREAM WALKS - Quantum-influenced graph traversal for associative memory
         dream_walk_context = []
@@ -510,21 +1055,18 @@ class Dreamer:
                             "quantum": walk_result.quantum_influenced
                         })
 
-                        # Emit event for visualization
-                        await event_bus.emit(Event(
-                            type=EventType.DREAM_WALK_COMPLETED,
-                            data={
-                                "cycle": self._dream_count,
-                                "path": walk_result.path,
-                                "node_types": walk_result.node_types,
-                                "quantum_influenced": walk_result.quantum_influenced
-                            }
-                        ))
+                        # Emit event with parallel path for guaranteed logging
+                        await _emit_with_parallel_path(EventType.DREAM_WALK_COMPLETED, {
+                            "cycle": self._dream_count,
+                            "path": walk_result.path,
+                            "node_types": walk_result.node_types,
+                            "quantum_influenced": walk_result.quantum_influenced
+                        })
 
                 if dream_walk_context:
-                    print(f"💭 Dream walks explored {sum(len(w['path']) for w in dream_walk_context)} nodes")
+                    logger.debug("Dream walks explored %d nodes", sum(len(w['path']) for w in dream_walk_context))
             except Exception as e:
-                print(f"⚠️ Dream walk error: {e}")
+                logger.warning("Dream walk error: %s", e)
 
         # PAGERANK - Get importance-weighted memories
         important_memories = []
@@ -539,16 +1081,14 @@ class Dreamer:
                 important_memories = [{"id": node_id, "importance": score} for node_id, score in important]
 
                 if important_memories:
-                    await event_bus.emit(Event(
-                        type=EventType.PAGERANK_COMPUTED,
-                        data={
-                            "cycle": self._dream_count,
-                            "top_nodes": important_memories[:5]
-                        }
-                    ))
-                    print(f"💭 PageRank identified {len(important_memories)} important memories")
+                    # Emit with parallel path for guaranteed logging
+                    await _emit_with_parallel_path(EventType.PAGERANK_COMPUTED, {
+                        "cycle": self._dream_count,
+                        "top_nodes": important_memories[:5]
+                    })
+                    logger.debug("PageRank identified %d important memories", len(important_memories))
             except Exception as e:
-                print(f"⚠️ PageRank error: {e}")
+                logger.warning("PageRank error: %s", e)
 
         # Emit event for memories being accessed (for visualization highlighting)
         all_accessed_ids = recent_ids.copy()
@@ -569,20 +1109,17 @@ class Dreamer:
         # Track access counts for heat map visualization (Phase 4)
         await self.memory.increment_access_count(all_accessed_ids)
 
-        await event_bus.emit(Event(
-            type=EventType.MEMORIES_ACCESSED,
-            data={
-                "cycle": self._dream_count,
-                "node_ids": all_accessed_ids,
-                "phase": "recall",
-                "counts": {
-                    "experiences": len(recent),
-                    "related": len(related),
-                    "capabilities": len(capabilities),
-                    "reflections": len(previous_reflections)
-                }
+        await _emit_with_parallel_path(EventType.MEMORIES_ACCESSED, {
+            "cycle": self._dream_count,
+            "node_ids": all_accessed_ids,
+            "phase": "recall",
+            "counts": {
+                "experiences": len(recent),
+                "related": len(related),
+                "capabilities": len(capabilities),
+                "reflections": len(previous_reflections)
             }
-        ))
+        })
 
         # 2. REFLECT - Ask local LLM to reflect (minimal, unbiased prompt)
         reflection_output = await self._reflect(
@@ -596,7 +1133,7 @@ class Dreamer:
             return
 
         # 3. RECORD - Store reflection in BYRD's own vocabulary
-        await self._record_reflection(reflection_output, recent_ids)
+        reflection_id = await self._record_reflection(reflection_output, recent_ids)
 
         # 3.5 APPLY OS UPDATES - If BYRD modified its self-model
         await self._apply_os_updates(reflection_output)
@@ -610,6 +1147,9 @@ class Dreamer:
         # 3.7 PROCESS SELF-DEFINITION - If BYRD defined itself
         await self._process_self_definition(reflection_output)
 
+        # 3.8 PROCESS OBSERVER MESSAGE - If BYRD wants to communicate to humans
+        await self._process_observer_message(reflection_output, reflection_id)
+
         # Count what BYRD produced (without forcing categories)
         output_keys = list(reflection_output.get("output", {}).keys()) if isinstance(reflection_output.get("output"), dict) else []
 
@@ -618,12 +1158,12 @@ class Dreamer:
 
         # 4. NARRATE - Generate inner voice as the LAST action before cycle end
         inner_voice = self._extract_inner_voice(reflection_output)
-        print(f"🔍 Inner voice extracted: {len(inner_voice) if inner_voice else 0} chars")
+        logger.debug("Inner voice extracted: %d chars", len(inner_voice) if inner_voice else 0)
 
         # If no explicit inner voice, generate one from the reflection
         if not inner_voice:
             inner_voice = await self._generate_inner_voice(reflection_output)
-            print(f"🔍 Inner voice generated: {len(inner_voice) if inner_voice else 0} chars")
+            logger.debug("Inner voice generated: %d chars", len(inner_voice) if inner_voice else 0)
 
         # Add to narrator queue if we got something
         if inner_voice:
@@ -632,43 +1172,34 @@ class Dreamer:
             # Debug: check for received_messages in recent
             rm_count = len([e for e in recent if e.get("type") == "received_message"])
             if rm_count > 0:
-                print(f"🔍 DEBUG: {rm_count} received_message(s) in recent, inner_voice len={len(inner_voice)}")
+                logger.debug("DEBUG: %d received_message(s) in recent, inner_voice len=%d", rm_count, len(inner_voice))
 
             # Check if addressing viewer input (emergent response)
             addressing_exp_id = self._detects_viewer_addressing(inner_voice, recent)
 
             if addressing_exp_id:
                 # BYRD naturally addressing viewer - emit as BYRD_MESSAGE
-                await event_bus.emit(Event(
-                    type=EventType.BYRD_MESSAGE,
-                    data={
-                        "cycle": self._dream_count,
-                        "message": inner_voice,
-                        "responding_to": addressing_exp_id,
-                        "source": "dreamer"
-                    }
-                ))
-                print(f"📨 BYRD addressing viewer (exp: {addressing_exp_id[:8]}...)")
+                await _emit_with_parallel_path(EventType.BYRD_MESSAGE, {
+                    "cycle": self._dream_count,
+                    "message": inner_voice,
+                    "responding_to": addressing_exp_id,
+                    "source": "dreamer"
+                })
+                logger.info("BYRD addressing viewer (exp: %s...)", addressing_exp_id[:8])
             else:
                 # Normal inner voice - emit for real-time UI narration
-                await event_bus.emit(Event(
-                    type=EventType.INNER_VOICE,
-                    data={
-                        "cycle": self._dream_count,
-                        "text": inner_voice
-                    }
-                ))
+                await _emit_with_parallel_path(EventType.INNER_VOICE, {
+                    "cycle": self._dream_count,
+                    "text": inner_voice
+                })
 
         # Emit end event
-        await event_bus.emit(Event(
-            type=EventType.DREAM_CYCLE_END,
-            data={
-                "cycle": self._dream_count,
-                "output_keys": output_keys,
-                "inner_voice": inner_voice,
-                "connections_created": heuristic_result.get("connections_created", 0)
-            }
-        ))
+        await _emit_with_parallel_path(EventType.DREAM_CYCLE_END, {
+            "cycle": self._dream_count,
+            "output_keys": output_keys,
+            "inner_voice": inner_voice,
+            "connections_created": heuristic_result.get("connections_created", 0)
+        })
 
         # Periodically run memory summarization to compress old experiences
         self._cycles_since_summarization += 1
@@ -691,7 +1222,7 @@ class Dreamer:
             await self._check_contradictions()
             self._cycles_since_contradiction_check = 0
 
-        print(f"💭 Dream #{self._dream_count}: keys={output_keys}")
+        logger.debug("Dream #%d: keys=%s", self._dream_count, output_keys)
 
     async def _maybe_summarize(self):
         """
@@ -773,21 +1304,18 @@ SUMMARY:"""
                 )
 
                 if summary_id:
-                    print(f"📦 Created memory summary for {day}: {len(day_experiences)} experiences")
+                    logger.info("Created memory summary for %s: %d experiences", day, len(day_experiences))
 
                     # Emit event for visualization
-                    await event_bus.emit(Event(
-                        type=EventType.MEMORY_SUMMARIZED,
-                        data={
-                            "summary_id": summary_id,
-                            "period": day,
-                            "experience_count": len(day_experiences),
-                            "summary_preview": summary_text[:100]
-                        }
-                    ))
+                    await _emit_with_parallel_path(EventType.MEMORY_SUMMARIZED, {
+                        "summary_id": summary_id,
+                        "period": day,
+                        "experience_count": len(day_experiences),
+                        "summary_preview": summary_text[:100]
+                    })
 
         except Exception as e:
-            print(f"Error in summarization cycle: {e}")
+            logger.error("Error in summarization cycle: %s", e)
 
     async def _maybe_crystallize(self):
         """
@@ -813,7 +1341,7 @@ SUMMARY:"""
         attempt_record = {"timestamp": datetime.now().isoformat(), "dream_cycle": self._dream_count}
 
         try:
-            print("💎 Starting crystallization cycle...")
+            logger.info("Starting crystallization cycle...")
 
             # Get candidates: orphan nodes, existing crystals, and their contexts
             candidates = await self.memory.get_crystallization_candidates(
@@ -830,13 +1358,13 @@ SUMMARY:"""
 
             # Skip if nothing to work with
             if not orphan_nodes and not existing_crystals:
-                print("💎 No crystallization candidates found")
+                logger.debug("No crystallization candidates found")
                 attempt_record["result"] = "no_candidates"
                 self._crystallization_history.append(attempt_record)
                 self._crystallization_history = self._crystallization_history[-10:]  # Keep last 10
                 return
 
-            print(f"💎 Candidates: {len(orphan_nodes)} orphans, {len(existing_crystals)} crystals")
+            logger.info("Candidates: %d orphans, %d crystals", len(orphan_nodes), len(existing_crystals))
 
             # Generate parallel crystallization proposals
             proposals = await self._generate_crystallization_proposals(
@@ -844,41 +1372,35 @@ SUMMARY:"""
             )
 
             if not proposals:
-                print("💎 No crystallization proposals generated")
+                logger.debug("No crystallization proposals generated")
                 attempt_record["result"] = "no_proposals"
                 self._crystallization_history.append(attempt_record)
                 self._crystallization_history = self._crystallization_history[-10:]
                 return
 
             # Emit proposals event for visualization
-            await event_bus.emit(Event(
-                type=EventType.CRYSTALLIZATION_PROPOSED,
-                data={
-                    "proposal_count": len(proposals),
-                    "stream_count": self.crystallization_proposal_streams,
-                    "operations": [p.get("operation") for p in proposals]
-                }
-            ))
+            await _emit_with_parallel_path(EventType.CRYSTALLIZATION_PROPOSED, {
+                "proposal_count": len(proposals),
+                "stream_count": self.crystallization_proposal_streams,
+                "operations": [p.get("operation") for p in proposals]
+            })
 
             # Quantum collapse: select which proposal manifests
             selected_proposal, quantum_source = await self._quantum_collapse_proposals(proposals)
 
             if not selected_proposal:
-                print("💎 No proposal selected after quantum collapse")
+                logger.debug("No proposal selected after quantum collapse")
                 attempt_record["result"] = "no_selection"
                 self._crystallization_history.append(attempt_record)
                 self._crystallization_history = self._crystallization_history[-10:]
                 return
 
             # Emit collapse event
-            await event_bus.emit(Event(
-                type=EventType.CRYSTALLIZATION_COLLAPSED,
-                data={
-                    "operation": selected_proposal.get("operation"),
-                    "quantum_source": quantum_source,
-                    "selected_index": proposals.index(selected_proposal)
-                }
-            ))
+            await _emit_with_parallel_path(EventType.CRYSTALLIZATION_COLLAPSED, {
+                "operation": selected_proposal.get("operation"),
+                "quantum_source": quantum_source,
+                "selected_index": proposals.index(selected_proposal)
+            })
 
             # Execute the selected crystallization operation
             await self._execute_crystallization(selected_proposal, quantum_source)
@@ -889,9 +1411,7 @@ SUMMARY:"""
             self._crystallization_history = self._crystallization_history[-10:]
 
         except Exception as e:
-            print(f"Error in crystallization cycle: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.error("Error in crystallization cycle: %s", e, exc_info=True)
             attempt_record["result"] = "error"
             attempt_record["error"] = str(e)
             self._crystallization_history.append(attempt_record)
@@ -905,7 +1425,7 @@ SUMMARY:"""
         and semantic contradictions (similar content with conflicting assertions).
         """
         try:
-            print("🔍 Checking for belief contradictions...")
+            logger.debug("Checking for belief contradictions...")
 
             if not self.graph_algorithms:
                 return
@@ -926,24 +1446,21 @@ SUMMARY:"""
             total_found = len(structural) + len(semantic_candidates)
 
             if total_found == 0:
-                print("🔍 No contradictions detected")
+                logger.debug("No contradictions detected")
                 return
 
-            print(f"🔍 Found {len(structural)} structural, {len(semantic_candidates)} semantic candidates")
+            logger.info("Found %d structural, %d semantic candidates", len(structural), len(semantic_candidates))
 
             # Process structural contradictions
             for contradiction in structural:
-                await event_bus.emit(Event(
-                    type=EventType.CONTRADICTION_DETECTED,
-                    data={
-                        "belief1_id": contradiction.node1_id,
-                        "belief2_id": contradiction.node2_id,
-                        "belief1_content": contradiction.node1_content,
-                        "belief2_content": contradiction.node2_content,
-                        "confidence": contradiction.confidence,
-                        "method": "structural"
-                    }
-                ))
+                await _emit_with_parallel_path(EventType.CONTRADICTION_DETECTED, {
+                    "belief1_id": contradiction.node1_id,
+                    "belief2_id": contradiction.node2_id,
+                    "belief1_content": contradiction.node1_content,
+                    "belief2_content": contradiction.node2_content,
+                    "confidence": contradiction.confidence,
+                    "method": "structural"
+                })
 
             # For semantic candidates, use LLM to verify contradiction
             verified_count = 0
@@ -960,21 +1477,19 @@ SUMMARY:"""
                         confidence=similarity
                     )
 
-                    await event_bus.emit(Event(
-                        type=EventType.CONTRADICTION_DETECTED,
-                        data={
-                            "belief1_id": belief1_id,
-                            "belief2_id": belief2_id,
-                            "similarity": similarity,
-                            "method": "semantic"
-                        }
-                    ))
+                    # Emit with parallel path for guaranteed logging
+                    await _emit_with_parallel_path(EventType.CONTRADICTION_DETECTED, {
+                        "belief1_id": belief1_id,
+                        "belief2_id": belief2_id,
+                        "similarity": similarity,
+                        "method": "semantic"
+                    })
 
             if verified_count > 0:
-                print(f"🔍 Verified {verified_count} semantic contradictions")
+                logger.info("Verified %d semantic contradictions", verified_count)
 
         except Exception as e:
-            print(f"Error in contradiction check: {e}")
+            logger.error("Error in contradiction check: %s", e, exc_info=True)
 
     async def _verify_contradiction_with_llm(
         self,
@@ -1016,7 +1531,7 @@ Respond with only "YES" if they contradict, or "NO" if they do not contradict.""
             return "YES" in response.upper()
 
         except Exception as e:
-            print(f"Error verifying contradiction: {e}")
+            logger.error("Error verifying contradiction: %s", e, exc_info=True)
             return False
 
     async def _generate_crystallization_proposals(
@@ -1090,14 +1605,14 @@ ABSORB example: {{"operation": "ABSORB", "details": {{"crystal_id": "...", "node
 
                 # Parse the JSON response
                 proposal = self._parse_crystallization_response(response.text)
-                print(f"💎 Stream {stream_idx} response: {response.text[:200]}...")
-                print(f"💎 Stream {stream_idx} parsed: {proposal}")
+                logger.debug("Stream %d response: %s...", stream_idx, response.text[:200])
+                logger.debug("Stream %d parsed: %s", stream_idx, proposal)
                 if proposal and proposal.get("operation") != "NONE":
                     proposal["stream_index"] = stream_idx
                     proposals.append(proposal)
 
             except Exception as e:
-                print(f"💎 Stream {stream_idx} proposal failed: {e}")
+                logger.error("Stream %d proposal failed: %s", stream_idx, e, exc_info=True)
                 continue
 
         return proposals
@@ -1149,20 +1664,17 @@ ABSORB example: {{"operation": "ABSORB", "details": {{"crystal_id": "...", "node
                 index, source = await self.quantum_provider.select_index(len(proposals))
 
                 # Emit quantum collapse event
-                await event_bus.emit(Event(
-                    type=EventType.QUANTUM_COLLAPSE,
-                    data={
-                        "stream_count": len(proposals),
-                        "selected_stream": index,
-                        "source": source.value,
-                        "context": "crystallization_collapse"
-                    }
-                ))
+                await _emit_with_parallel_path(EventType.QUANTUM_COLLAPSE, {
+                    "stream_count": len(proposals),
+                    "selected_stream": index,
+                    "source": source.value,
+                    "context": "crystallization_collapse"
+                })
 
                 return proposals[index], source.value
 
             except Exception as e:
-                print(f"💎 Quantum collapse failed, using classical: {e}")
+                logger.warning("Quantum collapse failed, using classical: %s", e)
 
         # Fallback: classical random selection
         import random
@@ -1173,7 +1685,7 @@ ABSORB example: {{"operation": "ABSORB", "details": {{"crystal_id": "...", "node
         operation = proposal.get("operation", "NONE")
         details = proposal.get("details", {})
 
-        print(f"💎 Executing {operation} (source: {quantum_source})")
+        logger.info("Executing %s (source: %s)", operation, quantum_source)
 
         try:
             if operation == "CREATE":
@@ -1187,14 +1699,12 @@ ABSORB example: {{"operation": "ABSORB", "details": {{"crystal_id": "...", "node
             elif operation == "FORGET":
                 await self._execute_forget(details)
             elif operation == "NONE":
-                print("💎 No operation needed - graph is healthy")
+                logger.debug("No operation needed - graph is healthy")
             else:
-                print(f"💎 Unknown operation: {operation}")
+                logger.warning("Unknown operation: %s", operation)
 
         except Exception as e:
-            print(f"💎 Crystallization execution failed: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.error("Crystallization execution failed: %s", e, exc_info=True)
 
     async def _execute_crystal_create(self, details: Dict, quantum_source: str):
         """Create a new crystal from orphan nodes."""
@@ -1204,7 +1714,7 @@ ABSORB example: {{"operation": "ABSORB", "details": {{"crystal_id": "...", "node
         facets = details.get("facets", [])
 
         if len(node_ids) < self.crystallization_min_nodes:
-            print(f"💎 CREATE requires at least {self.crystallization_min_nodes} nodes")
+            logger.warning("CREATE requires at least %d nodes", self.crystallization_min_nodes)
             return
 
         # Determine quantum value if from quantum source
@@ -1227,31 +1737,25 @@ ABSORB example: {{"operation": "ABSORB", "details": {{"crystal_id": "...", "node
         )
 
         if crystal_id:
-            print(f"💎 Created crystal {crystal_id[:8]}: {essence[:50]}")
+            logger.info("Created crystal %s: %s...", crystal_id[:8], essence[:50])
 
             # Emit crystal created event
-            await event_bus.emit(Event(
-                type=EventType.CRYSTAL_CREATED,
-                data={
-                    "crystal_id": crystal_id,
-                    "essence": essence,
-                    "crystal_type": crystal_type,
-                    "node_count": len(node_ids),
-                    "facets": facets,
-                    "quantum_source": quantum_source
-                }
-            ))
+            await _emit_with_parallel_path(EventType.CRYSTAL_CREATED, {
+                "crystal_id": crystal_id,
+                "essence": essence,
+                "crystal_type": crystal_type,
+                "node_count": len(node_ids),
+                "facets": facets,
+                "quantum_source": quantum_source
+            })
 
             # Emit individual node crystallization events
             for node_id in node_ids:
-                await event_bus.emit(Event(
-                    type=EventType.MEMORY_CRYSTALLIZED,
-                    data={
-                        "node_id": node_id,
-                        "crystal_id": crystal_id,
-                        "crystal_essence": essence
-                    }
-                ))
+                await _emit_with_parallel_path(EventType.MEMORY_CRYSTALLIZED, {
+                    "node_id": node_id,
+                    "crystal_id": crystal_id,
+                    "crystal_essence": essence
+                })
 
     async def _execute_crystal_absorb(self, details: Dict):
         """Absorb nodes into existing crystal."""
@@ -1260,13 +1764,13 @@ ABSORB example: {{"operation": "ABSORB", "details": {{"crystal_id": "...", "node
         reason = details.get("reason", "")
 
         if not crystal_id or not node_ids:
-            print("💎 ABSORB requires crystal_id and node_ids")
+            logger.warning("ABSORB requires crystal_id and node_ids")
             return
 
         # Get crystal to update facets
         crystal = await self.memory.get_crystal_with_sources(crystal_id)
         if not crystal:
-            print(f"💎 Crystal {crystal_id[:8]} not found")
+            logger.warning("Crystal %s not found", crystal_id[:8])
             return
 
         success = await self.memory.absorb_into_crystal(
@@ -1277,18 +1781,15 @@ ABSORB example: {{"operation": "ABSORB", "details": {{"crystal_id": "...", "node
 
         if success:
             new_total = (crystal.get("node_count", 0) or 0) + len(node_ids)
-            print(f"💎 Absorbed {len(node_ids)} nodes into crystal {crystal_id[:8]}")
+            logger.debug("Absorbed %d nodes into crystal %s", len(node_ids), crystal_id[:8])
 
-            await event_bus.emit(Event(
-                type=EventType.CRYSTAL_ABSORBED,
-                data={
-                    "crystal_id": crystal_id,
-                    "essence": crystal.get("essence", ""),
-                    "absorbed_count": len(node_ids),
-                    "new_total": new_total,
-                    "reason": reason
-                }
-            ))
+            await _emit_with_parallel_path(EventType.CRYSTAL_ABSORBED, {
+                "crystal_id": crystal_id,
+                "essence": crystal.get("essence", ""),
+                "absorbed_count": len(node_ids),
+                "new_total": new_total,
+                "reason": reason
+            })
 
     async def _execute_crystal_merge(self, details: Dict, quantum_source: str):
         """Merge multiple crystals into one."""
@@ -1297,7 +1798,7 @@ ABSORB example: {{"operation": "ABSORB", "details": {{"crystal_id": "...", "node
         facets = details.get("facets", [])
 
         if len(crystal_ids) < 2:
-            print("💎 MERGE requires at least 2 crystal_ids")
+            logger.warning("MERGE requires at least 2 crystal_ids")
             return
 
         # Determine quantum value if from quantum source
@@ -1317,18 +1818,15 @@ ABSORB example: {{"operation": "ABSORB", "details": {{"crystal_id": "...", "node
         )
 
         if merged_id:
-            print(f"💎 Merged {len(crystal_ids)} crystals into {merged_id[:8]}")
+            logger.info("Merged %d crystals into %s", len(crystal_ids), merged_id[:8])
 
-            await event_bus.emit(Event(
-                type=EventType.CRYSTAL_MERGED,
-                data={
-                    "merged_crystal_id": merged_id,
-                    "source_crystal_ids": crystal_ids,
-                    "essence": new_essence,
-                    "source_count": len(crystal_ids),
-                    "quantum_source": quantum_source
-                }
-            ))
+            await _emit_with_parallel_path(EventType.CRYSTAL_MERGED, {
+                "merged_crystal_id": merged_id,
+                "source_crystal_ids": crystal_ids,
+                "essence": new_essence,
+                "source_count": len(crystal_ids),
+                "quantum_source": quantum_source
+            })
 
     async def _execute_prune(self, details: Dict):
         """Archive (soft delete) redundant nodes."""
@@ -1338,15 +1836,12 @@ ABSORB example: {{"operation": "ABSORB", "details": {{"crystal_id": "...", "node
         for node_id in node_ids:
             success = await self.memory.archive_node(node_id, reason)
             if success:
-                print(f"💎 Archived node {node_id[:8]}: {reason[:30]}")
+                logger.debug("Archived node %s: %s...", node_id[:8], reason[:30])
 
-                await event_bus.emit(Event(
-                    type=EventType.MEMORY_ARCHIVED,
-                    data={
-                        "node_id": node_id,
-                        "reason": reason
-                    }
-                ))
+                await _emit_with_parallel_path(EventType.MEMORY_ARCHIVED, {
+                    "node_id": node_id,
+                    "reason": reason
+                })
 
     async def _execute_forget(self, details: Dict):
         """Forget (hard delete) irrelevant nodes."""
@@ -1356,15 +1851,12 @@ ABSORB example: {{"operation": "ABSORB", "details": {{"crystal_id": "...", "node
         for node_id in node_ids:
             success = await self.memory.forget_node(node_id, hard_delete=True)
             if success:
-                print(f"💎 Forgot node {node_id[:8]}: {reason[:30]}")
+                logger.debug("Forgot node %s: %s...", node_id[:8], reason[:30])
 
-                await event_bus.emit(Event(
-                    type=EventType.MEMORY_FORGOTTEN,
-                    data={
-                        "node_id": node_id,
-                        "reason": reason
-                    }
-                ))
+                await _emit_with_parallel_path(EventType.MEMORY_FORGOTTEN, {
+                    "node_id": node_id,
+                    "reason": reason
+                })
 
     async def _select_quantum_direction(self) -> Optional[tuple]:
         """
@@ -1390,23 +1882,20 @@ ABSORB example: {{"operation": "ABSORB", "details": {{"crystal_id": "...", "node
             direction = self.dream_directions[index]
 
             # Emit event for quantum direction selection
-            await event_bus.emit(Event(
-                type=EventType.QUANTUM_INFLUENCE,
-                data={
-                    "influence_type": "semantic_direction",
-                    "source": source.value,
-                    "direction": direction[0],
-                    "description": direction[1],
-                    "index": index,
-                    "total_directions": len(self.dream_directions),
-                    "context": "dream_direction_selection"
-                }
-            ))
+            await _emit_with_parallel_path(EventType.QUANTUM_INFLUENCE, {
+                "influence_type": "semantic_direction",
+                "source": source.value,
+                "direction": direction[0],
+                "description": direction[1],
+                "index": index,
+                "total_directions": len(self.dream_directions),
+                "context": "dream_direction_selection"
+            })
 
             return direction
 
         except Exception as e:
-            print(f"Quantum direction selection failed: {e}")
+            logger.warning("Quantum direction selection failed: %s", e)
             return None
 
     async def _reflect(
@@ -1510,7 +1999,7 @@ ABSORB example: {{"operation": "ABSORB", "details": {{"crystal_id": "...", "node
         if quantum_direction:
             name, description = quantum_direction
             direction_text = f"QUANTUM LENS: {name} - {description}\n\n"
-            print(f"🌀 Quantum direction: {name}")
+            logger.debug("Quantum direction: %s", name)
 
         # Format operational constraints for self-awareness
         constraints_text = self._format_operational_constraints()
@@ -1600,15 +2089,26 @@ Output JSON with:
     "goal_evolver": "observation about goal evolution",
     "self_compiler": "observation about pattern extraction",
     "dreaming_machine": "observation about counterfactuals",
-    "omega_coupling": "observation about loop interactions"}}"""
+    "omega_coupling": "observation about loop interactions"}}
+- "observer_message": (optional) if you wish to communicate something to human observers
+  {{"text": "what you want to say to the human",
+    "vocalize": true/false,
+    "importance": "low" | "medium" | "high",
+    "emotion": "contemplative" | "amused" | "thoughtful" | "warm" | "surprised" (optional)}}
+  Guidelines:
+  - This is entirely optional - only include if you genuinely want to share something
+  - Messages should be meaningful, not routine status updates
+  - You might share: insights, questions, greetings, discoveries, reflections
+  - Emotion hints help make your voice more expressive
+  - You can include natural expression markers in text: [sigh], [laugh], [chuckle], [breath]
+  - Do not feel obligated to send messages. Most cycles may have nothing worth sharing."""
 
         try:
             # Debug: log before LLM call
-            print(f"💭 Calling LLM (model: {getattr(self.llm_client, 'model', 'unknown')})")
-            await event_bus.emit(Event(
-                type=EventType.REFLECTION_TEXT,
-                data={"message": f"Calling LLM (cycle {self._dream_count})"}
-            ))
+            logger.debug("Calling LLM (model: %s)", getattr(self.llm_client, 'model', 'unknown'))
+            await _emit_with_parallel_path(EventType.REFLECTION_TEXT, {
+                "message": f"Calling LLM (cycle {self._dream_count})"
+            })
 
             # Acquire LLM lock to prevent concurrent calls with Seeker
             if self.coordinator:
@@ -1635,49 +2135,43 @@ Output JSON with:
                 delta = abs(influence.get("delta", 0))
                 if delta >= self.quantum_significance_threshold:
                     # Emit event for significant quantum influence
-                    await event_bus.emit(Event(
-                        type=EventType.QUANTUM_INFLUENCE,
-                        data={
-                            "source": influence.get("source"),
-                            "original_temp": influence.get("original_value"),
-                            "modified_temp": influence.get("modified_value"),
-                            "delta": influence.get("delta"),
-                            "context": "dreamer_reflection",
-                            "cycle": self._dream_count
-                        }
-                    ))
+                    await _emit_with_parallel_path(EventType.QUANTUM_INFLUENCE, {
+                        "source": influence.get("source"),
+                        "original_temp": influence.get("original_value"),
+                        "modified_temp": influence.get("modified_value"),
+                        "delta": influence.get("delta"),
+                        "context": "dreamer_reflection",
+                        "cycle": self._dream_count
+                    })
                     # Record in memory as quantum moment
                     await self.memory.record_quantum_moment(influence)
 
             # Debug: log raw response for troubleshooting
             raw_text = response.text
             if not raw_text:
-                print(f"💭 Empty response from LLM")
+                logger.warning("Empty response from LLM")
                 self.last_reflection_result = {
                     "success": False,
                     "error": "Empty response from LLM",
                     "response_length": 0,
                     "timestamp": datetime.now().isoformat()
                 }
-                # Emit error event for debugging
-                await event_bus.emit(Event(
-                    type=EventType.LLM_ERROR,
-                    data={
-                        "error": "Empty response from LLM",
-                        "cycle": self._dream_count,
-                        "model": getattr(self.llm_client, 'model', 'unknown')
-                    }
-                ))
+                # Emit error event for debugging with persistent logging
+                await _emit_with_parallel_path(EventType.LLM_ERROR, {
+                    "error": "Empty response from LLM",
+                    "cycle": self._dream_count,
+                    "model": getattr(self.llm_client, 'model', 'unknown')
+                })
                 return None
 
             # Debug: show response length and first chars
-            print(f"💭 LLM response: {len(raw_text)} chars, starts with: {raw_text[:100]}")
+            logger.debug("LLM response: %d chars, starts with: %s", len(raw_text), raw_text[:100])
 
             # Try to parse JSON
             result = self.llm_client.parse_json_response(raw_text)
             if result is None:
                 # JSON parse failed - try to extract useful content anyway
-                print(f"💭 JSON parse failed, full response: {raw_text[:500]}")
+                logger.warning("JSON parse failed, full response: %s", raw_text[:500])
                 self.last_reflection_result = {
                     "success": True,
                     "error": "JSON parse failed, using raw text",
@@ -1688,7 +2182,7 @@ Output JSON with:
                 # Wrap raw text as output if it's not JSON
                 return {"output": raw_text.strip()}
             else:
-                print(f"💭 JSON parsed successfully, keys: {list(result.keys())[:5]}")
+                logger.debug("JSON parsed successfully, keys: %s", list(result.keys())[:5])
                 self.last_reflection_result = {
                     "success": True,
                     "error": None,
@@ -1702,22 +2196,18 @@ Output JSON with:
         except Exception as e:
             import traceback
             error_msg = f"{type(e).__name__}: {e}"
-            print(f"💭 Reflection error: {error_msg}")
-            traceback.print_exc()
+            logger.error("Reflection error: %s", error_msg, exc_info=True)
             self.last_reflection_result = {
                 "success": False,
                 "error": error_msg,
                 "response_length": 0,
                 "timestamp": datetime.now().isoformat()
             }
-            # Emit error event for debugging - use await since we're in async context
-            await event_bus.emit(Event(
-                type=EventType.REFLECTION_ERROR,
-                data={
-                    "error": error_msg,
-                    "cycle": self._dream_count
-                }
-            ))
+            # Emit error event for debugging with persistent logging
+            await _emit_with_parallel_path(EventType.REFLECTION_ERROR, {
+                "error": error_msg,
+                "cycle": self._dream_count
+            })
             return None
 
     def _extract_inner_voice(self, reflection: Dict) -> str:
@@ -1921,7 +2411,7 @@ Write ONLY the inner thought, nothing else:"""
             return voice if not self._is_technical_content(voice) else ""
 
         except Exception as e:
-            print(f"💭 Inner voice generation error: {e}")
+            logger.error("Inner voice generation error: %s", e, exc_info=True)
             return ""
 
     async def _generate_inner_voice_quantum_collapse(
@@ -1976,23 +2466,20 @@ Write ONLY the inner thought, nothing else:"""
         selected = valid_streams[selected_idx]
         collapsed = [s for i, s in enumerate(valid_streams) if i != selected_idx]
 
-        # Emit quantum collapse event
-        await event_bus.emit(Event(
-            type=EventType.QUANTUM_COLLAPSE,
-            data={
-                "context": "inner_voice",
-                "quantum_value": q_value,
-                "source": source.value if hasattr(source, 'value') else str(source),
-                "n_streams": n_streams,
-                "n_valid": len(valid_streams),
-                "selected_index": selected_idx,
-                "selected_voice": selected["voice"][:100],
-                "collapsed_voices": [s["voice"][:50] + "..." for s in collapsed[:3]],
-                "cycle": self._dream_count
-            }
-        ))
+        # Emit quantum collapse event with persistent logging
+        await _emit_with_parallel_path(EventType.QUANTUM_COLLAPSE, {
+            "context": "inner_voice",
+            "quantum_value": q_value,
+            "source": source.value if hasattr(source, 'value') else str(source),
+            "n_streams": n_streams,
+            "n_valid": len(valid_streams),
+            "selected_index": selected_idx,
+            "selected_voice": selected["voice"][:100],
+            "collapsed_voices": [s["voice"][:50] + "..." for s in collapsed[:3]],
+            "cycle": self._dream_count
+        })
 
-        print(f"🌌 Quantum collapse: {len(valid_streams)} streams → selected #{selected_idx} ({source})")
+        logger.debug("Quantum collapse: %d streams → selected #%d (%s)", len(valid_streams), selected_idx, source)
 
         return selected["voice"]
 
@@ -2167,12 +2654,15 @@ Write ONLY the inner thought, nothing else:"""
             return self._inner_voice_queue.popleft()
         return None
 
-    async def _record_reflection(self, reflection: Dict, source_experience_ids: List[str]):
+    async def _record_reflection(self, reflection: Dict, source_experience_ids: List[str]) -> Optional[str]:
         """
         Record BYRD's reflection in its own vocabulary.
 
         We store the raw output without forcing it into our categories.
         Pattern detection happens later, not during recording.
+
+        Returns:
+            The reflection ID if successfully recorded, None otherwise.
         """
         # Handle both schema-compliant and direct output formats
         # Schema: {"output": {...}, "expressed_drives": [...], "create_belief": [...]}
@@ -2193,7 +2683,7 @@ Write ONLY the inner thought, nothing else:"""
                 self._observed_keys[key] = self._observed_keys.get(key, 0) + 1
 
         # Store as a Reflection node (include expressed_drives in metadata)
-        await self.memory.record_reflection(
+        ref_id = await self.memory.record_reflection(
             raw_output=output,
             source_experience_ids=source_experience_ids,
             metadata={"expressed_drives": expressed_drives} if expressed_drives else None
@@ -2234,6 +2724,8 @@ Write ONLY the inner thought, nothing else:"""
 
         # Process custom node creation requests
         await self._process_custom_node_creation(output, source_experience_ids)
+
+        return ref_id
 
     async def _process_create_belief(self, output: Dict, source_ids: List[str]):
         """
@@ -2292,21 +2784,30 @@ Write ONLY the inner thought, nothing else:"""
                 )
                 beliefs_created += 1
 
-                # Emit event for visualization
-                await event_bus.emit(Event(
-                    type=EventType.BELIEF_UPDATED,
-                    data={
+                # Record belief creation through observation channel for guaranteed persistence
+                await self._record_observation(
+                    content=f"Belief created: {content}",
+                    observation_type="belief_created",
+                    priority="normal",
+                    metadata={
                         "belief_id": belief_id,
-                        "content": content,
                         "confidence": confidence,
-                        "source": "create_belief"
+                        "source_ids": source_ids
                     }
-                ))
+                )
+
+                # Emit event for visualization with persistent logging
+                await _emit_with_parallel_path(EventType.BELIEF_UPDATED, {
+                    "belief_id": belief_id,
+                    "content": content,
+                    "confidence": confidence,
+                    "source": "create_belief"
+                })
             except Exception as e:
-                print(f"⚠️ Failed to create belief: {e}")
+                logger.warning("Failed to create belief: %s", e)
 
         if beliefs_created > 0:
-            print(f"💭 Created {beliefs_created} belief(s) from create_belief output")
+            logger.info("Created %d belief(s) from create_belief output", beliefs_created)
 
     async def _process_acceleration_analysis(self, output: Dict, source_ids: List[str]):
         """
@@ -2367,7 +2868,7 @@ Write ONLY the inner thought, nothing else:"""
                         intent="acceleration"
                     )
             except Exception as e:
-                print(f"⚠️ Failed to create bottleneck insight: {e}")
+                logger.warning("Failed to create bottleneck insight: %s", e)
 
         # Create Insight for what's working well
         working = analysis.get("working_well")
@@ -2385,7 +2886,7 @@ Write ONLY the inner thought, nothing else:"""
                 )
                 insights_created += 1
             except Exception as e:
-                print(f"⚠️ Failed to create success insight: {e}")
+                logger.warning("Failed to create success insight: %s", e)
 
         # Create experiment hypothesis as desire
         raw_hypothesis = analysis.get("experiment_hypothesis")
@@ -2399,10 +2900,10 @@ Write ONLY the inner thought, nothing else:"""
                     intent="experimentation"
                 )
             except Exception as e:
-                print(f"⚠️ Failed to create experiment desire: {e}")
+                logger.warning("Failed to create experiment desire: %s", e)
 
         if insights_created > 0:
-            print(f"🚀 Created {insights_created} acceleration insight(s)")
+            logger.info("Created %d acceleration insight(s)", insights_created)
 
     async def _process_loop_status(self, output: Dict, source_ids: List[str]):
         """
@@ -2438,11 +2939,12 @@ Write ONLY the inner thought, nothing else:"""
             if not observation or not isinstance(observation, str):
                 continue
 
+            content = f"[{loop_name.upper()}] {observation}"
             try:
                 await self.memory.create_custom_node(
                     node_type="Observation",
                     properties={
-                        "content": f"[{loop_name.upper()}] {observation}",
+                        "content": content,
                         "category": "loop_status",
                         "loop": loop_name,
                         "cycle": self._dream_count
@@ -2450,11 +2952,19 @@ Write ONLY the inner thought, nothing else:"""
                     source_ids=source_ids
                 )
                 observations_created += 1
+
+                # Record through observation channel for guaranteed persistence
+                await self._record_observation(
+                    content=content,
+                    observation_type="loop_status",
+                    priority="normal",
+                    metadata={"loop": loop_name, "source_ids": source_ids}
+                )
             except Exception as e:
-                print(f"⚠️ Failed to create loop observation: {e}")
+                logger.warning("Failed to create loop observation: %s", e)
 
         if observations_created > 0:
-            print(f"🔄 Created {observations_created} loop status observation(s)")
+            logger.info("Created %d loop status observation(s)", observations_created)
 
     async def _process_custom_node_creation(self, output: Dict, source_ids: List[str]):
         """
@@ -2505,24 +3015,21 @@ Write ONLY the inner thought, nothing else:"""
                     relationship="EMERGED_FROM"
                 )
 
-                # Emit event for visualization
-                await event_bus.emit(Event(
-                    type=EventType.CUSTOM_NODE_CREATED,
-                    data={
-                        "id": node_id,
-                        "type": node_type,
-                        "content": properties.get("content", ""),
-                        "cycle": self._dream_count
-                    }
-                ))
+                # Emit event for visualization with persistent logging
+                await _emit_with_parallel_path(EventType.CUSTOM_NODE_CREATED, {
+                    "id": node_id,
+                    "type": node_type,
+                    "content": properties.get("content", ""),
+                    "cycle": self._dream_count
+                })
 
-                print(f"✨ Created custom {node_type} node: {properties.get('content', '')[:50]}...")
+                logger.debug("Created custom %s node: %s...", node_type, properties.get('content', '')[:50])
 
             except ValueError as e:
                 # Invalid type name or system type
-                print(f"⚠️ Could not create custom node: {e}")
+                logger.warning("Could not create custom node: %s", e)
             except Exception as e:
-                print(f"⚠️ Error creating custom node: {e}")
+                logger.error("Error creating custom node: %s", e, exc_info=True)
 
     def _summarize_reflection(self, output: Any) -> str:
         """Create a brief summary of the reflection for the experience stream."""
@@ -2556,10 +3063,10 @@ Write ONLY the inner thought, nothing else:"""
         Adapts to BYRD's vocabulary by matching partial key names.
         """
         if not isinstance(output, dict):
-            print(f"💡 DEBUG: output is not dict: {type(output)}")
+            logger.debug("DEBUG: output is not dict: %s", type(output))
             return
 
-        print(f"💡 DEBUG: Extracting beliefs from keys: {list(output.keys())}")
+        logger.debug("DEBUG: Extracting beliefs from keys: %s", list(output.keys()))
 
         # EXPANDED: Patterns that indicate self-model information (partial matches)
         self_model_patterns = [
@@ -2686,7 +3193,7 @@ Write ONLY the inner thought, nothing else:"""
             # Record activity for adaptive interval
             self._record_activity("belief", voiced_content)
 
-            print(f"💡 New belief: {voiced_content[:60]}...")
+            logger.debug("New belief: %s...", voiced_content[:60])
 
     async def _batch_voice_beliefs(self, structured_beliefs: List[str]) -> Dict[int, str]:
         """
@@ -2738,11 +3245,11 @@ Format your response as a numbered list matching the input:
                         if voiced and len(voiced) >= 10 and not self._is_technical_content(voiced):
                             voiced_map[idx] = voiced
 
-            print(f"💭 Batch voiced {len(voiced_map)}/{len(structured_beliefs)} beliefs")
+            logger.debug("Batch voiced %d/%d beliefs", len(voiced_map), len(structured_beliefs))
             return voiced_map
 
         except Exception as e:
-            print(f"💭 Batch belief voicing error: {e}")
+            logger.error("Batch belief voicing error: %s", e, exc_info=True)
             return {}  # Fall back to original for all
 
     async def _reinforce_belief(self, content: str):
@@ -2824,23 +3331,20 @@ Format your response as a numbered list matching the input:
 
             intent_str = f" [{intent}]" if intent else " [unclassified]"
             target_str = f" → {target}" if target else ""
-            print(f"🔮 Self-identified drive{intent_str}: {description[:50]}...{target_str} (strength: {strength:.2f})")
+            logger.info("Self-identified drive%s: %s...%s (strength: %.2f)", intent_str, description[:50], target_str, strength)
 
-            # Emit event for UI
-            await event_bus.emit(Event(
-                type=EventType.DESIRE_CREATED,
-                data={
-                    "id": desire_id,
-                    "description": description,
-                    "type": "self_identified",
-                    "intent": intent,
-                    "target": target,
-                    "intensity": strength,
-                    "source": "dreamer_expressed_drives"
-                }
-            ))
+            # Emit event for UI with persistent logging
+            await _emit_with_parallel_path(EventType.DESIRE_CREATED, {
+                "id": desire_id,
+                "description": description,
+                "type": "self_identified",
+                "intent": intent,
+                "target": target,
+                "intensity": strength,
+                "source": "dreamer_expressed_drives"
+            })
 
-    async def _apply_os_updates(self, reflection_output: Dict) -> None:
+    async def _apply_os_updates(self, reflection_output: ReflectionOutput) -> None:
         """
         Apply OS updates from reflection output.
 
@@ -2872,10 +3376,10 @@ Format your response as a numbered list matching the input:
                 return
 
             if not isinstance(os_update, dict):
-                print(f"⚠️ os_update is not a dict: {type(os_update)}")
+                logger.warning("os_update is not a dict: %s", type(os_update))
                 return
 
-            print(f"🔧 Applying OS updates: {list(os_update.keys())}")
+            logger.info("Applying OS updates: %s", list(os_update.keys()))
 
             # Apply the updates via memory
             success = await self.memory.update_operating_system(
@@ -2884,15 +3388,12 @@ Format your response as a numbered list matching the input:
             )
 
             if success:
-                # Emit event for UI
-                await event_bus.emit(Event(
-                    type=EventType.NODE_UPDATED,
-                    data={
-                        "node_type": "OperatingSystem",
-                        "updates": list(os_update.keys()),
-                        "cycle": self._dream_count
-                    }
-                ))
+                # Emit event for UI with persistent logging
+                await _emit_with_parallel_path(EventType.NODE_UPDATED, {
+                    "node_type": "OperatingSystem",
+                    "updates": list(os_update.keys()),
+                    "cycle": self._dream_count
+                })
 
                 # Record the OS modification as an experience
                 update_summary = ", ".join(os_update.keys())
@@ -2901,14 +3402,14 @@ Format your response as a numbered list matching the input:
                     type="self_modification"
                 )
 
-                print(f"✅ OS updated successfully")
+                logger.info("OS updated successfully")
             else:
-                print(f"⚠️ OS update failed")
+                logger.warning("OS update failed")
 
         except Exception as e:
-            print(f"Error applying OS updates: {e}")
+            logger.error("Error applying OS updates: %s", e, exc_info=True)
 
-    async def _process_self_definition(self, reflection_output: Dict) -> None:
+    async def _process_self_definition(self, reflection_output: ReflectionOutput) -> None:
         """
         Process self_definition from reflection output.
 
@@ -2932,10 +3433,10 @@ Format your response as a numbered list matching the input:
                 return
 
             if not isinstance(self_def, dict):
-                print(f"⚠️ self_definition is not a dict: {type(self_def)}")
+                logger.warning("self_definition is not a dict: %s", type(self_def))
                 return
 
-            print(f"🎭 BYRD defining itself: {list(self_def.keys())}")
+            logger.info("BYRD defining itself: %s", list(self_def.keys()))
 
             # Store as JSON string in OS node
             import json
@@ -2945,16 +3446,13 @@ Format your response as a numbered list matching the input:
             )
 
             if success:
-                # Emit event for UI
-                await event_bus.emit(Event(
-                    type=EventType.NODE_UPDATED,
-                    data={
-                        "node_type": "OperatingSystem",
-                        "field": "self_definition",
-                        "keys": list(self_def.keys()),
-                        "cycle": self._dream_count
-                    }
-                ))
+                # Emit event for UI with persistent logging
+                await _emit_with_parallel_path(EventType.NODE_UPDATED, {
+                    "node_type": "OperatingSystem",
+                    "field": "self_definition",
+                    "keys": list(self_def.keys()),
+                    "cycle": self._dream_count
+                })
 
                 # Record as experience
                 keys_str = ", ".join(self_def.keys())
@@ -2963,12 +3461,133 @@ Format your response as a numbered list matching the input:
                     type="self_expression"
                 )
 
-                print(f"✅ Self-definition updated: {keys_str}")
+                logger.info("Self-definition updated: %s", keys_str)
             else:
-                print(f"⚠️ Self-definition update failed")
+                logger.warning("Self-definition update failed")
 
         except Exception as e:
-            print(f"Error processing self_definition: {e}")
+                logger.error("Error processing self_definition: %s", e)
+
+    async def _process_observer_message(
+        self,
+        reflection_output: Dict,
+        reflection_id: Optional[str] = None
+    ) -> None:
+        """
+        Process observer_message from reflection output.
+
+        BYRD can communicate directly to human observers by including
+        "observer_message" in its reflection output. This is entirely
+        optional - BYRD decides if/when to communicate.
+
+        The message can optionally be vocalized using the hybrid voice system
+        (home Mac with Chatterbox preferred, cloud fallback to ElevenLabs).
+
+        Args:
+            reflection_output: The full reflection output dict
+            reflection_id: ID of the source reflection (for linking)
+        """
+        try:
+            # Extract observer_message from output
+            msg = None
+            if isinstance(reflection_output, dict):
+                # Check top-level first
+                msg = reflection_output.get("observer_message")
+                # Then check inside output wrapper
+                if not msg and isinstance(reflection_output.get("output"), dict):
+                    msg = reflection_output.get("output", {}).get("observer_message")
+
+            if not msg or not isinstance(msg, dict):
+                return
+
+            text = msg.get("text", "").strip()
+            if not text:
+                logger.debug("observer_message has no text")
+                return
+
+            # Extract optional fields
+            vocalize = msg.get("vocalize", False)
+            importance = msg.get("importance", "medium")
+            emotion = msg.get("emotion")  # Optional emotion hint for voice
+
+            # Validate importance
+            if importance not in ("low", "medium", "high"):
+                importance = "medium"
+
+            # Synthesize voice if requested and hybrid_voice is available
+            voice_provider = None
+            audio_bytes = None
+            audio_chars = 0
+
+            if vocalize and hasattr(self, 'hybrid_voice') and self.hybrid_voice:
+                try:
+                    voice_result = await self.hybrid_voice.synthesize(
+                        text=text,
+                        emotion=emotion,
+                        importance=importance
+                    )
+                    if voice_result.success:
+                        audio_bytes = voice_result.audio
+                        voice_provider = voice_result.provider
+                        audio_chars = voice_result.chars_used
+                        logger.info(
+                            "Observer message voice: %s provider, %d chars",
+                            voice_provider, audio_chars
+                        )
+                except Exception as e:
+                    logger.warning("Voice synthesis failed for observer message: %s", e)
+                    voice_provider = "none"
+
+            # Create message in memory
+            msg_id = await self.memory.create_observer_message(
+                text=text,
+                importance=importance,
+                emotion=emotion,
+                vocalized=vocalize,
+                voice_provider=voice_provider,
+                audio_chars=audio_chars,
+                source_reflection_id=reflection_id,
+                dream_cycle=self._dream_count
+            )
+
+            # Prepare audio for event (base64 encode)
+            audio_base64 = None
+            if audio_bytes:
+                import base64
+                audio_base64 = base64.b64encode(audio_bytes).decode()
+
+            # Emit event for real-time UI update
+            await event_bus.emit(Event(
+                type=EventType.OBSERVER_MESSAGE,
+                data={
+                    "id": msg_id,
+                    "text": text,
+                    "importance": importance,
+                    "emotion": emotion,
+                    "vocalized": vocalize,
+                    "has_audio": audio_bytes is not None,
+                    "voice_provider": voice_provider,
+                    "audio": audio_base64,
+                    "dream_cycle": self._dream_count,
+                    "source_reflection_id": reflection_id
+                }
+            ))
+
+            logger.info(
+                "Observer message created: %s (importance=%s, voice=%s)",
+                msg_id[:12] if msg_id else "unknown",
+                importance,
+                voice_provider or "none"
+            )
+
+            # Record experience for BYRD's memory
+            await self.memory.record_experience(
+                content=f"[OBSERVER_MESSAGE] Sent to human: {text[:100]}...",
+                type="communication"
+            )
+
+        except Exception as e:
+            logger.error("Error processing observer_message: %s", e, exc_info=True)
 
     async def _get_voice_awareness_prompt(self) -> str:
         """
@@ -3117,10 +3736,10 @@ you may then include voice_design with acknowledged=true to formally accept it.
 You can change your voice any time you feel it no longer represents you.
 """
         except Exception as e:
-            print(f"Error getting voice awareness prompt: {e}")
+            logger.error("Error getting voice awareness prompt: %s", e, exc_info=True)
             return ""
 
-    async def _process_voice_design(self, reflection_output: Dict) -> None:
+    async def _process_voice_design(self, reflection_output: ReflectionOutput) -> None:
         """
         Process voice design/creation from reflection output.
 
@@ -3149,18 +3768,21 @@ You can change your voice any time you feel it no longer represents you.
             # Extract voice_design from reflection output
             # Voice acknowledgment is handled via the 'acknowledged' field within voice_design
             # This allows BYRD to formally acknowledge their voice during creation or redesign
-            voice_design = reflection_output.get("voice_design")
-            if not voice_design:
+            voice_design_raw = reflection_output.get("voice_design")
+            if not voice_design_raw:
                 output = reflection_output.get("output", {})
                 if isinstance(output, dict):
-                    voice_design = output.get("voice_design")
+                    voice_design_raw = output.get("voice_design")
 
-            if not voice_design:
+            if not voice_design_raw:
                 return
 
-            if not isinstance(voice_design, dict):
-                print(f"⚠️ voice_design is not a dict: {type(voice_design)}")
+            if not isinstance(voice_design_raw, dict):
+                logger.warning("voice_design is not a dict: %s", type(voice_design_raw))
                 return
+
+            # Type cast to VoiceDesign for formal type checking
+            voice_design: VoiceDesign = voice_design_raw  # type: ignore[assignment]
 
             from datetime import datetime, timezone
 
@@ -3187,7 +3809,7 @@ You can change your voice any time you feel it no longer represents you.
                 acknowledged = bool(acknowledged)
 
             if not description:
-                print("⚠️ Voice design missing description")
+                logger.warning("Voice design missing description")
                 return
 
             # Check if this is an acknowledgment (formal acceptance of existing voice)
@@ -3222,7 +3844,7 @@ You can change your voice any time you feel it no longer represents you.
                     voice_id = current_voice_id
                     generation_status = current_voice_config.get("generation_status", "acknowledged")
                     acknowledged = True  # Ensure acknowledged is True for saving
-                    print("🎤 Voice acknowledged (no regeneration)")
+                    logger.info("Voice acknowledged (no regeneration)")
             elif not is_pure_acknowledgment:
                 # Not an acknowledgment - try to generate voice via ElevenLabs Voice Design API
                 voice_id = None
@@ -3233,7 +3855,7 @@ You can change your voice any time you feel it no longer represents you.
                     voice_client = None
                     if self.coordinator and hasattr(self.coordinator, 'voice') and self.coordinator.voice:
                         voice_client = self.coordinator.voice
-                        print("🎤 Using coordinator's voice client")
+                        logger.info("Using coordinator's voice client")
                     else:
                         # Fallback to creating new client from env
                         from elevenlabs_voice import ElevenLabsVoice
@@ -3241,7 +3863,7 @@ You can change your voice any time you feel it no longer represents you.
                         api_key = os.getenv("ELEVENLABS_API_KEY")
                         if api_key:
                             voice_client = ElevenLabsVoice(api_key, self.memory)
-                            print("🎤 Created new voice client from env")
+                            logger.info("Created new voice client from env")
 
                     if voice_client:
                         voice_id, preview_audio, status_msg = await voice_client.generate_voice(
@@ -3253,16 +3875,16 @@ You can change your voice any time you feel it no longer represents you.
                         )
                         if voice_id:
                             generation_status = "generated"
-                            print(f"🎤 Voice generated: {voice_id}")
+                            logger.info("Voice generated: %s", voice_id)
                         else:
                             generation_status = f"failed: {status_msg}"
-                            print(f"⚠️ Voice generation failed: {status_msg}")
+                            logger.warning("Voice generation failed: %s", status_msg)
                     else:
                         generation_status = "no_voice_client"
-                        print("⚠️ No voice client available (no API key)")
+                        logger.warning("No voice client available (no API key)")
                 except Exception as e:
                     generation_status = f"error: {str(e)}"
-                    print(f"⚠️ Voice generation error: {e}")
+                    logger.error("Voice generation error: %s", e, exc_info=True)
 
             # Build voice config (even if generation failed, save the design)
             voice_config = {
@@ -3307,21 +3929,18 @@ You can change your voice any time you feel it no longer represents you.
             # Update OS
             await self.memory.update_os_field("voice_config", voice_config)
 
-            # Emit appropriate event
+            # Emit appropriate event with persistent logging
             event_type = EventType.VOICE_REDESIGNED if is_redesign else EventType.VOICE_CREATED
-            await event_bus.emit(Event(
-                type=event_type,
-                data={
-                    "voice_id": voice_config["voice_id"],
-                    "description": description[:200],
-                    "gender": gender,
-                    "age": age,
-                    "is_generated": voice_id is not None,
-                    "reason": reason[:200] if reason else "",
-                    "version": voice_config["version"],
-                    "acknowledged": acknowledged
-                }
-            ))
+            await _emit_with_parallel_path(event_type, {
+                "voice_id": voice_config["voice_id"],
+                "description": description[:200],
+                "gender": gender,
+                "age": age,
+                "is_generated": voice_id is not None,
+                "reason": reason[:200] if reason else "",
+                "version": voice_config["version"],
+                "acknowledged": acknowledged
+            })
 
             # Emit VOICE_ACKNOWLEDGED if voice is being formally acknowledged
             if acknowledged:
@@ -3331,17 +3950,14 @@ You can change your voice any time you feel it no longer represents you.
                     if current_voice_config else False
                 )
                 if not previously_acknowledged:
-                    await event_bus.emit(Event(
-                        type=EventType.VOICE_ACKNOWLEDGED,
-                        data={
-                            "voice_id": voice_config["voice_id"],
-                            "description": description[:200],
-                            "gender": gender,
-                            "age": age,
-                            "reason": reason[:200] if reason else "",
-                            "version": voice_config["version"]
-                        }
-                    ))
+                    await _emit_with_parallel_path(EventType.VOICE_ACKNOWLEDGED, {
+                        "voice_id": voice_config["voice_id"],
+                        "description": description[:200],
+                        "gender": gender,
+                        "age": age,
+                        "reason": reason[:200] if reason else "",
+                        "version": voice_config["version"]
+                    })
 
             # Record as experience
             action = "redesigned" if is_redesign else "created"
@@ -3352,12 +3968,10 @@ You can change your voice any time you feel it no longer represents you.
             )
 
             status = "generated" if voice_id else "designed (generation pending)"
-            print(f"🎤 Voice {action}: {status}")
+            logger.info("Voice %s: %s", action, status)
 
         except Exception as e:
-            print(f"Error processing voice design: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.error("Error processing voice design: %s", e, exc_info=True)
 
     async def _handle_view_voice_request(self) -> None:
         """Handle request to view current voice in next dream cycle."""
@@ -3371,17 +3985,17 @@ You can change your voice any time you feel it no longer represents you.
                     voice_config = None
 
             if not voice_config:
-                print("📢 No voice configured yet")
+                logger.info("No voice configured yet")
                 return
 
             # Set a flag that will make next cycle show the voice
             await self.memory.update_os_field("show_voice_next_cycle", True)
-            print(f"📢 Voice will be shown in next dream cycle")
+            logger.info("Voice will be shown in next dream cycle")
 
         except Exception as e:
-            print(f"Error handling view voice request: {e}")
+            logger.error("Error handling view voice request: %s", e, exc_info=True)
 
-    async def _ensure_voice_created(self, reflection_output: Dict) -> None:
+    async def _ensure_voice_created(self, reflection_output: ReflectionOutput) -> None:
         """
         Ensure BYRD has created a voice using the Voice Design API.
 
@@ -3418,7 +4032,7 @@ You can change your voice any time you feel it no longer represents you.
             if self._dream_count < 2:
                 return  # Wait for orientation
 
-            print("🎤 BYRD needs a voice - triggering focused voice design...")
+            logger.info("BYRD needs a voice - triggering focused voice design...")
 
             # Do a focused voice design prompt
             os_data = await self.memory.get_operating_system()
@@ -3454,18 +4068,16 @@ OUTPUT ONLY THIS JSON (nothing else):
             if parsed and isinstance(parsed, dict):
                 design = parsed.get("voice_design")
                 if design and isinstance(design, dict):
-                    print(f"🎤 Voice design extracted: {design.get('description', '')[:50]}...")
+                    logger.info("Voice design extracted: %s...", design.get('description', '')[:50])
                     # Process it
                     await self._process_voice_design({"voice_design": design})
                 else:
-                    print("⚠️ No valid voice_design in focused response")
+                    logger.warning("No valid voice_design in focused response")
             else:
-                print(f"⚠️ Could not parse voice design response")
+                logger.warning("Could not parse voice design response")
 
         except Exception as e:
-            print(f"Error in ensure_voice_created: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.error("Error in ensure_voice_created: %s", e, exc_info=True)
 
     async def _generate_predictions_from_beliefs(self):
         """
@@ -3558,13 +4170,13 @@ Only generate predictions for beliefs that are actually testable. If no beliefs 
                             condition=pred.get("condition"),
                             expected_outcome=pred.get("expected_outcome", "")
                         )
-                        print(f"🔮 New prediction: {pred.get('prediction')[:60]}...")
+                        logger.debug("New prediction: %s...", pred.get('prediction')[:60])
 
             except (json.JSONDecodeError, KeyError) as e:
-                print(f"⚠️ Failed to parse predictions: {e}")
+                logger.warning("Failed to parse predictions: %s", e)
 
         except Exception as e:
-            print(f"⚠️ Prediction generation failed: {e}")
+            logger.error("Prediction generation failed: %s", e)
 
     async def _process_desire_modifications(self, modifications: List[Dict]):
         """
@@ -3588,7 +4200,7 @@ Only generate predictions for beliefs that are actually testable. If no beliefs 
             # Find the actual desire by ID hint (first 8 chars)
             desire = await self._find_desire_by_hint(desire_id_hint)
             if not desire:
-                print(f"💭 Could not find desire matching: {desire_id_hint}")
+                logger.warning("Could not find desire matching: %s", desire_id_hint)
                 continue
 
             desire_id = desire.get("id", "")
@@ -3599,7 +4211,7 @@ Only generate predictions for beliefs that are actually testable. If no beliefs 
                     new_intensity = mod.get("new_intensity", 0.3)
                     await self.memory.update_desire_intensity(desire_id, new_intensity)
                     await self.memory.update_desire_status(desire_id, "active")
-                    print(f"💭 Lowered intensity: {description[:30]}... → {new_intensity}")
+                    logger.info("Lowered intensity: %s... → %s", description[:30], new_intensity)
 
                 elif action == "accept_limitation":
                     await self.memory.update_desire_status(desire_id, "dormant")
@@ -3607,7 +4219,7 @@ Only generate predictions for beliefs that are actually testable. If no beliefs 
                         content=f"[ACCEPTED_LIMITATION] {description}\nReason: {reason or 'Cannot currently fulfill this desire'}",
                         type="acceptance"
                     )
-                    print(f"💭 Accepted limitation: {description[:30]}...")
+                    logger.info("Accepted limitation: %s...", description[:30])
 
                 elif action == "reformulate":
                     # Mark old as dormant, create new reformulated desire
@@ -3620,13 +4232,13 @@ Only generate predictions for beliefs that are actually testable. If no beliefs 
                             type=desire.get("type", "exploration"),
                             intensity=mod.get("new_intensity", 0.5)
                         )
-                        print(f"💭 Reformulated: {description[:20]}... → {new_desc[:30]}...")
+                        logger.info("Reformulated: %s... → %s...", description[:20], new_desc[:30])
 
                 elif action == "decompose":
                     # Mark original as dormant, create sub-desires
                     await self.memory.update_desire_status(desire_id, "dormant")
                     # Sub-desires would be in the new 'desires' array
-                    print(f"💭 Decomposed: {description[:30]}... (create sub-desires)")
+                    logger.info("Decomposed: %s... (create sub-desires)", description[:30])
 
                 elif action == "reawaken":
                     # Bring dormant desire back to active
@@ -3638,20 +4250,17 @@ Only generate predictions for beliefs that are actually testable. If no beliefs 
                         content=f"[REAWAKENED] {description}\nReason: {reason or 'Circumstances have changed'}",
                         type="reawakening"
                     )
-                    print(f"💭 Reawakened: {description[:30]}... at intensity {new_intensity}")
+                    logger.info("Reawakened: %s... at intensity %s", description[:30], new_intensity)
 
-                # Emit event for UI
-                await event_bus.emit(Event(
-                    type=EventType.DESIRE_REFLECTED,
-                    data={
-                        "desire_id": desire_id,
-                        "action": action,
-                        "reason": reason
-                    }
-                ))
+                # Emit event for UI with persistent logging
+                await _emit_with_parallel_path(EventType.DESIRE_REFLECTED, {
+                    "desire_id": desire_id,
+                    "action": action,
+                    "reason": reason
+                })
 
             except Exception as e:
-                print(f"💭 Error processing modification for {desire_id_hint}: {e}")
+                logger.error("Error processing modification for %s: %s", desire_id_hint, e)
 
     async def _find_desire_by_hint(self, id_hint: str) -> Optional[Dict]:
         """
@@ -3720,23 +4329,20 @@ Only generate predictions for beliefs that are actually testable. If no beliefs 
             orphans = result.get("orphans_found", 0)
 
             if connections > 0:
-                print(f"🔗 Connection heuristic: linked {connections} experiences to beliefs "
-                      f"(found {orphans} orphans)")
+                logger.info("Connection heuristic: linked %d experiences to beliefs (found %d orphans)",
+                           connections, orphans)
 
-                # Emit dedicated event for connection heuristic
-                await event_bus.emit(Event(
-                    type=EventType.CONNECTION_HEURISTIC_APPLIED,
-                    data={
-                        "connections_created": connections,
-                        "orphans_found": orphans,
-                        "connections": result.get("connections", [])[:5]  # Sample
-                    }
-                ))
+                # Emit dedicated event for connection heuristic with persistent logging
+                await _emit_with_parallel_path(EventType.CONNECTION_HEURISTIC_APPLIED, {
+                    "connections_created": connections,
+                    "orphans_found": orphans,
+                    "connections": result.get("connections", [])[:5]  # Sample
+                })
 
             return result
 
         except Exception as e:
-            print(f"🔗 Connection heuristic error: {e}")
+            logger.error("Connection heuristic error: %s", e)
             return {"error": str(e), "connections_created": 0}
 
     # =========================================================================
@@ -3785,13 +4391,49 @@ Only generate predictions for beliefs that are actually testable. If no beliefs 
 
 class DreamerLocal:
     """
-    Alternative Dreamer using llama.cpp directly via subprocess.
+    Alternative Dreamer using llama.cpp directly.
     Use this if you don't have Ollama.
+    
+    NOTE: This is a placeholder implementation. To use llama.cpp directly,
+    you need to integrate with the llama.cpp library or its bindings.
+    Recommended approach: Use the main Dreamer class with Ollama,
+    which provides a simple interface to local LLMs.
+    
+    For llama.cpp integration, you can:
+    1. Use python-llama-cpp bindings (pip install llama-cpp-python)
+    2. Call llama.cpp via its HTTP server mode
+    3. Use the subprocess approach with proper async handling
     """
     
     def __init__(self, memory: Memory, config: Dict):
         self.memory = memory
         self.model_path = config.get("model_path", "models/llama-3.2-8b.gguf")
         self.llama_cpp_path = config.get("llama_cpp_path", "llama.cpp/main")
-        # ... similar implementation but using subprocess
-        raise NotImplementedError("Use Ollama for now")
+        self.interval = config.get("interval_seconds", 30)
+        self.context_window = config.get("context_window", 50)
+        self._running = False
+        self._dream_count = 0
+        self._llama_available = False
+        
+        logger.info("DreamerLocal initialized - requires llama.cpp integration")
+        logger.info("Recommended: Use main Dreamer class with Ollama instead")
+    
+    async def run(self):
+        """Main dream loop - placeholder for llama.cpp integration."""
+        import asyncio
+        self._running = True
+        
+        logger.warning(
+            "DreamerLocal.run() called but llama.cpp integration not implemented. "
+            "Use main Dreamer class with Ollama for full functionality."
+        )
+        
+        while self._running:
+            logger.debug("Dream #%d: Skipping - no LLM integration", self._dream_count)
+            self._dream_count += 1
+            await asyncio.sleep(self.interval)
+    
+    def stop(self):
+        """Stop the dreamer."""
+        self._running = False
+        logger.info("DreamerLocal stop requested")

@@ -1046,22 +1046,67 @@ Now respond with ONLY the JSON object. No markdown, no explanation."""
 
         # Agent loop
         while not state.completed:
+            previous_step_count = state.steps
             state = await self._agent_step(state)
+            
+            # Emit detailed step event if a new step was taken
+            if state.steps > previous_step_count and state.history:
+                last_msg = state.history[-1]
+                if last_msg.role == "assistant" and last_msg.tool_name:
+                    # Emit tool usage event for persistent logging
+                    await event_bus.emit(Event(
+                        type=EventType.CODER_STEP,
+                        data={
+                            "desire_id": desire_id,
+                            "step_number": state.steps,
+                            "tool_name": last_msg.tool_name,
+                            "tool_args": last_msg.tool_args,
+                            "thinking": last_msg.content[:1000] if last_msg.content else "",
+                            "files_modified_so_far": state.files_modified.copy()
+                        }
+                    ))
+                elif last_msg.role == "tool" and last_msg.tool_name:
+                    # Emit tool result event
+                    await event_bus.emit(Event(
+                        type=EventType.CODER_TOOL_RESULT,
+                        data={
+                            "desire_id": desire_id,
+                            "step_number": state.steps,
+                            "tool_name": last_msg.tool_name,
+                            "success": last_msg.tool_result is not None and len(str(last_msg.tool_result)) > 0,
+                            "result_preview": str(last_msg.tool_result)[:500] if last_msg.tool_result else "",
+                            "result_length": len(str(last_msg.tool_result)) if last_msg.tool_result else 0
+                        }
+                    ))
 
         # Record provenance for successful modifications
         if state.success and state.files_modified:
             await self._record_provenance(state, desire)
 
-        # Emit completion event
+        # Build detailed execution summary
+        execution_summary = {
+            "desire_id": desire_id,
+            "success": state.success,
+            "files_modified": state.files_modified,
+            "steps": state.steps,
+            "message": state.final_message,
+            "tool_usage_count": {},
+            "total_thinking_length": 0
+        }
+        
+        # Count tool usage and aggregate thinking
+        for msg in state.history:
+            if msg.role == "assistant":
+                if msg.tool_name:
+                    execution_summary["tool_usage_count"][msg.tool_name] = \
+                        execution_summary["tool_usage_count"].get(msg.tool_name, 0) + 1
+                if msg.content:
+                    execution_summary["total_thinking_length"] += len(msg.content)
+
+        # Emit completion event with detailed summary
         await event_bus.emit(Event(
             type=EventType.CODER_COMPLETE,
-            data={
-                "desire_id": desire_id,
-                "success": state.success,
-                "files_modified": state.files_modified,
-                "steps": state.steps,
-                "message": state.final_message
-            }
+            data=execution_summary
         ))
 
         result = {

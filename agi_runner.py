@@ -398,7 +398,7 @@ class AGIRunner:
             if len(unique_keywords) >= 15:
                 break
 
-        return unique_keywords
+        return unique_keywordss
 
     async def _seed_patterns_from_reflections(self):
         """

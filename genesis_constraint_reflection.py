@@ -182,10 +182,10 @@ async def execute_genesis_action():
 
     # STEP 6: Reflective invocation (THE GENESIS MOMENT)
     print("\n[STEP 6] REFLECTIVE INVOCATION - Executing genesis action...")
-    print("  ">" + "-"*58)
+    print("  " + "-"*58)
     print("  | Invoking add_constraint via reflection...               |")
     print("  | This is the moment of self-modification.               |")
-    print("  "-"*60+"")
+    print("  " + "-"*60+"")
 
     try:
         # The reflective call that creates the constraint

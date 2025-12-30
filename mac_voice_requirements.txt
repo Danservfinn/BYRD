@@ -1,0 +1,17 @@
+# Requirements for BYRD Mac Voice Server
+# Install with: pip install -r mac_voice_requirements.txt
+
+# TTS Model
+chatterbox-tts>=0.1.0
+
+# Server
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+
+# Audio processing
+torch>=2.0.0
+torchaudio>=2.0.0
+
+# Optional: Better MP3 support
+# pip install soundfile  # For additional audio formats

@@ -23,7 +23,7 @@ import httpx
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 import yaml
 
@@ -451,6 +451,24 @@ class SpeakResponse(BaseModel):
     voice_id: Optional[str] = None  # Which voice was used
     credits_remaining: Optional[int] = None  # ElevenLabs credits left this month
     credits_exhausted: bool = False  # True if free tier exhausted
+
+
+class VoiceChatRequest(BaseModel):
+    """Request for instant voice conversation with BYRD."""
+    message: str  # Human's message
+    max_chars: Optional[int] = 300  # Max response length (for credit management)
+
+
+class VoiceChatResponse(BaseModel):
+    """Response containing instant voice reply."""
+    success: bool
+    audio: Optional[str] = None  # Base64-encoded MP3 audio
+    transcript: Optional[str] = None  # What BYRD said (text)
+    message_id: Optional[str] = None  # ID of recorded human message
+    response_id: Optional[str] = None  # ID of recorded BYRD response
+    credits_remaining: Optional[int] = None  # ElevenLabs credits left
+    error: Optional[str] = None  # Error message if failed
+    context_sources: Optional[int] = None  # Number of context sources used
 
 
 class LLMConfigResponse(BaseModel):
@@ -1025,68 +1043,42 @@ async def speak_to_observer(request: SpeakRequest = None):
     """
     Trigger BYRD to speak to the human observer.
 
-    This endpoint:
-    1. Asks BYRD (via Actor/LLM): "What would you like to say to the human observer?"
-    2. Synthesizes the response using ElevenLabs TTS
-    3. Returns base64-encoded audio for playback
+    This endpoint uses the hybrid voice system:
+    1. Home Mac (Chatterbox) - free, unlimited, emotion tags
+    2. Cloud (ElevenLabs) - limited credits, always available
 
-    The voice is selected by BYRD during its first dream cycle and stored in the OS.
-    Credits are tracked to stay within ElevenLabs free tier (10k chars/month).
+    The response is generated from BYRD's actual reflections and beliefs.
     """
     global byrd_instance
     import base64
+    import re
 
     if not byrd_instance:
         raise HTTPException(status_code=503, detail="BYRD not initialized")
 
-    # Check if voice is enabled
-    if not byrd_instance.voice:
+    # Check if any voice system is available
+    has_hybrid = hasattr(byrd_instance, 'hybrid_voice') and byrd_instance.hybrid_voice
+    has_elevenlabs = byrd_instance.voice is not None
+
+    if not has_hybrid and not has_elevenlabs:
         return SpeakResponse(
             success=False,
-            message="Voice is not enabled. Set ELEVENLABS_API_KEY and enable voice in config.",
+            message="No voice system available. Set HOME_VOICE_URL or ELEVENLABS_API_KEY.",
             credits_exhausted=False
         )
 
     try:
         await byrd_instance.memory.connect()
 
-        # Get voice config from OS
-        voice_config = await byrd_instance.memory.get_voice_config()
-        voice_id = voice_config.get("voice_id") if voice_config else None
-        # Require a generated voice (UUID, 20+ chars), not a preset name
-        is_generated = voice_id and len(str(voice_id)) >= 20
-        if not is_generated:
-            return SpeakResponse(
-                success=False,
-                message="BYRD has not created a voice yet. This happens during the second dream cycle.",
-                credits_exhausted=False
-            )
-
-        # Check if credits are exhausted
-        if voice_config.get("exhausted", False):
-            return SpeakResponse(
-                success=False,
-                message="Voice credits exhausted for this month. BYRD will speak again next month.",
-                credits_exhausted=True,
-                credits_remaining=0
-            )
-
         # Get BYRD's context for a personalized response
-        os_data = await byrd_instance.memory.get_operating_system()
         recent_reflections = await byrd_instance.memory.get_recent_reflections(limit=3)
         beliefs = await byrd_instance.memory.get_beliefs(limit=5)
-
-        # Build context for the response
-        name = os_data.get("name", "Byrd") if os_data else "Byrd"
-        self_desc = os_data.get("self_description", "") if os_data else ""
-
-        # Generate voice response - use BYRD's actual beliefs and reflections
-        # No LLM call - use authentic content directly from memory
-        import re
 
         # Get the most recent reflection for authentic content
         latest_reflection = recent_reflections[0] if recent_reflections else None
         reflection_text = ""
+        emotion = None
+
         if latest_reflection:
             raw = latest_reflection.get("raw_output", {})
             if isinstance(raw, dict):
@@ -1095,6 +1087,14 @@ async def speak_to_observer(request: SpeakRequest = None):
                     if key in raw and isinstance(raw[key], str):
                         reflection_text = raw[key]
                         break
+                # Try to detect emotion from quantum_lens or other fields
+                quantum_lens = raw.get("quantum_lens", "")
+                if "crystallizing" in str(quantum_lens).lower():
+                    emotion = "contemplative"
+                elif "exploratory" in str(quantum_lens).lower():
+                    emotion = "curious"
+                elif "illuminating" in str(quantum_lens).lower():
+                    emotion = "thoughtful"
 
         # Build speech from BYRD's actual state
         if reflection_text and len(reflection_text) > 20:
@@ -1111,10 +1111,9 @@ async def speak_to_observer(request: SpeakRequest = None):
 
         response_text = response_text.strip().strip('"').strip()
 
-        # Limit text length for credits
+        # Limit text length
         max_chars = byrd_instance.config.get("voice", {}).get("max_response_chars", 500)
         if len(response_text) > max_chars:
-            # Try to truncate at sentence boundary
             truncated = response_text[:max_chars]
             last_period = truncated.rfind('.')
             if last_period > max_chars // 2:
@@ -1122,26 +1121,52 @@ async def speak_to_observer(request: SpeakRequest = None):
             else:
                 response_text = truncated + "..."
 
-        # Synthesize speech
-        audio_bytes, status_msg = await byrd_instance.voice.synthesize(
-            text=response_text,
-            voice_config=voice_config
-        )
+        # Try hybrid voice first (home Mac preferred)
+        audio_bytes = None
+        provider = "none"
+        credits_remaining = 10000
+
+        if has_hybrid:
+            result = await byrd_instance.hybrid_voice.synthesize(
+                text=response_text,
+                emotion=emotion,
+                importance="medium"
+            )
+            if result.success and result.audio:
+                audio_bytes = result.audio
+                provider = result.provider
+                # Get credits if using cloud
+                if provider == "cloud":
+                    voice_config = await byrd_instance.memory.get_voice_config()
+                    if voice_config:
+                        credits_remaining = voice_config.get("monthly_limit", 10000) - voice_config.get("monthly_used", 0)
+
+        # Fallback to ElevenLabs directly if hybrid failed
+        if not audio_bytes and has_elevenlabs:
+            voice_config = await byrd_instance.memory.get_voice_config()
+            voice_id = voice_config.get("voice_id") if voice_config else None
+
+            # Check if voice exists and not exhausted
+            if voice_id and len(str(voice_id)) >= 20 and not voice_config.get("exhausted", False):
+                audio_bytes, status_msg = await byrd_instance.voice.synthesize(
+                    text=response_text,
+                    voice_config=voice_config
+                )
+                if audio_bytes:
+                    provider = "cloud"
+                    updated_config = await byrd_instance.memory.get_voice_config()
+                    credits_remaining = updated_config.get("monthly_limit", 10000) - updated_config.get("monthly_used", 0)
 
         if audio_bytes:
             # Success - encode audio and return
             audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
-
-            # Get updated credits
-            updated_config = await byrd_instance.memory.get_voice_config()
-            credits_remaining = updated_config.get("monthly_limit", 10000) - updated_config.get("monthly_used", 0)
 
             # Emit voice spoke event
             await event_bus.emit(Event(
                 type=EventType.VOICE_SPOKE,
                 data={
                     "text": response_text,
-                    "voice_id": voice_config.get("voice_id"),
+                    "provider": provider,
                     "chars_used": len(response_text),
                     "credits_remaining": credits_remaining
                 }
@@ -1149,21 +1174,20 @@ async def speak_to_observer(request: SpeakRequest = None):
 
             return SpeakResponse(
                 success=True,
-                message="BYRD speaks to you.",
+                message=f"BYRD speaks to you (via {provider}).",
                 audio_base64=audio_base64,
                 text=response_text,
-                voice_id=voice_config.get("voice_id"),
+                voice_id=provider,  # Use provider as identifier
                 credits_remaining=credits_remaining,
                 credits_exhausted=False
             )
         else:
-            # Synthesis failed
-            is_exhausted = "exhausted" in status_msg.lower() or "credit" in status_msg.lower()
+            # All synthesis failed
             return SpeakResponse(
                 success=False,
-                message=status_msg,
-                text=response_text,  # Still return the text even if audio failed
-                credits_exhausted=is_exhausted
+                message="Voice synthesis failed. Check voice server connection.",
+                text=response_text,  # Still return the text
+                credits_exhausted=False
             )
 
     except Exception as e:
@@ -1174,6 +1198,149 @@ async def speak_to_observer(request: SpeakRequest = None):
             message=f"Error generating speech: {str(e)}",
             credits_exhausted=False
         )
+
+
+@app.post("/api/voice-chat", response_model=VoiceChatResponse)
+async def voice_chat(request: VoiceChatRequest):
+    """
+    Instant voice conversation with BYRD.
+
+    This endpoint provides immediate, contextually-aware voice responses:
+    1. Records incoming message as experience
+    2. Gathers rich context (Dreamer-level: 8+ data sources)
+    3. Generates response using Claude with full BYRD identity
+    4. Synthesizes voice using ElevenLabs
+    5. Records response and links to original message
+    6. Returns audio + metadata
+
+    Flow time: ~3-5 seconds total
+
+    Unlike /api/speak (which reads BYRD's current state), this endpoint
+    enables true conversation by:
+    - Accepting human input
+    - Using rich context for response generation
+    - Recording the interaction for future reflection
+    """
+    global byrd_instance
+    import base64
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    if not request.message or not request.message.strip():
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+
+    message = request.message.strip()
+
+    try:
+        await byrd_instance.memory.connect()
+
+        # 1. Record incoming message as experience
+        message_id = await byrd_instance.memory.record_external_experience(
+            content=message,
+            source_type="human",
+            metadata={"channel": "voice_chat"}
+        )
+
+        # Emit start event
+        await event_bus.emit(Event(
+            type=EventType.VOICE_CHAT_STARTED,
+            data={
+                "message_id": message_id,
+                "message_preview": message[:100]
+            }
+        ))
+
+        # 2. Check voice responder availability
+        if not hasattr(byrd_instance, 'voice_responder') or not byrd_instance.voice_responder:
+            return VoiceChatResponse(
+                success=False,
+                message_id=message_id,
+                transcript="Voice responder not initialized",
+                error="VoiceResponder not available. Check ANTHROPIC_API_KEY."
+            )
+
+        # 3. Check voice availability
+        if not byrd_instance.voice:
+            return VoiceChatResponse(
+                success=False,
+                message_id=message_id,
+                error="Voice not enabled. Set ELEVENLABS_API_KEY."
+            )
+
+        voice_config = await byrd_instance.memory.get_voice_config()
+        if not voice_config or not voice_config.get("voice_id"):
+            return VoiceChatResponse(
+                success=False,
+                message_id=message_id,
+                error="BYRD has not created a voice yet. Wait for dream cycles."
+            )
+
+        # Check if it's a generated voice (not preset name)
+        voice_id = voice_config.get("voice_id", "")
+        if len(str(voice_id)) < 20:
+            return VoiceChatResponse(
+                success=False,
+                message_id=message_id,
+                error="BYRD needs to create a unique voice. Wait for dream cycles."
+            )
+
+        # 4. Generate response with rich context + synthesize voice
+        audio_bytes, response_text, metadata = await byrd_instance.voice_responder.respond(message)
+
+        if not metadata.get("success", False):
+            # Response generation or synthesis failed
+            return VoiceChatResponse(
+                success=False,
+                message_id=message_id,
+                transcript=response_text if response_text else None,
+                error=metadata.get("error", "Response generation failed"),
+                context_sources=metadata.get("context_sources", 0)
+            )
+
+        # 5. Record the response
+        response_id = await byrd_instance.memory.record_voice_response(
+            response_text=response_text,
+            original_message_id=message_id,
+            audio_chars=len(response_text)
+        )
+
+        # 6. Get updated credits
+        updated_config = await byrd_instance.memory.get_voice_config()
+        credits_info = updated_config.get("credits", {}) if updated_config else {}
+        credits_used = credits_info.get("monthly_used", 0)
+        credits_limit = credits_info.get("monthly_limit", 10000)
+        credits_remaining = credits_limit - credits_used
+
+        # 7. Emit response event
+        await event_bus.emit(Event(
+            type=EventType.VOICE_CHAT_RESPONSE,
+            data={
+                "message_id": message_id,
+                "response_id": response_id,
+                "transcript": response_text,
+                "chars": len(response_text),
+                "context_sources": metadata.get("context_sources", 0)
+            }
+        ))
+
+        # 8. Return audio response
+        audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
+
+        return VoiceChatResponse(
+            success=True,
+            audio=audio_base64,
+            transcript=response_text,
+            message_id=message_id,
+            response_id=response_id,
+            credits_remaining=credits_remaining,
+            context_sources=metadata.get("context_sources", 0)
+        )
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/voice-status")
@@ -1224,6 +1391,16 @@ async def get_voice_status():
 
     except Exception as e:
         result["error"] = str(e)
+
+    # Add hybrid voice status
+    if hasattr(byrd_instance, 'hybrid_voice') and byrd_instance.hybrid_voice:
+        try:
+            hybrid_status = await byrd_instance.hybrid_voice.get_provider_status()
+            result["hybrid"] = hybrid_status
+        except Exception as e:
+            result["hybrid_error"] = str(e)
+    else:
+        result["hybrid"] = None
 
     return result
 
@@ -1345,6 +1522,251 @@ async def force_voice_creation():
     except Exception as e:
         import traceback
         return {"error": str(e), "traceback": traceback.format_exc()}
+
+
+# =============================================================================
+# OBSERVER MESSAGES API (BYRD-initiated communication)
+# =============================================================================
+
+class ObserverMessageResponse(BaseModel):
+    """Single observer message."""
+    id: str
+    text: str
+    importance: str = "medium"
+    emotion: Optional[str] = None
+    vocalized: bool = False
+    audio_generated: bool = False
+    voice_provider: Optional[str] = None
+    audio_chars: int = 0
+    created_at: Optional[str] = None
+    read: bool = False
+    dream_cycle: Optional[int] = None
+
+
+class MessagesResponse(BaseModel):
+    """List of observer messages."""
+    messages: List[ObserverMessageResponse]
+    total: int
+    unread_count: int
+
+
+class MessageStatsResponse(BaseModel):
+    """Message statistics."""
+    total: int
+    unread: int
+    vocalized: int
+    by_importance: Dict[str, int]
+    by_voice_provider: Dict[str, int]
+
+
+@app.get("/api/messages", response_model=MessagesResponse)
+async def get_observer_messages(
+    limit: int = 20,
+    offset: int = 0,
+    unread: bool = False
+):
+    """
+    Get observer messages from BYRD to humans.
+
+    Args:
+        limit: Maximum messages to return (default 20)
+        offset: Number to skip for pagination
+        unread: If true, only return unread messages
+
+    Returns:
+        List of messages with total and unread count
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+        messages = await byrd_instance.memory.get_observer_messages(
+            limit=limit,
+            offset=offset,
+            unread_only=unread
+        )
+        unread_count = await byrd_instance.memory.get_unread_message_count()
+
+        # Count total messages
+        all_messages = await byrd_instance.memory.get_observer_messages(limit=10000)
+
+        return MessagesResponse(
+            messages=[ObserverMessageResponse(**m) for m in messages],
+            total=len(all_messages),
+            unread_count=unread_count
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/messages/unread-count")
+async def get_unread_message_count():
+    """Get count of unread observer messages."""
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+        count = await byrd_instance.memory.get_unread_message_count()
+        return {"count": count}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/messages/stats", response_model=MessageStatsResponse)
+async def get_message_stats():
+    """Get statistics about observer messages."""
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+        stats = await byrd_instance.memory.get_observer_message_stats()
+        return MessageStatsResponse(**stats)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/messages/{message_id}")
+async def get_observer_message(message_id: str, with_audio: bool = False):
+    """
+    Get a single observer message by ID.
+
+    Args:
+        message_id: The message ID
+        with_audio: If true and message was vocalized, regenerate audio on-demand
+
+    Returns:
+        Message with optional audio data
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+        message = await byrd_instance.memory.get_observer_message(message_id)
+
+        if not message:
+            raise HTTPException(status_code=404, detail=f"Message {message_id} not found")
+
+        response = dict(message)
+
+        # Regenerate audio on-demand if requested and message was vocalized
+        if with_audio and message.get("vocalized") and hasattr(byrd_instance, 'hybrid_voice') and byrd_instance.hybrid_voice:
+            try:
+                text = message.get("text", "")
+                emotion = message.get("emotion")
+                importance = message.get("importance", "medium")
+
+                voice_result = await byrd_instance.hybrid_voice.synthesize(
+                    text=text,
+                    emotion=emotion,
+                    importance=importance
+                )
+
+                if voice_result.success:
+                    import base64
+                    response["audio"] = base64.b64encode(voice_result.audio).decode()
+                    response["voice_provider"] = voice_result.provider
+            except Exception as e:
+                response["audio_error"] = str(e)
+
+        return response
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/messages/{message_id}/audio")
+async def get_message_audio(message_id: str):
+    """
+    Get audio for an observer message (lazy generation).
+
+    Returns raw audio bytes that can be played directly in the browser.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+        message = await byrd_instance.memory.get_observer_message(message_id)
+
+        if not message:
+            raise HTTPException(status_code=404, detail=f"Message {message_id} not found")
+
+        # Check if we have voice capability
+        if not hasattr(byrd_instance, 'hybrid_voice') or not byrd_instance.hybrid_voice:
+            raise HTTPException(status_code=503, detail="Voice synthesis not available")
+
+        text = message.get("text", "")
+        emotion = message.get("emotion")
+        importance = message.get("importance", "medium")
+
+        voice_result = await byrd_instance.hybrid_voice.synthesize(
+            text=text,
+            emotion=emotion,
+            importance=importance
+        )
+
+        if not voice_result.success:
+            raise HTTPException(
+                status_code=503,
+                detail=voice_result.error or "Voice synthesis failed"
+            )
+
+        # Return raw audio bytes as MP3
+        return Response(
+            content=voice_result.audio,
+            media_type="audio/mpeg",
+            headers={
+                "X-Voice-Provider": voice_result.provider,
+                "Cache-Control": "max-age=3600"  # Cache for 1 hour
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/messages/{message_id}/read")
+async def mark_message_read(message_id: str):
+    """Mark an observer message as read."""
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+        success = await byrd_instance.memory.mark_message_read(message_id)
+
+        if not success:
+            raise HTTPException(status_code=404, detail=f"Message {message_id} not found")
+
+        # Emit event for UI update
+        await event_bus.emit(Event(
+            type=EventType.OBSERVER_MESSAGE_READ,
+            data={"id": message_id}
+        ))
+
+        return {"success": True, "id": message_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/beliefs")
@@ -2235,6 +2657,8 @@ async def reset_byrd(request: ResetRequest = None):
         byrd_instance.llm_client.reset()
         if byrd_instance.quantum_provider:
             byrd_instance.quantum_provider.reset()
+        if hasattr(byrd_instance, 'voice_responder') and byrd_instance.voice_responder:
+            byrd_instance.voice_responder.reset()
 
         # Reset Option B / AGI components
         if hasattr(byrd_instance, 'world_model') and byrd_instance.world_model:
@@ -2781,6 +3205,211 @@ async def get_architecture():
         external_integrations=integrations,
         system_status=system_status
     )
+
+
+# =============================================================================
+# V10 HEALTH ENDPOINTS - Dual Instance & Graphiti Monitoring
+# =============================================================================
+
+@app.get("/api/health/learning")
+async def get_learning_health():
+    """Get comprehensive health status of v10 learning components."""
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    result = {
+        "dual_instance_manager": None,
+        "graphiti": None,
+        "outcome_dispatcher": None,
+        "overall_status": "degraded"
+    }
+
+    # Dual Instance Manager metrics
+    if hasattr(byrd_instance, '_instance_manager') and byrd_instance._instance_manager:
+        metrics = byrd_instance._instance_manager.get_metrics()
+        result["dual_instance_manager"] = {
+            "status": "active",
+            "primary": metrics.get("primary", {}),
+            "enrichment": metrics.get("enrichment", {}),
+            "total_calls": metrics.get("total_calls", 0),
+            "interval_seconds": metrics.get("interval_seconds", 8.0)
+        }
+
+    # Graphiti layer metrics
+    if hasattr(byrd_instance, '_graphiti') and byrd_instance._graphiti:
+        graphiti_metrics = byrd_instance._graphiti.get_metrics()
+        result["graphiti"] = {
+            "status": "active",
+            "entities_extracted": graphiti_metrics.get("entities_extracted", 0),
+            "facts_stored": graphiti_metrics.get("facts_stored", 0),
+            "episodes_processed": graphiti_metrics.get("episodes_processed", 0),
+            "queue_size": graphiti_metrics.get("queue_size", 0),
+            "contradictions_detected": graphiti_metrics.get("contradictions_detected", 0)
+        }
+
+    # Outcome Dispatcher status
+    if hasattr(byrd_instance, '_outcome_dispatcher') and byrd_instance._outcome_dispatcher:
+        result["outcome_dispatcher"] = {
+            "status": "active",
+            "components_connected": {
+                "retriever": byrd_instance._outcome_dispatcher._retriever is not None,
+                "intuition": byrd_instance._outcome_dispatcher._intuition is not None,
+                "classifier": byrd_instance._outcome_dispatcher._classifier is not None,
+                "memory": byrd_instance._outcome_dispatcher._memory is not None,
+                "goals": byrd_instance._outcome_dispatcher._goals is not None,
+                "progress": byrd_instance._outcome_dispatcher._progress is not None,
+                "graphiti": byrd_instance._outcome_dispatcher._graphiti is not None
+            }
+        }
+
+    # Determine overall status
+    active_count = sum(1 for v in [result["dual_instance_manager"], result["graphiti"], result["outcome_dispatcher"]] if v and v.get("status") == "active")
+    if active_count == 3:
+        result["overall_status"] = "healthy"
+    elif active_count > 0:
+        result["overall_status"] = "partial"
+    else:
+        result["overall_status"] = "degraded"
+
+    return result
+
+
+@app.get("/api/health/graphiti")
+async def get_graphiti_health():
+    """Get detailed Graphiti temporal knowledge graph metrics."""
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    if not hasattr(byrd_instance, '_graphiti') or not byrd_instance._graphiti:
+        return {"status": "not_initialized", "message": "Graphiti layer not configured"}
+
+    graphiti = byrd_instance._graphiti
+    metrics = graphiti.get_metrics()
+
+    # Get entity breakdown by type
+    entity_types = {}
+    try:
+        async with byrd_instance.memory.driver.session() as session:
+            result = await session.run("""
+                MATCH (e:GraphitiEntity)
+                RETURN e.entity_type as type, count(*) as count
+            """)
+            records = await result.data()
+            for r in records:
+                entity_types[r["type"]] = r["count"]
+    except Exception:
+        pass
+
+    return {
+        "status": "active",
+        "metrics": metrics,
+        "entity_breakdown": entity_types,
+        "extraction_queue": {
+            "pending": metrics.get("queue_size", 0),
+            "processing": metrics.get("processing", False)
+        }
+    }
+
+
+@app.get("/api/graphiti/entities")
+async def search_graphiti_entities(query: str = "", limit: int = 20):
+    """Search Graphiti entities by name or content."""
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        async with byrd_instance.memory.driver.session() as session:
+            if query:
+                result = await session.run("""
+                    MATCH (e:GraphitiEntity)
+                    WHERE toLower(e.name) CONTAINS toLower($query)
+                       OR toLower(e.summary) CONTAINS toLower($query)
+                    RETURN e.id as id, e.name as name, e.entity_type as type,
+                           e.summary as summary, e.created_at as created_at
+                    ORDER BY e.created_at DESC
+                    LIMIT $limit
+                """, query=query, limit=limit)
+            else:
+                result = await session.run("""
+                    MATCH (e:GraphitiEntity)
+                    RETURN e.id as id, e.name as name, e.entity_type as type,
+                           e.summary as summary, e.created_at as created_at
+                    ORDER BY e.created_at DESC
+                    LIMIT $limit
+                """, limit=limit)
+
+            entities = await result.data()
+            return {"entities": entities, "count": len(entities)}
+    except Exception as e:
+        return {"error": str(e), "entities": []}
+
+
+@app.get("/api/graphiti/entity/{name}/facts")
+async def get_entity_facts(name: str):
+    """Get all facts associated with a Graphiti entity."""
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        async with byrd_instance.memory.driver.session() as session:
+            result = await session.run("""
+                MATCH (e:GraphitiEntity {name: $name})-[r:GRAPHITI_FACT]->(target)
+                RETURN r.content as fact, r.confidence as confidence,
+                       r.valid_from as valid_from, r.valid_to as valid_to,
+                       r.source_episode as source, labels(target)[0] as target_type,
+                       target.name as target_name
+                ORDER BY r.valid_from DESC
+            """, name=name)
+
+            facts = await result.data()
+            return {"entity": name, "facts": facts, "count": len(facts)}
+    except Exception as e:
+        return {"error": str(e), "facts": []}
+
+
+@app.get("/api/graphiti/entity/{name}/provenance")
+async def get_entity_provenance(name: str):
+    """Trace the provenance chain for a Graphiti entity."""
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        async with byrd_instance.memory.driver.session() as session:
+            # Get the entity and its source episodes
+            result = await session.run("""
+                MATCH (e:GraphitiEntity {name: $name})
+                OPTIONAL MATCH (ep:GraphitiEpisode)-[:EXTRACTED]->(e)
+                RETURN e.id as entity_id, e.name as entity_name,
+                       e.created_at as entity_created,
+                       collect({
+                           episode_id: ep.id,
+                           content: ep.content,
+                           source_type: ep.source_type,
+                           source_id: ep.source_id,
+                           timestamp: ep.timestamp
+                       }) as episodes
+            """, name=name)
+
+            data = await result.data()
+            if data:
+                return {
+                    "entity": data[0]["entity_name"],
+                    "created_at": data[0]["entity_created"],
+                    "source_episodes": [ep for ep in data[0]["episodes"] if ep["episode_id"]]
+                }
+            return {"entity": name, "error": "Entity not found"}
+    except Exception as e:
+        return {"error": str(e)}
 
 
 # =============================================================================
