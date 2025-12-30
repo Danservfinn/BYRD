@@ -142,15 +142,17 @@ Fulfills desires autonomously through strategy routing:
 
 | Strategy | Keywords | Action |
 |----------|----------|--------|
-| `introspection` | analyze myself, understand my code | Internal reflection |
+| `introspect` | analyze myself, understand my code | Internal reflection |
 | `source_introspect` | read my code, examine my files | Source code analysis |
 | `reconcile_orphans` | orphan, integrate, unify | Connect orphaned nodes |
 | `curate` | optimize, clean, consolidate | Graph optimization |
-| `crystallize` | crystallize, form crystal | Create unified concepts |
 | `self_modify` | modify my code, extend myself | Self-modification |
 | `edit_document` | edit document, update architecture | Edit docs in memory |
 | `code` | code, write, implement | Generate code |
-| `research` | (default) | Web research via DuckDuckGo |
+| `install` | install, add capability, tool | Install capabilities from aitmpl |
+| `agi_cycle` | improve capability, learn | AGI Runner improvement cycle |
+| `observe` | observe, watch, monitor | Passive observation |
+| `search` | (default) | Web research via DuckDuckGo |
 
 ### 6. Actor (Claude API)
 
@@ -411,8 +413,10 @@ Routes desires to appropriate handlers:
 
 ### Capability Evaluator (`capability_evaluator.py`)
 
-Provides ground-truth measurement with held-out test suites for 7 capabilities:
-- `reasoning`, `memory`, `learning`, `research`, `self_modification`, `prediction`, `metacognition`
+Provides ground-truth measurement with held-out test suites for 4 capabilities:
+- `reasoning`, `code_generation`, `research`, `memory_operations`
+
+**Note:** Additional capabilities (`learning`, `self_modification`, `prediction`, `metacognition`) are planned but not yet implemented in test suites.
 
 ### Learning Components
 
@@ -880,6 +884,6 @@ If yes, we have something useful. If no, we learn and try something else.
 
 ---
 
-*Document version: 3.2*
-*Updated: December 28, 2025*
-*Based on: UNIFIED_AGI_PLAN + Agent Coder + Compute Self-Awareness*
+*Document version: 3.3*
+*Updated: December 30, 2025*
+*Based on: UNIFIED_AGI_PLAN + Agent Coder + Compute Self-Awareness + Codebase Audit*
