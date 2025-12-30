@@ -318,6 +318,9 @@ Requirements:
         label = self._level_to_label(level)
 
         # Simple keyword search (can be enhanced with embeddings)
+        # Guard against None query
+        if not query:
+            return []
         keywords = query.lower().split()[:5]  # Limit keywords
 
         result = await self.memory._run_query(f"""
@@ -408,7 +411,10 @@ Requirements:
         groups: Dict[str, List[str]] = {}
 
         for c in candidates:
-            content = c["content"].lower()
+            # Guard against None content (nodes with missing content property)
+            content = (c.get("content") or "").lower()
+            if not content:
+                continue
             # Extract key words (>5 chars, not common)
             words = set(w for w in content.split() if len(w) > 5)
 
