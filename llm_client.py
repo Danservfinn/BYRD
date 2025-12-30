@@ -558,8 +558,9 @@ Example format: {"output": {...your reflection...}}"""
         quantum_influence = None
 
         # Check semantic cache first (two-tier: exact hash + semantic similarity)
+        # Note: SemanticCache.get() is synchronous - do NOT await it
         if self._cache is not None and not bypass_cache:
-            cached_response = await self._cache.get(prompt)
+            cached_response = self._cache.get(prompt)
             if cached_response is not None:
                 # Still track usage for metrics
                 self._track_usage(prompt, cached_response, {"cached": True}, "generate_cached")
