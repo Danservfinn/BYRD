@@ -18,6 +18,7 @@ Integrates with aitmpl.com for curated Claude Code templates.
 import asyncio
 import json
 import os
+import re
 import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -2011,12 +2012,15 @@ If no action needed, return: {{"rationale": "reason", "actions": []}}
             "unknown": "I process experiences that don't fit standard categories"
         }
 
-        belief_content = type_beliefs.get(exp_type, f"I process experiences of type '{exp_type}'")
+        base_content = type_beliefs.get(exp_type, f"I process experiences of type '{exp_type}'")
+        # Include exp_type marker in content for reliable lookup
+        belief_content = f"[UMBRELLA:{exp_type}] {base_content}"
 
-        # Check if such a belief already exists
-        beliefs = await self.memory.get_beliefs(limit=50)
+        # Check if such a belief already exists by looking for the umbrella marker
+        beliefs = await self.memory.get_beliefs(limit=100)
+        marker = f"[UMBRELLA:{exp_type}]"
         for belief in beliefs:
-            if exp_type.lower() in belief.get("content", "").lower():
+            if marker in belief.get("content", ""):
                 return belief.get("id")
 
         # Create new umbrella belief
