@@ -942,7 +942,7 @@
 
   <!-- Messages Panel - Chat History -->
   <div id="messages-panel" class="messages-panel collapsed">
-    <div class="messages-panel-header" onclick="toggleMessagesPanel()">
+    <div id="messages-panel-header" class="messages-panel-header">
       <h3>
         <span>Messages</span>
         <span id="unread-badge" class="unread-badge" style="display: none;">0</span>
@@ -957,8 +957,8 @@
       <div class="messages-loading">Loading messages...</div>
     </div>
     <div class="messages-input-area">
-      <input type="text" id="message-input" class="messages-input" placeholder="Type a message to BYRD..." onkeypress="handleMessageKeypress(event)">
-      <button class="messages-send-btn" onclick="sendMessage()">Send</button>
+      <input type="text" id="message-input" class="messages-input" placeholder="Type a message to BYRD...">
+      <button id="messages-send-btn" class="messages-send-btn">Send</button>
     </div>
   </div>
 
@@ -2174,6 +2174,30 @@
         unreadMessageCount++;
         updateUnreadBadge();
       }
+    }
+
+    // Initialize messages panel event listeners when DOM is ready
+    function initMessagesPanel() {
+      const header = document.getElementById('messages-panel-header');
+      const sendBtn = document.getElementById('messages-send-btn');
+      const input = document.getElementById('message-input');
+
+      if (header) {
+        header.addEventListener('click', toggleMessagesPanel);
+      }
+      if (sendBtn) {
+        sendBtn.addEventListener('click', sendMessage);
+      }
+      if (input) {
+        input.addEventListener('keypress', handleMessageKeypress);
+      }
+    }
+
+    // Run when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initMessagesPanel);
+    } else {
+      initMessagesPanel();
     }
 
     // ==========================================================================
