@@ -458,6 +458,81 @@ The Omega cycle runs learning component updates:
 - **Every 10 cycles**: Hierarchical Memory consolidation
 - **Every 20 cycles**: Code Learner codification
 
+### v10: Rate Limiting & Temporal Knowledge
+
+v10 adds dual-instance rate limiting for ZAI GLM-4.7 Max Coding Plan and Graphiti temporal knowledge graph integration.
+
+#### Dual Instance Manager (`dual_instance_manager.py`)
+
+Manages two concurrent GLM-4.7 instances with independent rate limiting:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    DUAL INSTANCE MANAGER                         │
+│                                                                  │
+│   ┌────────────────────┐     ┌────────────────────┐            │
+│   │   INSTANCE A       │     │   INSTANCE B       │            │
+│   │   (PRIMARY)        │     │   (ENRICHMENT)     │            │
+│   │                    │     │                    │            │
+│   │ • Dreamer          │     │ • Graphiti         │            │
+│   │ • Seeker           │     │ • Cap. Evaluator   │            │
+│   │ • Actor            │     │ • Code Verifier    │            │
+│   │                    │     │                    │            │
+│   │ 480 prompts/hr     │     │ 480 prompts/hr     │            │
+│   └────────────────────┘     └────────────────────┘            │
+│                                                                  │
+│   Total Capacity: 960 prompts/hr (8s interval per instance)     │
+│   Burst Tokens: 3 per instance (recovers at 24s)                │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Key Features:**
+- Token bucket burst handling for rapid consecutive calls
+- Component-based routing (automatic instance selection)
+- Per-instance metrics tracking (calls, wait time, utilization)
+
+#### Graphiti Layer (`graphiti_layer.py`)
+
+Temporal knowledge graph with bi-temporal tracking:
+
+| Feature | Description |
+|---------|-------------|
+| **Entity Extraction** | LLM-based named entity recognition from task outcomes |
+| **Bi-temporal Tracking** | `valid_time` (when true) + `transaction_time` (when recorded) |
+| **Contradiction Detection** | Flags conflicting facts with confidence scores |
+| **Async Queue** | Non-blocking episode processing (Instance B) |
+| **Provenance** | Episodes → Entities → Facts relationship chain |
+
+**Neo4j Schema:**
+- `GraphitiEntity` - Extracted entities (name, type, summary)
+- `GraphitiEpisode` - Source content for extraction
+- `GRAPHITI_FACT` - Relationship with temporal validity
+- `EXTRACTED` - Episode → Entity provenance link
+
+#### Outcome Dispatcher (`outcome_dispatcher.py`)
+
+Routes task outcomes to learning components:
+
+```python
+async def dispatch(outcome: TaskOutcome) -> Dict[str, bool]:
+    # 1. Learned Retriever - update relevance weights
+    # 2. Intuition Network - train on success/failure
+    # 3. Desire Classifier - routing feedback
+    # 4. Memory Tracker - persistence
+    # 5. Goal Discoverer - prediction error
+    # 6. Learning Progress - metrics
+    # 7. Graphiti - temporal knowledge extraction
+```
+
+**API Endpoints:**
+| Endpoint | Purpose |
+|----------|---------|
+| `/api/health/learning` | Overall v10 component health |
+| `/api/health/graphiti` | Detailed Graphiti metrics |
+| `/api/graphiti/entities` | Search entities by name/content |
+| `/api/graphiti/entity/{name}/facts` | Get entity facts |
+| `/api/graphiti/entity/{name}/provenance` | Trace provenance chain |
+
 ---
 
 ## Option B: Compounding Loops
