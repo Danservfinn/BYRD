@@ -396,7 +396,7 @@ class OpenRouterClient(LLMClient):
 
         # Check cache first if enabled
         if self._cache is not None:
-            cached_result = self._cache.get(prompt)
+            cached_result = self._cache.get_with_info(prompt)
             if cached_result is not None:
                 response_text, is_semantic = cached_result
                 return LLMResponse(
@@ -550,6 +550,7 @@ Example format: {"output": {...your reflection...}}"""
         quantum_context: str = "unknown",
         system_message: Optional[str] = None,
         model_override: Optional[str] = None,
+        bypass_cache: bool = False,
         **kwargs
     ) -> LLMResponse:
         """Generate using Z.AI API with retry on rate limits."""
