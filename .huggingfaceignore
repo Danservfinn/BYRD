@@ -1,0 +1,33 @@
+# Files to exclude from HuggingFace Space
+# These are local development files not needed for cloud deployment
+
+# Local voice server files (run on home Mac, not HF)
+mac_voice_server.py
+start_voice_server.sh
+mac_voice_requirements.txt
+home_voice_client.py
+
+# Documentation with local setup instructions
+PLAN_OBSERVER_MESSAGES.md
+
+# Development files
+*.pyc
+__pycache__/
+.git/
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local config
+.env.local
+*.local.yaml

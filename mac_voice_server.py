@@ -4,7 +4,7 @@ Mac Chatterbox TTS Server
 
 A local TTS server for BYRD that runs on your Mac, providing free unlimited
 voice synthesis with emotion tag support. Designed to be exposed via
-Cloudflare Tunnel for remote access.
+reverse proxy for remote access.
 
 Features:
 - OpenAI-compatible /v1/audio/speech endpoint
@@ -19,11 +19,11 @@ Setup:
 Run:
     python mac_voice_server.py
 
-Cloudflare Tunnel:
-    cloudflared tunnel --url http://localhost:5050
+Remote Access:
+    Expose via ngrok, tailscale, or your preferred method
 
 Usage from BYRD:
-    Set HOME_VOICE_URL environment variable to your tunnel URL
+    Set HOME_VOICE_URL environment variable to your server URL
 """
 
 import argparse
@@ -459,8 +459,8 @@ Examples:
   python mac_voice_server.py --port 8080        # Run on port 8080
   python mac_voice_server.py --host 0.0.0.0     # Listen on all interfaces
 
-Cloudflare Tunnel:
-  cloudflared tunnel --url http://localhost:5050
+Remote Access:
+  Expose via ngrok, tailscale, or your preferred method
 
 Voice References:
   Place .wav/.mp3 files in ~/.byrd/voices/ to use custom voices.
@@ -503,8 +503,8 @@ Emotion Tags:
 ║  Device: {get_device():<50}║
 ║  Voice refs: ~/.byrd/voices/                                 ║
 ╠══════════════════════════════════════════════════════════════╣
-║  Cloudflare Tunnel:                                          ║
-║    cloudflared tunnel --url http://localhost:{args.port:<15}║
+║  Remote: Expose via ngrok/tailscale for BYRD access          ║
+║  Set HOME_VOICE_URL env var to your public URL               ║
 ╚══════════════════════════════════════════════════════════════╝
     """)
 

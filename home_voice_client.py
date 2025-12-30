@@ -1,14 +1,14 @@
 """
-Home Voice Client - Connects to Mac's Chatterbox TTS server via tunnel.
+Home Voice Client - Connects to Mac's Chatterbox TTS server remotely.
 
 This client communicates with a local Chatterbox TTS server running on your
-Mac at home, exposed via Cloudflare Tunnel. This provides free, unlimited
+Mac at home, exposed via a reverse proxy. This provides free, unlimited
 voice synthesis with emotion tag support.
 
 Setup:
 1. Install Chatterbox TTS Server on your Mac
-2. Set up Cloudflare Tunnel to expose it
-3. Set HOME_VOICE_URL environment variable to your tunnel URL
+2. Expose it via your preferred method (ngrok, tailscale, etc.)
+3. Set HOME_VOICE_URL environment variable to your server URL
 
 See PLAN_OBSERVER_MESSAGES.md for detailed setup instructions.
 """
@@ -26,7 +26,7 @@ class HomeVoiceClient:
     """
     Client for home Mac Chatterbox TTS server.
 
-    Communicates via Cloudflare Tunnel for secure, reliable connection.
+    Communicates via secure remote connection.
     Supports emotion tags like [laugh], [sigh], [chuckle] for expressive speech.
     """
 
@@ -36,7 +36,7 @@ class HomeVoiceClient:
 
         Args:
             config: Configuration dict with:
-                - url: Tunnel URL (or from HOME_VOICE_URL env var)
+                - url: Server URL (or from HOME_VOICE_URL env var)
                 - timeout_seconds: Request timeout (default 30)
                 - health_check_interval: How often to check availability (default 60)
         """
