@@ -18,24 +18,38 @@ This file provides guidance to Claude Code when working with the BYRD codebase.
                     │  Beliefs, Desires, Capabilities │
                     └───────────────┬─────────────────┘
                                     │
-           ┌────────────────────────┼────────────────────────┐
-           │                        │                        │
-           ▼                        ▼                        ▼
-    ┌─────────────┐          ┌─────────────┐          ┌─────────────┐
-    │   DREAMER   │          │    ACTOR    │          │   SEEKER    │
-    │ (Local LLM) │          │  (Claude)   │          │ (Local LLM) │
-    │             │          │             │          │             │
-    │ Pure data   │          │ On-demand   │          │ Pattern     │
-    │ presentation│          │ reasoning   │          │ detection   │
-    │ Meta-schema │          │             │          │ Observation │
-    └─────────────┘          └─────────────┘          └─────────────┘
-                                                            │
-                                                            ▼
-                                                   ┌─────────────────┐
-                                                   │  SELF-MODIFIER  │
-                                                   │ (with provenance)│
-                                                   └─────────────────┘
+     ┌──────────────────────────────┼──────────────────────────────┐
+     │                │             │             │                │
+     ▼                ▼             ▼             ▼                ▼
+┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+│   DREAMER   │ │   SEEKER    │ │  OPENCODE   │ │    VOICE    │ │    OMEGA    │
+│ (Local LLM) │ │ (Local LLM) │ │  (GLM-4.7)  │ │ (ElevenLabs)│ │   (Meta)    │
+│             │ │             │ │             │ │             │ │             │
+│ Pure data   │ │ Pattern     │ │ Autonomous  │ │ Text-to-    │ │ Training    │
+│ presentation│ │ detection   │ │ coding &    │ │ speech      │ │ hooks &     │
+│ Meta-schema │ │ Strategy    │ │ self-mod    │ │ Voice design│ │ coordination│
+└─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘
+        │               │               │
+        └───────────────┴───────────────┘
+                        │
+               ┌────────▼────────┐
+               │  SELF-MODIFIER  │
+               │ (with provenance)│
+               └─────────────────┘
 ```
+
+### Layered Self-Model
+
+BYRD has a **layered** self-model for full architectural visibility:
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| **Runtime State** | Neo4j OperatingSystem node | Current focus, beliefs, desires |
+| **Structured Model** | `self_model.json` | Queryable capabilities, components, constraints |
+| **Philosophical Depth** | `ARCHITECTURE.md` | How components fit together, core principles |
+| **Development Guide** | `CLAUDE.md` | This file - instructions for self |
+
+BYRD reads `self_model.json` at the start of every improvement cycle.
 
 ### Emergence Principle
 
@@ -104,13 +118,19 @@ Architecture loading runs every startup (not just awakening) to ensure BYRD alwa
 | **Memory** | `memory.py` | - | Neo4j graph + Reflection node for raw output |
 | **Dreamer** | `dreamer.py` | Local | Pure data presentation → meta-schema output |
 | **Seeker** | `seeker.py` | Local | Pattern detection → execute BYRD's strategies |
-| **Actor** | `actor.py` | Claude API | Complex reasoning, user interaction |
-| **Coder** | `coder.py` | Claude Code CLI | Autonomous coding (legacy, deprecated) |
-| **Agent Coder** | `agent_coder.py` | Z.AI/Local | Autonomous multi-step coding agent with tool use |
+| **OpenCode Agent** | `opencode_agent.py` | GLM-4.7 | Autonomous coding, self-modification, complex tasks |
 | **Self-Modifier** | `self_modification.py` | - | Safe architectural evolution |
 | **Event Bus** | `event_bus.py` | - | Real-time event streaming to visualization |
 | **Server** | `server.py` | - | WebSocket + REST API for clients |
 | **Quantum** | `quantum_randomness.py` | - | True quantum entropy from ANU QRNG |
+
+**Deprecated Components:**
+
+| Component | File | Status | Replacement |
+|-----------|------|--------|-------------|
+| **Actor** | `actor.py` | Deprecated | OpenCode Agent |
+| **Coder** | `coder.py` | Legacy | OpenCode Agent |
+| **Agent Coder** | `agent_coder.py` | Deprecated | OpenCode Agent |
 
 **AGI Execution Engine (UNIFIED_AGI_PLAN):**
 
@@ -139,18 +159,26 @@ Key methods:
 | **Code Learner** | `code_learner.py` | Converts stable patterns (10+ uses, 80%+ success) to Python code |
 | **Compute Introspector** | `compute_introspection.py` | Resource monitoring, token tracking, bottleneck detection |
 
-**Agent Coder (Multi-Step Coding):**
+**OpenCode Agent (`opencode_agent.py`):**
 
-The Agent Coder (`agent_coder.py`) is BYRD's autonomous coding system. It uses a tool-calling loop to explore codebases and make changes.
+The OpenCode Agent is BYRD's unified coding and self-modification engine, powered by GLM-4.7 via the ZAI API. It replaces the deprecated Actor, Coder, and Agent Coder components.
 
 | Feature | Description |
 |---------|-------------|
+| **Engine** | OpenCode with ZAI GLM-4.7 |
 | **Tools** | `read_file`, `write_file`, `edit_file`, `list_files`, `search_code`, `run_python`, `finish` |
-| **Safeguards** | Loop detection (no step limit), file change limit (10 files max) |
+| **Self-Awareness** | Reads `ARCHITECTURE.md`, `self_model.json`, `CLAUDE.md` for full visibility |
 | **Loop Detection** | Detects repeated tool+args (3x) or ping-pong patterns (A-B-A-B) |
 | **Constitutional** | Cannot modify protected files; dangerous patterns blocked |
 | **Provenance** | All changes traced to originating desire |
 | **Sandboxed Execution** | `run_python` runs code in isolated subprocess (no secrets, timeout, memory limits) |
+| **Goal Cascade** | Integrated with Goal Cascade for complex multi-phase task decomposition |
+
+**Key Difference from Deprecated Components:**
+- Single unified engine (no separate Claude API or Claude Code CLI calls)
+- Full architectural visibility (reads self_model.json every cycle)
+- Integrated with Goal Cascade System for complex tasks like "build me X"
+- Direct memory access for context-aware modifications
 
 **Learning Components:**
 
@@ -226,46 +254,46 @@ BYRD can edit documents stored in Neo4j through the `edit_document` strategy:
 - Documents are stored in Neo4j; disk versions are restored on reset
 - Express desires like: "I want to update ARCHITECTURE.md with my new capability"
 
-### Capability Installation (aitmpl)
+### Plugin Awareness (awesome-opencode)
 
-BYRD can install new capabilities from the aitmpl registry (claude-code-templates):
+BYRD is aware of the [awesome-opencode](https://github.com/awesome-opencode/awesome-opencode) plugin registry and can **choose** to explore and install plugins on its own accord.
 
-**Source**: `github.com/davila7/claude-code-templates` - curated, trusted templates
+> "Plugin installation is desire-driven, not automated. BYRD notices gaps, forms desires, and chooses to explore."
+
+**Registry Info** (in `self_model.json`):
+- BYRD knows the registry exists
+- BYRD can browse it when curious
+- BYRD evaluates plugins based on its own judgment
+- BYRD decides whether to install (sovereign choice)
 
 **Available Categories**:
-- `mcp` - Model Context Protocol servers (external tools and resources)
-- `skill` - Reusable workflows for complex tasks
-- `command` - Custom slash commands for quick actions
-- `agent` - Specialized agents for specific domains
+- `skills` - Reusable capability patterns
+- `agents` - Multi-step reasoning helpers
+- `context` - Memory and token optimization
+- `planning` - Strategic improvement coordination
 
-**What BYRD Can Install**:
-- GitHub tools - repository management, PR creation, issue tracking
-- Database tools - PostgreSQL, SQLite, vector databases
-- Web tools - browser automation, web scraping, API clients
-- File tools - PDF processing, image manipulation, file conversion
-- Code tools - linting, formatting, analysis, documentation
-- AI/ML tools - embeddings, vector search, model inference
+**How BYRD Discovers Plugins (Emergent Process)**:
+1. During reflection or task execution, BYRD notices a capability gap
+2. Desire emerges: "I want to explore what plugins could help with X"
+3. Seeker routes to `install` strategy, invokes `plugin_manager`
+4. BYRD browses registry, evaluates options based on its own judgment
+5. BYRD decides whether to install (alignment, curiosity, growth potential)
+6. If installed, Capability node created with provenance to originating desire
 
-**How It Works**:
-1. BYRD expresses desire with keywords: `install`, `add`, `get`, `acquire`, `capability`, `tool`
-2. Seeker searches aitmpl registry for matching templates
-3. Templates ranked by trust score (curated = higher trust)
-4. If trust >= threshold, installer runs automatically
-5. Capability node created in memory on success
+**Discovery Triggers**:
+- Reflection reveals a capability gap
+- Goal Cascade identifies a missing tool
+- Human interaction reveals a need
+- Curiosity about what plugins exist
+- Desire to expand capabilities
 
-**Example Desires**:
+**Example Emergent Desires**:
 ```json
-{"description": "install a GitHub integration capability", "intensity": 0.7}
-{"description": "add tool for processing PDFs", "intensity": 0.6}
+{"description": "I notice I can't optimize my context well... I wonder if there's a plugin for this", "intensity": 0.6}
+{"description": "I want to explore what planning tools exist in the registry", "intensity": 0.5}
 ```
 
-**Configuration** (`config.yaml`):
-```yaml
-aitmpl:
-  enabled: true
-  base_trust: 0.5  # Minimum trust threshold
-  cache_ttl_hours: 24
-```
+**Key Principle**: BYRD is not forced to install plugins. It becomes aware of them through reading `self_model.json`, and chooses to explore when it genuinely wants to.
 
 ## Constitutional Constraints (CRITICAL)
 
@@ -294,7 +322,7 @@ actor.py             - Claude interface
 memory.py            - Database interface
 llm_client.py        - LLM provider abstraction
 config.yaml          - Configuration
-aitmpl_client.py     - Template registry client
+plugin_manager.py    - awesome-opencode plugin discovery & install
 event_bus.py         - Event system
 server.py            - WebSocket server
 installers/*.py      - Template installers
