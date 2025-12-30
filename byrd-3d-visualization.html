@@ -2068,14 +2068,18 @@
     }
 
     function renderMessage(msg) {
-      const isFromByrd = msg.direction === 'byrd_to_observer' || msg.from_byrd;
+      // Messages from /api/messages are all from BYRD unless marked as from_human
+      // Messages added via sendMessage() set from_byrd: false
+      const isFromByrd = msg.from_byrd !== false;
       const messageClass = isFromByrd ? 'byrd' : 'human';
       const timestamp = formatMessageTime(msg.created_at);
-      const emotion = msg.emotional_tone ? `<span class="message-emotion">${msg.emotional_tone}</span>` : '';
+      const emotionText = msg.emotion || msg.emotional_tone;
+      const emotion = emotionText ? `<span class="message-emotion">${emotionText}</span>` : '';
+      const messageText = msg.text || msg.content || '';
 
       return `
         <div class="message-item ${messageClass}">
-          <div class="message-bubble">${escapeHtml(msg.content)}</div>
+          <div class="message-bubble">${escapeHtml(messageText)}</div>
           <div class="message-meta">${timestamp}${emotion}</div>
         </div>
       `;
