@@ -315,6 +315,7 @@ Output JSON:
             # Record as desire for Seeker to pursue
             await self.memory.create_desire(
                 description=f"[CHALLENGE] {challenge.description}",
+                type="challenge",
                 intensity=0.7,
                 intent="self_improvement"
             )

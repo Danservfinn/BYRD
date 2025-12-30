@@ -560,6 +560,7 @@ Output JSON:
             # Increase challenge difficulty
             await self.memory.create_desire(
                 description="Increase difficulty of self-improvement challenges",
+                type="meta_learning",
                 intensity=0.6,
                 intent="self_improvement"
             )
@@ -569,6 +570,7 @@ Output JSON:
             for action in analysis.suggested_actions[:2]:
                 await self.memory.create_desire(
                     description=f"[PLATEAU_RESPONSE] {action}",
+                    type="meta_learning",
                     intensity=0.7,
                     intent="self_improvement"
                 )
@@ -585,6 +587,7 @@ Output JSON:
             for action in analysis.suggested_actions:
                 await self.memory.create_desire(
                     description=f"[URGENT] {action}",
+                    type="meta_learning",
                     intensity=0.9,
                     intent="self_improvement"
                 )

@@ -574,8 +574,9 @@ Reply in JSON:
                 # Store as a desire and let seeker handle it
                 await self.memory.create_desire(
                     description=desire_description,
-                    intent="capability",
-                    strength=potential.urgency
+                    type="capability",
+                    intensity=potential.urgency,
+                    intent="capability"
                 )
                 return True
             except Exception as e:
@@ -606,12 +607,13 @@ Reply in JSON:
         # Store as an active desire
         await self.memory.create_desire(
             description=potential.description,
-            intent="action",
-            strength=potential.urgency
+            type="action",
+            intensity=potential.urgency,
+            intent="action"
         )
-        
+
         return True
-    
+
     async def _execute_insight_implementation(self, potential: Potential) -> bool:
         """
         Execute implementation of an insight.
@@ -652,8 +654,9 @@ Reply in JSON:
                 # Route to appropriate seeker handler
                 await self.memory.create_desire(
                     description=potential.description,
-                    intent="connection",
-                    strength=potential.urgency
+                    type="connection",
+                    intensity=potential.urgency,
+                    intent="connection"
                 )
                 return True
             except Exception as e:
@@ -676,12 +679,13 @@ Reply in JSON:
         # Record as a meta-desire for self-modification
         await self.memory.create_desire(
             description=potential.description,
-            intent="meta",
-            strength=potential.urgency
+            type="meta_improvement",
+            intensity=potential.urgency,
+            intent="meta"
         )
-        
+
         return True
-    
+
     async def _execute_knowledge_acquisition(self, potential: Potential) -> bool:
         """
         Execute acquisition of new knowledge.
@@ -699,8 +703,9 @@ Reply in JSON:
             try:
                 await self.memory.create_desire(
                     description=potential.description,
-                    intent="research",
-                    strength=potential.urgency
+                    type="research",
+                    intensity=potential.urgency,
+                    intent="research"
                 )
                 return True
             except Exception as e:
@@ -723,12 +728,13 @@ Reply in JSON:
         # Create a general desire
         await self.memory.create_desire(
             description=potential.description,
-            intent="action",
-            strength=potential.urgency
+            type="action",
+            intensity=potential.urgency,
+            intent="action"
         )
-        
+
         return True
-    
+
     def _calculate_priority(self, potential: Potential) -> float:
         """
         Calculate priority score for a potential.

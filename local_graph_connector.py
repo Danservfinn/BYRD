@@ -209,14 +209,10 @@ class LocalGraphConnector:
                 f"Monitor for code execution availability to complete pending action: {description}"
             )
             monitoring_desire_id = await self.memory.create_desire(
-                content=monitoring_content,
-                desire_type="monitoring",
-                intensity=0.5,
-                metadata={
-                    "blocked_by": "execution_unavailable",
-                    "related_pending_action": pending_action_id,
-                    "original_desire_id": desire_id
-                }
+                description=monitoring_content,
+                type="monitoring",
+                intensity=0.5
+                # Note: metadata fields removed - not supported by create_desire
             )
             nodes_created.append(monitoring_desire_id)
             edges_created += 1
