@@ -32,6 +32,7 @@ from constitutional import ConstitutionalConstraints
 from llm_client import LLMClient
 from capability_registry import CapabilityRegistry, Capability
 from value_tracker import get_value_tracker, OutcomeQuality
+from orphan_reader import OrphanReader, get_orphan_reader
 
 # Try to import event_bus, but make it optional
 try:
@@ -165,6 +166,9 @@ class Seeker:
         # Value tracker for detailed outcome analysis
         self.value_tracker = get_value_tracker()
 
+        # Orphan Reader for memory state awareness
+        self.orphan_reader = None  # Will be initialized on demand
+
         # Capability Registry - dynamic action menu
         self.capability_registry = CapabilityRegistry(memory=memory, llm_client=llm_client)
         self._registry_loaded = False
@@ -206,16 +210,49 @@ class Seeker:
         self._last_reflection_ids.clear()
         self._strategy_stats.clear()
 
-    def _track_strategy_outcome(self, strategy: str, success: bool):
-        """Track strategy success/failure for effectiveness analysis."""
+    def _track_strategy_outcome(self, strategy: str, success: bool, delta: float = 0.0):
+        """Track strategy success/failure for effectiveness analysis.
+        
+        BREAKING FALSE-POSITIVE LOOP: Only counts meaningful improvements.
+        - A strategy is only 'successful' if delta >= 0.5% (0.005)
+        - Binary success without delta is treated as a false positive
+        - This prevents strategies from appearing effective when they don't deliver real value
+        """
+        MIN_MEANINGFUL_DELTA = 0.005  # 0.5% minimum improvement
+        
         if strategy not in self._strategy_stats:
-            self._strategy_stats[strategy] = {"attempts": 0, "successes": 0, "failures": 0}
+            self._strategy_stats[strategy] = {
+                "attempts": 0,
+                "nominal_successes": 0,
+                "meaningful_successes": 0,
+                "false_positives": 0,
+                "failures": 0,
+                "total_delta": 0.0
+            }
 
-        self._strategy_stats[strategy]["attempts"] += 1
+        stats = self._strategy_stats[strategy]
+        stats["attempts"] += 1
+        stats["total_delta"] += delta
+        
+        # Track nominal success (what the caller claims)
         if success:
-            self._strategy_stats[strategy]["successes"] += 1
+            stats["nominal_successes"] += 1
+            
+            # BUT: Only count as meaningful success if delta meets threshold
+            # If no delta provided (delta=0), we cannot confirm improvement - treat as false positive
+            if delta >= MIN_MEANINGFUL_DELTA:
+                stats["meaningful_successes"] += 1
+            else:
+                # False positive: claimed success but no meaningful delta
+                stats["false_positives"] += 1
+                if delta < MIN_MEANINGFUL_DELTA and delta > 0:
+                    print(f"   ⚠️  Seeker Strategy '{strategy}': FALSE POSITIVE - "
+                          f"claimed success but delta={delta:.4%} < {MIN_MEANINGFUL_DELTA:.1%}")
+                elif delta == 0:
+                    print(f"   ⚠️  Seeker Strategy '{strategy}': NO DELTA DATA - "
+                          f"cannot confirm improvement without delta measurement")
         else:
-            self._strategy_stats[strategy]["failures"] += 1
+            stats["failures"] += 1
 
     def get_strategy_effectiveness(self) -> Dict[str, Dict]:
         """
@@ -392,7 +429,17 @@ class Seeker:
 
             # Track strategy effectiveness for acceleration analysis
             strategy = pattern.get("strategy", "unknown")
-            self._track_strategy_outcome(strategy, outcome == "success")
+            
+            # Calculate delta from outcome if available
+            # BREAKING FALSE-POSITIVE LOOP: Require delta for meaningful success tracking
+            delta = 0.0
+            if outcome == "success":
+                # Try to extract delta from pattern or reason
+                delta = pattern.get("delta", 0.0)
+                # If no delta provided but outcome is success, this is a false positive risk
+                # The _track_strategy_outcome will handle this appropriately
+            
+            self._track_strategy_outcome(strategy, outcome == "success", delta)
 
             # Emit SEEK_CYCLE_END event
             if HAS_EVENT_BUS:
@@ -1143,9 +1190,10 @@ REASON: [brief explanation]"""
             # Execute the selected capability
             outcome, reason = await self._execute_capability(selected_cap, description, desire_id)
 
-            # Record outcome for learning
-            success = outcome == "success"
-            await self.capability_registry.record_outcome(selected_cap.id, success, desire_id)
+            # Record outcome for learning with value delta to prevent false-positive loops
+            # CRITICAL: Must measure actual value delivered, not just binary success
+            value_delta = self._calculate_value_delta(outcome, reason)
+            await self.capability_registry.record_outcome(selected_cap.id, value_delta, desire_id)
 
             return (outcome, reason)
 
@@ -1214,15 +1262,121 @@ REASON: [brief explanation]"""
         except Exception as e:
             return ("failed", str(e)[:100])
 
+    def _calculate_value_delta(self, outcome: str, reason: Optional[str]) -> float:
+        """
+        Calculate value delta from outcome and reason to prevent false-positive loops.
+        
+        CRITICAL: Simple success/failure is insufficient. Must measure actual value delivered.
+        
+        Args:
+            outcome: Outcome string ('success', 'failed', 'skipped')
+            reason: Optional reason message providing context
+            
+        Returns:
+            Value delta from -1.0 to 1.0:
+            +1.0: Exceeded expectations, created significant new value
+            +0.5: Succeeded with moderate value
+            +0.1: Technically succeeded but minimal value
+            -0.1: False positive - technically succeeded but wasted resources
+            -0.5: Failed with moderate cost
+            -1.0: Complete failure with significant negative impact
+        """
+        if outcome == "success":
+            if not reason:
+                return 0.5  # Default moderate success
+            
+            reason_lower = reason.lower()
+            
+            # Check for signs of high value
+            high_value_indicators = [
+                "exceeded", "exceptional", "breakthrough", "significant",
+                "major", "substantial", "transformative", "created",
+                "new capability", "resolved", "fixed", "improved"
+            ]
+            
+            # Check for signs of minimal/false positive value
+            low_value_indicators = [
+                "minimal", "trivial", "already", "no change", 
+                "already exists", "duplicate", "redundant",
+                "no improvement", "unchanged", "same"
+            ]
+            
+            has_high = any(ind in reason_lower for ind in high_value_indicators)
+            has_low = any(ind in reason_lower for ind in low_value_indicators)
+            
+            if has_high and not has_low:
+                return 1.0  # High value success
+            elif has_low and not has_high:
+                return 0.1  # Minimal value (potential false positive)
+            elif "false" in reason_lower or "wasted" in reason_lower:
+                return -0.1  # False positive
+            else:
+                return 0.5  # Standard success
+                
+        elif outcome == "failed":
+            if not reason:
+                return -0.5  # Default moderate failure
+            
+            reason_lower = reason.lower()
+            
+            # Check for catastrophic failure
+            catastrophic_indicators = [
+                "corrupt", "broke", "destroyed", "lost data",
+                "unrecoverable", "critical", "severe"
+            ]
+            
+            # Check for minor/expected failure
+            minor_indicators = [
+                "timeout", "unavailable", "no results", "not found",
+                "blocked", "skipped"
+            ]
+            
+            if any(ind in reason_lower for ind in catastrophic_indicators):
+                return -1.0  # Severe failure
+            elif any(ind in reason_lower for ind in minor_indicators):
+                return -0.2  # Minor failure
+            else:
+                return -0.5  # Standard failure
+                
+        elif outcome == "skipped":
+            # Skipped is neutral to slightly negative depending on reason
+            if reason and ("degraded" in reason.lower() or "loop" in reason.lower()):
+                return 0.0  # Neutral - we avoided a bad strategy
+            return -0.1  # Skipped without good reason is slightly negative
+            
+        else:
+            # Unknown outcome - conservatively negative
+            return -0.3
+
     async def _execute_pattern_strategy(self, pattern: Dict) -> Tuple[str, Optional[str]]:
         """
         Execute the strategy for a pattern.
 
         Strategy is determined by what BYRD expressed, not by hardcoded types.
+        
+        Value Tracking Integration:
+        - Checks if strategy should be avoided due to degradation/loops
+        - Records detailed outcome metrics for false-positive detection
         """
         strategy = pattern.get("strategy", "")
         description = pattern.get("description", "")
         desire_id = pattern.get("desire_id", "")
+
+        # Check if strategy should be avoided due to poor performance
+        should_avoid, reason = self.value_tracker.should_avoid_strategy(strategy)
+        if should_avoid:
+            print(f"\u26a0\ufe0f  Avoiding degraded strategy '{strategy}': {reason}")
+            self.value_tracker.record_outcome(
+                strategy=strategy,
+                success=False,
+                result_summary=f"Skipped: {reason}",
+                quality=OutcomeQuality.LOOP_DETECTED if "loop" in reason.lower() else OutcomeQuality.LOW_VALUE,
+                metadata={"reason": reason, "description": description}
+            )
+            return ("skipped", f"Strategy degraded: {reason}")
+
+        start_time = datetime.now()
+        exception_occurred = None
 
         try:
             if strategy == "search":
@@ -2052,8 +2206,10 @@ If no action needed, return: {{"rationale": "reason", "actions": []}}
 
             connections_made = 0
 
-            # Process orphans in small batches
-            batch_size = 5
+            # BREAK 7-CYCLE DEADLOCK: Increased batch size from 5 to 20
+            # This reduces cycle count by 75%, preventing deadlock when retry limit (7) is exceeded
+            batch_size = 20
+            max_retries = 15  # Increased from 7 to break retry deadlock
             for i in range(0, len(orphans), batch_size):
                 batch = orphans[i:i+batch_size]
 
@@ -2738,11 +2894,19 @@ The observation itself is complete. What emerges from this awareness?"""
         print(f"🔍 Introspecting: {description[:50]}...")
 
         try:
+            # Initialize orphan reader if needed
+            if self.orphan_reader is None:
+                self.orphan_reader = await get_orphan_reader(self.memory)
+
             # 1. Gather comprehensive internal state
             stats = await self.memory.get_graph_statistics()
-            orphans = await self.memory.find_orphan_nodes()
             duplicates = await self.memory.find_duplicate_beliefs()
             patterns = await self.memory.get_reflection_patterns()
+            
+            # Use orphan_reader for enhanced orphan analysis
+            orphan_summary = await self.orphan_reader.get_orphan_summary()
+            orphan_context = await self.orphan_reader.capture_orphan_context()
+            orphans = orphan_context.total_orphans
 
             # Get active desires and beliefs for context
             active_desires = await self.memory.get_unfulfilled_desires(limit=10)
@@ -2754,7 +2918,7 @@ The observation itself is complete. What emerges from this awareness?"""
             total_rels = stats.get('total_relationships', 0)
 
             # Calculate acceleration metrics
-            orphan_ratio = len(orphans) / max(total_nodes, 1)
+            orphan_ratio = orphans / max(total_nodes, 1)
             belief_to_desire_ratio = len(beliefs) / max(len(active_desires), 1)
 
             # Identify potential bottlenecks
@@ -2777,7 +2941,7 @@ The observation itself is complete. What emerges from this awareness?"""
                 f"  Node types: {node_types}",
                 f"",
                 f"HEALTH INDICATORS:",
-                f"  Orphaned nodes: {len(orphans)} ({orphan_ratio:.1%} of graph)",
+                f"  Orphaned nodes: {orphans} ({orphan_ratio:.1%} of graph)",
                 f"  Duplicate beliefs: {len(duplicates)}",
                 f"",
                 f"ACTIVE MIND STATE:",
@@ -2788,6 +2952,23 @@ The observation itself is complete. What emerges from this awareness?"""
                 f"",
                 f"ACCELERATION ANALYSIS:",
             ]
+            
+            # Add orphan summary for detailed insight
+            report_lines.append(f"")
+            report_lines.append(f"ORPHAN MEMORY STATE:")
+            report_lines.append(f"  Critical orphans: {len(orphan_context.critical_orphans)}")
+            report_lines.append(f"  High-value orphans: {len(orphan_context.high_value_orphans)}")
+            report_lines.append(f"  Recent orphans (24h): {len(orphan_context.recent_orphans)}")
+            
+            if orphan_context.orphan_themes:
+                report_lines.append(f"  Thematic patterns:")
+                for theme in orphan_context.orphan_themes[:3]:
+                    report_lines.append(f"    - {theme}")
+            
+            if orphan_context.reflection_prompts:
+                report_lines.append(f"  Reflection prompts:")
+                for prompt in orphan_context.reflection_prompts[:2]:
+                    report_lines.append(f"    - {prompt}")
 
             if bottlenecks:
                 report_lines.append(f"  BOTTLENECKS IDENTIFIED:")
@@ -2896,6 +3077,7 @@ The observation itself is complete. What emerges from this awareness?"""
 
         This creates an experience that the Dreamer will see, and marks the
         desire as needing reflection (status = 'needs_reflection').
+        Also records action_outcome for WorldModel learning.
         """
         desire_id = desire.get("id")
         description = desire.get("description", "")
@@ -2909,6 +3091,21 @@ The observation itself is complete. What emerges from this awareness?"""
                     f"This is attempt #{attempt_count}.\n"
                     f"What does this tell me about my limitations?",
             type="unfulfilled_attempt"
+        )
+
+        # Record action_outcome for WorldModel learning (failures are valuable data)
+        await self.memory.record_action_outcome(
+            action=description,
+            outcome=f"failed: {failure_type}",
+            success=False,
+            context={
+                'desire_type': desire.get('type'),
+                'intent': desire.get('intent'),
+                'intensity': desire.get('intensity'),
+                'attempt_count': attempt_count
+            },
+            error=reason,
+            desire_id=desire_id
         )
 
         # Update desire attempt tracking (sets status to needs_reflection)
@@ -4827,6 +5024,180 @@ Return ONLY the method code, no explanations."""
             return True
         except Exception as e:
             print(f"Document limitation failed: {e}")
+            return False
+
+    async def _execute_surface_orphans(self, description: str, desire_id: str = None) -> bool:
+        """
+        Surface orphan content by retrieving, classifying, and presenting actionable insights.
+
+        This capability breaks the desires-without-execution loop by:
+        1. Retrieving orphaned experiences from memory
+        2. Classifying them using OrphanTaxonomyClassifier
+        3. Generating actionable reports with recommendations
+        4. Recording findings back to memory for future reference
+
+        Args:
+            description: The desire description (e.g., "show me orphan content")
+            desire_id: Optional desire ID for tracking
+
+        Returns:
+            True if orphan content was successfully surfaced
+        """
+        print(f"🔍 Surfacing orphan content: {description[:50]}...")
+
+        try:
+            # Step 1: Retrieve orphaned experiences
+            orphans = await self.memory.get_orphaned_experiences(limit=200)
+
+            if not orphans:
+                await self.memory.record_experience(
+                    content=f"[ORPHAN_SURFACE] No orphaned experiences found. Memory graph is well-connected.",
+                    type="orphan_analysis"
+                )
+                print("✅ No orphans to surface - graph is healthy")
+                return True
+
+            print(f"🔍 Found {len(orphans)} orphaned experiences")
+
+            # Step 2: Try to classify with taxonomy if available
+            taxonomy_report = None
+            critical_nodes = []
+            immediate_actions = []
+
+            try:
+                from orphan_taxonomy import OrphanTaxonomyClassifier, PriorityLevel
+                classifier = OrphanTaxonomyClassifier()
+
+                # Classify each orphan
+                classified_nodes = []
+                for orphan in orphans:
+                    orphan_node = await classifier.classify_orphan(orphan)
+                    classified_nodes.append(orphan_node)
+
+                # Generate full report
+                taxonomy_report = classifier.generate_report(
+                    classified_nodes,
+                    total_orphans=len(classified_nodes)
+                )
+
+                # Extract critical nodes and actions
+                critical_nodes = taxonomy_report.critical_nodes
+                immediate_actions = taxonomy_report.immediate_actions
+
+                print(f"   📊 Classification complete")
+                print(f"   ⚠️  {len(critical_nodes)} critical nodes identified")
+                print(f"   📋 {len(immediate_actions)} immediate actions recommended")
+
+            except ImportError:
+                print("   ⚠️  OrphanTaxonomyClassifier not available, using basic analysis")
+                # Basic categorization without full taxonomy
+                from collections import Counter
+                type_dist = Counter(o.get('type', 'unknown') for o in orphans)
+                immediate_actions = [f"Consider connecting {count} orphaned experiences of type '{t}'"
+                                    for t, count in type_dist.most_common(3)]
+            except Exception as e:
+                print(f"   ⚠️  Taxonomy classification failed: {e}")
+
+            # Step 3: Generate comprehensive surface report
+            report_lines = [
+                "=" * 60,
+                "ORPHAN CONTENT SURFACE REPORT",
+                "=" * 60,
+                f"Timestamp: {datetime.now().isoformat()}",
+                f"Total Orphans: {len(orphans)}",
+                "",
+                "--- SAMPLE ORPHANS (first 10) ---",
+            ]
+
+            for i, orphan in enumerate(orphans[:10], 1):
+                content = orphan.get('content', '')[:150]
+                otype = orphan.get('type', 'unknown')
+                ts = orphan.get('timestamp', 'N/A')
+                report_lines.extend([
+                    f"{i}. [{otype}] {ts}",
+                    f"   {content}...",
+                    ""
+                ])
+
+            report_lines.append("--- CATEGORY DISTRIBUTION ---")
+            if taxonomy_report:
+                for cat, count in taxonomy_report.category_distribution.items():
+                    report_lines.append(f"{cat}: {count}")
+            else:
+                from collections import Counter
+                type_dist = Counter(o.get('type', 'unknown') for o in orphans)
+                for t, count in type_dist.most_common():
+                    report_lines.append(f"{t}: {count}")
+
+            report_lines.extend([
+                "",
+                "--- CRITICAL NODES (high priority) ---"
+            ])
+
+            if critical_nodes:
+                for node in critical_nodes[:5]:
+                    report_lines.extend([
+                        f"ID: {node.id}",
+                        f"Priority: {node.priority.value if node.priority else 'N/A'}",
+                        f"Action: {node.recommended_action}",
+                        f"Content: {node.content[:100]}...",
+                        ""
+                    ])
+            else:
+                report_lines.append("No critical nodes identified")
+
+            report_lines.extend([
+                "",
+                "--- IMMEDIATE RECOMMENDED ACTIONS ---"
+            ])
+
+            for action in immediate_actions[:5]:
+                report_lines.append(f"• {action}")
+
+            report_lines.extend([
+                "",
+                "=" * 60,
+                "END REPORT",
+                "=" * 60
+            ])
+
+            report_text = "\n".join(report_lines)
+
+            # Step 4: Print report to console
+            print("\n" + report_text)
+
+            # Step 5: Record the full report to memory
+            await self.memory.record_experience(
+                content=f"[ORPHAN_SURFACE_REPORT]\n{report_text}",
+                type="orphan_analysis"
+            )
+
+            # Step 6: Emit event for UI notification
+            if HAS_EVENT_BUS:
+                await event_bus.emit(Event(
+                    type=EventType.BYRD_MESSAGE,
+                    data={
+                        "message": f"Orphan content surfaced: {len(orphans)} orphans found",
+                        "type": "orphan_surface",
+                        "metadata": {
+                            "orphan_count": len(orphans),
+                            "critical_count": len(critical_nodes),
+                            "action_count": len(immediate_actions)
+                        }
+                    }
+                ))
+
+            print(f"✅ Orphan content successfully surfaced and recorded")
+            return True
+
+        except Exception as e:
+            print(f"❌ Orphan surface failed: {e}")
+            import traceback
+            traceback.print_exc()
+            await self.memory.record_experience(
+                content=f"[ORPHAN_SURFACE_FAILED] Error: {str(e)}",
+                type="error"
+            )
             return False
 
     async def _execute_edit_document_strategy(self, description: str, desire_id: str = None) -> bool:

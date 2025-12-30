@@ -585,6 +585,75 @@ class Memory:
 
         return exp_id
 
+    async def record_action_outcome(
+        self,
+        action: str,
+        outcome: str,
+        success: bool,
+        context: Optional[Dict] = None,
+        error: Optional[str] = None,
+        desire_id: Optional[str] = None
+    ) -> str:
+        """
+        Record an action outcome for WorldModel learning.
+
+        This creates an Experience node with structured fields that the
+        WorldModel can query for empirical prediction.
+
+        Args:
+            action: The action that was taken (desire description)
+            outcome: Description of what happened
+            success: Whether the action succeeded
+            context: Optional context dict (desire_type, intent, etc.)
+            error: Optional error message if success=False
+            desire_id: Optional ID of the desire that was fulfilled
+
+        Returns:
+            Experience ID
+        """
+        import json
+
+        exp_id = self._generate_id(f"action_outcome_{action}")
+        context_json = json.dumps(context) if context else "{}"
+
+        async with self.driver.session() as session:
+            await session.run("""
+                CREATE (e:Experience {
+                    id: $id,
+                    content: $content,
+                    type: 'action_outcome',
+                    action: $action,
+                    outcome: $outcome,
+                    success: $success,
+                    context: $context,
+                    error: $error,
+                    desire_id: $desire_id,
+                    timestamp: datetime()
+                })
+            """,
+                id=exp_id,
+                content=f"[ACTION_OUTCOME] {action[:100]} → {outcome}",
+                action=action,
+                outcome=outcome,
+                success=success,
+                context=context_json,
+                error=error,
+                desire_id=desire_id
+            )
+
+        # Emit event
+        await event_bus.emit(Event(
+            type=EventType.EXPERIENCE_CREATED,
+            data={
+                "id": exp_id,
+                "type": "action_outcome",
+                "action": action,
+                "success": success
+            }
+        ))
+
+        return exp_id
+
     async def record_external_experience(
         self,
         content: str,
@@ -1613,10 +1682,35 @@ class Memory:
     async def fulfill_desire(
         self,
         desire_id: str,
-        fulfilled_by: Optional[str] = None
+        fulfilled_by: Optional[str] = None,
+        outcome: Optional[str] = None,
+        success: bool = True,
+        context: Optional[Dict] = None,
+        error: Optional[str] = None
     ):
-        """Mark a desire as fulfilled, optionally linking what fulfilled it."""
+        """Mark a desire as fulfilled and record action_outcome for WorldModel.
+
+        Args:
+            desire_id: ID of the desire to fulfill
+            fulfilled_by: Optional ID of capability/experience that fulfilled it
+            outcome: Description of what happened (defaults to 'fulfilled')
+            success: Whether the action succeeded (default True)
+            context: Optional context dict for WorldModel prediction
+            error: Optional error message if success=False
+        """
+        # Get desire details for action_outcome recording
+        desire_details = None
         async with self.driver.session() as session:
+            result = await session.run("""
+                MATCH (d:Desire {id: $id})
+                RETURN d.description as description, d.type as type,
+                       d.intent as intent, d.intensity as intensity
+            """, id=desire_id)
+            record = await result.single()
+            if record:
+                desire_details = dict(record)
+
+            # Mark desire as fulfilled
             await session.run("""
                 MATCH (d:Desire {id: $id})
                 SET d.fulfilled = true, d.fulfilled_at = datetime()
@@ -1629,12 +1723,37 @@ class Memory:
                     CREATE (c)-[:FULFILLS]->(d)
                 """, desire_id=desire_id, cap_id=fulfilled_by)
 
+        # Record action_outcome experience for WorldModel learning
+        if desire_details:
+            action = desire_details.get('description', 'unknown action')
+            outcome_desc = outcome or ('success' if success else 'failure')
+
+            # Build context for WorldModel
+            action_context = context or {}
+            action_context.update({
+                'desire_type': desire_details.get('type'),
+                'intent': desire_details.get('intent'),
+                'intensity': desire_details.get('intensity'),
+                'fulfilled_by': fulfilled_by
+            })
+
+            await self.record_action_outcome(
+                action=action,
+                outcome=outcome_desc,
+                success=success,
+                context=action_context,
+                error=error,
+                desire_id=desire_id
+            )
+
         # Emit event for real-time UI
         await event_bus.emit(Event(
             type=EventType.DESIRE_FULFILLED,
             data={
                 "id": desire_id,
-                "fulfilled_by": fulfilled_by
+                "fulfilled_by": fulfilled_by,
+                "success": success,
+                "outcome": outcome
             }
         ))
     
