@@ -1605,8 +1605,15 @@ async def get_observer_messages(
         # Count total messages
         all_messages = await byrd_instance.memory.get_observer_messages(limit=10000)
 
+        # Convert neo4j DateTime to string for Pydantic validation
+        def convert_message(m):
+            msg = dict(m)
+            if msg.get('created_at') and hasattr(msg['created_at'], 'isoformat'):
+                msg['created_at'] = msg['created_at'].isoformat()
+            return msg
+
         return MessagesResponse(
-            messages=[ObserverMessageResponse(**m) for m in messages],
+            messages=[ObserverMessageResponse(**convert_message(m)) for m in messages],
             total=len(all_messages),
             unread_count=unread_count
         )
@@ -1671,6 +1678,10 @@ async def get_observer_message(message_id: str, with_audio: bool = False):
             raise HTTPException(status_code=404, detail=f"Message {message_id} not found")
 
         response = dict(message)
+
+        # Convert neo4j DateTime to string
+        if response.get('created_at') and hasattr(response['created_at'], 'isoformat'):
+            response['created_at'] = response['created_at'].isoformat()
 
         # Regenerate audio on-demand if requested and message was vocalized
         if with_audio and message.get("vocalized") and hasattr(byrd_instance, 'hybrid_voice') and byrd_instance.hybrid_voice:
