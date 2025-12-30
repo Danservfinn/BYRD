@@ -13,6 +13,7 @@ import certifi
 os.environ['SSL_CERT_FILE'] = certifi.where()
 
 import asyncio
+import json
 import subprocess
 import sys
 from contextlib import asynccontextmanager
@@ -537,6 +538,53 @@ class GraphResponse(BaseModel):
     nodes: List[GraphNode]
     relationships: List[GraphRelationship]
     stats: GraphStats
+
+
+# Topology Visualization Models
+class TopologyClique(BaseModel):
+    """A clique (fully connected subgraph) of nodes."""
+    node_ids: List[str]
+    size: int
+    type: str  # 'triangle', 'tetrahedron', 'higher'
+
+
+class TopologyChain(BaseModel):
+    """A directed chain of relationships (A→B→C→D)."""
+    node_ids: List[str]
+    relationship_types: List[str]
+    length: int
+
+
+class MetaNode(BaseModel):
+    """A consolidated cluster of nodes."""
+    id: str
+    label: str
+    constituent_ids: List[str]
+    constituent_count: int
+    centroid: Optional[Dict[str, float]] = None
+    timestamp_range: Optional[Dict[str, str]] = None
+    dominant_type: Optional[str] = None
+
+
+class TopologyStats(BaseModel):
+    """Statistics for topology structures."""
+    original_node_count: int
+    consolidated_node_count: int
+    consolidation_level: int
+    triangle_count: int
+    tetrahedron_count: int
+    higher_clique_count: int
+    chain_count: int
+    meta_node_count: int
+
+
+class TopologyResponse(BaseModel):
+    """Response for /api/graph/topology endpoint."""
+    nodes: List[GraphNode]
+    relationships: List[GraphRelationship]
+    topology: Dict[str, Any]  # triangles, tetrahedra, higher, chains
+    meta_nodes: List[MetaNode]
+    stats: TopologyStats
 
 
 # Option B: Omega Metrics Models
@@ -2722,6 +2770,237 @@ async def get_graph(limit: int = 10000):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/graph/topology", response_model=TopologyResponse)
+async def get_graph_topology(
+    limit: int = 2000,
+    consolidation_level: int = 1,
+    compute_cliques: bool = True
+):
+    """
+    Get graph with pre-computed topology analysis for visualization.
+
+    This endpoint returns the memory graph with relationship-derived geometry:
+    - Triangles: 3 mutually connected nodes
+    - Tetrahedra: 4 fully connected nodes
+    - Higher cliques: 5+ fully connected nodes
+    - Chains: Directed relationship paths (A→B→C→D)
+    - Meta-nodes: Consolidated clusters for large graphs
+
+    Args:
+        limit: Maximum number of nodes to return (default 2000)
+        consolidation_level: Level of node consolidation (0=none, 1=temporal, 2=community)
+        compute_cliques: Whether to compute clique topology (can be slow for large graphs)
+
+    Returns:
+        TopologyResponse with nodes, relationships, topology structures, and stats
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+        graph = await byrd_instance.memory.get_full_graph(limit=limit * 2)  # Get extra for consolidation
+
+        nodes = graph["nodes"]
+        relationships = graph["relationships"]
+        original_count = len(nodes)
+
+        # Build adjacency map for topology computation
+        adjacency = {}
+        directed_adjacency = {}
+        for rel in relationships:
+            src, tgt = rel.get("source_id") or rel.get("source"), rel.get("target_id") or rel.get("target")
+            if src and tgt:
+                # Undirected adjacency for clique detection
+                if src not in adjacency:
+                    adjacency[src] = set()
+                if tgt not in adjacency:
+                    adjacency[tgt] = set()
+                adjacency[src].add(tgt)
+                adjacency[tgt].add(src)
+
+                # Directed adjacency for chain detection
+                if src not in directed_adjacency:
+                    directed_adjacency[src] = []
+                directed_adjacency[src].append({"target": tgt, "type": rel.get("type", "RELATES_TO")})
+
+        # Consolidation for large graphs
+        meta_nodes = []
+        consolidation_applied = 0
+
+        if len(nodes) > limit and consolidation_level > 0:
+            # Simple temporal consolidation: group nodes by day
+            from collections import defaultdict
+            from datetime import datetime
+
+            now = datetime.now()
+            week_ms = 7 * 24 * 60 * 60 * 1000
+
+            recent = []
+            day_buckets = defaultdict(list)
+
+            for node in nodes:
+                timestamp = node.get("created_at") or node.get("timestamp")
+                if timestamp:
+                    try:
+                        if isinstance(timestamp, str):
+                            ts = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                        else:
+                            ts = timestamp
+                        age_days = (now - ts.replace(tzinfo=None)).days
+                        if age_days < 7:
+                            recent.append(node)
+                        else:
+                            day_key = ts.strftime("%Y-%m-%d")
+                            day_buckets[day_key].append(node)
+                    except:
+                        recent.append(node)
+                else:
+                    recent.append(node)
+
+            # Create meta-nodes for day buckets
+            for day_key, day_nodes in day_buckets.items():
+                if len(day_nodes) >= 3:  # Only consolidate if 3+ nodes
+                    # Find dominant type
+                    type_counts = defaultdict(int)
+                    for n in day_nodes:
+                        type_counts[n.get("type", "unknown")] += 1
+                    dominant_type = max(type_counts, key=type_counts.get)
+
+                    meta_node = MetaNode(
+                        id=f"meta_{day_key}",
+                        label=f"{day_key} ({len(day_nodes)} memories)",
+                        constituent_ids=[n["id"] for n in day_nodes],
+                        constituent_count=len(day_nodes),
+                        timestamp_range={"start": day_key, "end": day_key},
+                        dominant_type=dominant_type
+                    )
+                    meta_nodes.append(meta_node)
+                else:
+                    recent.extend(day_nodes)
+
+            # Limit to requested count
+            if len(recent) > limit:
+                # Sort by importance/recency and take top
+                recent.sort(key=lambda n: (n.get("importance", 0.5), n.get("created_at", "")), reverse=True)
+                recent = recent[:limit]
+
+            nodes = recent
+            consolidation_applied = 1 if meta_nodes else 0
+
+        # Compute topology structures
+        triangles = []
+        tetrahedra = []
+        higher_cliques = []
+        chains = []
+
+        if compute_cliques and len(nodes) <= 5000:
+            node_ids = set(n["id"] for n in nodes)
+
+            # Find triangles using adjacency
+            found_triangles = set()
+            for node_id in node_ids:
+                if node_id not in adjacency:
+                    continue
+                neighbors = adjacency[node_id] & node_ids
+                neighbor_list = list(neighbors)
+                for i, n1 in enumerate(neighbor_list):
+                    for n2 in neighbor_list[i+1:]:
+                        if n2 in adjacency.get(n1, set()):
+                            tri = tuple(sorted([node_id, n1, n2]))
+                            if tri not in found_triangles:
+                                found_triangles.add(tri)
+                                triangles.append(list(tri))
+
+            # Find tetrahedra (extend triangles)
+            found_tetrahedra = set()
+            for tri in triangles:
+                common_neighbors = adjacency.get(tri[0], set()) & adjacency.get(tri[1], set()) & adjacency.get(tri[2], set())
+                common_neighbors = common_neighbors & node_ids
+                for n4 in common_neighbors:
+                    if n4 not in tri:
+                        tetra = tuple(sorted([*tri, n4]))
+                        if tetra not in found_tetrahedra:
+                            found_tetrahedra.add(tetra)
+                            tetrahedra.append(list(tetra))
+
+            # Find chains (directed paths of length 4+)
+            in_degree = defaultdict(int)
+            out_degree = defaultdict(int)
+            for src, targets in directed_adjacency.items():
+                out_degree[src] += len(targets)
+                for t in targets:
+                    in_degree[t["target"]] += 1
+
+            # Start from nodes with low in-degree
+            potential_starts = [n for n in node_ids if in_degree[n] <= 1 and out_degree[n] >= 1]
+
+            visited_chains = set()
+            for start in potential_starts[:100]:  # Limit chain search
+                chain = [start]
+                current = start
+                chain_types = []
+
+                while current in directed_adjacency and len(chain) < 10:
+                    targets = directed_adjacency[current]
+                    # Pick first unvisited target
+                    next_node = None
+                    for t in targets:
+                        if t["target"] in node_ids and t["target"] not in chain:
+                            next_node = t["target"]
+                            chain_types.append(t["type"])
+                            break
+                    if next_node:
+                        chain.append(next_node)
+                        current = next_node
+                    else:
+                        break
+
+                if len(chain) >= 4:
+                    chain_key = tuple(chain)
+                    if chain_key not in visited_chains:
+                        visited_chains.add(chain_key)
+                        chains.append({
+                            "node_ids": chain,
+                            "relationship_types": chain_types,
+                            "length": len(chain)
+                        })
+
+        # Build response
+        topology = {
+            "triangles": triangles[:500],  # Limit for performance
+            "tetrahedra": tetrahedra[:200],
+            "higher": [list(h) for h in higher_cliques[:50]],
+            "chains": chains[:100]
+        }
+
+        stats = TopologyStats(
+            original_node_count=original_count,
+            consolidated_node_count=len(nodes),
+            consolidation_level=consolidation_applied,
+            triangle_count=len(triangles),
+            tetrahedron_count=len(tetrahedra),
+            higher_clique_count=len(higher_cliques),
+            chain_count=len(chains),
+            meta_node_count=len(meta_nodes)
+        )
+
+        return TopologyResponse(
+            nodes=[GraphNode(**node) for node in nodes],
+            relationships=[GraphRelationship(**rel) for rel in relationships if rel.get("source_id") or rel.get("source")],
+            topology=topology,
+            meta_nodes=meta_nodes,
+            stats=stats
+        )
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/start")
 async def start_byrd():
     """Start BYRD background processes."""
@@ -3482,6 +3761,69 @@ async def get_graphiti_health():
             "processing": metrics.get("processing", False)
         }
     }
+
+
+@app.get("/api/loop-metrics")
+async def get_loop_metrics(loop_name: str = None, limit: int = 50):
+    """
+    Get Option B loop metrics for verification.
+
+    BYRD uses this to verify that metric trackers are actually writing data.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        metrics = await byrd_instance.memory.get_loop_metrics(
+            loop_name=loop_name,
+            limit=limit
+        )
+
+        # Parse JSON metrics back to dicts
+        for m in metrics:
+            if "metrics" in m and isinstance(m["metrics"], str):
+                m["metrics"] = json.loads(m["metrics"])
+
+        return {
+            "loop_name": loop_name or "all",
+            "count": len(metrics),
+            "metrics": metrics
+        }
+    except Exception as e:
+        return {"error": str(e), "metrics": []}
+
+
+@app.get("/api/loop-metrics/summary")
+async def get_loop_metrics_summary():
+    """
+    Get summary of loop metrics by loop name.
+
+    Returns count and latest metrics per loop for quick verification.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        async with byrd_instance.memory.driver.session() as session:
+            result = await session.run("""
+                MATCH (lm:LoopMetric)
+                WITH lm.loop_name AS loop_name, count(*) AS count,
+                     max(lm.cycle_number) AS latest_cycle
+                RETURN loop_name, count, latest_cycle
+                ORDER BY loop_name
+            """)
+            summary = await result.data()
+
+        return {
+            "loops": summary,
+            "total_metrics": sum(s["count"] for s in summary)
+        }
+    except Exception as e:
+        return {"error": str(e), "loops": []}
 
 
 @app.get("/api/graphiti/entities")

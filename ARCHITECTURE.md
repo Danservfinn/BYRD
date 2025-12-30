@@ -74,6 +74,7 @@ The unified graph holds everything. All state, all learning, all provenance.
 | `Strategy` | Learned approaches (linked from OS) |
 | `QuantumMoment` | Quantum influence records |
 | `SystemState` | System counters and state |
+| `LoopMetric` | Per-cycle metrics from Option B compounding loops |
 
 ### 2. Operating System (Self-Model)
 
@@ -536,6 +537,8 @@ async def dispatch(outcome: TaskOutcome) -> Dict[str, bool]:
 | `/api/graphiti/entities` | Search entities by name/content |
 | `/api/graphiti/entity/{name}/facts` | Get entity facts |
 | `/api/graphiti/entity/{name}/provenance` | Trace provenance chain |
+| `/api/loop-metrics` | Per-loop metrics from Option B cycles |
+| `/api/loop-metrics/summary` | Aggregate summary by loop name |
 
 ---
 

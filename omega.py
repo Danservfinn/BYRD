@@ -326,6 +326,9 @@ class BYRDOmega:
             elif self._mode == OperatingMode.COMPILING:
                 results["loops"] = await self._run_compiling_mode()
 
+            # Persist loop metrics to Neo4j for verification
+            await self._persist_loop_metrics(results["loops"])
+
             # Measure capability and growth
             await self._measure_capability()
 
@@ -442,6 +445,28 @@ class BYRDOmega:
             results["goal_evolver"] = self.goal_evolver.get_metrics()
 
         return results
+
+    async def _persist_loop_metrics(self, loop_results: Dict[str, Any]):
+        """
+        Persist per-loop metrics to Neo4j for verification.
+
+        This allows BYRD to verify that trackers are actually writing data
+        by querying LoopMetric nodes in the graph.
+        """
+        if not self.memory:
+            return
+
+        for loop_name, metrics in loop_results.items():
+            if metrics:  # Only persist non-empty metrics
+                try:
+                    await self.memory.record_loop_metrics(
+                        loop_name=loop_name,
+                        cycle_number=self._total_cycles,
+                        metrics=metrics,
+                        mode=self._mode.value
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to persist {loop_name} metrics: {e}")
 
     async def _measure_capability(self):
         """Measure current capability and compute growth rate."""
@@ -609,10 +634,18 @@ class BYRDOmega:
 
                 if recent_outcomes:
                     for outcome in recent_outcomes:
+                        # BREAKING FALSE-POSITIVE LOOP: Pass delta for meaningful success detection
+                        # Extract delta from context if available, otherwise 0.0
+                        context = outcome.get("context", {})
+                        delta = 0.0
+                        if isinstance(context, dict):
+                            delta = context.get("delta", 0.0)
+                        
                         await self.intuition_network.record_outcome(
-                            situation=str(outcome.get("context", "")),
+                            situation=str(context),
                             action=outcome.get("action", ""),
-                            success=outcome.get("success", False)
+                            success=outcome.get("success", False),
+                            delta=delta
                         )
                     results["intuition"] = {
                         "outcomes_processed": len(recent_outcomes)

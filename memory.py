@@ -443,6 +443,13 @@ class Memory:
             await session.run("""
                 CREATE INDEX IF NOT EXISTS FOR (ms:MetricSnapshot) ON (ms.timestamp)
             """)
+            # Option B: LoopMetric indexes for verification
+            await session.run("""
+                CREATE INDEX IF NOT EXISTS FOR (lm:LoopMetric) ON (lm.timestamp)
+            """)
+            await session.run("""
+                CREATE INDEX IF NOT EXISTS FOR (lm:LoopMetric) ON (lm.loop_name, lm.cycle_number)
+            """)
 
     def _generate_id(self, content: str) -> str:
         """Generate deterministic ID from content."""
@@ -8680,6 +8687,87 @@ class Memory:
             result = await session.run(query, limit=limit)
             records = await result.data()
             return [dict(r["ms"]) for r in records]
+
+    async def record_loop_metrics(
+        self,
+        loop_name: str,
+        cycle_number: int,
+        metrics: Dict[str, Any],
+        mode: str = "awake"
+    ) -> str:
+        """
+        Record per-loop metrics to Neo4j for Option B verification.
+
+        This enables BYRD to verify that trackers are actually writing data.
+
+        Args:
+            loop_name: Name of the loop (memory_reasoner, goal_evolver, etc.)
+            cycle_number: Current omega cycle number
+            metrics: Dict of metric values from loop.get_metrics()
+            mode: Current operating mode
+
+        Returns:
+            ID of created LoopMetric node
+        """
+        metric_id = self._generate_id(f"loop_metric_{loop_name}_{cycle_number}")
+
+        async with self.driver.session() as session:
+            await session.run("""
+                CREATE (lm:LoopMetric {
+                    id: $id,
+                    loop_name: $loop_name,
+                    cycle_number: $cycle_number,
+                    mode: $mode,
+                    metrics: $metrics,
+                    timestamp: datetime()
+                })
+            """,
+            id=metric_id,
+            loop_name=loop_name,
+            cycle_number=cycle_number,
+            mode=mode,
+            metrics=json.dumps(metrics)
+            )
+
+        return metric_id
+
+    async def get_loop_metrics(
+        self,
+        loop_name: str = None,
+        limit: int = 50
+    ) -> List[Dict]:
+        """
+        Get recent loop metrics for verification and analysis.
+
+        Args:
+            loop_name: Optional filter by loop name
+            limit: Max records to return
+
+        Returns:
+            List of LoopMetric records
+        """
+        if loop_name:
+            query = """
+                MATCH (lm:LoopMetric)
+                WHERE lm.loop_name = $loop_name
+                RETURN lm
+                ORDER BY lm.timestamp DESC
+                LIMIT $limit
+            """
+            params = {"loop_name": loop_name, "limit": limit}
+        else:
+            query = """
+                MATCH (lm:LoopMetric)
+                RETURN lm
+                ORDER BY lm.timestamp DESC
+                LIMIT $limit
+            """
+            params = {"limit": limit}
+
+        async with self.driver.session() as session:
+            result = await session.run(query, **params)
+            records = await result.data()
+            return [dict(r["lm"]) for r in records]
 
     # -------------------------------------------------------------------------
     # RAW QUERY EXECUTION (AGI Seed Components, Accelerators)
