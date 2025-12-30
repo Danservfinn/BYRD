@@ -31,6 +31,7 @@ from installers import get_installer
 from constitutional import ConstitutionalConstraints
 from llm_client import LLMClient
 from capability_registry import CapabilityRegistry, Capability
+from value_tracker import get_value_tracker, OutcomeQuality
 
 # Try to import event_bus, but make it optional
 try:
@@ -160,6 +161,9 @@ class Seeker:
 
         # Strategy effectiveness tracking (for acceleration)
         self._strategy_stats: Dict[str, Dict[str, int]] = {}  # strategy -> {attempts, successes, failures}
+
+        # Value tracker for detailed outcome analysis
+        self.value_tracker = get_value_tracker()
 
         # Capability Registry - dynamic action menu
         self.capability_registry = CapabilityRegistry(memory=memory, llm_client=llm_client)

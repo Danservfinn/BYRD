@@ -276,7 +276,7 @@ class ParallelTransmissionPath:
                     content=content,
                     type=observation_type,
                     force=priority == ObservationPriority.CRITICAL,
-                    link_on_acquisition=True
+                    link_on_acquisition=False  # Disabled to prevent harmful fragmentation
                 )
                 primary_succeeded = True
                 self._primary_success_count += 1
@@ -373,7 +373,7 @@ class ParallelTransmissionPath:
                 await self._memory.record_experience(
                     content=obs["content"],
                     type=obs["observation_type"],
-                    link_on_acquisition=True
+                    link_on_acquisition=False  # Disabled to prevent harmful fragmentation
                 )
                 replayed += 1
             except Exception:

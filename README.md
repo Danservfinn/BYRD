@@ -145,7 +145,7 @@ The Seeker routes desires to appropriate actions:
 - `self_modify` - Code modification
 - `edit_document` - Documentation editing
 - `curate` - Memory graph optimization
-- `reconcile_orphans` - Connect isolated experiences
+# REMOVED: `reconcile_orphans` - Disabled to prevent harmful fragmentation (use `curate` instead)
 
 ### AGI Runner Cycle
 The 8-step improvement loop:

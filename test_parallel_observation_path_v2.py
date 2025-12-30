@@ -46,7 +46,7 @@ class MockMemory:
         self.records = []
     
     async def record_experience(self, content, type, embedding=None, 
-                                force=False, link_on_acquisition=True):
+                                force=False, link_on_acquisition=False):
         self.attempt += 1
         if self.attempt <= self.fail_count:
             raise Exception(f"Mock memory failure (attempt {self.attempt})")

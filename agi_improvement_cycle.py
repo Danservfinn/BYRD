@@ -43,7 +43,9 @@ class CycleState:
     predictions: Dict[str, float] = field(default_factory=dict)
     verification_results: Dict[str, bool] = field(default_factory=dict)
     execution_results: Dict[str, Any] = field(default_factory=dict)
+    baseline_measurements: Dict[str, float] = field(default_factory=dict)
     measurements: Dict[str, float] = field(default_factory=dict)
+    delta_measurements: Dict[str, float] = field(default_factory=dict)
     learnings: Dict[str, Any] = field(default_factory=dict)
     errors: List[str] = field(default_factory=list)
     
@@ -59,7 +61,9 @@ class CycleState:
             "predictions": self.predictions,
             "verification_results": self.verification_results,
             "execution_results": self.execution_results,
+            "baseline_measurements": self.baseline_measurements,
             "measurements": self.measurements,
+            "delta_measurements": self.delta_measurements,
             "learnings": self.learnings,
             "errors": self.errors
         }

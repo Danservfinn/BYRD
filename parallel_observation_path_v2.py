@@ -319,7 +319,7 @@ class ParallelObservationPath:
                     content=observation.content,
                     type=observation.observation_type,
                     force=(observation.priority == ObservationPriority.CRITICAL),
-                    link_on_acquisition=True
+                    link_on_acquisition=False  # Disabled to prevent harmful fragmentation
                 )
                 
             elif self._primary_path_type == PrimaryPathType.EVENT_BUS:

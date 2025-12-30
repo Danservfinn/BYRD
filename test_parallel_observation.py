@@ -46,7 +46,7 @@ class FailingMemory:
         self.fail_count = fail_count
         self.attempt = 0
     
-    async def record_experience(self, content, type, embedding=None, force=False, link_on_acquisition=True):
+    async def record_experience(self, content, type, embedding=None, force=False, link_on_acquisition=False):
         self.attempt += 1
         if self.attempt <= self.fail_count:
             raise Exception(f"Neo4j connection failed (attempt {self.attempt})")
@@ -57,7 +57,7 @@ class WorkingMemory:
     def __init__(self):
         self.records = []
     
-    async def record_experience(self, content, type, embedding=None, force=False, link_on_acquisition=True):
+    async def record_experience(self, content, type, embedding=None, force=False, link_on_acquisition=False):
         exp_id = f"exp_{len(self.records) + 1}"
         self.records.append((exp_id, content, type))
         return exp_id

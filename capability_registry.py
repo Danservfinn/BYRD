@@ -196,16 +196,20 @@ class CapabilityRegistry:
             ),
 
             # === GRAPH OPERATIONS ===
-            Capability(
-                id="reconcile_orphans",
-                name="Orphan Reconciliation",
-                description="Connect isolated nodes in my memory graph to reduce fragmentation",
-                handler="_execute_orphan_reconciliation",
-                keywords=["orphan", "orphaned", "isolated", "disconnected", "unconnected", "fragmentation"],
-                intents=["connection", "organization"],
-                constraints=["Only for internal graph operations"],
-                category="graph"
-            ),
+            # DISABLED: Aggressive orphan reconciliation was causing fragmentation
+            # by forcing low-quality connections and creating artificial beliefs.
+            # Preserving node isolation is preferable to false semantic connections.
+            # Capability(
+            #     id="reconcile_orphans",
+            #     name="Orphan Reconciliation",
+            #     description="Connect isolated nodes in my memory graph to reduce fragmentation",
+            #     handler="_execute_orphan_reconciliation",
+            #     keywords=["orphan", "orphaned", "isolated", "disconnected", "unconnected", "fragmentation"],
+            #     intents=["connection", "organization"],
+            #     constraints=["Only for internal graph operations"],
+            #     category="graph",
+            #     enabled=False
+            # ),
             Capability(
                 id="curate_graph",
                 name="Graph Curation",

@@ -517,57 +517,27 @@ RECOMMENDED EXECUTION ORDER:
         return "\n".join(lines)
 
     # =========================================================================
-    # RECONCILIATION
+    # RECONCILIATION - DISABLED
     # =========================================================================
 
     async def run_reconciliation(self) -> Tuple[int, int]:
-        """Run the full orphan reconciliation with proper understanding."""
+        """RECONCILIATION DISABLED to prevent harmful fragmentation.
+        
+        Orphan reconciliation was found to create low-quality connections
+        and artificial beliefs, causing more harm than preserving node isolation.
+        """
         print("\n" + "=" * 70)
-        print("RUNNING ORPHAN RECONCILIATION")
+        print("ORPHAN RECONCILIATION DISABLED")
         print("=" * 70)
-
-        # First record the taxonomy analysis
-        await self.create_taxonomy_experience()
-
-        # Get initial state
-        initial_stats = await self.memory.get_connection_statistics()
-        initial_orphans = initial_stats.get('experiences', {}).get('orphaned', 0)
-        print(f"\nInitial orphan count: {initial_orphans}")
-
-        if initial_orphans == 0:
-            print("✅ No orphans to reconcile!")
-            return (0, 0)
-
-        # Import and run the seeker's reconciliation
-        try:
-            from seeker import Seeker
-            from llm_client import create_llm_client
-
-            # Create LLM client
-            llm_client = create_llm_client(self.config)
-
-            # Create seeker instance with required arguments
-            seeker = Seeker(self.memory, llm_client, self.config, coordinator=None)
-
-            # Run reconciliation
-            print("\n🔗 Executing multi-phase reconciliation...")
-            success = await seeker._execute_orphan_reconciliation(
-                description="Diagnostic-triggered orphan reconciliation with full understanding",
-                desire_id=None
-            )
-
-            # Get final state
-            final_stats = await self.memory.get_connection_statistics()
-            final_orphans = final_stats.get('experiences', {}).get('orphaned', 0)
-
-            connections_made = initial_orphans - final_orphans
-
-            print(f"\n" + "=" * 70)
-            print("RECONCILIATION RESULTS")
-            print("=" * 70)
-            print(f"Initial orphans: {initial_orphans}")
-            print(f"Final orphans: {final_orphans}")
-            print(f"Orphans reduced: {connections_made}")
+        print("\n⚠️  Reconciliation has been disabled to prevent harmful fragmentation.")
+        print("Aggressive orphan reconciliation was causing:")
+        print("  - Low-quality semantic connections")
+        print("  - Artificial beliefs lacking genuine meaning")
+        print("  - Increased graph fragmentation over time")
+        print("\nPreserving node isolation is preferable to false connections.")
+        print("\nUse 'curate' strategy for intentional graph optimization instead.")
+        
+        return (0, 0)
             print(f"Success: {'✅' if success else '❌'}")
 
             return (initial_orphans, final_orphans)

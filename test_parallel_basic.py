@@ -17,7 +17,7 @@ class MockMemory:
         self.attempt = 0
         self.records = []
     
-    async def record_experience(self, content, type, embedding=None, force=False, link_on_acquisition=True):
+    async def record_experience(self, content, type, embedding=None, force=False, link_on_acquisition=False):
         self.attempt += 1
         if self.attempt <= self.fail_count:
             raise Exception(f"Neo4j connection failed (attempt {self.attempt})")
