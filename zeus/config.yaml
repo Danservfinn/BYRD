@@ -1,0 +1,161 @@
+# ZEUS Configuration
+# Zero-overhead Unified Engine for Self-improvement
+
+# Core loop settings
+cycle:
+  interval_seconds: 60
+  max_cycles_per_session: 1000
+  phases:
+    - assess
+    - identify
+    - improve
+    - verify
+    - record
+    - learn
+
+# Optional phases
+optional_phases:
+  reflect:
+    enabled: true
+    frequency: 5             # Run every N cycles
+    on_high_curiosity: true  # Also run when curiosity is high
+
+# Neo4j Memory
+neo4j:
+  uri: "${NEO4J_URI:-bolt://localhost:7687}"
+  user: "${NEO4J_USER:-neo4j}"
+  password: "${NEO4J_PASSWORD}"
+  database: "neo4j"
+
+# OpenCode Engine (with ZAI GLM-4.7)
+opencode:
+  provider: "zai"
+  model: "glm-4.7"
+  api_key: "${ZAI_API_KEY}"
+  base_url: "https://open.bigmodel.cn/api/paas/v4"
+  timeout_seconds: 180
+  max_turns: 30
+  # Rate limiting to prevent 429 errors
+  rate_limit:
+    min_interval_seconds: 10.0    # Minimum seconds between requests
+    max_requests_per_minute: 6    # Conservative limit
+    retry_after_429: true
+    retry_delay_seconds: 15
+
+# Safety constraints (observation-based)
+safety:
+  protected_paths:
+    - "zeus/safety/"
+    - "zeus/config.yaml"
+  require_tests: true
+  max_files_per_modification: 5
+  snapshot_before_modify: true
+  # Note: No "blocked actions" - safety emerges from observation
+
+# Capability tracking
+capabilities:
+  domains:
+    - reasoning
+    - coding
+    - learning
+    - memory
+    - planning
+    - meta
+  benchmark_interval: 10
+  history_window: 50
+
+# Meta-learning
+meta:
+  explore_probability: 0.2
+  min_history_for_strategy: 5
+  track_path_effectiveness: true  # Track emergent vs explicit path outcomes
+  strategies:
+    - code_refactor
+    - prompt_optimize
+    - add_capability
+    - memory_optimize
+    - fix_bug
+    - add_test
+    - install_plugin      # Install from awesome-opencode
+    - update_plugin       # Update existing plugin
+    - compose_plugins     # Combine plugins creatively
+
+# Plugin Discovery (awesome-opencode)
+plugins:
+  enabled: true
+  registry_url: "https://raw.githubusercontent.com/awesome-opencode/awesome-opencode/main/README.md"
+  cache_ttl_hours: 24
+  scan_interval_cycles: 1         # Check registry every cycle
+  max_installs_per_session: 3     # Don't install too many at once
+  auto_update: true               # Auto-update installed plugins
+
+  # Category priorities for RSI
+  category_weights:
+    skills: 1.0
+    agents: 0.9
+    context: 0.8
+    planning: 0.8
+    token_optimization: 0.7
+    session: 0.5
+    monitoring: 0.4
+    theme: 0.1
+
+  # Health thresholds
+  min_stars: 5                    # Minimum GitHub stars
+  max_days_since_update: 180      # Must have recent activity
+  require_readme: true            # Must have documentation
+
+  # Installation settings
+  install_dir: "plugins/"
+  validate_before_install: true
+  run_plugin_tests: true
+
+# Human Observer Interface
+observer:
+  enabled: true
+  api_host: "0.0.0.0"
+  api_port: 8080
+
+  # Session management
+  session_timeout_minutes: 60
+  max_concurrent_sessions: 10
+
+  # File processing
+  file_upload:
+    max_size_mb: 50
+    allowed_extensions:
+      - .py
+      - .js
+      - .ts
+      - .go
+      - .rs
+      - .md
+      - .txt
+      - .rst
+      - .json
+      - .yaml
+      - .yml
+      - .csv
+      - .pdf
+      - .log
+      - .png
+      - .jpg
+      - .svg
+    temp_dir: "/tmp/zeus_uploads"
+
+  # Guidance weighting
+  guidance:
+    human_goal_priority: 0.9       # Priority for human-specified goals
+    human_constraint_confidence: 1.0  # Confidence for human constraints
+    feedback_learning_rate: 0.1   # How much feedback adjusts meta-learning
+
+  # Trust model
+  trust:
+    initial_level: 0.7            # Default trust for new observers
+    expertise_learning_rate: 0.05 # How fast expertise estimate updates
+
+# Logging
+logging:
+  level: "INFO"
+  file: "zeus.log"
+  console: true

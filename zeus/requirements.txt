@@ -1,0 +1,15 @@
+# ZEUS Dependencies
+# Minimal - complexity is the enemy
+
+# Neo4j driver for memory persistence
+neo4j>=5.0.0
+
+# Configuration
+pyyaml>=6.0
+
+# Async support
+aiofiles>=23.0.0
+
+# Testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
