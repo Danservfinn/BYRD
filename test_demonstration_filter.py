@@ -236,16 +236,38 @@ class TestDemonstrationFilter:
         assert not filter._is_demonstration_desire(None)
         # Short string
         assert not filter._is_demonstration_desire("demo")
-        # Word boundary - "demonstrate" in context
+        # Short string with context
+        assert not filter._is_demonstration_desire("a demo")
+        # Short demonstration
+        assert not filter._is_demonstration_desire("dem")
+    
+    def test_legitimate_uses_pass(self, filter):
+        """Should accept legitimate uses of demonstration/test words in natural language."""
+        # "Demonstrate understanding" is a legitimate expression
         assert not filter._is_demonstration_desire("Demonstrate understanding of the topic")
-        # Word boundary - "test" as a verb
+        # "Test the hypothesis" is legitimate scientific language
         assert not filter._is_demonstration_desire("Test the hypothesis")
+        # "Test the system" - borderline but acceptable in production contexts
+        assert not filter._is_demonstration_desire("Test the system performance")
+        # "Example" without desire/task context
+        assert not filter._is_demonstration_desire("This is an example of good code")
+        # "Demo" without desire/task context
+        assert not filter._is_demonstration_desire("Check the demo file for reference")
     
     def test_keyword_substring_partial(self, filter):
         """Should detect keywords even as part of larger phrases."""
+        # "just a demo" - explicit demo context
         assert filter._is_demonstration_desire("This is just a demo")
+        # "Create demonstration video" - demonstration keyword
         assert filter._is_demonstration_desire("Create demonstration video")
+        # "for demonstration purposes only" - explicit purpose
         assert filter._is_demonstration_desire("Use for demonstration purposes only")
+        # "demo desire" - demo with desire context
+        assert filter._is_demonstration_desire("demo desire for testing")
+        # "for a demo" - for + a + demo
+        assert filter._is_demonstration_desire("Run this for a demo")
+        # "example desire" - example with desire context
+        assert filter._is_demonstration_desire("example desire for documentation")
 
 
 if __name__ == "__main__":
