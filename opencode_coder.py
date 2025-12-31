@@ -38,6 +38,25 @@ class CoderResult:
     files_created: List[str] = field(default_factory=list)
     duration_seconds: float = 0.0
     provenance: Optional[Dict] = None
+    # Compatibility fields for drop-in replacement of coder.py
+    cost_usd: float = 0.0
+    session_id: Optional[str] = None
+    turns_used: int = 0
+    duration_ms: int = 0
+
+    def to_dict(self) -> Dict:
+        """Convert to dictionary for logging."""
+        return {
+            "success": self.success,
+            "output": self.output[:500] if self.output else "",
+            "session_id": self.session_id,
+            "cost_usd": self.cost_usd,
+            "files_modified": self.files_modified,
+            "files_created": self.files_created,
+            "turns_used": self.turns_used,
+            "duration_ms": self.duration_ms,
+            "error": self.error,
+        }
 
 
 @dataclass
@@ -118,6 +137,20 @@ class OpenCodeCoder:
         self._rate_limit_seconds = self.config.get("rate_limit_seconds", 10.0)
         self._last_execution: Optional[datetime] = None
 
+        # Enabled status (for compatibility with coder.py interface)
+        config_enabled = self.config.get("enabled", True)
+        self._enabled = config_enabled and self._cli_command is not None
+
+    @property
+    def enabled(self) -> bool:
+        """Check if coder is enabled (property for compatibility)."""
+        return self._enabled
+
+    @enabled.setter
+    def enabled(self, value: bool):
+        """Set enabled state."""
+        self._enabled = value
+
     def _find_cli(self) -> Tuple[Optional[str], List[str]]:
         """Find available CLI command."""
         for cmd, args in self.CLI_OPTIONS:
@@ -128,26 +161,53 @@ class OpenCodeCoder:
         logger.warning("No coding CLI found - will use subprocess fallback")
         return None, []
 
-    async def execute(self, task: str, desire_id: str = None) -> CoderResult:
+    async def execute(
+        self,
+        prompt: str,
+        context: Optional[Dict] = None,
+        working_dir: Optional[str] = None,
+        desire_id: str = None
+    ) -> CoderResult:
         """
         Execute a coding/modification task.
 
-        1. Signal ComponentCoordinator (pause other LLM calls)
-        2. Check constitutional constraints
-        3. Load tiered context
-        4. Execute CLI or subprocess
-        5. Record provenance
-        6. Signal completion
+        This method is a drop-in replacement for coder.py and agent_coder.py.
+
+        1. Check if enabled
+        2. Signal ComponentCoordinator (pause other LLM calls)
+        3. Check constitutional constraints
+        4. Load tiered context
+        5. Execute CLI or subprocess
+        6. Record provenance
+        7. Signal completion
 
         Args:
-            task: The coding task to execute
-            desire_id: ID of the originating desire
+            prompt: The coding task prompt (for compatibility with coder.py)
+            context: Optional context dict (for compatibility with coder.py)
+            working_dir: Optional working directory override
+            desire_id: ID of the originating desire (optional)
 
         Returns:
             CoderResult with success status and output
         """
+        # Use prompt as task for internal processing
+        task = prompt
+
+        # Generate desire_id if not provided
+        if not desire_id:
+            desire_id = datetime.now().strftime("%Y%m%d%H%M%S%f")
+
         start_time = datetime.now()
         self._execution_count += 1
+
+        # Check if enabled
+        if not self._enabled:
+            return CoderResult(
+                success=False,
+                output="",
+                error="Coder is disabled or no CLI available",
+                session_id=desire_id,
+            )
 
         # Check rate limiting
         if self._last_execution:
@@ -162,6 +222,7 @@ class OpenCodeCoder:
                 success=False,
                 output="",
                 error=f"Constitutional constraint violation: {constraint_check['reason']}",
+                session_id=desire_id,
             )
 
         # Signal coordinator - other components pause LLM calls
@@ -169,32 +230,39 @@ class OpenCodeCoder:
             self.coordinator.coder_started(task[:50])
 
         try:
-            # Load tiered context
-            context = await self._build_context(task)
+            # Load tiered context (merge with provided context)
+            loaded_context = await self._build_context(task)
+            if context:
+                # Append provided context to loaded context
+                context_str = "\n".join(f"# {k}\n{v}" for k, v in context.items() if v)
+                loaded_context = f"{loaded_context}\n\n{context_str}"
 
             # Build full prompt
-            prompt = f"{context}\n\n# TASK\n{task}"
+            full_prompt = f"{loaded_context}\n\n# TASK\n{task}"
 
-            # Execute
+            # Execute (pass working_dir to CLI runner)
             if self._cli_command:
-                result = await self._run_cli(prompt, task)
+                result = await self._run_cli(full_prompt, task, working_dir)
             else:
-                result = await self._run_subprocess(prompt, task)
+                result = await self._run_subprocess(full_prompt, task, working_dir)
 
             # Record provenance
-            if result.success and desire_id:
+            if result.success:
                 await self._record_provenance(task, desire_id, result)
 
             # Track modification
             self._modifications.append(ModificationRecord(
-                desire_id=desire_id or "unknown",
+                desire_id=desire_id,
                 task=task,
                 files=result.files_modified + result.files_created,
                 success=result.success,
             ))
 
             self._last_execution = datetime.now()
-            result.duration_seconds = (self._last_execution - start_time).total_seconds()
+            duration = (self._last_execution - start_time).total_seconds()
+            result.duration_seconds = duration
+            result.duration_ms = int(duration * 1000)
+            result.session_id = desire_id
 
             return result
 
@@ -252,7 +320,7 @@ class OpenCodeCoder:
 
         return {"allowed": True, "reason": None}
 
-    async def _run_cli(self, prompt: str, task: str) -> CoderResult:
+    async def _run_cli(self, prompt: str, task: str, working_dir: Optional[str] = None) -> CoderResult:
         """Execute task via CLI."""
         try:
             # Build command
@@ -268,13 +336,16 @@ class OpenCodeCoder:
             env = os.environ.copy()
             env["OPENCODE_RATE_LIMIT"] = str(int(self._rate_limit_seconds))
 
+            # Determine working directory
+            cwd = working_dir or self.config.get("project_root", ".")
+
             # Execute
             proc = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 env=env,
-                cwd=self.config.get("project_root", "."),
+                cwd=cwd,
             )
 
             stdout, stderr = await asyncio.wait_for(
@@ -310,10 +381,13 @@ class OpenCodeCoder:
                 error=str(e),
             )
 
-    async def _run_subprocess(self, prompt: str, task: str) -> CoderResult:
+    async def _run_subprocess(self, prompt: str, task: str, working_dir: Optional[str] = None) -> CoderResult:
         """Fallback: Execute task via subprocess without external CLI."""
         # This is a minimal fallback for when no CLI is available
         # It can only execute simple shell commands
+
+        # Determine working directory
+        cwd = working_dir or self.config.get("project_root", ".")
 
         # Extract any shell commands from the task
         if "```bash" in task or "```shell" in task:
@@ -336,7 +410,7 @@ class OpenCodeCoder:
                         command,
                         stdout=asyncio.subprocess.PIPE,
                         stderr=asyncio.subprocess.PIPE,
-                        cwd=self.config.get("project_root", "."),
+                        cwd=cwd,
                     )
 
                     stdout, stderr = await asyncio.wait_for(
@@ -434,6 +508,22 @@ class OpenCodeCoder:
             "cli_available": cli_available,
             "reason": constitutional.get("reason") or ("No CLI available" if not cli_available else None),
         }
+
+    async def generate_code(self, prompt: str) -> str:
+        """
+        Generate code from a prompt.
+
+        This is a convenience method for code generation that returns
+        just the output string. Used by seeker.py for capability creation.
+
+        Args:
+            prompt: The code generation prompt
+
+        Returns:
+            Generated code as a string
+        """
+        result = await self.execute(prompt)
+        return result.output if result.success else ""
 
     def get_modification_history(self, limit: int = 20) -> List[ModificationRecord]:
         """Get recent modification history."""

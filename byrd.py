@@ -25,8 +25,7 @@ from memory import Memory
 from dreamer import Dreamer
 from seeker import Seeker
 from actor import Actor
-from coder import Coder
-from agent_coder import AgentCoder, create_agent_coder
+from opencode_coder import OpenCodeCoder, create_opencode_coder, CoderResult
 from self_modification import SelfModificationSystem
 from context_loader import ContextLoader, create_context_loader
 from plugin_manager import PluginManager, create_plugin_manager
@@ -264,37 +263,23 @@ class BYRD:
         # Inject self-modification system into Seeker
         self.seeker.self_mod = self.self_mod
 
-        # Initialize Coder
-        # Choose between Claude Code CLI and LLM-based Agent Coder
+        # Initialize OpenCode Coder (CLI wrapper with auto-detection)
+        # Tries 'opencode' CLI first, falls back to 'claude' CLI
         coder_config = self.config.get("coder", {})
-        coder_type = coder_config.get("type", "auto")  # "cli", "agent", or "auto"
+        coder_config["project_root"] = "."
 
-        if coder_type == "agent":
-            # Use LLM-based Agent Coder (works anywhere, uses existing LLM)
-            self.coder = create_agent_coder(
-                llm_client=self.llm_client,
-                memory=self.memory,
-                config=self.config
-            )
-            print(f"💻 Coder: Agent (LLM-based)")
-        elif coder_type == "cli":
-            # Use Claude Code CLI (requires local installation)
-            self.coder = Coder(coder_config, project_root=".")
-            print(f"💻 Coder: CLI (Claude Code)")
+        self.coder = create_opencode_coder(
+            config=coder_config,
+            coordinator=None,  # Will be set up later if ComponentCoordinator is used
+            context_loader=self.context_loader,
+            memory=self.memory
+        )
+
+        if self.coder.enabled:
+            cli_name = self.coder._cli_command or "subprocess"
+            print(f"💻 Coder: OpenCode ({cli_name})")
         else:
-            # Auto-detect: prefer CLI if available, fall back to Agent
-            cli_coder = Coder(coder_config, project_root=".")
-            # CLI Coder sets enabled=False if CLI not found
-            if cli_coder.enabled:
-                self.coder = cli_coder
-                print(f"💻 Coder: CLI (Claude Code) [auto-detected]")
-            else:
-                self.coder = create_agent_coder(
-                    llm_client=self.llm_client,
-                    memory=self.memory,
-                    config=self.config
-                )
-                print(f"💻 Coder: Agent (LLM-based) [CLI not available]")
+            print(f"⚠️  Coder: Disabled (no CLI available)")
 
         # Inject Coder into Seeker
         self.seeker.coder = self.coder
