@@ -299,37 +299,38 @@ DESIRE_ID: {desire_id or 'unspecified'}
 
             # Execute via SDK - collect all messages
             async for message in query(prompt=task, options=options):
-                # Handle different message types
-                if hasattr(message, 'type'):
-                    if message.type == 'assistant':
-                        # Assistant text response
-                        if hasattr(message, 'content'):
-                            for block in message.content:
-                                if hasattr(block, 'text'):
-                                    output_parts.append(block.text)
-                                elif hasattr(block, 'type') and block.type == 'tool_use':
-                                    tool_name = getattr(block, 'name', 'unknown')
-                                    tool_input = getattr(block, 'input', {})
-                                    tool_calls.append({
-                                        'tool': tool_name,
-                                        'input': tool_input,
-                                    })
-                                    self._total_tool_calls += 1
+                msg_type = type(message).__name__
 
-                                    # Track file modifications
-                                    if tool_name in ('Write', 'Edit'):
-                                        file_path = tool_input.get('file_path', '')
-                                        if file_path:
-                                            self._files_tracked[desire_id].append(file_path)
+                if msg_type == 'AssistantMessage':
+                    # Assistant response with tool use or text
+                    if hasattr(message, 'content'):
+                        for block in message.content:
+                            block_type = type(block).__name__
+                            if block_type == 'TextBlock' and hasattr(block, 'text'):
+                                output_parts.append(block.text)
+                            elif block_type == 'ToolUseBlock':
+                                tool_name = getattr(block, 'name', 'unknown')
+                                tool_input = getattr(block, 'input', {})
+                                tool_calls.append({
+                                    'tool': tool_name,
+                                    'input': tool_input,
+                                })
+                                self._total_tool_calls += 1
 
-                    elif message.type == 'result':
-                        # Final result
-                        if hasattr(message, 'session_id'):
-                            session_id = message.session_id
-                        if hasattr(message, 'cost_usd'):
-                            cost_usd = message.cost_usd or 0.0
-                        if hasattr(message, 'result') and message.result:
-                            output_parts.append(f"\n\n{message.result}")
+                                # Track file modifications
+                                if tool_name in ('Write', 'Edit'):
+                                    file_path = tool_input.get('file_path', '')
+                                    if file_path:
+                                        self._files_tracked[desire_id].append(file_path)
+
+                elif msg_type == 'ResultMessage':
+                    # Final result
+                    if hasattr(message, 'session_id'):
+                        session_id = message.session_id
+                    if hasattr(message, 'total_cost_usd'):
+                        cost_usd = message.total_cost_usd or 0.0
+                    if hasattr(message, 'result') and message.result:
+                        output_parts.append(f"\n\n{message.result}")
 
             duration = (datetime.now() - start_time).total_seconds()
             files_modified = self._files_tracked.get(desire_id, [])
