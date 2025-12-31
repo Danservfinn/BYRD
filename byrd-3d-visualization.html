@@ -1948,13 +1948,13 @@
     // ==========================================================================
 
     const CONFIG = {
-      // Node limits
-      maxNodes: 2000,
-      consolidationThreshold: 2000,
+      // Node limits (reduced for browser performance)
+      maxNodes: 1000,
+      consolidationThreshold: 500,
 
       // Consolidation settings
       consolidation: {
-        enabled: false,  // TEMP: disabled for debugging edge rendering
+        enabled: true,   // Enable consolidation for large graphs
         strategy: 'auto',          // 'auto', 'temporal', 'community'
         ageThresholdDays: 7,       // Nodes older than this get consolidated
         minClusterSize: 3,         // Minimum nodes to form a cluster
@@ -2269,10 +2269,14 @@
 
     function toggleAutoScroll() {
       consoleState.autoScroll = !consoleState.autoScroll;
-      const btn = document.getElementById('btn-auto-scroll');
-      if (btn) {
-        btn.classList.toggle('active', consoleState.autoScroll);
-        btn.textContent = consoleState.autoScroll ? '▶' : '⏸';
+      updateAutoScrollButton();
+
+      // If enabling auto-scroll, scroll to bottom immediately
+      if (consoleState.autoScroll) {
+        const consoleBody = document.getElementById('console-body');
+        if (consoleBody) {
+          consoleBody.scrollTop = consoleBody.scrollHeight;
+        }
       }
     }
 
@@ -2436,6 +2440,33 @@
       document.getElementById('btn-clear-console')?.addEventListener('click', clearConsole);
       document.getElementById('btn-export-console')?.addEventListener('click', exportConsole);
       document.getElementById('btn-minimize-console')?.addEventListener('click', toggleConsoleMinimize);
+
+      // Smart auto-scroll: disable when user scrolls up, re-enable when at bottom
+      const consoleBody = document.getElementById('console-body');
+      if (consoleBody) {
+        consoleBody.addEventListener('scroll', () => {
+          // Check if scrolled to bottom (with 20px tolerance)
+          const isAtBottom = consoleBody.scrollHeight - consoleBody.scrollTop - consoleBody.clientHeight < 20;
+
+          if (isAtBottom && !consoleState.autoScroll) {
+            // User scrolled back to bottom - re-enable auto-scroll
+            consoleState.autoScroll = true;
+            updateAutoScrollButton();
+          } else if (!isAtBottom && consoleState.autoScroll) {
+            // User scrolled away from bottom - disable auto-scroll
+            consoleState.autoScroll = false;
+            updateAutoScrollButton();
+          }
+        });
+      }
+    }
+
+    function updateAutoScrollButton() {
+      const btn = document.getElementById('btn-auto-scroll');
+      if (btn) {
+        btn.classList.toggle('active', consoleState.autoScroll);
+        btn.textContent = consoleState.autoScroll ? '▶' : '⏸';
+      }
     }
 
     // ==========================================================================
@@ -2450,14 +2481,18 @@
       const nodeLimitSlider = document.getElementById('node-limit-slider');
       const nodeLimitValue = document.getElementById('node-limit-value');
       if (nodeLimitSlider) {
+        // Initialize slider to match CONFIG
+        nodeLimitSlider.value = CONFIG.maxNodes;
+        nodeLimitValue.textContent = CONFIG.maxNodes.toLocaleString();
+
         nodeLimitSlider.addEventListener('input', (e) => {
           const value = parseInt(e.target.value);
           nodeLimitValue.textContent = value.toLocaleString();
           CONFIG.maxNodes = value;
         });
         nodeLimitSlider.addEventListener('change', () => {
-          // Refresh graph with new limit
-          fetchGraphData();
+          console.log(`Node limit changed to ${CONFIG.maxNodes}`);
+          applyConsolidationSettings();
         });
       }
 
@@ -2465,24 +2500,79 @@
       const ageSlider = document.getElementById('age-threshold-slider');
       const ageValue = document.getElementById('age-threshold-value');
       if (ageSlider) {
+        // Initialize slider to match CONFIG
+        ageSlider.value = CONFIG.consolidation.ageThresholdDays;
+        ageValue.textContent = `${CONFIG.consolidation.ageThresholdDays}d`;
+
         ageSlider.addEventListener('input', (e) => {
           const value = parseInt(e.target.value);
           ageValue.textContent = `${value}d`;
           CONFIG.consolidation.ageThresholdDays = value;
         });
         ageSlider.addEventListener('change', () => {
-          // Refresh graph with new threshold
-          if (graphState.rawNodes && graphState.rawNodes.length > 0) {
-            processGraphData({
-              nodes: graphState.rawNodes,
-              relationships: graphState.rawRelationships
-            });
-            updateStats();
-            updateConsolidationUI();
-          }
+          console.log(`Age threshold changed to ${CONFIG.consolidation.ageThresholdDays} days`);
+          applyConsolidationSettings();
         });
       }
+
+      // Initialize strategy buttons to match CONFIG
+      document.querySelectorAll('[data-strategy]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.strategy === CONFIG.consolidation.strategy);
+      });
+      document.getElementById('consolidation-badge').textContent = CONFIG.consolidation.strategy.toUpperCase();
     }
+
+    /**
+     * Apply current consolidation settings and re-process the graph
+     * Called when any consolidation control is changed
+     */
+    function applyConsolidationSettings() {
+      if (graphState.rawNodes && graphState.rawNodes.length > 0) {
+        // Re-process existing data with new settings
+        processGraphData({
+          nodes: graphState.rawNodes,
+          relationships: graphState.rawRelationships
+        });
+        updateStats();
+        updateConsolidationUI();
+        console.log(`Consolidation applied: ${consolidationState.originalCount} → ${consolidationState.consolidatedCount} nodes`);
+      } else {
+        // No data loaded - offer to load demo data
+        console.log('No data loaded. Consider loading demo data.');
+        showNoDataMessage();
+      }
+    }
+
+    /**
+     * Show message when no data is available for consolidation
+     */
+    function showNoDataMessage() {
+      const statsContainer = document.querySelector('.consolidation-stats');
+      if (statsContainer && !document.getElementById('load-demo-btn')) {
+        const hint = document.createElement('div');
+        hint.id = 'load-demo-btn';
+        hint.style.cssText = 'margin-top: 8px; text-align: center;';
+        hint.innerHTML = `
+          <button class="control-btn" onclick="loadDemoDataForTesting()"
+                  style="font-size: 11px; padding: 4px 8px;">
+            Load Demo Data
+          </button>
+        `;
+        statsContainer.appendChild(hint);
+      }
+    }
+
+    /**
+     * Load demo data for testing consolidation controls
+     */
+    window.loadDemoDataForTesting = function() {
+      console.log('Loading demo data for consolidation testing...');
+      // Remove the hint button
+      const hint = document.getElementById('load-demo-btn');
+      if (hint) hint.remove();
+      // Create demo data
+      createDemoData();
+    };
 
     function toggleConsolidationMinimize() {
       const panel = document.getElementById('consolidation-controls');
@@ -2877,46 +2967,7 @@
       // Keyboard
       document.addEventListener('keydown', onKeyDown);
 
-      // Consolidation control sliders
-      const nodeLimitSlider = document.getElementById('node-limit-slider');
-      const nodeLimitValue = document.getElementById('node-limit-value');
-      if (nodeLimitSlider) {
-        nodeLimitSlider.addEventListener('input', (e) => {
-          const value = parseInt(e.target.value);
-          CONFIG.maxNodes = value;
-          nodeLimitValue.textContent = value.toLocaleString();
-        });
-        nodeLimitSlider.addEventListener('change', () => {
-          // Re-process with new limit
-          if (graphState.rawNodes.length > 0) {
-            processGraphData({
-              nodes: graphState.rawNodes,
-              relationships: graphState.rawRelationships
-            });
-            updateStats();
-          }
-        });
-      }
-
-      const ageSlider = document.getElementById('age-threshold-slider');
-      const ageValue = document.getElementById('age-threshold-value');
-      if (ageSlider) {
-        ageSlider.addEventListener('input', (e) => {
-          const value = parseInt(e.target.value);
-          CONFIG.consolidation.ageThresholdDays = value;
-          ageValue.textContent = `${value}d`;
-        });
-        ageSlider.addEventListener('change', () => {
-          // Re-process with new threshold
-          if (graphState.rawNodes.length > 0) {
-            processGraphData({
-              nodes: graphState.rawNodes,
-              relationships: graphState.rawRelationships
-            });
-            updateStats();
-          }
-        });
-      }
+      // Note: Consolidation control sliders are set up in setupConsolidationControls()
 
       // Close cluster overlay when clicking background
       const clusterOverlay = document.getElementById('cluster-overlay');
@@ -3831,9 +3882,7 @@
     function consolidateNodes(nodes, relationships, limit = CONFIG.maxNodes) {
       console.log(`Consolidating ${nodes.length} nodes to max ${limit}...`);
 
-      // Store raw data
-      graphState.rawNodes = nodes;
-      graphState.rawRelationships = relationships;
+      // Raw data is already stored in processGraphData before this is called
 
       // If under limit, no consolidation needed
       if (nodes.length <= limit) {
@@ -3846,15 +3895,15 @@
 
       // Choose strategy based on config
       const strategy = CONFIG.consolidation.strategy;
-      let result;
+      let result = { nodes, relationships, metaNodes: [], level: 0 };
 
       if (strategy === 'temporal' || strategy === 'auto') {
         result = temporalConsolidation(nodes, relationships, limit);
       }
 
-      // If still over limit after temporal, apply community detection
-      if (result.nodes.length > limit || strategy === 'community') {
-        result = communityConsolidation(result.nodes, result.relationships, limit, result.metaNodes);
+      // If still over limit after temporal, or if community strategy selected, apply community detection
+      if ((result && result.nodes.length > limit) || strategy === 'community') {
+        result = communityConsolidation(result.nodes, result.relationships, limit, result.metaNodes || []);
       }
 
       // Update consolidation state
@@ -4580,15 +4629,10 @@
 
       document.getElementById('consolidation-badge').textContent = strategy.toUpperCase();
 
-      // Re-process data with new strategy
-      if (graphState.rawNodes.length > 0) {
-        processGraphData({
-          nodes: graphState.rawNodes,
-          relationships: graphState.rawRelationships
-        });
-        updateStats();
-        updateConsolidationUI();
-      }
+      console.log(`Consolidation strategy changed to ${strategy}`);
+
+      // Apply new strategy using shared function
+      applyConsolidationSettings();
     };
 
     window.hideClusterOverlay = function() {
@@ -4660,8 +4704,19 @@
         const data = await response.json();
         console.log(`Fetched ${data.nodes.length} nodes, ${data.relationships.length} relationships`);
 
+        // If API returns empty data, show message and offer demo data
+        if (!data.nodes || data.nodes.length === 0) {
+          console.log('API returned empty data. Showing demo data option.');
+          processGraphData({ nodes: [], relationships: [] });
+          updateStats();
+          updateConsolidationUI();
+          showNoDataMessage();
+          return;
+        }
+
         processGraphData(data);
         updateStats();
+        updateConsolidationUI();
 
       } catch (error) {
         console.error('Failed to fetch graph data:', error);
@@ -4681,10 +4736,22 @@
         target: rel.target || rel.target_id
       }));
 
-      // Apply consolidation if needed
-      const consolidated = CONFIG.consolidation.enabled
-        ? consolidateNodes(data.nodes, normalizedRelationships, CONFIG.maxNodes)
-        : { nodes: data.nodes, relationships: normalizedRelationships, metaNodes: [] };
+      // Always store raw data for later re-processing
+      graphState.rawNodes = data.nodes;
+      graphState.rawRelationships = normalizedRelationships;
+
+      // Apply consolidation if enabled, otherwise pass through with state update
+      let consolidated;
+      if (CONFIG.consolidation.enabled) {
+        consolidated = consolidateNodes(data.nodes, normalizedRelationships, CONFIG.maxNodes);
+      } else {
+        // Even without consolidation, update the state for UI
+        consolidationState.originalCount = data.nodes.length;
+        consolidationState.consolidatedCount = data.nodes.length;
+        consolidationState.metaClusters = 0;
+        consolidationState.level = 0;
+        consolidated = { nodes: data.nodes, relationships: normalizedRelationships, metaNodes: [] };
+      }
 
       // Store consolidated nodes
       consolidated.nodes.forEach(node => {
@@ -4800,22 +4867,53 @@
     }
 
     function clearGraph() {
-      // Remove existing meshes
-      graphState.nodeMeshes.forEach(mesh => scene.remove(mesh));
+      // Helper to dispose Three.js object properly
+      function disposeObject(obj) {
+        if (obj.geometry) {
+          obj.geometry.dispose();
+        }
+        if (obj.material) {
+          if (Array.isArray(obj.material)) {
+            obj.material.forEach(m => m.dispose());
+          } else {
+            obj.material.dispose();
+          }
+        }
+      }
+
+      // Remove and dispose node meshes
+      graphState.nodeMeshes.forEach(mesh => {
+        scene.remove(mesh);
+        disposeObject(mesh);
+      });
       graphState.nodeMeshes.clear();
 
-      graphState.surfaceMeshes.forEach(mesh => scene.remove(mesh));
+      // Remove and dispose surface meshes
+      graphState.surfaceMeshes.forEach(mesh => {
+        scene.remove(mesh);
+        disposeObject(mesh);
+      });
       graphState.surfaceMeshes = [];
 
-      graphState.edgeLines.forEach(line => scene.remove(line));
+      // Remove and dispose edge lines
+      graphState.edgeLines.forEach(line => {
+        scene.remove(line);
+        disposeObject(line);
+      });
       graphState.edgeLines = [];
 
-      // Remove chain meshes
-      graphState.chainMeshes.forEach(chain => scene.remove(chain));
+      // Remove and dispose chain meshes
+      graphState.chainMeshes.forEach(chain => {
+        scene.remove(chain);
+        disposeObject(chain);
+      });
       graphState.chainMeshes = [];
 
-      // Remove cluster hulls
-      graphState.clusterHulls.forEach(hull => scene.remove(hull));
+      // Remove and dispose cluster hulls
+      graphState.clusterHulls.forEach(hull => {
+        scene.remove(hull);
+        disposeObject(hull);
+      });
       graphState.clusterHulls.clear();
 
       // Clear data
@@ -4830,8 +4928,12 @@
       graphState.chains = [];
       graphState.clusters = [];
 
-      // Clear glass materials registry
+      // Clear and dispose glass materials
+      glassMaterials.forEach(m => m.dispose());
       glassMaterials.length = 0;
+
+      // Reset cleanup flag so it runs again on next data load
+      sceneCleanedUp = false;
     }
 
     /**
@@ -5345,13 +5447,22 @@
       let nodesCreated = 0;
       let nodesSkipped = 0;
 
-      graphState.nodes.forEach((node, id) => {
+      // Limit max nodes for performance
+      const maxNodesToRender = Math.min(graphState.nodes.size, CONFIG.maxNodes || 2000);
+
+      for (const [id, node] of graphState.nodes) {
+        // Safety limit
+        if (nodesCreated >= maxNodesToRender) {
+          console.log(`Node limit reached: ${maxNodesToRender}`);
+          break;
+        }
+
         const position = graphState.nodePositions.get(id);
 
         // Skip nodes with invalid positions
         if (!isValidPosition(position)) {
           nodesSkipped++;
-          return;
+          continue;
         }
 
         const color = getNodeColor(node.type);
@@ -5402,7 +5513,7 @@
         scene.add(mesh);
         graphState.nodeMeshes.set(id, mesh);
         nodesCreated++;
-      });
+      }
 
       console.log(`Node rendering: ${nodesCreated} created, ${nodesSkipped} skipped (invalid positions)`);
     }
@@ -5436,18 +5547,33 @@
     // EDGE RENDERING
     // ==========================================================================
 
+    // Shared edge material (created once, reused for all edges)
+    let sharedEdgeMaterial = null;
+
     function createEdgeLines() {
-      const material = new THREE.LineBasicMaterial({
-        color: 0x444444,  // Darker grey
-        transparent: true,
-        opacity: 0.3,
-        linewidth: 0.5  // Thinner
-      });
+      // Create shared material once (or reuse existing)
+      if (!sharedEdgeMaterial) {
+        sharedEdgeMaterial = new THREE.LineBasicMaterial({
+          color: 0x444444,  // Darker grey
+          transparent: true,
+          opacity: 0.3,
+          linewidth: 0.5  // Thinner
+        });
+      }
 
       let edgesCreated = 0;
       let edgesSkipped = 0;
 
-      graphState.relationships.forEach(rel => {
+      // Limit edges to prevent memory exhaustion
+      const maxEdges = 5000;
+      let edgeCount = 0;
+
+      for (const rel of graphState.relationships.values()) {
+        if (edgeCount >= maxEdges) {
+          console.log(`Edge limit reached: ${maxEdges}`);
+          break;
+        }
+
         const sourcePos = graphState.nodePositions.get(rel.source);
         const targetPos = graphState.nodePositions.get(rel.target);
 
@@ -5456,16 +5582,18 @@
             !isNaN(sourcePos.x) && !isNaN(sourcePos.y) && !isNaN(sourcePos.z) &&
             !isNaN(targetPos.x) && !isNaN(targetPos.y) && !isNaN(targetPos.z)) {
           const geometry = new THREE.BufferGeometry().setFromPoints([sourcePos, targetPos]);
-          const line = new THREE.Line(geometry, material.clone());
+          // SHARE material instead of cloning (major memory optimization)
+          const line = new THREE.Line(geometry, sharedEdgeMaterial);
           line.userData = { relationship: rel, lodVisible: true };
 
           scene.add(line);
           graphState.edgeLines.push(line);
           edgesCreated++;
+          edgeCount++;
         } else {
           edgesSkipped++;
         }
-      });
+      }
 
       console.log(`Edge rendering: ${edgesCreated} created, ${edgesSkipped} skipped`);
 
@@ -6209,12 +6337,15 @@
       const now = Date.now();
       const dayMs = 24 * 60 * 60 * 1000;
 
-      // Create 2500 demo nodes (above default 2000 limit to trigger consolidation)
+      // Create 500 demo nodes (reduced from 2500 for performance)
       // Distribute across time to test temporal consolidation
-      for (let i = 0; i < 2500; i++) {
+      const nodeCount = Math.min(500, CONFIG.maxNodes);
+      const recentRatio = 0.3; // 30% recent nodes
+
+      for (let i = 0; i < nodeCount; i++) {
         // Time distribution: 30% recent (< 7 days), 70% older
         let timestamp;
-        if (i < 750) {
+        if (i < nodeCount * recentRatio) {
           // Recent nodes (last 7 days)
           timestamp = new Date(now - Math.random() * 7 * dayMs).toISOString();
         } else {
@@ -6269,9 +6400,10 @@
         }
       }
 
-      // Add some fully connected cliques to create interesting topology
-      for (let c = 0; c < 20; c++) {
-        const cliqueSize = 4 + Math.floor(Math.random() * 3); // 4-6 nodes
+      // Add some fully connected cliques to create interesting topology (reduced for performance)
+      const cliqueCount = Math.min(5, Math.floor(demoNodes.length / 50));
+      for (let c = 0; c < cliqueCount; c++) {
+        const cliqueSize = 4 + Math.floor(Math.random() * 2); // 4-5 nodes
         const cliqueStart = Math.floor(Math.random() * (demoNodes.length - cliqueSize));
 
         for (let i = 0; i < cliqueSize; i++) {
@@ -6285,15 +6417,15 @@
         }
       }
 
-      // Add some explicit chain sequences (A→B→C→D→E)
-      // These form derivation paths through the memory
-      for (let c = 0; c < 15; c++) {
-        const chainLength = 5 + Math.floor(Math.random() * 4); // 5-8 nodes
-        const chainStart = Math.floor(Math.random() * (demoNodes.length - chainLength * 10));
+      // Add some explicit chain sequences (A→B→C→D→E) - reduced for performance
+      const chainCount = Math.min(5, Math.floor(demoNodes.length / 50));
+      for (let c = 0; c < chainCount; c++) {
+        const chainLength = 4 + Math.floor(Math.random() * 3); // 4-6 nodes
+        const chainStart = Math.floor(Math.random() * (demoNodes.length - chainLength * 5));
 
         for (let i = 0; i < chainLength - 1; i++) {
-          const sourceIdx = chainStart + i * 10;
-          const targetIdx = chainStart + (i + 1) * 10;
+          const sourceIdx = chainStart + i * 5;
+          const targetIdx = chainStart + (i + 1) * 5;
 
           if (sourceIdx < demoNodes.length && targetIdx < demoNodes.length) {
             demoRelationships.push({
@@ -6305,10 +6437,11 @@
         }
       }
 
-      // Add some causal chains with different relationship type
-      for (let c = 0; c < 10; c++) {
-        const chainLength = 4 + Math.floor(Math.random() * 3); // 4-6 nodes
-        const chainStart = Math.floor(Math.random() * (demoNodes.length - chainLength * 8));
+      // Add some causal chains with different relationship type (reduced for performance)
+      const causalChainCount = Math.min(3, Math.floor(demoNodes.length / 100));
+      for (let c = 0; c < causalChainCount; c++) {
+        const chainLength = 3 + Math.floor(Math.random() * 2); // 3-4 nodes
+        const chainStart = Math.floor(Math.random() * (demoNodes.length - chainLength * 5));
 
         for (let i = 0; i < chainLength - 1; i++) {
           const sourceIdx = chainStart + i * 8;
@@ -7432,6 +7565,7 @@
     let messagesLoaded = false;
     let messagesPanelExpanded = false;
     let unreadMessageCount = 0;
+    let messagesAutoScroll = true;  // Smart scroll for messages panel
 
     function toggleMessagesPanel() {
       const panel = document.getElementById('messages-panel');
@@ -7574,6 +7708,7 @@
 
       messagesList.insertAdjacentHTML('beforeend', renderMessage(tempMessage));
       messagesList.scrollTop = messagesList.scrollHeight;
+      messagesAutoScroll = true;  // Re-enable auto-scroll when user sends a message
 
       try {
         const response = await fetch(`${API_BASE}/api/experience/message`, {
@@ -7609,7 +7744,11 @@
       };
 
       messagesList.insertAdjacentHTML('beforeend', renderMessage(msg));
-      messagesList.scrollTop = messagesList.scrollHeight;
+
+      // Only auto-scroll if user is at bottom
+      if (messagesAutoScroll) {
+        messagesList.scrollTop = messagesList.scrollHeight;
+      }
 
       // Update unread count if panel is collapsed
       if (!messagesPanelExpanded) {
@@ -7623,6 +7762,7 @@
       const header = document.getElementById('messages-panel-header');
       const sendBtn = document.getElementById('messages-send-btn');
       const input = document.getElementById('message-input');
+      const messagesList = document.getElementById('messages-list');
 
       if (header) {
         header.addEventListener('click', toggleMessagesPanel);
@@ -7632,6 +7772,14 @@
       }
       if (input) {
         input.addEventListener('keypress', handleMessageKeypress);
+      }
+
+      // Smart auto-scroll: disable when user scrolls up, re-enable when at bottom
+      if (messagesList) {
+        messagesList.addEventListener('scroll', () => {
+          const isAtBottom = messagesList.scrollHeight - messagesList.scrollTop - messagesList.clientHeight < 20;
+          messagesAutoScroll = isAtBottom;
+        });
       }
     }
 

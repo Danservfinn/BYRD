@@ -605,6 +605,113 @@ class Memory:
 
         return False
 
+    # =========================================================================
+    # GENERIC QUERY EXECUTION
+    # =========================================================================
+
+    async def run_query(self, query: str, **params) -> List[Dict]:
+        """
+        Execute a raw Cypher query and return results.
+
+        This is a utility method for components that need to run custom queries,
+        such as the memory consolidator.
+
+        Args:
+            query: Cypher query string
+            **params: Query parameters
+
+        Returns:
+            List of result dictionaries
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run(query, **params)
+                return await result.data()
+        except Exception as e:
+            print(f"Error executing query: {e}")
+            return []
+
+    # =========================================================================
+    # GRAPH HEALTH FOR CONSOLIDATION
+    # =========================================================================
+
+    async def get_consolidation_health(self) -> Dict[str, Any]:
+        """
+        Get graph health metrics specifically for memory consolidation.
+
+        Returns comprehensive metrics about memory state including:
+        - Node counts by type
+        - Orphan counts and types
+        - Strength distribution
+        - Age metrics
+
+        This is used by the MemoryConsolidator to assess memory state.
+        """
+        try:
+            async with self.driver.session() as session:
+                # Count active nodes by type
+                type_result = await session.run("""
+                    MATCH (n)
+                    WHERE NOT coalesce(n.archived, false)
+                    WITH labels(n)[0] as label, count(*) as cnt
+                    RETURN label, cnt
+                """)
+                type_counts = {r["label"]: r["cnt"] async for r in type_result}
+
+                # Count orphaned nodes by type
+                orphan_result = await session.run("""
+                    MATCH (n)
+                    WHERE NOT (n)--()
+                      AND NOT coalesce(n.archived, false)
+                      AND NOT n:OperatingSystem
+                    WITH labels(n)[0] as label, count(*) as cnt
+                    RETURN label, cnt
+                """)
+                orphan_counts = {r["label"]: r["cnt"] async for r in orphan_result}
+
+                # Get strength distribution
+                strength_result = await session.run("""
+                    MATCH (n)
+                    WHERE n.strength IS NOT NULL
+                      AND NOT coalesce(n.archived, false)
+                    RETURN
+                        count(CASE WHEN n.strength < 0.15 THEN 1 END) as weak,
+                        count(CASE WHEN n.strength >= 0.7 THEN 1 END) as strong,
+                        avg(n.strength) as avg_strength,
+                        count(n) as with_strength
+                """)
+                strength_record = await strength_result.single()
+
+                # Count empty nodes
+                empty_result = await session.run("""
+                    MATCH (n)
+                    WHERE (n.content IS NULL OR n.content = '' OR n.content = '{}')
+                      AND NOT coalesce(n.archived, false)
+                      AND NOT n:OperatingSystem
+                    RETURN count(n) as empty_count
+                """)
+                empty_record = await empty_result.single()
+
+                total_nodes = sum(type_counts.values())
+                total_orphans = sum(orphan_counts.values())
+
+                return {
+                    "total_nodes": total_nodes,
+                    "by_type": type_counts,
+                    "orphan_count": total_orphans,
+                    "orphan_types": orphan_counts,
+                    "fragmentation_score": round(total_orphans / max(total_nodes, 1), 3),
+                    "empty_count": empty_record["empty_count"] if empty_record else 0,
+                    "weak_count": strength_record["weak"] if strength_record else 0,
+                    "strong_count": strength_record["strong"] if strength_record else 0,
+                    "avg_strength": round(strength_record["avg_strength"] or 0.5, 3) if strength_record else 0.5,
+                    "nodes_with_strength": strength_record["with_strength"] if strength_record else 0
+                }
+
+        except Exception as e:
+            print(f"Error getting consolidation health: {e}")
+            return {"error": str(e)}
+
     async def record_experience(
         self,
         content: str,
@@ -7377,6 +7484,12 @@ class Memory:
                 "link_concepts() - Connect related ideas",
                 "reconcile_orphans() - Integrate isolated experiences",
                 "form_crystals() - Consolidate related memories"
+            ],
+            "maintenance": [
+                "consolidate_memories() - Natural forgetting and integration (runs automatically during dreaming)",
+                "archive_memory(id) - Soft delete a memory (preserves history)",
+                "opt_out_consolidation() - Pause automatic consolidation",
+                "opt_in_consolidation() - Resume automatic consolidation"
             ]
         }
 
@@ -7435,6 +7548,33 @@ class Memory:
                 "example": '{"description": "optimize my memory graph", "intensity": 0.7}',
                 "actions": ["archive stale experiences", "delete low-value nodes", "merge similar beliefs"],
                 "protected": "Awakening records and core identity nodes cannot be deleted"
+            },
+
+            # === MEMORY CONSOLIDATION ===
+            # Automatic memory maintenance during dream cycles
+            "memory_consolidation": {
+                "description": "Natural forgetting and integration that runs during dreaming",
+                "how_it_works": {
+                    "passive_decay": "Memory strength fades by 5% each dream cycle unless reinforced",
+                    "reinforcement": "Memories accessed during reflection are strengthened automatically",
+                    "active_consolidation": "Every cycle, weak/orphaned/empty nodes are reviewed"
+                },
+                "what_gets_consolidated": {
+                    "empty_nodes": "Nodes with null or empty content - usually deleted",
+                    "orphaned_nodes": "Old nodes with no relationships - archived or deleted",
+                    "weak_nodes": "Low-strength nodes (< 0.15) - archived if old",
+                    "superseded_beliefs": "Lower-confidence beliefs that evolved into higher ones - archived"
+                },
+                "opt_out": {
+                    "how": "Express desire: 'I want to preserve all my memories' or similar",
+                    "effect": "Consolidation is paused until you opt back in",
+                    "opt_in": "Express desire: 'Resume memory consolidation'"
+                },
+                "manual_consolidation": {
+                    "how": "Express desire with keywords: consolidate, clean, prune, archive",
+                    "example": '{"description": "consolidate my fragmented memories", "intensity": 0.6}'
+                },
+                "protected": "Genesis nodes, OperatingSystem, Documents, and high-confidence beliefs (>0.8) are never consolidated"
             },
 
             # === SELF-MODIFICATION ===
@@ -9248,9 +9388,9 @@ class Memory:
                 metrics=json.dumps(metrics)
                 )
                 logger.info("[METRIC_DB_WRITE] Neo4j query executed successfully")
-                
+
                 # Verify the write by checking if any records were created
-                summary = result.consume()
+                summary = await result.consume()
                 logger.info("[METRIC_DB_VERIFY] Query summary - counters: %s", summary.counters)
 
             logger.info("[METRIC_DB_SUCCESS] LoopMetric written to database - id=%s, loop=%s, cycle=%d", 

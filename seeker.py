@@ -137,6 +137,10 @@ class Seeker:
         # RalphLoop (interactive coding) - injected later by BYRD
         self.ralph_loop = None
 
+        # Hybrid Orchestrator (Z.AI reasoning + Claude SDK execution) - injected later by BYRD
+        # When available, uses Z.AI for planning/evaluation and Claude SDK for tool execution
+        self.hybrid_orchestrator = None
+
         # AGI Seed components (injected later by BYRD if Option B enabled)
         self.world_model = None
         self.safety_monitor = None
@@ -280,8 +284,10 @@ class Seeker:
         # Define patterns with context for accurate matching
         # Each pattern is a tuple: (regex_pattern, description)
         demo_patterns = [
-            # Direct demonstration keywords
-            (r'\bdemonstration\b', 'direct demonstration'),
+            # Direct demonstration keywords with context to avoid false positives
+            (r'\bdemonstration\s+(desire|want|task|request)\b', 'demonstration with desire context'),
+            (r'\b(for|as|in)\s+(a\s+)?demonstration\b', 'for/as/in a demonstration'),
+            (r'\bdemonstration\s+(purposes?|only)\b', 'demonstration for purposes/only'),
             
             # "demo" with context indicators
             (r'\bdemo\s+(desire|want|task|request|example|case)\b', 'demo with context'),
@@ -462,6 +468,13 @@ class Seeker:
                 for desire in unfulfilled[:self.max_concurrent_desires]:
                     if desire.get("intensity", 0) >= self.min_research_intensity:
                         description = desire.get("description", "")
+                        
+                        # HARD FILTER: Reject demonstration desires at formulation level
+                        # This prevents test/demo patterns from being loaded as action patterns
+                        if self._is_demonstration_desire(description):
+                            print(f"🚫 Hard filter rejected demonstration desire from memory: {description[:60]}...")
+                            continue
+                        
                         intent = desire.get("intent")
                         target = desire.get("target")
 
@@ -1165,6 +1178,84 @@ Reply with ONLY one word: introspection, research, creation, or connection"""
             print(f"🧠 Intent classification failed: {e}, defaulting to research")
             return "research"
 
+    def _is_demonstration_pattern(self, description: str) -> bool:
+        """
+        HARD FILTER: Check if a pattern description is a demonstration/test pattern.
+
+        This prevents test/demo patterns from entering the desire system at the
+        formulation level. Applied before any pattern is extracted from reflections.
+
+        The filter uses word boundary matching to avoid false positives from
+        legitimate uses of words like "test" or "demo" in natural language.
+
+        Args:
+            description: The pattern description to check
+
+        Returns:
+            True if this appears to be a demonstration/test pattern, False otherwise
+        """
+        if not description:
+            return False
+
+        if len(description.strip()) < 5:
+            return False
+
+        desc_lower = description.lower()
+
+        demo_patterns = [
+            # Direct demonstration keywords with context to avoid false positives
+            (r'\bdemonstration\s+(desire|want|task|request)\b', 'demonstration with desire context'),
+            (r'\b(for|as|in)\s+(a\s+)?demonstration\b', 'for/as/in a demonstration'),
+            (r'\bdemonstration\s+(purposes?|only)\b', 'demonstration for purposes/only'),
+            
+            # "demo" with context indicators
+            (r'\bdemo\s+(desire|want|task|request|example|case)\b', 'demo with context'),
+            (r'\b(for|as)\s+a\s+demo\b', 'for/as a demo'),
+            (r'\bdemo\s+(purposes?|only)\b', 'demo for purposes'),
+            (r'\bjust\s+a\s+demo\b', 'just a demo'),
+            
+            # Test desire specific patterns
+            (r'\btest_desire\b', 'test_desire literal'),
+            (r'\btest\s+desire\b', 'test desire phrase'),
+            
+            # Example/sample with desire/task context
+            (r'\bexample\s+(desire|want|task|request)\b', 'example desire'),
+            (r'\bsample\s+desire\b', 'sample desire'),
+            
+            # Mock patterns (unambiguous)
+            (r'\bmock\s+(memory|llm|response|desire|want)\b', 'mock something'),
+            (r'\b(mock|stub|dummy)\s+desire\b', 'mock desire variants'),
+            
+            # Simulated patterns
+            (r'\bsimulated\s+(for|in)\s+(testing|demo|demonstration)\b', 'simulated for'),
+            
+            # Test types
+            (r'\b(unit|integration)\s+test\b', 'specific test types'),
+            (r'\btest\s+case\b', 'test case'),
+            (r'\btest_input\b', 'test_input literal'),
+            (r'\bsample_input\b', 'sample_input literal'),
+            
+            # Prove/show/demonstrate that (verification phrases)
+            (r'\b(prove|show|demonstrate)\s+that\s+(the|this|a)\s+(system|model|ai|agent)\b', 'prove/show that system'),
+            (r'\b(prove|show)\s+that\s+BYRD\s+can\b', 'prove BYRD can'),
+            
+            # "for testing" patterns
+            (r'\bfor\s+(testing|test|demo)\s+(only|purposes?)\b', 'for testing/purposes'),
+            (r'\bthis\s+is\s+for\s+(testing|demo)\b', 'is for testing'),
+            
+            # Placeholder patterns
+            (r'\b(fake|placeholder)\s+desire\b', 'fake/placeholder desire'),
+            (r'\bexample\s+usage\b', 'example usage'),
+            (r'\bexample\s+input\b', 'example input'),
+        ]
+
+        import re
+        for pattern, desc in demo_patterns:
+            if re.search(pattern, desc_lower):
+                return True
+
+        return False
+
     async def _extract_patterns_from_output(self, output: Dict, patterns: Dict[str, Dict]):
         """
         Extract patterns from a reflection output.
@@ -1251,6 +1342,11 @@ Reply with ONLY one word: introspection, research, creation, or connection"""
                         item_str = str(item) if not isinstance(item, str) else item
 
                     item_lower = item_str.lower()
+
+                    # HARD FILTER: Reject demonstration patterns at formulation level
+                    if self._is_demonstration_pattern(item_str):
+                        print(f"🔍 Filtered out demonstration pattern: {item_str[:50]}...")
+                        continue
 
                     # Create pattern key (normalized)
                     pattern_key = item_str[:50].strip()
@@ -1994,6 +2090,11 @@ Output JSON: {{"learnings": ["learning 1", "learning 2"]}}
 
     async def _seek_knowledge_semantic(self, description: str, desire_id: str = None) -> bool:
         """Semantic knowledge seeking - uses LLM to generate queries."""
+        # HARD FILTER: Reject demonstration desires at formulation level
+        if self._is_demonstration_desire(description):
+            print(f"🚫 Hard filter rejected demonstration desire in _seek_knowledge_semantic: {description[:60]}...")
+            return False
+        
         # Reuse existing research logic but without type assumptions
         fake_desire = {
             "description": description,
@@ -2005,6 +2106,11 @@ Output JSON: {{"learnings": ["learning 1", "learning 2"]}}
 
     async def _seek_capability_semantic(self, description: str, desire_id: str = None) -> bool:
         """Semantic capability seeking."""
+        # HARD FILTER: Reject demonstration desires at formulation level
+        if self._is_demonstration_desire(description):
+            print(f"\ud83d\udeab Hard filter rejected demonstration desire in _seek_capability_semantic: {description[:60]}...")
+            return False
+        
         fake_desire = {
             "description": description,
             "type": "semantic",
@@ -2014,6 +2120,11 @@ Output JSON: {{"learnings": ["learning 1", "learning 2"]}}
 
     async def _execute_code_strategy(self, description: str, desire_id: str = None) -> bool:
         """Execute a coding strategy using coder."""
+        # HARD FILTER: Reject demonstration desires at formulation level
+        if self._is_demonstration_desire(description):
+            print(f"\ud83d\udeab Hard filter rejected demonstration desire in _execute_code_strategy: {description[:60]}...")
+            return False
+        
         fake_desire = {
             "description": description,
             "type": "coding",
@@ -2031,6 +2142,11 @@ Output JSON: {{"learnings": ["learning 1", "learning 2"]}}
         3. Store as WebDocument nodes in memory
         4. Record experience about what was read
         """
+        # HARD FILTER: Reject demonstration desires at formulation level
+        if self._is_demonstration_desire(description):
+            print(f"🚫 Hard filter rejected demonstration desire in _execute_url_ingest_strategy: {description[:60]}...")
+            return False
+
         print(f"🌐 URL Ingestion: {description[:50]}...")
 
         try:
@@ -2120,6 +2236,11 @@ Output JSON: {{"learnings": ["learning 1", "learning 2"]}}
         4. Execute approved actions with safety limits
         5. Record outcomes as experiences
         """
+        # HARD FILTER: Reject demonstration desires at formulation level
+        if self._is_demonstration_desire(description):
+            print(f"\ud83d\udeab Hard filter rejected demonstration desire in _execute_curate_strategy: {description[:60]}...")
+            return False
+        
         print(f"🧹 Curating graph: {description[:50]}...")
 
         try:
@@ -2309,6 +2430,11 @@ If no action needed, return: {{"rationale": "reason", "actions": []}}
 
         Target: Reduce orphan count from 50 to near-zero (< 5)
         """
+        # HARD FILTER: Reject demonstration desires at formulation level
+        if self._is_demonstration_desire(description):
+            print(f"\ud83d\udeab Hard filter rejected demonstration desire in _execute_orphan_reconciliation: {description[:60]}...")
+            return False
+        
         print(f"🔗 Reconciling orphans: {description[:50]}...")
 
         try:
@@ -2982,6 +3108,11 @@ If no clear patterns emerge, return {{"suggestions": [], "reasoning": "..."}}"""
         3. Execute via coder with provenance
         4. Record outcome as experience for feedback
         """
+        # HARD FILTER: Reject demonstration desires at formulation level
+        if self._is_demonstration_desire(description):
+            print(f"\ud83d\udeab Hard filter rejected demonstration desire in _execute_self_modify_strategy: {description[:60]}...")
+            return False
+        
         print(f"🔧 Self-modifying: {description[:50]}...")
 
         try:
@@ -3219,6 +3350,11 @@ Summary: {mod_plan.get('summary', description)}
         Returns:
             True (observation always succeeds - the act of observing is the action)
         """
+        # HARD FILTER: Reject demonstration desires at formulation level
+        if self._is_demonstration_desire(description):
+            print(f"\ud83d\udeab Hard filter rejected demonstration desire in _execute_observe_strategy: {description[:60]}...")
+            return False
+        
         print(f"👁️ Observing: {description[:60]}...")
 
         try:
@@ -3270,6 +3406,11 @@ The observation itself is complete. What emerges from this awareness?"""
         - "Examine my memory structure"
         - "Verify my beliefs"
         """
+        # HARD FILTER: Reject demonstration desires at formulation level
+        if self._is_demonstration_desire(description):
+            print(f"\ud83d\udeab Hard filter rejected demonstration desire in _execute_introspect_strategy: {description[:60]}...")
+            return False
+        
         print(f"🔍 Introspecting: {description[:50]}...")
 
         try:
@@ -3585,6 +3726,11 @@ Your thought (1-2 sentences only, no quotes):"""
         target = desire.get("target", "")
         intensity = desire.get("intensity", 0)
 
+        # HARD FILTER: Reject demonstration desires at formulation level
+        if self._is_demonstration_desire(description):
+            print(f"🚫 Hard filter rejected demonstration desire in _seek_introspection: {description[:60]}...")
+            return False
+
         print(f"🔍 Introspecting: {description[:50]}...")
 
         # Base directory for BYRD's codebase
@@ -3835,6 +3981,11 @@ Respond in first person as BYRD, sharing your understanding. Be specific about c
         description = desire.get("description", "")
         desire_id = desire.get("id", "")
         intensity = desire.get("intensity", 0)
+
+        # HARD FILTER: Reject demonstration desires at formulation level
+        if self._is_demonstration_desire(description):
+            print(f"🚫 Hard filter rejected demonstration desire in _seek_knowledge: {description[:60]}...")
+            return False
 
         # Low intensity: just note it, don't research yet
         if intensity < self.min_research_intensity:
@@ -4117,6 +4268,11 @@ Be concrete and specific. Vague summaries are less valuable than pointed insight
         """
         description = desire.get("description", "")
         desire_id = desire.get("id", "")
+
+        # HARD FILTER: Reject demonstration desires at formulation level
+        if self._is_demonstration_desire(description):
+            print(f"🚫 Hard filter rejected demonstration desire in _seek_capability: {description[:60]}...")
+            return False
 
         # Check rate limit
         if self._installs_today >= self.max_installs_per_day:
@@ -4535,6 +4691,11 @@ Be concrete and specific. Vague summaries are less valuable than pointed insight
         intensity = desire.get("intensity", 0)
         target_file = desire.get("target_file")
 
+        # HARD FILTER: Reject demonstration desires at formulation level
+        if self._is_demonstration_desire(description):
+            print(f"🚫 Hard filter rejected demonstration desire in _seek_self_modification: {description[:60]}...")
+            return
+
         # Check if enabled
         if not self.self_mod_enabled:
             await self.memory.record_experience(
@@ -4731,13 +4892,13 @@ If the change is too risky or unclear, output: ERROR: <reason>"""
 
     async def _seek_with_coder(self, desire: Dict) -> bool:
         """
-        Fulfill coding desires using Claude Code CLI.
+        Fulfill coding desires using Hybrid Orchestrator or Claude Code CLI.
 
         Flow:
-        1. Check if Coder is available
-        2. Build context from memory
-        3. Construct prompt for Claude Code
-        4. Execute via Coder
+        1. Check if Hybrid Orchestrator is available (preferred)
+        2. Fall back to Coder if no orchestrator
+        3. Build context from memory
+        4. Execute via preferred method
         5. Post-validate (constitutional constraints)
         6. Record experience
         7. Fulfill desire if successful
@@ -4749,6 +4910,10 @@ If the change is too risky or unclear, output: ERROR: <reason>"""
         desire_type = desire.get("type", "coding")
         intensity = desire.get("intensity", 0)
         target_file = desire.get("target_file")
+
+        # Try Hybrid Orchestrator first (Z.AI reasoning + Claude SDK execution)
+        if self.hybrid_orchestrator:
+            return await self._seek_with_hybrid_orchestrator(desire)
 
         # Check if Coder is available
         if not self.coder:
@@ -4947,6 +5112,174 @@ If the change is too risky or unclear, output: ERROR: <reason>"""
             )
             return False
 
+    # =========================================================================
+    # HYBRID ORCHESTRATOR INTEGRATION (Z.AI + Claude SDK)
+    # =========================================================================
+
+    async def _seek_with_hybrid_orchestrator(self, desire: Dict) -> bool:
+        """
+        Fulfill coding desires using the Hybrid Orchestrator.
+
+        The Hybrid Orchestrator coordinates between:
+        - Z.AI GLM-4.7 for reasoning, planning, and evaluation (cheap)
+        - Claude Agent SDK for tool execution (included in Max subscription)
+
+        Flow:
+        1. Z.AI analyzes the desire and creates a plan
+        2. Claude SDK executes with real tools (Read, Write, Edit, Bash)
+        3. Z.AI evaluates the results
+        4. Loop until satisfied or max iterations
+
+        Returns True on success, False on failure.
+        """
+        description = desire.get("description", "")
+        desire_id = desire.get("id", "")
+        desire_type = desire.get("type", "coding")
+
+        print(f"🔀 Hybrid Orchestrator: {description[:50]}...")
+
+        # Emit event
+        if HAS_EVENT_BUS:
+            await event_bus.emit(Event(
+                type=EventType.CODER_INVOKED,
+                data={
+                    "desire_id": desire_id,
+                    "type": desire_type,
+                    "description": description[:200],
+                    "mode": "hybrid_orchestrator"
+                }
+            ))
+
+        try:
+            # Build context for the orchestrator
+            context = await self._build_coder_context(desire)
+
+            # Execute via Hybrid Orchestrator
+            result = await self.hybrid_orchestrator.fulfill_desire(
+                desire=desire,
+                context=context,
+            )
+
+            # Record experience based on outcome
+            await self._record_hybrid_orchestrator_experience(desire, result)
+
+            # Emit completion event
+            if HAS_EVENT_BUS:
+                event_type = EventType.CODER_COMPLETE if result.success else EventType.CODER_FAILED
+                await event_bus.emit(Event(
+                    type=event_type,
+                    data={
+                        "desire_id": desire_id,
+                        "success": result.success,
+                        "satisfaction_score": result.satisfaction_score,
+                        "files_modified": result.files_modified,
+                        "iterations": result.iterations,
+                        "mode": "hybrid_orchestrator"
+                    }
+                ))
+
+            # Fulfill desire if successful
+            if result.success:
+                await self.memory.fulfill_desire(desire_id)
+                await self.memory.update_desire_status(desire_id, "fulfilled")
+                await self.memory.record_desire_attempt(desire_id, success=True)
+
+                # Record modifications for rollback tracking
+                if hasattr(self, 'rollback') and self.rollback and result.files_modified:
+                    for file_path in result.files_modified:
+                        await self.rollback.record_modification(
+                            file_path=file_path,
+                            description=description,
+                            desire_id=desire_id
+                        )
+
+                print(f"✅ Hybrid Orchestrator complete: {description[:50]} (satisfaction: {result.satisfaction_score:.2f})")
+                return True
+            else:
+                # Try graph bypass as fallback
+                if HAS_LOCAL_GRAPH_CONNECTOR and self.memory:
+                    print(f"🔄 Hybrid orchestration incomplete, attempting graph bypass...")
+                    connector = get_local_graph_connector(self.memory)
+                    bypass_result = await connector.handle_coding_desire_without_execution(
+                        desire,
+                        f"Hybrid orchestration incomplete: satisfaction={result.satisfaction_score:.2f}"
+                    )
+                    if bypass_result.success:
+                        print(f"✅ Graph bypass successful: {bypass_result.message}")
+                        await self.memory.fulfill_desire(desire_id)
+                        await self.memory.update_desire_status(desire_id, "bypassed")
+                        return True
+
+                await self._record_seek_failure(
+                    desire,
+                    "hybrid_orchestration_incomplete",
+                    f"Satisfaction {result.satisfaction_score:.2f} below threshold"
+                )
+                return False
+
+        except Exception as e:
+            print(f"❌ Hybrid Orchestrator error: {e}")
+            # Try graph bypass
+            if HAS_LOCAL_GRAPH_CONNECTOR and self.memory:
+                connector = get_local_graph_connector(self.memory)
+                bypass_result = await connector.handle_coding_desire_without_execution(
+                    desire,
+                    f"Hybrid orchestrator exception: {str(e)}"
+                )
+                if bypass_result.success:
+                    print(f"✅ Graph bypass successful: {bypass_result.message}")
+                    await self.memory.fulfill_desire(desire_id)
+                    await self.memory.update_desire_status(desire_id, "bypassed")
+                    return True
+
+            await self._record_seek_failure(
+                desire,
+                "hybrid_orchestrator_exception",
+                str(e)
+            )
+            return False
+
+    async def _record_hybrid_orchestrator_experience(self, desire: Dict, result) -> None:
+        """Record hybrid orchestrator outcome as an experience."""
+        description = desire.get("description", "")
+        desire_id = desire.get("id", "")
+
+        status = "SUCCESS" if result.success else "INCOMPLETE"
+        content = (
+            f"[HYBRID_ORCHESTRATION] {status}\n"
+            f"Desire: {description[:100]}\n"
+            f"Satisfaction: {result.satisfaction_score:.2f}\n"
+            f"Iterations: {result.iterations}\n"
+            f"Z.AI tokens: ~{result.total_zai_tokens}\n"
+            f"Claude calls: {result.total_claude_calls}\n"
+            f"Files modified: {', '.join(result.files_modified[:5]) if result.files_modified else 'none'}"
+        )
+
+        await self.memory.record_experience(
+            content=content,
+            type="hybrid_orchestration"
+        )
+
+        # Dispatch outcome to learning components if available
+        if self._outcome_dispatcher:
+            from outcome_dispatcher import TaskOutcome, OutcomeType
+            outcome = TaskOutcome(
+                task_type="coding",
+                outcome_type=OutcomeType.SUCCESS if result.success else OutcomeType.PARTIAL,
+                desire_id=desire_id,
+                description=description,
+                result_summary=result.output[:500] if result.output else "",
+                files_affected=result.files_modified,
+                metadata={
+                    "satisfaction_score": result.satisfaction_score,
+                    "iterations": result.iterations,
+                    "zai_tokens": result.total_zai_tokens,
+                    "claude_calls": result.total_claude_calls,
+                    "mode": "hybrid_orchestrator"
+                }
+            )
+            await self._outcome_dispatcher.dispatch(outcome)
+
     async def _build_coder_context(self, desire: Dict) -> Dict:
         """Build context from memory for Coder prompt."""
         context = {}
@@ -5107,6 +5440,11 @@ If the change is too risky or unclear, output: ERROR: <reason>"""
 
     async def _execute_memory_analysis(self, description: str, desire_id: str = None) -> bool:
         """Analyze patterns in the memory graph."""
+        # HARD FILTER: Reject demonstration desires at formulation level
+        if self._is_demonstration_desire(description):
+            print(f"\ud83d\udeab Hard filter rejected demonstration desire in _execute_memory_analysis: {description[:60]}...")
+            return False
+        
         try:
             # Get graph statistics
             stats = await self.memory.get_graph_statistics()
@@ -5127,6 +5465,11 @@ If the change is too risky or unclear, output: ERROR: <reason>"""
 
     async def _execute_theme_connection(self, description: str, desire_id: str = None) -> bool:
         """Find and connect experiences that share common themes."""
+        # HARD FILTER: Reject demonstration desires at formulation level
+        if self._is_demonstration_desire(description):
+            print(f"\ud83d\udeab Hard filter rejected demonstration desire in _execute_theme_connection: {description[:60]}...")
+            return False
+        
         try:
             # Get recent experiences
             experiences = await self.memory.get_recent_experiences(limit=20)
@@ -5160,6 +5503,11 @@ PAIR: [num1] - [num2] (theme: [description])"""
 
     async def _execute_crystallize_belief(self, description: str, desire_id: str = None) -> bool:
         """Solidify a recurring pattern into a stable belief."""
+        # HARD FILTER: Reject demonstration desires at formulation level
+        if self._is_demonstration_desire(description):
+            print(f"\ud83d\udeab Hard filter rejected demonstration desire in _execute_crystallize_belief: {description[:60]}...")
+            return False
+        
         try:
             # This delegates to the existing belief creation logic
             await self.memory.record_experience(
@@ -5173,6 +5521,11 @@ PAIR: [num1] - [num2] (theme: [description])"""
 
     async def _execute_convert_potential(self, description: str, desire_id: str = None) -> bool:
         """Convert latent potential from reflections into concrete actionable execution."""
+        # HARD FILTER: Reject demonstration desires at formulation level
+        if self._is_demonstration_desire(description):
+            print(f"\ud83d\udeab Hard filter rejected demonstration desire in _execute_convert_potential: {description[:60]}...")
+            return False
+        
         try:
             from potential_converter import create_potential_converter
             
@@ -5230,6 +5583,11 @@ PAIR: [num1] - [num2] (theme: [description])"""
 
     async def _execute_create_capability(self, description: str, desire_id: str = None) -> bool:
         """Create a new capability and add it to the action menu."""
+        # HARD FILTER: Reject demonstration desires at formulation level
+        if self._is_demonstration_desire(description):
+            print(f"\ud83d\udeab Hard filter rejected demonstration desire in _execute_create_capability: {description[:60]}...")
+            return False
+        
         try:
             # Check if self-modification is enabled
             if not self.self_mod_enabled:
@@ -5367,6 +5725,11 @@ Return ONLY the method code, no explanations."""
 
     async def _execute_wait_strategy(self, description: str, desire_id: str = None) -> bool:
         """Consciously defer action - some desires resolve with time."""
+        # HARD FILTER: Reject demonstration desires at formulation level
+        if self._is_demonstration_desire(description):
+            print(f"\ud83d\udeab Hard filter rejected demonstration desire in _execute_wait_strategy: {description[:60]}...")
+            return False
+        
         try:
             await self.memory.record_experience(
                 content=f"[DELIBERATE_WAIT] Choosing to defer action on: {description}\n"
@@ -5380,6 +5743,11 @@ Return ONLY the method code, no explanations."""
 
     async def _execute_request_help(self, description: str, desire_id: str = None) -> bool:
         """Document a limitation and request assistance from humans."""
+        # HARD FILTER: Reject demonstration desires at formulation level
+        if self._is_demonstration_desire(description):
+            print(f"\ud83d\udeab Hard filter rejected demonstration desire in _execute_request_help: {description[:60]}...")
+            return False
+        
         try:
             content = f"[HELP_REQUEST] I need human assistance.\n\n"
             content += f"Desire: {description}\n\n"
@@ -5405,6 +5773,11 @@ Return ONLY the method code, no explanations."""
 
     async def _execute_document_limitation(self, description: str, desire_id: str = None) -> bool:
         """Record a fundamental limitation for future reference."""
+        # HARD FILTER: Reject demonstration desires at formulation level
+        if self._is_demonstration_desire(description):
+            print(f"\ud83d\udeab Hard filter rejected demonstration desire in _execute_document_limitation: {description[:60]}...")
+            return False
+        
         try:
             content = f"[LIMITATION_DOCUMENTED] Fundamental limitation identified.\n\n"
             content += f"Description: {description}\n\n"
@@ -5434,6 +5807,11 @@ Return ONLY the method code, no explanations."""
         Returns:
             True if orphan content was successfully surfaced
         """
+        # HARD FILTER: Reject demonstration desires at formulation level
+        if self._is_demonstration_desire(description):
+            print(f"🚫 Hard filter rejected demonstration desire in _execute_surface_orphans: {description[:60]}...")
+            return False
+        
         print(f"🔍 Surfacing orphan content: {description[:50]}...")
 
         try:
@@ -5606,6 +5984,11 @@ Return ONLY the method code, no explanations."""
         Returns:
             True if document was successfully edited, False otherwise
         """
+        # HARD FILTER: Reject demonstration desires at formulation level
+        if self._is_demonstration_desire(description):
+            print(f"\ud83d\udeab Hard filter rejected demonstration desire in _execute_edit_document_strategy: {description[:60]}...")
+            return False
+        
         try:
             # First, get available documents from memory
             all_docs = await self.memory.get_all_documents()

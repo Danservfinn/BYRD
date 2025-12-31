@@ -53,3 +53,7 @@ youtube-transcript-api>=0.6.0
 
 # PDF extraction alternative with better support (optional)
 pymupdf>=1.23.0
+
+# Claude Code SDK for hybrid LLM architecture (tool execution layer)
+# Requires: claude login (OAuth with Claude Max subscription)
+claude-code-sdk>=0.1.0

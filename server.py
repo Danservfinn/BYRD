@@ -1948,6 +1948,18 @@ async def get_coder_status():
         coder_stats = byrd_instance.coder.get_stats()
         coder_mode = coder_stats.get("mode", "unknown") if coder_stats else "unknown"
 
+    # Hybrid LLM Architecture stats
+    hybrid_orchestrator_stats = None
+    claude_coder_stats = None
+    hybrid_enabled = False
+
+    if byrd_instance:
+        if hasattr(byrd_instance, 'hybrid_orchestrator') and byrd_instance.hybrid_orchestrator:
+            hybrid_enabled = True
+            hybrid_orchestrator_stats = byrd_instance.hybrid_orchestrator.get_stats()
+        if hasattr(byrd_instance, 'claude_coder') and byrd_instance.claude_coder:
+            claude_coder_stats = byrd_instance.claude_coder.get_stats()
+
     result = {
         "mode": coder_mode,
         "opencode_cli": opencode_info,
@@ -1957,6 +1969,12 @@ async def get_coder_status():
         "coder_stats": coder_stats,
         "zai_api_key_set": "ZAI_API_KEY" in os.environ,
         "current_user": os.getenv("USER", "unknown"),
+        # Hybrid LLM Architecture
+        "hybrid_llm": {
+            "enabled": hybrid_enabled,
+            "orchestrator_stats": hybrid_orchestrator_stats,
+            "claude_coder_stats": claude_coder_stats,
+        },
     }
 
     return result

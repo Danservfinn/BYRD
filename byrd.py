@@ -27,6 +27,16 @@ from seeker import Seeker
 from actor import Actor
 from opencode_coder import OpenCodeCoder, create_opencode_coder, CoderResult
 from interactive_coder import RalphLoop, RalphLoopConfig
+
+# Hybrid LLM Architecture (Z.AI reasoning + Claude SDK execution)
+try:
+    from hybrid_orchestrator import HybridOrchestrator
+    from claude_coder import ClaudeCoder
+    from llm_router import LLMRouter
+    HAS_HYBRID_LLM = True
+except ImportError as e:
+    HAS_HYBRID_LLM = False
+    print(f"⚠️ Hybrid LLM components not available: {e}")
 from self_modification import SelfModificationSystem
 from context_loader import ContextLoader, create_context_loader
 from plugin_manager import PluginManager, create_plugin_manager
@@ -305,6 +315,38 @@ class BYRD:
         # Inject RalphLoop into Seeker
         self.seeker.ralph_loop = self.ralph_loop
         print("🔄 Ralph Loop: Interactive coding enabled")
+
+        # Initialize Hybrid LLM Architecture (Z.AI + Claude SDK)
+        self.claude_coder = None
+        self.hybrid_orchestrator = None
+        if HAS_HYBRID_LLM:
+            claude_coder_config = self.config.get("claude_coder", {})
+            orchestrator_config = self.config.get("orchestrator", {})
+
+            # Create Claude Coder (Claude Agent SDK wrapper)
+            self.claude_coder = ClaudeCoder(
+                config=claude_coder_config,
+                coordinator=None,  # Will use ComponentCoordinator if needed
+                memory=self.memory,
+                working_dir="."
+            )
+
+            if self.claude_coder.enabled:
+                # Create Hybrid Orchestrator
+                self.hybrid_orchestrator = HybridOrchestrator(
+                    llm_client=self.llm_client,  # Z.AI for reasoning
+                    claude_coder=self.claude_coder,  # Claude SDK for execution
+                    memory=self.memory,
+                    config=orchestrator_config,
+                )
+
+                # Inject into Seeker (preferred over ralph_loop when available)
+                self.seeker.hybrid_orchestrator = self.hybrid_orchestrator
+                print("🔀 Hybrid Orchestrator: Z.AI reasoning + Claude SDK execution (enabled)")
+            else:
+                print("⚠️ Hybrid Orchestrator: Claude SDK not available, using fallback")
+        else:
+            print("⚠️ Hybrid LLM: Components not imported, using OpenCode Coder only")
 
         # Initialize Voice (ElevenLabs TTS)
         self.voice = None
@@ -1294,7 +1336,7 @@ class BYRD:
 
         await self.memory.close()
 
-        return {
+        result = {
             "memory_stats": stats,
             "unfulfilled_desires": [
                 {"description": d.get("description", ""),
@@ -1309,6 +1351,14 @@ class BYRD:
             "self_modification": self.self_mod.get_statistics(),
             "coder": self.coder.get_stats()
         }
+
+        # Add hybrid LLM stats if available
+        if self.hybrid_orchestrator:
+            result["hybrid_orchestrator"] = self.hybrid_orchestrator.get_stats()
+        if self.claude_coder:
+            result["claude_coder"] = self.claude_coder.get_stats()
+
+        return result
     
     async def chat_loop(self):
         """Interactive chat mode."""

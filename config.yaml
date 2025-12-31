@@ -191,6 +191,32 @@ dreamer:
     archive_on_crystallize: true  # Archive source nodes after crystallization
     forget_threshold_days: 7      # Archived nodes older than this may be forgotten
 
+  # ---------------------------------------------------------------------------
+  # MEMORY CONSOLIDATION (Natural Forgetting & Integration)
+  # ---------------------------------------------------------------------------
+  # Implements biological-inspired memory consolidation during dreaming:
+  # 1. Passive decay: Memory strength fades unless reinforced through access
+  # 2. Active consolidation: LLM-assisted review of weak/orphaned/duplicate nodes
+  #
+  # BYRD can opt out by expressing desire to preserve memories.
+  consolidation:
+    enabled: true
+    interval_cycles: 1            # Run active consolidation every dream cycle
+
+    # Strength decay settings (passive forgetting)
+    strength_decay_rate: 0.95     # Multiply strength by this each cycle (5% decay)
+    default_strength: 0.5         # Initial strength for new nodes
+    genesis_strength: 1.0         # Strength for genesis/protected nodes
+    reinforce_amount: 0.2         # How much to increase strength on access
+
+    # Active consolidation thresholds
+    weak_threshold: 0.15          # Nodes with strength below this are candidates
+    max_candidates_per_cycle: 50  # Limit candidates to prevent overwhelming LLM
+    min_age_hours: 24             # Only consolidate nodes older than this
+
+    # Belief evolution
+    archive_evolved_beliefs: true # Archive lower-confidence beliefs that evolved
+
 # =============================================================================
 # SEEKER (Desire Fulfillment)
 # =============================================================================
@@ -821,3 +847,67 @@ outcome_dispatcher:
     goals: true                 # Goal discoverer
     progress: true              # Learning progress tracker
     graphiti: true              # Temporal knowledge graph
+
+# =============================================================================
+# HYBRID LLM ARCHITECTURE (Z.AI + Claude SDK)
+# =============================================================================
+# Cost-optimized hybrid architecture:
+# - Z.AI GLM-4.7 handles reasoning, reflection, and orchestration (cheap, fast)
+# - Claude Agent SDK handles tool execution (coding, file ops, bash) via Max subscription
+#
+# Philosophy: Z.AI decides WHAT to do, Claude SDK DOES it.
+
+# ---------------------------------------------------------------------------
+# CLAUDE CODER (Claude Agent SDK)
+# ---------------------------------------------------------------------------
+# Uses Claude Max subscription for tool execution.
+# Requires: pip install claude-code-sdk && claude login
+claude_coder:
+  # Enable/disable Claude SDK coder
+  enabled: true
+
+  # Model for tool execution (sonnet is cost-effective, opus for complex tasks)
+  model: "claude-sonnet-4-20250514"
+
+  # Maximum tool turns per execution
+  max_turns: 20
+
+  # Constitutional constraints - files that CANNOT be modified
+  protected_paths:
+    - "provenance.py"
+    - "modification_log.py"
+    - "self_modification.py"
+    - "constitutional.py"
+    - "safety_monitor.py"
+
+# ---------------------------------------------------------------------------
+# HYBRID ORCHESTRATOR
+# ---------------------------------------------------------------------------
+# Coordinates between Z.AI (reasoning) and Claude SDK (execution).
+# Flow: Receive desire → Z.AI plans → Claude executes → Z.AI evaluates → Loop
+orchestrator:
+  # Maximum iterations per desire fulfillment
+  max_iterations: 5
+
+  # Satisfaction threshold to consider desire fulfilled (0.0-1.0)
+  satisfaction_threshold: 0.8
+
+  # Routing preferences (which tasks go to which provider)
+  routing:
+    # Tasks that should always use Z.AI (cheap reasoning)
+    force_zai_for:
+      - reflection
+      - pattern_detection
+      - satisfaction_evaluation
+      - context_summarization
+      - desire_classification
+      - inner_voice
+      - belief_formation
+
+    # Tasks that should always use Claude SDK (tool access)
+    force_claude_for:
+      - code_editing
+      - file_operations
+      - bash_execution
+      - codebase_search
+      - self_modification

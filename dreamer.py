@@ -26,6 +26,7 @@ from quantum_randomness import get_quantum_provider, EntropySource
 from graph_algorithms import MemoryGraphAlgorithms
 from byrd_types import VoiceDesign, ReflectionOutput
 from parallel_observation_path_v2 import get_observer, ObservationPriority
+from memory_consolidator import MemoryConsolidator
 
 # Configure persistent logging to bypass transmission failures
 # Logs are written to disk and survive crashes/network issues
@@ -461,6 +462,7 @@ class Dreamer:
         self.memory = memory
         self.llm_client = llm_client
         self.coordinator = coordinator  # For synchronizing with Seeker/Coder
+        self._mode = "dreaming"  # Current operating mode for metrics
 
         # Initialize observation channel for robust observation persistence
         self.observer = get_observer()
@@ -541,6 +543,22 @@ class Dreamer:
         self.crystallization_forget_days = crystallization_config.get("forget_threshold_days", 7)
         self._cycles_since_crystallization = 0
         self._crystallization_history = []  # Track last N crystallization attempts for debugging
+
+        # Memory consolidation configuration (natural forgetting and integration)
+        # This runs during dream cycles to:
+        # 1. Apply passive strength decay (memories fade unless reinforced)
+        # 2. Periodically run active consolidation (LLM-assisted cleanup)
+        consolidation_config = config.get("consolidation", {})
+        self.consolidation_enabled = consolidation_config.get("enabled", True)
+        self.consolidation_interval_cycles = consolidation_config.get("interval_cycles", 10)
+        self._cycles_since_consolidation = 0
+
+        # Initialize memory consolidator
+        if self.consolidation_enabled:
+            self.consolidator = MemoryConsolidator(memory, llm_client, consolidation_config)
+            logger.info("Memory consolidator initialized")
+        else:
+            self.consolidator = None
 
         # Graph algorithms configuration (advanced memory analysis)
         graph_algo_config = config.get("graph_algorithms", {})
@@ -1006,6 +1024,12 @@ class Dreamer:
         self._inner_voice_queue.clear()  # Clear narrator queue
         self._belief_cache.clear()  # Clear belief deduplication cache
         self._belief_cache_loaded = False  # Force reload on next start
+        self._cycles_since_summarization = 0
+        self._cycles_since_crystallization = 0
+        self._cycles_since_consolidation = 0
+        # Reset consolidator state
+        if self.consolidator:
+            self.consolidator.reset()
         # Note: Database counter is reset in memory.clear_all()
 
     async def _dream_cycle(self):
@@ -1358,6 +1382,36 @@ class Dreamer:
             self._cycles_since_contradiction_check >= self.contradiction_check_interval):
             await self._check_contradictions()
             self._cycles_since_contradiction_check = 0
+
+        # Memory consolidation - natural forgetting and integration
+        # 1. Passive decay: memories fade unless reinforced (every cycle)
+        # 2. Active consolidation: LLM-assisted cleanup (every N cycles)
+        if self.consolidation_enabled and self.consolidator:
+            # Passive decay - apply to all nodes every cycle
+            await self.consolidator.apply_strength_decay()
+
+            # Reinforce memories that were accessed this cycle
+            if all_accessed_ids:
+                reinforced = await self.consolidator.reinforce_memories(all_accessed_ids)
+                if reinforced > 0:
+                    logger.debug("Reinforced %d accessed memories", reinforced)
+
+            # Active consolidation - run every N cycles
+            self._cycles_since_consolidation += 1
+            if self._cycles_since_consolidation >= self.consolidation_interval_cycles:
+                logger.info("Running memory consolidation cycle...")
+                stats = await self.consolidator.run_consolidation_cycle()
+
+                if stats.decisions_made > 0:
+                    # Record consolidation as experience so BYRD is aware
+                    await self.memory.record_experience(
+                        content=f"[CONSOLIDATION] Reviewed {stats.candidates_found} memories: "
+                               f"kept {stats.kept}, merged {stats.merged}, "
+                               f"archived {stats.archived}, deleted {stats.deleted}",
+                        type="system"
+                    )
+
+                self._cycles_since_consolidation = 0
 
         logger.debug("Dream #%d: keys=%s", self._dream_count, output_keys)
 
