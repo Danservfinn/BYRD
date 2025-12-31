@@ -627,11 +627,13 @@ If no clear drives emerge, return {{"drives": []}}"""
             if exists:
                 continue
 
-            # Create desire with provenance
+            # Create desire with provenance and explicit intent to prevent routing loop
+            # Emergent drives are about internal reflection, so route to introspection
             desire_id = await self.memory.create_desire(
                 description=description,
                 type="emergent",  # Emerged from semantic pattern analysis
-                intensity=strength
+                intensity=strength,
+                intent="introspection"  # Explicit routing to prevent classification loop
             )
 
             print(f"🔮 Emergent drive → Desire: {description[:50]}... (strength: {strength:.2f})")
@@ -2134,57 +2136,61 @@ If no action needed, return: {{"rationale": "reason", "actions": []}}
 
             print(f"🔗 Found {initial_orphans} orphaned experiences, applying multi-phase reconciliation...")
 
-            # Filter out drift nodes (reconciliation_attempts >= 3)
-            # These nodes have failed to reconcile multiple times and should be skipped
-            # to prevent wasting cycles on persistent integration failures
+            # Check for drift nodes (reconciliation_attempts >= 3)
+            # These nodes have failed to reconcile multiple times
+            # For phases 1-3, we skip drift nodes; phase 4 handles them
             drift_threshold = 3
             orphans = await self.memory.get_orphaned_experiences(limit=1000)
             orphans_before = len(orphans)
-            orphans = [o for o in orphans if o.get("reconciliation_attempts", 0) < drift_threshold]
-            orphans_after = len(orphans)
-            if orphans_before > orphans_after:
-                print(f"⚠️  Skipped {orphans_before - orphans_after} drift nodes (reconciliation_attempts >= {drift_threshold})")
-                initial_orphans = orphans_after
-                if initial_orphans == 0:
-                    await self.memory.record_experience(
-                        content=f"[ORPHAN_RECONCILIATION_COMPLETE] No orphaned experiences found after filtering drift nodes.",
-                        type="reconciliation_success"
-                    )
-                    print(f"✅ No orphans to reconcile - graph is healthy")
-                    return True
+            non_drift_orphans = [o for o in orphans if o.get("reconciliation_attempts", 0) < drift_threshold]
+            drift_count = orphans_before - len(non_drift_orphans)
+
+            if drift_count > 0:
+                print(f"⚠️  Found {drift_count} drift nodes - will handle in Phase 4")
+
+            # If ALL orphans are drift nodes, skip directly to phase 4
+            all_drift = len(non_drift_orphans) == 0 and orphans_before > 0
+            if all_drift:
+                print(f"🔗 All {orphans_before} orphans are drift nodes - jumping to Phase 4 (bridging beliefs)")
+                # Don't return early - continue to phase 4 below
 
             total_connections_made = 0
+            remaining_orphans = initial_orphans
 
-            # PHASE 1: Standard connection heuristic with aggressive thresholds
-            phase1_connections = await self._phase1_similarity_matching()
-            total_connections_made += phase1_connections
+            # Only run phases 1-3 if we have non-drift orphans
+            if not all_drift:
+                # PHASE 1: Standard connection heuristic with aggressive thresholds
+                phase1_connections = await self._phase1_similarity_matching()
+                total_connections_made += phase1_connections
 
-            # Check progress
-            current_stats = await self.memory.get_connection_statistics()
-            remaining_orphans = current_stats.get("experiences", {}).get("orphaned", 0)
-            print(f"🔗 Phase 1 complete: {remaining_orphans} orphans remaining")
-
-            # PHASE 2: Type-based categorization (if still have orphans)
-            if remaining_orphans > 5:
-                phase2_connections = await self._phase2_type_based_grouping()
-                total_connections_made += phase2_connections
-
+                # Check progress
                 current_stats = await self.memory.get_connection_statistics()
                 remaining_orphans = current_stats.get("experiences", {}).get("orphaned", 0)
-                print(f"🔗 Phase 2 complete: {remaining_orphans} orphans remaining")
+                print(f"🔗 Phase 1 complete: {remaining_orphans} orphans remaining")
 
-            # PHASE 3: LLM-assisted semantic grouping (if still have orphans)
-            if remaining_orphans > 5:
-                phase3_connections = await self._reconcile_orphans_via_reflection(remaining_orphans)
-                total_connections_made += phase3_connections
+                # PHASE 2: Type-based categorization (if still have orphans)
+                if remaining_orphans > 5:
+                    phase2_connections = await self._phase2_type_based_grouping()
+                    total_connections_made += phase2_connections
 
-                current_stats = await self.memory.get_connection_statistics()
-                remaining_orphans = current_stats.get("experiences", {}).get("orphaned", 0)
-                print(f"🔗 Phase 3 complete: {remaining_orphans} orphans remaining")
+                    current_stats = await self.memory.get_connection_statistics()
+                    remaining_orphans = current_stats.get("experiences", {}).get("orphaned", 0)
+                    print(f"🔗 Phase 2 complete: {remaining_orphans} orphans remaining")
+
+                # PHASE 3: LLM-assisted semantic grouping (if still have orphans)
+                if remaining_orphans > 5:
+                    phase3_connections = await self._reconcile_orphans_via_reflection(remaining_orphans)
+                    total_connections_made += phase3_connections
+
+                    current_stats = await self.memory.get_connection_statistics()
+                    remaining_orphans = current_stats.get("experiences", {}).get("orphaned", 0)
+                    print(f"🔗 Phase 3 complete: {remaining_orphans} orphans remaining")
 
             # PHASE 4: Fallback - create bridging beliefs for stubborn orphans
-            if remaining_orphans > 0:
-                phase4_connections = await self._phase4_create_bridging_beliefs()
+            # This phase explicitly handles ALL orphans including drift nodes
+            # Always runs if there are any remaining orphans (including drift nodes)
+            if remaining_orphans > 0 or all_drift:
+                phase4_connections = await self._phase4_create_bridging_beliefs(include_drift=True)
                 total_connections_made += phase4_connections
 
             # Get final statistics
@@ -2365,15 +2371,24 @@ If no action needed, return: {{"rationale": "reason", "actions": []}}
         print(f"🔗 Created umbrella belief for type '{exp_type}': {belief_content[:50]}...")
         return belief_id
 
-    async def _phase4_create_bridging_beliefs(self) -> int:
+    async def _phase4_create_bridging_beliefs(self, include_drift: bool = True) -> int:
         """
         Phase 4: Create bridging beliefs for stubborn orphans.
 
         For orphans that couldn't be connected via similarity or type-based
         matching, extract key themes and create specific bridging beliefs.
+
+        Args:
+            include_drift: If True, include drift nodes (orphans that have failed
+                           reconciliation multiple times). Default True to ensure
+                           all orphans get connected.
         """
         try:
-            orphans = await self.memory.get_orphaned_experiences(limit=50)
+            # Get ALL orphans including drift nodes when include_drift=True
+            orphans = await self.memory.get_orphaned_experiences(
+                limit=100,  # Increased from 50 to handle more orphans
+                include_drift=include_drift
+            )
 
             if not orphans:
                 return 0

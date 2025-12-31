@@ -277,10 +277,13 @@ class BYRD:
         )
 
         if self.coder.enabled:
-            cli_name = self.coder._cli_command or "subprocess"
-            print(f"💻 Coder: OpenCode ({cli_name})")
+            if hasattr(self.coder, '_limited_mode') and self.coder._limited_mode:
+                print(f"💻 Coder: Limited mode (subprocess only)")
+            else:
+                cli_name = self.coder._cli_command or "subprocess"
+                print(f"💻 Coder: OpenCode ({cli_name})")
         else:
-            print(f"⚠️  Coder: Disabled (no CLI available)")
+            print(f"⚠️  Coder: Disabled")
 
         # Inject Coder into Seeker
         self.seeker.coder = self.coder
