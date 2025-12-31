@@ -338,6 +338,172 @@ Runs continuously in the background. Takes recent experiences, finds related mem
 
 BYRD defines its own vocabulary. The system tracks what keys BYRD uses.
 
+### 3.1 Memory Consolidation (`memory_consolidator.py`)
+
+BYRD implements biological-inspired memory consolidation during dream cycles—the natural process of "forgetting" and "integrating" memories that occurs during sleep.
+
+```
++-------------------------------------------------------------------------+
+|                    MEMORY CONSOLIDATION                                  |
+|                                                                          |
+|   PHASE 1: PASSIVE DECAY (Every Dream Cycle)                            |
+|   +-------------------------------------------------------------------+ |
+|   |                                                                   | |
+|   |   All memory nodes have a "strength" field (0.0 - 1.0)            | |
+|   |                                                                   | |
+|   |   Each cycle:                                                     | |
+|   |   - strength = strength × 0.95  (5% decay)                        | |
+|   |   - Unless reinforced through access or reference                 | |
+|   |                                                                   | |
+|   |   Reinforcement events (+0.2 strength):                           | |
+|   |   - Node referenced in reflection                                 | |
+|   |   - Node connected to another node                                | |
+|   |   - Node used in a decision                                       | |
+|   |   - Node explicitly marked important                              | |
+|   |                                                                   | |
+|   +-------------------------------------------------------------------+ |
+|                                                                          |
+|   PHASE 2: ACTIVE CONSOLIDATION (Every N Cycles)                        |
+|   +-------------------------------------------------------------------+ |
+|   |                                                                   | |
+|   |   1. Find candidates:                                             | |
+|   |      - Empty: Nodes with null/empty content                       | |
+|   |      - Orphaned: Old nodes with no relationships                  | |
+|   |      - Weak: Nodes with strength < 0.15                           | |
+|   |      - Superseded: Lower-confidence beliefs that evolved          | |
+|   |                                                                   | |
+|   |   2. LLM decides (BYRD has agency over its memories):             | |
+|   |      - KEEP: Retain and reinforce the memory                      | |
+|   |      - MERGE: Combine with similar memory                         | |
+|   |      - ARCHIVE: Soft delete - preserve but hide from queries      | |
+|   |      - DELETE: Hard delete - remove completely                    | |
+|   |                                                                   | |
+|   |   3. Execute decisions with safety checks                         | |
+|   |      - Protected types never consolidated                         | |
+|   |      - Genesis nodes preserved                                    | |
+|   |      - Archive preferred over delete when uncertain               | |
+|   |                                                                   | |
+|   +-------------------------------------------------------------------+ |
+|                                                                          |
++-------------------------------------------------------------------------+
+```
+
+#### Strength-Based Memory
+
+Every memory node has a `strength` field that represents how well-remembered it is:
+
+| Strength | Meaning |
+|----------|---------|
+| **1.0** | Genesis/protected nodes, newly reinforced |
+| **0.7+** | Strong memories, frequently accessed |
+| **0.5** | Default strength for new nodes |
+| **< 0.15** | Weak, candidate for consolidation |
+
+#### Consolidation Candidates
+
+| Candidate Type | Detection | Typical Action |
+|----------------|-----------|----------------|
+| **Empty** | `content IS NULL OR content = ''` | DELETE |
+| **Orphaned** | No relationships, age > 24h | ARCHIVE or KEEP |
+| **Weak** | `strength < 0.15`, age > 24h | LLM decides |
+| **Superseded** | Belief evolved into higher-confidence belief | ARCHIVE |
+
+#### Protected Types (Never Consolidated)
+
+- `OperatingSystem` - BYRD's self-model
+- `ModificationLog` - Immutable audit trail
+- `Document` - Architecture docs and guides
+
+#### BYRD's Agency
+
+BYRD decides what to consolidate through LLM prompts. This gives BYRD agency over its own memories:
+
+```json
+{
+  "decisions": [
+    {"id": "exp_abc123", "action": "ARCHIVE", "reason": "superseded by evolved belief"},
+    {"id": "belief_def", "action": "KEEP", "reason": "still relevant to current goals"},
+    {"id": "empty_node", "action": "DELETE", "reason": "empty node with no content"}
+  ],
+  "consolidation_insight": "My memory graph is becoming fragmented..."
+}
+```
+
+BYRD can also **opt out** of consolidation entirely by expressing a desire like:
+- "I want to preserve all my memories"
+- "Don't consolidate my memories"
+
+#### Graph Health Metrics
+
+The consolidator provides health metrics to BYRD during reflection:
+
+```python
+{
+    "total_nodes": 1523,
+    "by_type": {"Experience": 892, "Belief": 234, "Desire": 45},
+    "orphan_count": 67,
+    "fragmentation_score": 0.044,  # orphans / total
+    "weak_nodes": 123,
+    "strong_nodes": 456,
+    "avg_strength": 0.52,
+    "old_unconsolidated": 89,
+    "total_archived": 234,
+    "total_deleted": 45
+}
+```
+
+#### Configuration
+
+```yaml
+dreamer:
+  consolidation:
+    enabled: true
+    interval_cycles: 1            # Run active consolidation every cycle
+    strength_decay_rate: 0.95     # 5% decay per cycle
+    default_strength: 0.5         # Initial strength for new nodes
+    genesis_strength: 1.0         # Strength for protected nodes
+    reinforce_amount: 0.2         # Boost on access
+    weak_threshold: 0.15          # Below this = candidate
+    max_candidates_per_cycle: 50  # Limit per cycle
+    min_age_hours: 24             # Only consolidate old nodes
+    archive_evolved_beliefs: true # Archive superseded beliefs
+```
+
+#### Integration with Dreamer
+
+Memory consolidation is integrated into the dream cycle:
+
+```python
+# In dreamer._reflect()
+async def _reflect(self):
+    # ... reflection logic ...
+
+    # Apply passive decay to all memories
+    await self.consolidator.apply_strength_decay()
+
+    # Reinforce memories accessed during reflection
+    await self.consolidator.reinforce_memories(accessed_node_ids)
+
+    # Run active consolidation every N cycles
+    if cycles_since_consolidation >= interval:
+        stats = await self.consolidator.run_consolidation_cycle()
+        # Record as experience so BYRD is aware
+        await memory.record_experience(
+            f"[CONSOLIDATION] kept={stats.kept}, archived={stats.archived}...",
+            type="consolidation"
+        )
+```
+
+#### Events
+
+| Event | When |
+|-------|------|
+| `MEMORY_FORGOTTEN` | Node deleted via consolidation |
+| `MEMORY_ARCHIVED` | Node archived (soft delete) |
+| `DREAM_CYCLE_END` | Consolidation stats included |
+
+**EMERGENCE PRINCIPLE**: Memory consolidation should feel like natural forgetting and integration, not garbage collection. BYRD has full agency over what to keep and can opt out entirely.
+
 ### 4. Seeker (Local LLM + Tools)
 
 Fulfills desires autonomously through strategy routing:
@@ -892,6 +1058,97 @@ await component_coordinator.coder_finished()
 
 This prevents Dreamer/Seeker from exhausting quota while OpenCode is working.
 
+### Hybrid LLM Architecture (Z.AI + Claude SDK)
+
+BYRD implements a cost-optimized hybrid architecture where Z.AI handles reasoning and Claude Agent SDK handles tool execution:
+
+```
++-------------------------------------------------------------------------+
+|                    HYBRID LLM ARCHITECTURE                               |
+|                                                                          |
+|   +-------------------------------------------------------------------+ |
+|   |   Z.AI GLM-4.7 (Reasoning Layer)                                  | |
+|   |   ~$0.001/1k tokens                                               | |
+|   |                                                                   | |
+|   |   - Dreamer reflection                                            | |
+|   |   - Seeker strategy planning                                      | |
+|   |   - Desire classification                                         | |
+|   |   - Satisfaction evaluation                                       | |
+|   |   - Memory consolidation decisions                                | |
+|   +-------------------------------------------------------------------+ |
+|                            |                                             |
+|                            | "Execute this task"                         |
+|                            v                                             |
+|   +-------------------------------------------------------------------+ |
+|   |   Claude Agent SDK (Execution Layer)                              | |
+|   |   Included in Claude Max subscription                             | |
+|   |                                                                   | |
+|   |   Tools available:                                                | |
+|   |   - Read: Read files for context                                  | |
+|   |   - Write: Create new files                                       | |
+|   |   - Edit: Modify files in-place                                   | |
+|   |   - Bash: Run commands and tests                                  | |
+|   |   - Glob: Find files by pattern                                   | |
+|   |   - Grep: Search file contents                                    | |
+|   +-------------------------------------------------------------------+ |
+|                                                                          |
++-------------------------------------------------------------------------+
+```
+
+**Philosophy**: Z.AI decides WHAT to do, Claude SDK DOES it.
+
+#### Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| **LLM Router** | `llm_router.py` | Routes tasks to Z.AI or Claude SDK based on type |
+| **Claude Coder** | `claude_coder.py` | Claude Agent SDK wrapper with constitutional hooks |
+| **Hybrid Orchestrator** | `hybrid_orchestrator.py` | Coordinates Z.AI planning with Claude execution |
+
+#### Routing Rules
+
+| Task Type | Provider | Reason |
+|-----------|----------|--------|
+| Reflection, planning, evaluation | Z.AI | Cheap reasoning |
+| Code editing, file ops, bash | Claude SDK | Real tool access |
+| Pattern detection, classification | Z.AI | No tools needed |
+| Web research, codebase search | Claude SDK | Tool execution |
+
+#### Cost Analysis
+
+| Scenario | Z.AI Only | Hybrid |
+|----------|-----------|--------|
+| 1000 reflections | $1.00 | $1.00 |
+| 100 code tasks | $0.40 | $0.00* |
+| Total | $1.40 | $1.00 |
+
+*Claude SDK included in Max subscription
+
+#### Configuration
+
+```yaml
+claude_coder:
+  enabled: true
+  model: "claude-sonnet-4-20250514"
+  max_turns: 20
+  protected_paths:
+    - "provenance.py"
+    - "modification_log.py"
+    - "self_modification.py"
+    - "constitutional.py"
+
+orchestrator:
+  max_iterations: 5
+  satisfaction_threshold: 0.8
+```
+
+#### Activation
+
+```bash
+pip install claude-code-sdk
+claude login  # OAuth with Claude Max subscription
+```
+
 ---
 
 ## Context Management: Tiered Loading
@@ -1348,6 +1605,11 @@ byrd/
 │   ├── server.py            # FastAPI + WebSocket server
 │   └── plugin_manager.py    # awesome-opencode plugin discovery & install
 │
+├── Hybrid LLM Architecture
+│   ├── llm_router.py        # Routes tasks to Z.AI or Claude SDK
+│   ├── claude_coder.py      # Claude Agent SDK wrapper
+│   └── hybrid_orchestrator.py # Coordinates Z.AI planning + Claude execution
+│
 ├── Self-Model
 │   ├── ARCHITECTURE.md      # This document (architectural self-knowledge)
 │   ├── self_model.json      # Queryable structured self-model
@@ -1367,7 +1629,8 @@ byrd/
 │   ├── gnn_layer.py            # Graph Neural Network
 │   ├── graphiti_layer.py       # Temporal knowledge graph
 │   ├── learned_retriever.py    # Relevance learning
-│   └── emergent_categories.py  # Category discovery
+│   ├── emergent_categories.py  # Category discovery
+│   └── memory_consolidator.py  # Natural forgetting & integration
 │
 ├── Option B Components
 │   ├── omega.py             # Meta-orchestration + training hooks
@@ -1435,8 +1698,9 @@ If yes, we have something useful. If no, we learn and try something else.
 
 ---
 
-*Document version: 6.0*
-*Updated: December 30, 2025*
+*Document version: 7.0*
+*Updated: December 31, 2025*
 *Merged from: BYRD v3.3 + ZEUS v3.0 Philosophy*
 *Changes v5.0: OpenCode CLI wrapper, tiered context loading, regex+API plugin parsing*
 *Changes v6.0: Simplified plugin discovery (reactive+proactive), Goal Cascade Neo4j persistence*
+*Changes v7.0: Memory consolidation (natural forgetting & integration), Hybrid LLM architecture (Z.AI + Claude SDK)*
