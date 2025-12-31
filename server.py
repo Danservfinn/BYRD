@@ -1922,32 +1922,46 @@ async def get_capabilities():
 
 @app.get("/api/coder-status")
 async def get_coder_status():
-    """Get Claude Code CLI status for diagnostics."""
+    """Get OpenCode CLI status for diagnostics."""
     global byrd_instance
     import shutil
     import os
 
-    # Check common Claude CLI locations
-    cli_locations = [
-        "/usr/local/bin/claude",
-        "/usr/bin/claude",
-        "/home/user/.local/bin/claude",
-        "/root/.local/bin/claude",
-        "/usr/local/lib/node_modules/@anthropic-ai/claude-code/cli.js",
-    ]
-    found_locations = [loc for loc in cli_locations if os.path.exists(loc)]
+    # Check for OpenCode CLI (primary) and Claude CLI (fallback)
+    cli_checks = {
+        "opencode": {
+            "found": shutil.which("opencode") is not None,
+            "which": shutil.which("opencode"),
+            "locations": [
+                "/usr/local/bin/opencode",
+                "/usr/bin/opencode",
+                "/home/user/.local/bin/opencode",
+                "/usr/local/lib/node_modules/opencode-ai/bin/opencode",
+            ]
+        },
+        "claude": {
+            "found": shutil.which("claude") is not None,
+            "which": shutil.which("claude"),
+            "locations": [
+                "/usr/local/bin/claude",
+                "/usr/bin/claude",
+                "/home/user/.local/bin/claude",
+            ]
+        }
+    }
+
+    # Find which locations exist
+    for cli_name, cli_info in cli_checks.items():
+        cli_info["found_locations"] = [loc for loc in cli_info["locations"] if os.path.exists(loc)]
 
     result = {
-        "cli_path": "claude",
-        "cli_found": shutil.which("claude") is not None,
-        "cli_which": shutil.which("claude"),
-        "cli_found_locations": found_locations,
+        "opencode_cli": cli_checks["opencode"],
+        "claude_cli": cli_checks["claude"],
         "coder_enabled": False,
-        "credentials_exist": os.path.exists(os.path.expanduser("~/.claude/.credentials.json")),
-        "claude_dir_exists": os.path.exists(os.path.expanduser("~/.claude")),
-        "claude_dir_contents": [],
-        "oauth_env_exists": "CLAUDE_OAUTH_CREDS" in os.environ,
-        "oauth_env_length": len(os.environ.get("CLAUDE_OAUTH_CREDS", "")),
+        "coder_cli_command": None,
+        "coder_limited_mode": None,
+        "zai_api_key_set": "ZAI_API_KEY" in os.environ,
+        "anthropic_api_key_set": "ANTHROPIC_API_KEY" in os.environ,
         "current_user": os.getenv("USER", "unknown"),
         "env_vars": {
             "HOME": os.environ.get("HOME", ""),
@@ -1955,17 +1969,10 @@ async def get_coder_status():
         }
     }
 
-    # List ~/.claude directory
-    claude_dir = os.path.expanduser("~/.claude")
-    if os.path.exists(claude_dir):
-        try:
-            result["claude_dir_contents"] = os.listdir(claude_dir)
-        except:
-            pass
-
     if byrd_instance and hasattr(byrd_instance, 'coder') and byrd_instance.coder:
         result["coder_enabled"] = byrd_instance.coder.enabled
-        result["coder_cli_path"] = byrd_instance.coder.cli_path
+        result["coder_cli_command"] = byrd_instance.coder._cli_command
+        result["coder_limited_mode"] = getattr(byrd_instance.coder, '_limited_mode', None)
 
     return result
 

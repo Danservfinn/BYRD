@@ -1294,7 +1294,7 @@ class BYRD:
             "seek_count": self.seeker.seek_count(),
             "recent_insights": self.dreamer.recent_insights(),
             "self_modification": self.self_mod.get_statistics(),
-            "coder": self.coder.get_statistics()
+            "coder": self.coder.get_stats()
         }
     
     async def chat_loop(self):
