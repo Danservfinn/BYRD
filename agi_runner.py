@@ -27,6 +27,7 @@ from pathlib import Path
 
 from memory import Memory
 from desire_classifier import DesireClassifier, DesireType
+from demonstration_filter import DemonstrationFilter
 
 
 @dataclass
@@ -109,6 +110,7 @@ class AGIRunner:
         self.intuition = None          # Will be IntuitionNetwork (Phase 3)
         self.evaluator = None          # Will be CapabilityEvaluator (Phase 1)
         self.desire_classifier = DesireClassifier(self.config)
+        self.demonstration_filter = DemonstrationFilter()  # Filter malformed desires
 
         # Cycle tracking
         self._cycle_count = 0
@@ -1159,6 +1161,12 @@ class AGIRunner:
         Called when DesireClassifier routes a desire here.
         """
         description = desire.get('description', '')
+
+        # CRITICAL: Filter out demonstration and test desires immediately
+        # Without this, every cycle is wasted on malformed desires
+        if self.demonstration_filter.is_demonstration_desire(description):
+            print(f"🚫 AGI Runner: Filtered demonstration desire: {description[:50]}...")
+            return {"success": False, "reason": "Filtered as demonstration/test desire"}
 
         print(f"🎯 AGI Runner: Processing capability desire: {description[:50]}...")
 
