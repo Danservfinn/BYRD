@@ -2000,13 +2000,15 @@ async def test_coder():
         return {
             "success": result.success,
             "output_length": len(result.output) if result.output else 0,
-            "output_preview": result.output[:1000] if result.output else None,
+            "output_preview": result.output[:2000] if result.output else None,
             "error": result.error,
+            "error_length": len(result.error) if result.error else 0,
             "files_modified": result.files_modified,
             "files_created": result.files_created,
             "duration_seconds": result.duration_seconds,
             "cli_command": byrd_instance.coder._cli_command,
             "cli_args": byrd_instance.coder._cli_args,
+            "limited_mode": byrd_instance.coder._limited_mode,
         }
     except Exception as e:
         return {

@@ -324,9 +324,9 @@ class OpenCodeCoder:
 
             # Add task argument based on CLI type
             if self._cli_command == "opencode":
-                # OpenCode syntax: opencode run -m model --format json "message"
+                # OpenCode syntax: opencode run -m model --format json --print-logs "message"
                 cmd.insert(1, "run")  # Add 'run' subcommand after 'opencode'
-                cmd.extend(["--format", "json"])  # Use JSON format for programmatic output
+                cmd.extend(["--format", "json", "--print-logs"])  # JSON format + logs to stderr
                 cmd.append(task)  # Add task as the final argument
             elif self._cli_command == "claude":
                 cmd.extend(["--print", task])
@@ -339,14 +339,19 @@ class OpenCodeCoder:
             # Determine working directory
             cwd = working_dir or self.config.get("project_root", ".")
 
-            # Execute
+            # Execute - provide stdin pipe and close it to signal EOF
             proc = await asyncio.create_subprocess_exec(
                 *cmd,
+                stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 env=env,
                 cwd=cwd,
             )
+
+            # Close stdin to signal no interactive input
+            proc.stdin.close()
+            await proc.stdin.wait_closed()
 
             stdout, stderr = await asyncio.wait_for(
                 proc.communicate(),
@@ -364,9 +369,16 @@ class OpenCodeCoder:
             # Parse modified files from output
             files_modified, files_created = self._parse_file_changes(output)
 
+            # Include stderr in output if stdout is empty (logs might be there)
+            combined_output = output
+            if not output and error:
+                combined_output = f"[STDERR]\n{error}"
+            elif output and error:
+                combined_output = f"{output}\n[STDERR]\n{error}"
+
             return CoderResult(
                 success=proc.returncode == 0,
-                output=output,
+                output=combined_output,
                 error=error if proc.returncode != 0 else None,
                 files_modified=files_modified,
                 files_created=files_created,
