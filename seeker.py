@@ -252,6 +252,39 @@ class Seeker:
         self._last_reflection_ids.clear()
         self._strategy_stats.clear()
 
+    def _is_demonstration_desire(self, description: str) -> bool:
+        """
+        HARD FILTER: Check if a desire description is a demonstration/test desire.
+        
+        This prevents test/demo patterns from entering the desire system at the
+        formulation level. Applied before any desire is created.
+        
+        Args:
+            description: The desire description to check
+            
+        Returns:
+            True if this appears to be a demonstration/test desire, False otherwise
+        """
+        if not description:
+            return False
+            
+        desc_lower = description.lower()
+        
+        # Comprehensive list of demonstration/test keywords
+        demo_keywords = [
+            "demonstration", "demo", "test_desire", "test desire",
+            "example usage", "mock memory", "for demonstration",
+            "mock llm", "mock response", "simulated for",
+            "test case", "unit test", "integration test",
+            "prove that", "show that", "demonstrate that",
+            "example_desire", "sample desire", "fake desire",
+            "placeholder desire", "mock desire", "stub desire",
+            "dummy desire", "test_input", "sample_input",
+            "example input", "for testing", "for demo"
+        ]
+        
+        return any(kw in desc_lower for kw in demo_keywords)
+
     def _track_strategy_outcome(self, strategy: str, success: bool, delta: float = 0.0):
         """Track strategy success/failure for effectiveness analysis.
         
@@ -627,6 +660,12 @@ If no clear drives emerge, return {{"drives": []}}"""
             if exists:
                 continue
 
+            # HARD FILTER: Reject demonstration desires at formulation level
+            # This prevents test/demo patterns from entering the desire system
+            if self._is_demonstration_desire(description):
+                print(f"🚫 Hard filter rejected demonstration desire: {description[:60]}...")
+                continue
+
             # Create desire with provenance and explicit intent to prevent routing loop
             # Emergent drives are about internal reflection, so route to introspection
             desire_id = await self.memory.create_desire(
@@ -819,8 +858,18 @@ Reply with ONLY one word: introspect, reconcile_orphans, curate, self_modify, in
             # External strategies (more general) - CHECK LAST (fallback)
             "code": ["code", "write", "implement", "build", "create", "program"],
             "install": ["install", "add", "get", "acquire", "capability", "tool"],
+            "url_ingest": ["read this", "fetch this", "read link", "read url", "absorb this",
+                          "check out http", "look at http", "read http", "ingest http"],
             "search": ["search", "look up", "find", "research", "learn about", "understand"],
         }
+
+        # Check for URLs in description - if present, route to url_ingest
+        try:
+            from url_ingestor import extract_urls
+            if extract_urls(description):
+                return "url_ingest"
+        except ImportError:
+            pass
 
         for strategy, hints in strategy_hints.items():
             if any(hint in desc_lower for hint in hints):
@@ -1459,6 +1508,12 @@ REASON: [brief explanation]"""
                 return ("success" if success else "failed",
                         None if success else "Capability installation failed or no matching capability found")
 
+            elif strategy == "url_ingest":
+                # URL content ingestion - fetch and absorb web content
+                success = await self._execute_url_ingest_strategy(description, desire_id)
+                return ("success" if success else "failed",
+                        None if success else "URL ingestion failed or no valid URLs found")
+
             elif strategy == "curate":
                 # Use graph curation capability
                 success = await self._execute_curate_strategy(description, desire_id)
@@ -1918,6 +1973,94 @@ Output JSON: {{"learnings": ["learning 1", "learning 2"]}}
             "id": desire_id or f"code-strategy-{int(datetime.now().timestamp())}"
         }
         return await self._seek_with_coder(fake_desire)
+
+    async def _execute_url_ingest_strategy(self, description: str, desire_id: str = None) -> bool:
+        """
+        Execute URL ingestion strategy - fetch and absorb web content.
+
+        Flow:
+        1. Extract URLs from the desire description
+        2. For each URL, fetch and extract content
+        3. Store as WebDocument nodes in memory
+        4. Record experience about what was read
+        """
+        print(f"🌐 URL Ingestion: {description[:50]}...")
+
+        try:
+            # Get URLIngestor from BYRD instance
+            url_ingestor = getattr(self, 'url_ingestor', None)
+            if not url_ingestor and hasattr(self, 'byrd') and self.byrd:
+                url_ingestor = getattr(self.byrd, 'url_ingestor', None)
+
+            if not url_ingestor:
+                print("[Seeker] URLIngestor not available")
+                await self.memory.record_experience(
+                    content=f"[URL_INGEST_FAILED] URLIngestor not available for: {description[:100]}",
+                    type="url_ingest_failed"
+                )
+                return False
+
+            # Extract URLs from description
+            from url_ingestor import extract_urls
+            urls = extract_urls(description)
+
+            if not urls:
+                print(f"[Seeker] No URLs found in desire: {description[:50]}")
+                await self.memory.record_experience(
+                    content=f"[URL_INGEST_SKIPPED] No URLs found in: {description[:100]}",
+                    type="url_ingest_skipped"
+                )
+                return False
+
+            # Ingest each URL
+            success_count = 0
+            failed_count = 0
+            ingested_titles = []
+
+            for url in urls[:5]:  # Max 5 URLs per desire
+                try:
+                    result = await url_ingestor.ingest(
+                        url=url,
+                        context=description[:200],
+                        provenance=desire_id or "seeker"
+                    )
+
+                    if result.success:
+                        success_count += 1
+                        ingested_titles.append(result.title or url)
+                        print(f"   ✅ Ingested: {result.title} ({result.char_count} chars)")
+                    else:
+                        failed_count += 1
+                        print(f"   ❌ Failed: {url} - {result.error}")
+                except Exception as e:
+                    failed_count += 1
+                    print(f"   ❌ Exception for {url}: {e}")
+
+            # Record experience about what was read
+            if success_count > 0:
+                titles_summary = ", ".join(ingested_titles[:3])
+                if len(ingested_titles) > 3:
+                    titles_summary += f" and {len(ingested_titles) - 3} more"
+
+                await self.memory.record_experience(
+                    content=f"[URL_INGESTED] Read {success_count} web pages: {titles_summary}. Context: {description[:100]}",
+                    type="url_ingested"
+                )
+                return True
+            else:
+                await self.memory.record_experience(
+                    content=f"[URL_INGEST_FAILED] Failed to ingest any URLs from: {description[:100]}",
+                    type="url_ingest_failed"
+                )
+                return False
+
+        except Exception as e:
+            print(f"[Seeker] URL ingest strategy error: {e}")
+            await self.memory.record_experience(
+                content=f"[URL_INGEST_ERROR] Error during ingestion: {str(e)[:100]}. Desire: {description[:100]}",
+                type="url_ingest_error"
+            )
+            return False
 
     async def _execute_curate_strategy(self, description: str, desire_id: str = None) -> bool:
         """

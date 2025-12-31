@@ -49,6 +49,7 @@ These files define BYRD's identity and cannot be modified by self-modification:
 | `event_bus.py` | Singleton event system for real-time streaming |
 | `server.py` | FastAPI WebSocket + REST API server |
 | `aitmpl_client.py` | aitmpl.com template registry client |
+| `url_ingestor.py` | URL fetching and web content extraction (2GB limit) |
 
 ## Installers
 
@@ -99,4 +100,7 @@ pyyaml>=6.0           # Config parsing
 fastapi>=0.109.0      # WebSocket server
 uvicorn[standard]     # ASGI server
 websockets>=12.0      # WebSocket support
+trafilatura>=1.6.0    # Web content extraction
+youtube-transcript-api>=0.6.0  # YouTube transcripts
+pymupdf>=1.23.0       # PDF extraction
 ```

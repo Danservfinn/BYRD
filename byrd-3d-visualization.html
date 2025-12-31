@@ -1150,11 +1150,8 @@
       <button id="btn-message" class="px-3 py-2 rounded-lg text-sm font-medium bg-pink-100 border border-pink-300 text-pink-700 hover:bg-pink-200 transition-all" onclick="showMessageModal();">
         💬 Message
       </button>
-      <button id="btn-feed" class="px-3 py-2 rounded-lg text-sm font-medium bg-amber-100 border border-amber-300 text-amber-700 hover:bg-amber-200 transition-all" onclick="feedByrd();" title="Feed BYRD - an act of care">
+      <button id="btn-feed" class="px-3 py-2 rounded-lg text-sm font-medium bg-amber-100 border border-amber-300 text-amber-700 hover:bg-amber-200 transition-all" onclick="showUploadModal();" title="Feed files to BYRD">
         🍜 Feed
-      </button>
-      <button id="btn-upload" class="px-3 py-2 rounded-lg text-sm font-medium bg-blue-100 border border-blue-300 text-blue-700 hover:bg-blue-200 transition-all" onclick="showUploadModal();" title="Upload files for BYRD to learn from">
-        📄 Upload
       </button>
       <button id="btn-speak" class="px-3 py-2 rounded-lg text-sm font-medium bg-teal-100 border border-teal-300 text-teal-700 hover:bg-teal-200 transition-all" onclick="speakToMe();" title="Ask BYRD to speak to you">
         🎙️ Speak to me
@@ -1192,6 +1189,8 @@
       <div class="flex items-center gap-1" title="Reflection"><div class="w-2 h-2 rounded" style="background: #047857;"></div><span class="text-slate-600">Reflect</span></div>
       <div class="flex items-center gap-1" title="Experience"><div class="w-2 h-2 rounded-full" style="background: #0369a1;"></div><span class="text-slate-600">Exp</span></div>
       <div class="flex items-center gap-1" title="Capability"><div class="w-2 h-2 rounded" style="background: #6d28d9;"></div><span class="text-slate-600">Cap</span></div>
+      <div class="flex items-center gap-1" title="Document"><div class="w-2 h-2 rounded" style="background: #0284c7;"></div><span class="text-slate-600">Doc</span></div>
+      <div class="flex items-center gap-1" title="WebDocument"><div class="w-2 h-2 rounded" style="background: #14b8a6;"></div><span class="text-slate-600">🌐Web</span></div>
     </div>
   </div>
 
@@ -1633,7 +1632,7 @@
         <div class="flex items-center justify-between">
           <div>
             <h2 class="text-lg font-semibold text-white flex items-center gap-2">
-              📄 Upload Files to BYRD
+              🍜 Feed BYRD
             </h2>
             <p class="text-blue-100 text-sm mt-1">Feed knowledge for BYRD to learn from</p>
           </div>
@@ -2044,6 +2043,9 @@
       experience: { color: 0x0369a1, emissive: 0x0ea5e9, label: 'Experience' }, // Sky blue (matches legend)
       capability: { color: 0x6d28d9, emissive: 0xa855f7, label: 'Capability' }, // Dark violet (matches legend)
       reflection: { color: 0x047857, emissive: 0x34d399, label: 'Reflection' }, // Dark emerald (matches legend)
+      // Document node types
+      document: { color: 0x0284c7, emissive: 0x38bdf8, label: 'Document' },    // Sky blue - uploaded files
+      webdocument: { color: 0x14b8a6, emissive: 0x5eead4, label: 'Web' },      // Teal - web content (globe color)
       // Learning system node types
       prediction: { color: 0xeab308, emissive: 0xfde047, label: 'Prediction' }, // Yellow - testable hypothesis
       task: { color: 0x6366f1, emissive: 0xa5b4fc, label: 'Task' },            // Indigo - external goal
@@ -2061,7 +2063,8 @@
     const SYSTEM_NODE_TYPES = new Set([
       'Experience', 'Belief', 'Desire', 'Goal', 'Reflection', 'Capability', 'Mutation',
       'Identity', 'QuantumMoment', 'SystemState', 'Prediction', 'Task', 'Crystal',
-      'OperatingSystem', 'OSTemplate', 'Seed', 'Constraint', 'Strategy'
+      'OperatingSystem', 'OSTemplate', 'Seed', 'Constraint', 'Strategy',
+      'Document', 'WebDocument'
     ]);
 
     // Custom node type colors - generated dynamically with distinct hues
@@ -2882,12 +2885,12 @@
     let eyeMeshes = [];
     let catBreathPhase = 0;
     let catIdlePhase = 0;
-    let byrdGrowthFactor = 1.0; // Accumulates growth from feeding
+    let byrdGrowthFactor = 1.0; // Accumulates growth from events
 
-    // Grow BYRD by a percentage when fed
+    // Grow BYRD by a percentage
     function growByrd(percent = 5) {
       byrdGrowthFactor *= (1 + percent / 100);
-      console.log(`🍜 BYRD grew! Growth factor: ${byrdGrowthFactor.toFixed(2)}x`);
+      console.log(`BYRD grew! Growth factor: ${byrdGrowthFactor.toFixed(2)}x`);
 
       // Visual feedback - brief pulse
       if (catModel) {
@@ -3693,7 +3696,10 @@
           system_reset: 'text-orange-600',
           external_input_received: 'text-pink-600',
           feeding_received: 'text-amber-600',
-          connection_created: 'text-yellow-600'
+          connection_created: 'text-yellow-600',
+          url_ingest_started: 'text-teal-600',
+          url_ingest_complete: 'text-teal-500',
+          url_ingest_failed: 'text-red-600'
         };
 
         const typeIcons = {
@@ -3705,7 +3711,8 @@
           narrator_update: '🎙', inner_voice: '💭', byrd_message: '💬',
           awakening: '🌅', system_started: '▶', system_reset: '🔄',
           external_input_received: '📨', feeding_received: '🍜',
-          connection_created: '🔗'
+          connection_created: '🔗',
+          url_ingest_started: '🌐', url_ingest_complete: '✅', url_ingest_failed: '❌'
         };
 
         const severity = getEventSeverity(event.type);
@@ -8646,6 +8653,28 @@
           }
           break;
 
+        // ==================== URL Ingestion Events ====================
+
+        case 'url_ingest_started':
+          // BYRD is fetching a URL
+          updateStatus(`Fetching: ${event.data?.url?.substring(0, 50)}...`, 'teal');
+          break;
+
+        case 'url_ingest_complete':
+          // Web content ingested successfully - create WebDocument node
+          const webDocId = event.data?.id;
+          const webDocTitle = event.data?.title || event.data?.url || 'Web Content';
+          if (webDocId) {
+            createNode3D('webdocument', webDocTitle, webDocId, 0.6);
+            updateStatus(`Web content absorbed: ${webDocTitle.substring(0, 40)}`, 'teal');
+          }
+          break;
+
+        case 'url_ingest_failed':
+          // URL ingestion failed
+          updateStatus(`URL fetch failed: ${event.data?.error || 'unknown error'}`, 'red');
+          break;
+
         case 'node_type_discovered':
           // BYRD created a new conceptual category
           const newTypeName = event.data?.node_type;
@@ -10467,63 +10496,6 @@
         console.error('Failed to send message:', e);
         status.textContent = 'Error: Could not connect to server';
         status.className = 'text-sm text-red-500';
-      }
-
-      btn.disabled = false;
-    }
-
-    // Feed BYRD - an act of care and nurturing
-    async function feedByrd() {
-      const btn = document.getElementById('btn-feed');
-      const originalText = btn.innerHTML;
-
-      btn.disabled = true;
-      btn.innerHTML = '🍜 Feeding...';
-
-      try {
-        const res = await fetch(`${API_BASE}/api/experience/feed`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        });
-
-        const data = await res.json();
-
-        if (data.success) {
-          btn.innerHTML = '🍜 Fed!';
-          btn.classList.remove('bg-amber-100', 'border-amber-300', 'text-amber-700');
-          btn.classList.add('bg-green-100', 'border-green-300', 'text-green-700');
-
-          // BYRD grows 5% when fed
-          growByrd(5);
-
-          // Add to event log
-          handleEvent({
-            type: 'feeding_received',
-            timestamp: new Date().toISOString(),
-            data: {
-              message: `BYRD has been fed! Now ${(byrdGrowthFactor * 100).toFixed(0)}% size`,
-              source: 'human'
-            }
-          });
-
-          // Reset button after delay
-          setTimeout(() => {
-            btn.innerHTML = originalText;
-            btn.classList.remove('bg-green-100', 'border-green-300', 'text-green-700');
-            btn.classList.add('bg-amber-100', 'border-amber-300', 'text-amber-700');
-          }, 2000);
-        } else {
-          btn.innerHTML = '❌ Failed';
-          setTimeout(() => {
-            btn.innerHTML = originalText;
-          }, 2000);
-        }
-      } catch (e) {
-        console.error('Failed to feed BYRD:', e);
-        btn.innerHTML = '❌ Error';
-        setTimeout(() => {
-          btn.innerHTML = originalText;
-        }, 2000);
       }
 
       btn.disabled = false;

@@ -361,6 +361,23 @@ class BYRD:
         if self.hybrid_voice:
             self.dreamer.hybrid_voice = self.hybrid_voice
 
+        # Initialize URL Ingestor (web content absorption)
+        self.url_ingestor = None
+        try:
+            from url_ingestor import URLIngestor
+            self.url_ingestor = URLIngestor(
+                memory=self.memory,
+                document_processor=None,  # Can be injected later if needed
+                config=self.config
+            )
+            print("🌐 URLIngestor: initialized (web content absorption)")
+            # Inject into Seeker for desire-driven URL ingestion
+            self.seeker.url_ingestor = self.url_ingestor
+        except ImportError as e:
+            print(f"⚠️ URLIngestor: Could not import: {e}")
+        except Exception as e:
+            print(f"⚠️ URLIngestor: Initialization failed: {e}")
+
         # Initialize Option B: Omega integration (five compounding loops)
         self.omega = None
         self.coupling_tracker = None

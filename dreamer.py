@@ -2189,26 +2189,49 @@ ABSORB example: {{"operation": "ABSORB", "details": {{"crystal_id": "...", "node
                 purpose = doc.get("purpose", "not specified")
                 summary = doc.get("summary", "No summary available")
                 tags = doc.get("tags", [])
+                is_web_doc = doc.get("is_web_document", False)
+                url = doc.get("url")
 
-                # Fetch chunks for this document
-                try:
-                    chunks = await self.memory.get_document_chunks_for_reflection(doc_id, limit=5)
-                except Exception as e:
-                    logger.warning("Failed to get chunks for doc %s: %s", doc_id, e)
-                    chunks = []
+                if is_web_doc:
+                    # WebDocument: fetch content directly (no chunks)
+                    doc_text = f"### 🌐 {filename} ({doc_type})\n"
+                    doc_text += f"ID: {doc_id}\n"
+                    if url:
+                        doc_text += f"Source URL: {url}\n"
+                    if purpose:
+                        doc_text += f"Context: {purpose}\n"
+                    doc_text += f"Summary: {summary}\n\n"
 
-                doc_text = f"### {filename} ({doc_type})\n"
-                doc_text += f"ID: {doc_id}\n"
-                doc_text += f"Purpose: {purpose}\n"
-                if tags:
-                    doc_text += f"Tags: {', '.join(tags)}\n"
-                doc_text += f"Summary: {summary}\n\n"
+                    # Fetch full WebDocument content
+                    try:
+                        web_doc = await self.memory.get_web_document_by_id(doc_id)
+                        if web_doc and web_doc.get("content"):
+                            content_preview = web_doc["content"][:3000]  # Larger preview for web content
+                            if len(web_doc["content"]) > 3000:
+                                content_preview += "\n...[content truncated]..."
+                            doc_text += f"**Content:**\n{content_preview}\n\n"
+                    except Exception as e:
+                        logger.warning("Failed to get WebDocument content for %s: %s", doc_id, e)
+                else:
+                    # Regular Document: fetch chunks
+                    try:
+                        chunks = await self.memory.get_document_chunks_for_reflection(doc_id, limit=5)
+                    except Exception as e:
+                        logger.warning("Failed to get chunks for doc %s: %s", doc_id, e)
+                        chunks = []
 
-                # Add chunk content
-                for chunk in chunks:
-                    heading = chunk.get("heading") or f"Section {chunk.get('index', 0)}"
-                    content = chunk.get("content", "")[:500]  # Limit chunk preview
-                    doc_text += f"**{heading}**\n{content}\n\n"
+                    doc_text = f"### {filename} ({doc_type})\n"
+                    doc_text += f"ID: {doc_id}\n"
+                    doc_text += f"Purpose: {purpose}\n"
+                    if tags:
+                        doc_text += f"Tags: {', '.join(tags)}\n"
+                    doc_text += f"Summary: {summary}\n\n"
+
+                    # Add chunk content
+                    for chunk in chunks:
+                        heading = chunk.get("heading") or f"Section {chunk.get('index', 0)}"
+                        content = chunk.get("content", "")[:500]  # Limit chunk preview
+                        doc_text += f"**{heading}**\n{content}\n\n"
 
                 doc_parts.append(doc_text)
             documents_text = "\n---\n".join(doc_parts)

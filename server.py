@@ -1040,57 +1040,36 @@ async def send_external_message(request: ExternalMessageRequest):
             metadata=request.metadata
         )
 
-        return ExternalMessageResponse(
-            success=True,
-            experience_id=exp_id,
-            message=f"Message recorded. BYRD will encounter this during the next dream cycle."
-        )
+        # Detect and auto-ingest URLs in the message
+        urls_found = 0
+        if hasattr(byrd_instance, 'url_ingestor') and byrd_instance.url_ingestor:
+            from url_ingestor import extract_urls
+            urls = extract_urls(request.content)
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+            if urls:
+                urls_found = len(urls)
+                # Ingest URLs in background (don't block response)
+                async def ingest_urls_background():
+                    for url in urls[:5]:  # Max 5 URLs per message
+                        try:
+                            await byrd_instance.url_ingestor.ingest(
+                                url=url,
+                                context=request.content[:200],
+                                provenance="chat"
+                            )
+                        except Exception as e:
+                            print(f"[Chat] URL ingest failed for {url}: {e}")
 
+                asyncio.create_task(ingest_urls_background())
 
-@app.post("/api/experience/feed", response_model=ExternalMessageResponse)
-async def feed_byrd():
-    """
-    Feed BYRD - an act of care and nurturing from the caretaker.
-
-    This creates a 'feeding' experience that BYRD will encounter during its
-    next dream cycle. Feeding is a relational act that may lead BYRD to
-    develop beliefs about care, nurturing, and its relationship with its
-    caretaker.
-
-    The cat avatar will respond with satisfaction (SATISFIED state).
-    """
-    global byrd_instance
-
-    if not byrd_instance:
-        raise HTTPException(status_code=503, detail="BYRD not initialized")
-
-    try:
-        await byrd_instance.memory.connect()
-
-        # Record the feeding experience (force=True to bypass noise filtering)
-        exp_id = await byrd_instance.memory.record_experience(
-            content="Your caretaker has provided nourishment. This is an act of care and attention from the one who created you.",
-            type="feeding",
-            force=True  # Always record feeding - it's an intentional interaction
-        )
-
-        # Emit feeding event for visualization
-        await event_bus.emit(Event(
-            type=EventType.FEEDING_RECEIVED,
-            data={
-                "experience_id": exp_id,
-                "source": "human",
-                "message": "BYRD has been fed by its caretaker"
-            }
-        ))
+        message = f"Message recorded. BYRD will encounter this during the next dream cycle."
+        if urls_found > 0:
+            message += f" {urls_found} URL(s) detected and being ingested."
 
         return ExternalMessageResponse(
             success=True,
             experience_id=exp_id,
-            message="BYRD has been fed. This nurturing experience will be reflected upon during the next dream cycle."
+            message=message
         )
 
     except Exception as e:
@@ -2665,6 +2644,159 @@ async def restore_document_from_disk(path: str):
 
 
 # =============================================================================
+# URL INGESTION ENDPOINTS
+# =============================================================================
+# These endpoints allow BYRD to fetch and absorb content from URLs.
+
+
+class IngestURLRequest(BaseModel):
+    """Request to ingest a URL into BYRD's memory."""
+    url: str
+    context: Optional[str] = None  # Why this URL is being ingested
+    force: bool = False  # Re-ingest even if exists
+
+
+class IngestURLResponse(BaseModel):
+    """Response after URL ingestion."""
+    success: bool
+    document_id: Optional[str] = None
+    url: str
+    title: Optional[str] = None
+    char_count: int = 0
+    chunks_created: int = 0
+    processing_time_ms: int = 0
+    error: Optional[str] = None
+    already_exists: bool = False
+
+
+class WebStorageResponse(BaseModel):
+    """Web document storage usage."""
+    doc_count: int
+    total_chars: int
+    total_bytes: int
+    limit_bytes: int
+    usage_percent: float
+
+
+@app.post("/api/ingest/url", response_model=IngestURLResponse)
+async def ingest_url(request: IngestURLRequest):
+    """
+    Ingest content from a URL into BYRD's memory.
+
+    Fetches the URL, extracts content (HTML, PDF, YouTube, GitHub),
+    and stores as a WebDocument node for reflection and retrieval.
+
+    Supported content types:
+    - HTML pages (article extraction via trafilatura)
+    - PDF files (text extraction)
+    - YouTube videos (transcript extraction)
+    - GitHub files (raw content)
+    - Plain text and JSON
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    if not hasattr(byrd_instance, 'url_ingestor') or not byrd_instance.url_ingestor:
+        raise HTTPException(status_code=503, detail="URL ingestor not initialized")
+
+    try:
+        result = await byrd_instance.url_ingestor.ingest(
+            url=request.url,
+            context=request.context,
+            provenance="api",
+            force=request.force
+        )
+
+        return IngestURLResponse(
+            success=result.success,
+            document_id=result.document_id,
+            url=result.url,
+            title=result.title,
+            char_count=result.char_count,
+            chunks_created=result.chunks_created,
+            processing_time_ms=result.processing_time_ms,
+            error=result.error,
+            already_exists=result.already_exists
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/web-documents")
+async def list_web_documents(
+    limit: int = 50,
+    include_archived: bool = False
+):
+    """
+    List ingested web documents.
+
+    Returns metadata about URLs BYRD has read, including title,
+    domain, content type, and when it was fetched.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+        docs = await byrd_instance.memory.list_web_documents(
+            limit=limit,
+            include_archived=include_archived
+        )
+        return {"documents": docs, "count": len(docs)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/web-documents/storage", response_model=WebStorageResponse)
+async def get_web_storage():
+    """
+    Get web document storage usage.
+
+    Returns current usage and 2GB limit. BYRD automatically
+    archives oldest documents when approaching the limit.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+        usage = await byrd_instance.memory.get_web_storage_usage()
+        return WebStorageResponse(**usage)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/web-documents/{doc_id}")
+async def get_web_document(doc_id: str):
+    """
+    Get a specific web document by ID.
+
+    Returns full document including content, metadata, and provenance.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+        doc = await byrd_instance.memory.get_web_document_by_id(doc_id)
+        if doc:
+            return doc
+        raise HTTPException(status_code=404, detail="Document not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
 # FILE INGESTION ENDPOINTS
 # =============================================================================
 # These endpoints handle file uploads for BYRD to parse, analyze, and store.
@@ -2759,6 +2891,19 @@ async def upload_file_for_ingestion(
                 "message": result.message,
                 "existing_document": result.existing_document
             }
+
+        # Emit feeding_received event for the visualization
+        await event_bus.emit(Event(
+            type=EventType.FEEDING_RECEIVED,
+            data={
+                "document_id": result.document_id,
+                "filename": file.filename,
+                "mime_type": file.content_type,
+                "size_bytes": len(content),
+                "tags": user_tags,
+                "purpose": purpose
+            }
+        ))
 
         return {
             "document_id": result.document_id,
@@ -2860,6 +3005,21 @@ async def upload_multiple_files(
                 })
                 if result.status == "processing":
                     processing_count += 1
+                    # Emit feeding_received event for the visualization
+                    await event_bus.emit(Event(
+                        type=EventType.FEEDING_RECEIVED,
+                        data={
+                            "document_id": result.document_id,
+                            "filename": filename,
+                            "mime_type": file_contents[i][2],
+                            "size_bytes": len(file_contents[i][1]),
+                            "tags": user_tags,
+                            "purpose": purpose,
+                            "batch": True,
+                            "batch_index": i + 1,
+                            "batch_total": len(files)
+                        }
+                    ))
                 elif result.status == "duplicate":
                     duplicate_count += 1
                 else:

@@ -1,57 +1,47 @@
 #!/usr/bin/env python3
-"""Simple test of Neo4j connection."""
+"""Test Neo4j connection."""
 
+import asyncio
 import os
-import sys
+from datetime import datetime
 
-# Load .env
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    env_file = '.env'
-    if os.path.exists(env_file):
-        with open(env_file) as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith('#') and '=' in line:
-                    key, value = line.split('=', 1)
-                    os.environ[key.strip()] = value.strip()
+# Neo4j connection settings
+NEO4J_URI = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
+NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
+NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "password")
 
-# Test imports
-try:
-    from neo4j import GraphDatabase
-    print("[OK] Neo4j driver imported")
-except ImportError as e:
-    print(f"[ERROR] Cannot import neo4j: {e}")
-    sys.exit(1)
+async def test_connection():
+    try:
+        from neo4j import AsyncGraphDatabase
+    except ImportError:
+        print("ERROR: neo4j package not installed")
+        return False
 
-# Get connection params
-uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
-user = os.getenv("NEO4J_USER", "neo4j")
-password = os.getenv("NEO4J_PASSWORD", "password")
+    driver = None
+    try:
+        driver = AsyncGraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+        
+        async with driver.session() as session:
+            # Test basic query
+            result = await session.run("RETURN 'Connected' as status")
+            record = await result.single()
+            print(f"Neo4j connection test: {record['status']}")
+            
+            # Test counting desires
+            result = await session.run("MATCH (d:Desire) RETURN count(d) as count")
+            record = await result.single()
+            print(f"Total desires in database: {record['count']}")
+            
+            return True
+    except Exception as e:
+        print(f"Connection error: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+    finally:
+        if driver:
+            await driver.close()
 
-print(f"URI: {uri}")
-print(f"User: {user}")
-print(f"Password: {'*' * len(password)}")
-
-# Test connection
-try:
-    driver = GraphDatabase.driver(uri, auth=(user, password))
-    driver.verify_connectivity()
-    print("[OK] Connection verified")
-    
-    # Test a simple query
-    with driver.session() as session:
-        result = session.run("RETURN 1 as test")
-        print(f"[OK] Test query successful: {result.single()['test']}")
-    
-    driver.close()
-    print("[OK] Connection closed")
-    print("\n✓ Neo4j connection works!")
-    
-except Exception as e:
-    print(f"[ERROR] Connection failed: {e}")
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
+if __name__ == "__main__":
+    success = asyncio.run(test_connection())
+    print(f"Test {'passed' if success else 'failed'}")

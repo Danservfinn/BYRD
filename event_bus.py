@@ -39,7 +39,7 @@ class EventType(Enum):
 
     # External input events (communication from outside BYRD)
     EXTERNAL_INPUT_RECEIVED = "external_input_received"  # Message/media from external source
-    FEEDING_RECEIVED = "feeding_received"  # Nurturing/care act from caretaker
+    FEEDING_RECEIVED = "feeding_received"  # File/knowledge fed to BYRD
 
     # Dynamic ontology events (BYRD evolving its own node types)
     NODE_TYPE_DISCOVERED = "node_type_discovered"  # First use of a new node type
@@ -117,6 +117,11 @@ class EventType(Enum):
     QUANTUM_FALLBACK = "quantum_fallback"          # Switched to classical entropy
     QUANTUM_MOMENT_CREATED = "quantum_moment_created"  # Significant moment recorded
     QUANTUM_COLLAPSE = "quantum_collapse"          # Multi-stream collapsed to one reality
+
+    # URL ingestion events (web content absorption)
+    URL_INGEST_STARTED = "url_ingest_started"      # Starting to fetch URL
+    URL_INGEST_COMPLETE = "url_ingest_complete"    # URL successfully ingested
+    URL_INGEST_FAILED = "url_ingest_failed"        # URL ingestion failed
 
     # Error events (for debugging)
     LLM_ERROR = "llm_error"                        # LLM call failed

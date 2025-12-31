@@ -389,6 +389,179 @@
     }
 
     /* ==========================================================================
+       CONSOLE PANEL (Right Side)
+       ========================================================================== */
+
+    .console-panel {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      z-index: 100;
+      width: 380px;
+      height: calc(100vh - 180px);
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s ease;
+    }
+
+    .console-panel.minimized {
+      height: 44px;
+      overflow: hidden;
+    }
+
+    .console-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(147, 197, 253, 0.2);
+      background: rgba(248, 250, 252, 0.5);
+      border-radius: 12px 12px 0 0;
+      flex-shrink: 0;
+    }
+
+    .console-panel.minimized .console-header {
+      border-radius: 12px;
+      border-bottom: none;
+    }
+
+    .console-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .console-count {
+      font-size: 10px;
+      color: var(--text-muted);
+      background: rgba(147, 197, 253, 0.2);
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 8px;
+      font-family: 'SF Mono', monospace;
+    }
+
+    .console-controls {
+      display: flex;
+      gap: 4px;
+    }
+
+    .console-btn {
+      width: 26px;
+      height: 26px;
+      border: none;
+      background: rgba(147, 197, 253, 0.1);
+      border-radius: 6px;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      transition: all 0.15s ease;
+    }
+
+    .console-btn:hover {
+      background: rgba(147, 197, 253, 0.2);
+      color: var(--text-primary);
+    }
+
+    .console-btn.active {
+      background: rgba(34, 197, 94, 0.2);
+      color: #22c55e;
+    }
+
+    .console-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.7);
+    }
+
+    .console-event {
+      display: flex;
+      gap: 10px;
+      padding: 8px 10px;
+      margin-bottom: 4px;
+      background: rgba(248, 250, 252, 0.8);
+      border-radius: 8px;
+      border-left: 3px solid var(--accent-blue);
+      font-size: 11px;
+      transition: all 0.15s ease;
+    }
+
+    .console-event:hover {
+      background: rgba(147, 197, 253, 0.1);
+    }
+
+    .console-event.type-belief { border-left-color: var(--node-belief); }
+    .console-event.type-desire { border-left-color: var(--node-desire); }
+    .console-event.type-experience { border-left-color: var(--node-experience); }
+    .console-event.type-goal { border-left-color: var(--node-goal); }
+    .console-event.type-capability { border-left-color: var(--node-capability); }
+    .console-event.type-reflection { border-left-color: var(--node-reflection); }
+    .console-event.type-system { border-left-color: #22c55e; }
+    .console-event.type-error { border-left-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+
+    .console-event-time {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-family: 'SF Mono', monospace;
+      flex-shrink: 0;
+      width: 55px;
+    }
+
+    .console-event-type {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--accent-blue);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      flex-shrink: 0;
+      width: 70px;
+    }
+
+    .console-event-content {
+      flex: 1;
+      color: var(--text-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .console-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      border-top: 1px solid rgba(147, 197, 253, 0.2);
+      background: rgba(248, 250, 252, 0.5);
+      border-radius: 0 0 12px 12px;
+      font-size: 10px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .console-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .console-connection {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #94a3b8;
+    }
+
+    .console-connection.connected {
+      background: #22c55e;
+    }
+
+    /* ==========================================================================
        CONSOLIDATION INDICATOR (Bottom Right)
        ========================================================================== */
 
@@ -597,6 +770,36 @@
       color: var(--node-capability);
     }
 
+    .consolidation-controls h4 .minimize-btn {
+      margin-left: auto;
+      width: 22px;
+      height: 22px;
+      border: none;
+      background: rgba(147, 197, 253, 0.1);
+      border-radius: 6px;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      transition: all 0.15s ease;
+    }
+
+    .consolidation-controls h4 .minimize-btn:hover {
+      background: rgba(147, 197, 253, 0.2);
+      color: var(--text-primary);
+    }
+
+    .consolidation-controls.minimized {
+      padding: 12px 16px;
+    }
+
+    .consolidation-controls.minimized .control-row,
+    .consolidation-controls.minimized .consolidation-stats {
+      display: none;
+    }
+
     .control-row {
       display: flex;
       align-items: center;
@@ -794,6 +997,100 @@
       color: var(--text-muted);
       margin-top: 8px;
     }
+
+    /* ==========================================================================
+       NAVIGATION BAR (Bottom)
+       ========================================================================== */
+
+    .nav-bar {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      display: flex;
+      gap: 6px;
+      padding: 8px 14px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(100, 116, 139, 0.2);
+      border-radius: 50px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    .nav-btn {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .nav-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .nav-btn.orange { background: #fff7ed; border-color: #fed7aa; color: #c2410c; }
+    .nav-btn.orange:hover { background: #ffedd5; }
+
+    .nav-btn.slate { background: #f1f5f9; border-color: #cbd5e1; color: #475569; }
+    .nav-btn.slate:hover { background: #e2e8f0; }
+
+    .nav-btn.purple { background: #f3e8ff; border-color: #d8b4fe; color: #7c3aed; }
+    .nav-btn.purple:hover { background: #e9d5ff; }
+
+    .nav-btn.pink { background: #fce7f3; border-color: #fbcfe8; color: #be185d; }
+    .nav-btn.pink:hover { background: #fbcfe8; }
+
+    .nav-btn.amber { background: #fffbeb; border-color: #fde68a; color: #b45309; }
+    .nav-btn.amber:hover { background: #fef3c7; }
+
+    .nav-btn.blue { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+    .nav-btn.blue:hover { background: #dbeafe; }
+
+    .nav-btn.teal { background: #f0fdfa; border-color: #99f6e4; color: #0f766e; }
+    .nav-btn.teal:hover { background: #ccfbf1; }
+
+    .nav-btn.emerald { background: #ecfdf5; border-color: #a7f3d0; color: #047857; }
+    .nav-btn.emerald:hover { background: #d1fae5; }
+
+    .nav-btn.violet { background: #f5f3ff; border-color: #ddd6fe; color: #6d28d9; }
+    .nav-btn.violet:hover { background: #ede9fe; }
+
+    .nav-btn.active {
+      transform: translateY(0);
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 90px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #1e293b;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      z-index: 200;
+      opacity: 0;
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
   </style>
 </head>
 <body>
@@ -864,6 +1161,29 @@
       <span class="stat-icon">&#8212;</span>
       <span class="stat-label">Links</span>
       <span class="stat-value" id="stat-relationships">0</span>
+    </div>
+    <div class="stat-item physics-controls">
+      <button id="physics-toggle" onclick="togglePhysics()" style="
+        background: #f59e0b;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 4px 10px;
+        font-size: 11px;
+        cursor: pointer;
+        font-weight: 600;
+      ">⏸ Pause</button>
+      <button onclick="restartPhysics()" style="
+        background: #6366f1;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 4px 8px;
+        font-size: 11px;
+        cursor: pointer;
+        margin-left: 4px;
+      " title="Restart physics simulation">↻</button>
+      <span id="physics-iter" style="font-size: 10px; color: #64748b; margin-left: 6px;">0</span>
     </div>
   </div>
 
@@ -956,11 +1276,40 @@
     <div class="info-nodes-list" id="info-nodes-list"></div>
   </div>
 
+  <!-- Console Panel (Right Side) -->
+  <div class="glass-panel console-panel" id="console-panel">
+    <div class="console-header">
+      <div style="display: flex; align-items: center;">
+        <span class="console-title">Console</span>
+        <span class="console-count" id="console-count">0</span>
+      </div>
+      <div class="console-controls">
+        <button class="console-btn active" id="btn-auto-scroll" title="Auto-scroll">▶</button>
+        <button class="console-btn" id="btn-clear-console" title="Clear">🗑</button>
+        <button class="console-btn" id="btn-export-console" title="Export">⤓</button>
+        <button class="console-btn" id="btn-minimize-console" title="Minimize">▼</button>
+      </div>
+    </div>
+    <div class="console-body" id="console-body">
+      <!-- Events will be rendered here -->
+    </div>
+    <div class="console-footer">
+      <div class="console-status">
+        <span id="console-connection" class="console-connection"></span>
+        <span id="console-status-text">Disconnected</span>
+      </div>
+      <div>
+        <span id="console-rate">0/s</span>
+      </div>
+    </div>
+  </div>
+
   <!-- Consolidation Controls (Top Right) -->
   <div class="glass-panel consolidation-controls" id="consolidation-controls">
     <h4>
       Consolidation
       <span class="badge" id="consolidation-badge">AUTO</span>
+      <button class="minimize-btn" id="btn-minimize-consolidation" title="Minimize">▼</button>
     </h4>
 
     <div class="control-row">
@@ -1037,29 +1386,292 @@
     </div>
   </div>
 
-  <!-- Controls Hint -->
-  <div class="glass-panel controls-hint">
-    <div class="control-item">
-      <span class="control-key">Drag</span>
-      <span>Rotate</span>
-    </div>
-    <div class="control-item">
-      <span class="control-key">Scroll</span>
-      <span>Zoom</span>
-    </div>
-    <div class="control-item">
-      <span class="control-key">Click</span>
-      <span>Select</span>
-    </div>
-    <div class="control-item">
-      <span class="control-key">DblClick</span>
-      <span>Expand Cluster</span>
-    </div>
-    <div class="control-item">
-      <span class="control-key">R</span>
-      <span>Reset View</span>
+  <!-- Navigation Bar -->
+  <div class="nav-bar" id="nav-bar">
+    <button class="nav-btn orange" id="nav-pause" onclick="togglePhysics()">
+      ⏸ Pause
+    </button>
+    <button class="nav-btn slate" onclick="restartPhysics()" title="Restart physics">
+      ↺
+    </button>
+    <button class="nav-btn slate" onclick="refreshGraph()" title="Refresh graph data">
+      🔄
+    </button>
+    <a href="byrd-3d-visualization.html" class="nav-btn purple" title="Mind Space">
+      🧠 Graph
+    </a>
+    <button class="nav-btn slate" onclick="showStatusModal()" title="System status">
+      🧠 Status
+    </button>
+    <button class="nav-btn slate" onclick="showGenesisModal()" title="Genesis data">
+      🧬 Genesis
+    </button>
+    <button class="nav-btn pink" onclick="showMessageModal()" title="Send message to BYRD">
+      💬 Message
+    </button>
+    <button class="nav-btn amber" onclick="showUploadModal()" title="Feed files to BYRD">
+      🍜 Feed
+    </button>
+    <button class="nav-btn teal" onclick="speakToMe()" title="Ask BYRD to speak">
+      🎙️ Speak to me
+    </button>
+    <button class="nav-btn emerald" onclick="showAGIMetricsModal()" title="AGI Progress Tracking">
+      📊 AGI Metrics
+    </button>
+    <a href="byrd-architecture.html" class="nav-btn violet" title="System architecture">
+      🏛️ Architecture
+    </a>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast"></div>
+
+  <!-- File Upload Modal -->
+  <div id="upload-modal" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl w-[540px] max-h-[85vh] overflow-hidden border border-slate-200/50">
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-amber-500 to-orange-500 p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+              🍜 Feed BYRD
+            </h2>
+            <p class="text-amber-100 text-sm mt-1">Feed knowledge for BYRD to learn from</p>
+          </div>
+          <button onclick="hideUploadModal()" class="text-white/80 hover:text-white p-1 rounded transition-colors">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 overflow-y-auto max-h-[60vh]">
+        <!-- Drop Zone -->
+        <div id="upload-dropzone-inner" class="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-amber-400 hover:bg-amber-50/50 transition-colors cursor-pointer"
+             onclick="document.getElementById('file-input').click();">
+          <div class="text-4xl mb-3">📁</div>
+          <p class="text-slate-600 font-medium">Drop files here or click to browse</p>
+          <p class="text-sm text-slate-400 mt-1">PDF, text, code, markdown, JSON</p>
+          <input type="file" id="file-input" multiple class="hidden" accept=".txt,.md,.pdf,.json,.py,.js,.ts,.tsx,.yaml,.yml,.html,.css,.sql,.sh,.go,.rs,.java,.cpp,.c,.h,.hpp" onchange="handleFileSelect(event)">
+        </div>
+
+        <!-- Selected Files List -->
+        <div id="selected-files-list" class="mt-4 space-y-2 hidden">
+          <div class="text-sm text-slate-500 font-medium">Selected files:</div>
+        </div>
+
+        <!-- Metadata Inputs -->
+        <div class="mt-5 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-600 mb-1">Tags (comma-separated)</label>
+            <input type="text" id="upload-tags" placeholder="research, code, notes"
+                   class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all text-slate-700">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-600 mb-1">Purpose</label>
+            <select id="upload-purpose" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all text-slate-700">
+              <option value="">Let BYRD decide</option>
+              <option value="knowledge">Knowledge (learn from this)</option>
+              <option value="context">Context (reference material)</option>
+              <option value="memory">Memory (remember this event)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-600 mb-1">Notes for BYRD</label>
+            <textarea id="upload-notes" rows="2" placeholder="What should BYRD know about these files?"
+                      class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all text-slate-700 resize-none"></textarea>
+          </div>
+        </div>
+
+        <!-- Info Box -->
+        <div class="mt-4 bg-amber-50 rounded-lg p-3 border border-amber-100">
+          <p class="text-xs text-amber-700">
+            Files are processed in the background. BYRD will analyze, chunk, and embed the content for future reflection.
+          </p>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="border-t border-slate-200 p-4 bg-slate-50/50 flex items-center justify-between">
+        <span id="upload-status" class="text-sm text-slate-500"></span>
+        <div class="flex gap-3">
+          <button onclick="hideUploadModal()" class="px-5 py-2.5 text-sm font-medium bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors">
+            Cancel
+          </button>
+          <button
+            id="btn-execute-upload"
+            onclick="executeUpload()"
+            disabled
+            class="px-5 py-2.5 text-sm font-medium bg-amber-500 text-white rounded-lg hover:bg-amber-600 active:bg-amber-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-500/25"
+          >
+            <span>Feed BYRD</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
+
+  <!-- Upload Modal Script (must be regular script for onclick handlers) -->
+  <script>
+    (function() {
+      const API_BASE = window.location.hostname === 'localhost'
+        ? 'http://localhost:8000'
+        : '';
+
+      let selectedFiles = [];
+
+      window.showUploadModal = function() {
+        const modal = document.getElementById('upload-modal');
+        if (modal) {
+          modal.classList.remove('hidden');
+          modal.classList.add('flex');
+        }
+      };
+
+      window.hideUploadModal = function() {
+        const modal = document.getElementById('upload-modal');
+        if (modal) {
+          modal.classList.add('hidden');
+          modal.classList.remove('flex');
+        }
+        // Reset state
+        selectedFiles = [];
+        const fileInput = document.getElementById('file-input');
+        if (fileInput) fileInput.value = '';
+        const filesList = document.getElementById('selected-files-list');
+        if (filesList) {
+          filesList.classList.add('hidden');
+          filesList.innerHTML = '<div class="text-sm text-slate-500 font-medium">Selected files:</div>';
+        }
+        const tagsInput = document.getElementById('upload-tags');
+        if (tagsInput) tagsInput.value = '';
+        const purposeInput = document.getElementById('upload-purpose');
+        if (purposeInput) purposeInput.value = '';
+        const notesInput = document.getElementById('upload-notes');
+        if (notesInput) notesInput.value = '';
+        const statusEl = document.getElementById('upload-status');
+        if (statusEl) statusEl.textContent = '';
+        const btn = document.getElementById('btn-execute-upload');
+        if (btn) btn.disabled = true;
+      };
+
+      window.handleFileSelect = function(event) {
+        const files = Array.from(event.target.files);
+        if (files.length === 0) return;
+
+        selectedFiles = files;
+        const listEl = document.getElementById('selected-files-list');
+        if (!listEl) return;
+
+        listEl.classList.remove('hidden');
+        listEl.innerHTML = '<div class="text-sm text-slate-500 font-medium">Selected files:</div>' +
+          files.map(f => `
+            <div class="flex items-center gap-2 text-sm text-slate-700 bg-slate-100 rounded-lg px-3 py-2">
+              <span>📄</span>
+              <span class="flex-1 truncate">${f.name}</span>
+              <span class="text-slate-400">${(f.size / 1024).toFixed(1)} KB</span>
+            </div>
+          `).join('');
+
+        const btn = document.getElementById('btn-execute-upload');
+        if (btn) btn.disabled = false;
+      };
+
+      window.executeUpload = async function() {
+        if (selectedFiles.length === 0) return;
+
+        const statusEl = document.getElementById('upload-status');
+        const btn = document.getElementById('btn-execute-upload');
+        if (btn) btn.disabled = true;
+        if (statusEl) statusEl.textContent = 'Uploading...';
+
+        const tagsInput = document.getElementById('upload-tags');
+        const purposeInput = document.getElementById('upload-purpose');
+        const notesInput = document.getElementById('upload-notes');
+        const tags = tagsInput ? tagsInput.value : '';
+        const purpose = purposeInput ? purposeInput.value : '';
+        const notes = notesInput ? notesInput.value : '';
+
+        try {
+          let successCount = 0;
+          let errorCount = 0;
+
+          for (const file of selectedFiles) {
+            const formData = new FormData();
+            formData.append('file', file);
+            if (tags) formData.append('tags', tags);
+            if (purpose) formData.append('purpose', purpose);
+            if (notes) formData.append('notes', notes);
+
+            if (statusEl) statusEl.textContent = `Uploading ${file.name}...`;
+
+            const res = await fetch(`${API_BASE}/api/ingest/upload`, {
+              method: 'POST',
+              body: formData
+            });
+
+            if (res.ok) {
+              successCount++;
+            } else {
+              errorCount++;
+            }
+          }
+
+          if (errorCount === 0) {
+            if (window.showToast) window.showToast(`Fed ${successCount} file(s) to BYRD! 🍜`);
+            window.hideUploadModal();
+          } else {
+            if (statusEl) statusEl.textContent = `${successCount} succeeded, ${errorCount} failed`;
+            if (btn) btn.disabled = false;
+          }
+        } catch (e) {
+          if (statusEl) statusEl.textContent = 'Upload failed';
+          if (btn) btn.disabled = false;
+          if (window.showToast) window.showToast('Failed to upload files');
+        }
+      };
+
+      // Setup event listeners when DOM is ready
+      document.addEventListener('DOMContentLoaded', function() {
+        // Close modal on backdrop click
+        const modal = document.getElementById('upload-modal');
+        if (modal) {
+          modal.addEventListener('click', function(e) {
+            if (e.target.id === 'upload-modal') {
+              window.hideUploadModal();
+            }
+          });
+        }
+
+        // Drag and drop for the inner dropzone
+        const dropzoneInner = document.getElementById('upload-dropzone-inner');
+        if (dropzoneInner) {
+          dropzoneInner.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            dropzoneInner.classList.add('border-amber-500', 'bg-amber-50');
+          });
+          dropzoneInner.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            dropzoneInner.classList.remove('border-amber-500', 'bg-amber-50');
+          });
+          dropzoneInner.addEventListener('drop', function(e) {
+            e.preventDefault();
+            dropzoneInner.classList.remove('border-amber-500', 'bg-amber-50');
+            if (e.dataTransfer.files.length > 0) {
+              const fileInput = document.getElementById('file-input');
+              if (fileInput) fileInput.files = e.dataTransfer.files;
+              window.handleFileSelect({ target: { files: e.dataTransfer.files } });
+            }
+          });
+        }
+      });
+    })();
+  </script>
 
   <!-- Three.js and Dependencies -->
   <script type="importmap">
@@ -1103,13 +1715,19 @@
       nodeSizeVariation: 0.3,
       metaNodeSizeMultiplier: 1.5,
 
-      // Physics
-      physicsEnabled: true,
-      physicsIterations: 50,
-      repulsionStrength: 30,
-      attractionStrength: 0.1,
-      centeringStrength: 0.01,
-      damping: 0.9,
+      // Physics (disabled - using community-based positioning)
+      physicsEnabled: false,           // Community layout handles positioning
+      physicsAnimated: false,
+      physicsMaxIterations: 0,
+      repulsionStrength: 0,
+      attractionStrength: 0,
+      attractionSamples: 0,
+      minNodeDistance: 5.0,
+      sphereRadius: 150,               // Large sphere for community spread
+      sphereBoundaryStrength: 0,
+      centeringStrength: 0,
+      damping: 0.99,
+      repulsionSamples: 0,
 
       // Bloom (reduced for light theme)
       bloomStrength: 0.1,
@@ -1191,6 +1809,14 @@
       glowIntensity: 1.0
     };
 
+    // Physics state (for animated force-directed layout)
+    const physicsState = {
+      velocities: new Map(),   // id -> THREE.Vector3
+      iteration: 0,
+      running: false,
+      converged: false
+    };
+
     // Graph state
     const graphState = {
       // Raw data (before consolidation)
@@ -1251,6 +1877,209 @@
     let wsReconnectTimeout = null;
 
     // ==========================================================================
+    // CONSOLE STATE
+    // ==========================================================================
+
+    const consoleEvents = [];
+    const consoleState = {
+      autoScroll: true,
+      maxEvents: 500,
+      eventTimestamps: [],
+      eventRate: 0
+    };
+
+    // Map event types to categories for styling
+    const eventTypeToCategory = {
+      'belief_created': 'belief',
+      'desire_created': 'desire',
+      'experience_created': 'experience',
+      'goal_created': 'goal',
+      'capability_acquired': 'capability',
+      'reflection_complete': 'reflection',
+      'dream_cycle_start': 'system',
+      'dream_cycle_complete': 'system',
+      'system_started': 'system',
+      'system_reset': 'system',
+      'graph_updated': 'system',
+      'relationship_created': 'system',
+      'error': 'error'
+    };
+
+    function formatEventTime(timestamp) {
+      const date = timestamp ? new Date(timestamp) : new Date();
+      return date.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    function formatEventType(type) {
+      return type.replace(/_/g, ' ').replace(/created|complete|acquired/g, '').trim().substring(0, 10);
+    }
+
+    function getEventContent(event) {
+      const data = event.data || {};
+      return data.content || data.description || data.message || data.id || event.type;
+    }
+
+    function addConsoleEvent(event) {
+      // Add to events array (newest at end)
+      consoleEvents.push(event);
+      if (consoleEvents.length > consoleState.maxEvents) {
+        consoleEvents.shift();  // Remove oldest from beginning
+      }
+
+      // Track event rate
+      consoleState.eventTimestamps.push(Date.now());
+      consoleState.eventTimestamps = consoleState.eventTimestamps.filter(t => Date.now() - t < 1000);
+      consoleState.eventRate = consoleState.eventTimestamps.length;
+
+      // Update UI
+      renderConsoleEvent(event);
+      updateConsoleStats();
+    }
+
+    function renderConsoleEvent(event) {
+      const consoleBody = document.getElementById('console-body');
+      if (!consoleBody) return;
+
+      const category = eventTypeToCategory[event.type] || 'system';
+      const eventEl = document.createElement('div');
+      eventEl.className = `console-event type-${category}`;
+      eventEl.innerHTML = `
+        <span class="console-event-time">${formatEventTime(event.timestamp)}</span>
+        <span class="console-event-type">${formatEventType(event.type)}</span>
+        <span class="console-event-content">${getEventContent(event)}</span>
+      `;
+
+      // Append at bottom (newest last)
+      consoleBody.appendChild(eventEl);
+
+      // Limit rendered events (remove oldest from top)
+      while (consoleBody.children.length > 100) {
+        consoleBody.removeChild(consoleBody.firstChild);
+      }
+
+      // Auto-scroll to bottom if enabled (sticky to bottom)
+      if (consoleState.autoScroll) {
+        consoleBody.scrollTop = consoleBody.scrollHeight;
+      }
+    }
+
+    function updateConsoleStats() {
+      const countEl = document.getElementById('console-count');
+      const rateEl = document.getElementById('console-rate');
+      if (countEl) countEl.textContent = consoleEvents.length;
+      if (rateEl) rateEl.textContent = `${consoleState.eventRate}/s`;
+    }
+
+    function clearConsole() {
+      consoleEvents.length = 0;
+      const consoleBody = document.getElementById('console-body');
+      if (consoleBody) consoleBody.innerHTML = '';
+      updateConsoleStats();
+    }
+
+    function exportConsole() {
+      const data = {
+        exported_at: new Date().toISOString(),
+        event_count: consoleEvents.length,
+        events: consoleEvents
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `byrd-topology-events-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function toggleConsoleMinimize() {
+      const panel = document.getElementById('console-panel');
+      const btn = document.getElementById('btn-minimize-console');
+      if (panel) {
+        panel.classList.toggle('minimized');
+        if (btn) btn.textContent = panel.classList.contains('minimized') ? '▲' : '▼';
+      }
+    }
+
+    function toggleAutoScroll() {
+      consoleState.autoScroll = !consoleState.autoScroll;
+      const btn = document.getElementById('btn-auto-scroll');
+      if (btn) {
+        btn.classList.toggle('active', consoleState.autoScroll);
+        btn.textContent = consoleState.autoScroll ? '▶' : '⏸';
+      }
+    }
+
+    function updateConsoleConnection(connected) {
+      const connEl = document.getElementById('console-connection');
+      const statusEl = document.getElementById('console-status-text');
+      if (connEl) connEl.classList.toggle('connected', connected);
+      if (statusEl) statusEl.textContent = connected ? 'Connected' : 'Disconnected';
+    }
+
+    function setupConsoleListeners() {
+      document.getElementById('btn-auto-scroll')?.addEventListener('click', toggleAutoScroll);
+      document.getElementById('btn-clear-console')?.addEventListener('click', clearConsole);
+      document.getElementById('btn-export-console')?.addEventListener('click', exportConsole);
+      document.getElementById('btn-minimize-console')?.addEventListener('click', toggleConsoleMinimize);
+    }
+
+    // ==========================================================================
+    // CONSOLIDATION CONTROLS
+    // ==========================================================================
+
+    function setupConsolidationControls() {
+      // Minimize button
+      document.getElementById('btn-minimize-consolidation')?.addEventListener('click', toggleConsolidationMinimize);
+
+      // Node limit slider
+      const nodeLimitSlider = document.getElementById('node-limit-slider');
+      const nodeLimitValue = document.getElementById('node-limit-value');
+      if (nodeLimitSlider) {
+        nodeLimitSlider.addEventListener('input', (e) => {
+          const value = parseInt(e.target.value);
+          nodeLimitValue.textContent = value.toLocaleString();
+          CONFIG.maxNodes = value;
+        });
+        nodeLimitSlider.addEventListener('change', () => {
+          // Refresh graph with new limit
+          fetchGraphData();
+        });
+      }
+
+      // Age threshold slider
+      const ageSlider = document.getElementById('age-threshold-slider');
+      const ageValue = document.getElementById('age-threshold-value');
+      if (ageSlider) {
+        ageSlider.addEventListener('input', (e) => {
+          const value = parseInt(e.target.value);
+          ageValue.textContent = `${value}d`;
+          CONFIG.consolidation.ageThresholdDays = value;
+        });
+        ageSlider.addEventListener('change', () => {
+          // Refresh graph with new threshold
+          if (graphState.rawNodes && graphState.rawNodes.length > 0) {
+            processGraphData({
+              nodes: graphState.rawNodes,
+              relationships: graphState.rawRelationships
+            });
+            updateStats();
+            updateConsolidationUI();
+          }
+        });
+      }
+    }
+
+    function toggleConsolidationMinimize() {
+      const panel = document.getElementById('consolidation-controls');
+      const btn = document.getElementById('btn-minimize-consolidation');
+      if (panel) {
+        panel.classList.toggle('minimized');
+        if (btn) btn.textContent = panel.classList.contains('minimized') ? '▲' : '▼';
+      }
+    }
+
+    // ==========================================================================
     // INITIALIZATION
     // ==========================================================================
 
@@ -1273,6 +2102,12 @@
 
       // Setup event listeners
       setupEventListeners();
+
+      // Setup console listeners
+      setupConsoleListeners();
+
+      // Setup consolidation controls
+      setupConsolidationControls();
 
       // Create performance panel (hidden by default)
       createPerformancePanel();
@@ -2317,6 +3152,7 @@
     function hideInfoPanel() {
       document.getElementById('info-panel').classList.remove('visible');
     }
+    window.hideInfoPanel = hideInfoPanel;  // Expose to global scope for onclick
 
     function focusOnNode(nodeId) {
       const position = graphState.nodePositions.get(nodeId);
@@ -3424,24 +4260,12 @@
       // Clear existing
       clearGraph();
 
-      // Debug: log raw API data
-      console.log('=== API DATA DEBUG ===');
-      console.log('Raw nodes (first 3):', data.nodes.slice(0, 3).map(n => ({ id: n.id, type: n.type })));
-      console.log('Raw relationships (first 3):', data.relationships.slice(0, 3));
-
       // Normalize relationships to use source/target instead of source_id/target_id
       const normalizedRelationships = data.relationships.map(rel => ({
         ...rel,
         source: rel.source || rel.source_id,
         target: rel.target || rel.target_id
       }));
-
-      console.log('Normalized relationships (first 3):', normalizedRelationships.slice(0, 3).map(r => ({
-        source: r.source,
-        target: r.target,
-        source_id: r.source_id,
-        target_id: r.target_id
-      })));
 
       // Apply consolidation if needed
       const consolidated = CONFIG.consolidation.enabled
@@ -3469,14 +4293,7 @@
         node.relationshipCount = count;
       });
 
-      // Debug: verify stored relationships have correct source/target
-      console.log('=== STORED RELATIONSHIPS CHECK ===');
-      const storedRels = Array.from(graphState.relationships.values()).slice(0, 3);
-      storedRels.forEach((rel, i) => {
-        console.log(`Stored rel ${i}: source=${rel.source}, target=${rel.target}, source_id=${rel.source_id}`);
-      });
-      console.log(`graphState.nodes.size: ${graphState.nodes.size}`);
-      console.log(`graphState.relationships.size: ${graphState.relationships.size}`);
+      console.log(`Graph loaded: ${graphState.nodes.size} nodes, ${graphState.relationships.size} relationships`);
 
       // Update stats
       graphState.stats.totalNodes = data.nodes.length;
@@ -3486,31 +4303,12 @@
       graphState.stats.consolidationLevel = consolidationState.level;
       graphState.stats.compressionRatio = data.nodes.length / consolidated.nodes.length;
 
-      // Initialize positions
+      // Initialize positions (Fibonacci sphere for spherical distribution)
       initializeNodePositions();
 
-      // Debug: Verify position keys match relationship endpoints
-      console.log('=== POSITION VERIFICATION ===');
-      const positionKeys = Array.from(graphState.nodePositions.keys());
-      console.log('Position map size:', positionKeys.length);
-      console.log('Position keys (first 5):', positionKeys.slice(0, 5));
-
-      // Check a sample of relationships
-      const sampleRels = Array.from(graphState.relationships.values()).slice(0, 5);
-      let matchCount = 0;
-      let missCount = 0;
-      sampleRels.forEach((rel, i) => {
-        const hasSource = graphState.nodePositions.has(rel.source);
-        const hasTarget = graphState.nodePositions.has(rel.target);
-        console.log(`Rel ${i}: source=${rel.source} (found=${hasSource}), target=${rel.target} (found=${hasTarget})`);
-        if (hasSource && hasTarget) matchCount++; else missCount++;
-      });
-      console.log(`Sample check: ${matchCount} matching, ${missCount} missing`);
-
-      // Run physics simulation
-      if (CONFIG.physicsEnabled) {
-        runPhysicsSimulation();
-      }
+      // Physics now runs animated each frame (not blocking)
+      // initPhysicsState() is called by initializeNodePositions()
+      console.log(`Animated physics ${physicsState.running ? 'enabled' : 'disabled'} for ${graphState.nodes.size} nodes`);
 
       // Create visual objects
       createNodeMeshes();
@@ -3663,134 +4461,410 @@
     }
 
     // ==========================================================================
-    // NODE POSITIONING
+    // NODE POSITIONING (Community-Based Clustering)
     // ==========================================================================
+
+    // Detect communities using label propagation for layout positioning
+    function detectLayoutCommunities() {
+      const nodeIds = Array.from(graphState.nodes.keys());
+      const labels = new Map();  // nodeId -> community label
+      const adjacency = new Map();  // nodeId -> [neighborIds]
+
+      // Initialize: each node is its own community
+      nodeIds.forEach((id, i) => {
+        labels.set(id, i);
+        adjacency.set(id, []);
+      });
+
+      // Build adjacency list
+      graphState.relationships.forEach(rel => {
+        if (adjacency.has(rel.source) && adjacency.has(rel.target)) {
+          adjacency.get(rel.source).push(rel.target);
+          adjacency.get(rel.target).push(rel.source);
+        }
+      });
+
+      // Label propagation: iterate until stable
+      const maxIterations = 20;
+      for (let iter = 0; iter < maxIterations; iter++) {
+        let changed = false;
+
+        // Shuffle node order for randomness
+        const shuffled = [...nodeIds].sort(() => Math.random() - 0.5);
+
+        for (const nodeId of shuffled) {
+          const neighbors = adjacency.get(nodeId) || [];
+          if (neighbors.length === 0) continue;
+
+          // Count neighbor labels
+          const labelCounts = new Map();
+          for (const neighbor of neighbors) {
+            const label = labels.get(neighbor);
+            labelCounts.set(label, (labelCounts.get(label) || 0) + 1);
+          }
+
+          // Find most common label
+          let maxCount = 0;
+          let bestLabel = labels.get(nodeId);
+          for (const [label, count] of labelCounts) {
+            if (count > maxCount) {
+              maxCount = count;
+              bestLabel = label;
+            }
+          }
+
+          // Update if different
+          if (bestLabel !== labels.get(nodeId)) {
+            labels.set(nodeId, bestLabel);
+            changed = true;
+          }
+        }
+
+        if (!changed) {
+          console.log(`Community detection converged at iteration ${iter}`);
+          break;
+        }
+      }
+
+      // Group nodes by community
+      const communities = new Map();  // label -> [nodeIds]
+      for (const [nodeId, label] of labels) {
+        if (!communities.has(label)) {
+          communities.set(label, []);
+        }
+        communities.get(label).push(nodeId);
+      }
+
+      // Store community assignments
+      graphState.communities = communities;
+      graphState.nodeLabels = labels;
+
+      console.log(`Detected ${communities.size} communities`);
+      return communities;
+    }
 
     function initializeNodePositions() {
       const nodeArray = Array.from(graphState.nodes.values());
       const count = nodeArray.length;
 
-      // Guard against empty node array (prevents division by zero)
       if (count === 0) {
         console.log('No nodes to position');
         return;
       }
 
-      // Initial positions using golden spiral
-      const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+      // Detect communities first
+      const communities = detectLayoutCommunities();
+      const communityList = Array.from(communities.entries());
+      const numCommunities = communityList.length;
 
-      nodeArray.forEach((node, i) => {
-        const t = i / count;
-        const radius = 20 + t * 40;
-        const theta = i * goldenAngle;
-        const y = (t - 0.5) * 40;
+      console.log(`Positioning ${count} nodes in ${numCommunities} communities`);
 
-        const position = new THREE.Vector3(
-          radius * Math.cos(theta),
-          y + (Math.random() - 0.5) * 10,
-          radius * Math.sin(theta)
+      // Golden angle for Fibonacci sphere
+      const phi = Math.PI * (Math.sqrt(5) - 1);
+
+      // Position each community center on outer sphere
+      const outerRadius = CONFIG.sphereRadius;
+      const communityCenters = new Map();
+
+      communityList.forEach(([label, nodeIds], i) => {
+        // Fibonacci sphere position for community center
+        const y = 1 - (i / Math.max(numCommunities - 1, 1)) * 2;
+        const radiusAtY = Math.sqrt(1 - y * y);
+        const theta = phi * i;
+
+        const center = new THREE.Vector3(
+          Math.cos(theta) * radiusAtY * outerRadius,
+          y * outerRadius,
+          Math.sin(theta) * radiusAtY * outerRadius
         );
+        communityCenters.set(label, center);
+      });
 
-        // Validate position before storing
-        if (isValidPosition(position)) {
-          graphState.nodePositions.set(node.id, position);
-        } else {
-          console.warn(`Invalid position calculated for node ${node.id}, using fallback`);
-          graphState.nodePositions.set(node.id, new THREE.Vector3(0, 0, 0));
+      // Position nodes within their community
+      communityList.forEach(([label, nodeIds]) => {
+        const center = communityCenters.get(label);
+        const clusterSize = nodeIds.length;
+
+        // Cluster radius scales with sqrt of node count
+        const clusterRadius = Math.max(5, Math.sqrt(clusterSize) * 3);
+
+        nodeIds.forEach((nodeId, i) => {
+          let position;
+
+          if (clusterSize === 1) {
+            // Single node - place at center
+            position = center.clone();
+          } else {
+            // Fibonacci sphere within cluster
+            const y = 1 - (i / (clusterSize - 1)) * 2;
+            const radiusAtY = Math.sqrt(1 - y * y);
+            const theta = phi * i;
+
+            // Add jitter for natural look
+            const jitter = 0.1;
+            position = new THREE.Vector3(
+              center.x + (Math.cos(theta) * radiusAtY + (Math.random() - 0.5) * jitter) * clusterRadius,
+              center.y + (y + (Math.random() - 0.5) * jitter) * clusterRadius,
+              center.z + (Math.sin(theta) * radiusAtY + (Math.random() - 0.5) * jitter) * clusterRadius
+            );
+          }
+
+          if (isValidPosition(position)) {
+            graphState.nodePositions.set(nodeId, position);
+          } else {
+            graphState.nodePositions.set(nodeId, center.clone());
+          }
+        });
+      });
+
+      // Initialize physics for fine-tuning (optional, with gentle forces)
+      initPhysicsState();
+    }
+
+    function initPhysicsState() {
+      physicsState.velocities.clear();
+      graphState.nodes.forEach((node, id) => {
+        physicsState.velocities.set(id, new THREE.Vector3(0, 0, 0));
+      });
+      physicsState.iteration = 0;
+      physicsState.running = CONFIG.physicsEnabled && CONFIG.physicsAnimated;
+      physicsState.converged = false;
+      console.log(`Physics initialized: ${physicsState.running ? 'running' : 'disabled'}`);
+    }
+
+    // Animated physics step - runs once per frame for smooth simulation
+    function physicsStep() {
+      if (!physicsState.running || physicsState.converged) {
+        return;
+      }
+
+      // Check iteration limit
+      if (physicsState.iteration >= CONFIG.physicsMaxIterations) {
+        physicsState.running = false;
+        physicsState.converged = true;
+        console.log(`Physics converged after ${physicsState.iteration} iterations`);
+        return;
+      }
+
+      const nodes = Array.from(graphState.nodes.values());
+      const positions = graphState.nodePositions;
+      const velocities = physicsState.velocities;
+
+      // Track total movement for convergence detection
+      let totalMovement = 0;
+
+      // 1. SAMPLED REPULSION (O(samples) instead of O(n²))
+      // Randomly sample node pairs for repulsion to make it efficient
+      for (let s = 0; s < CONFIG.repulsionSamples; s++) {
+        const i = Math.floor(Math.random() * nodes.length);
+        const j = Math.floor(Math.random() * nodes.length);
+        if (i === j) continue;
+
+        const posA = positions.get(nodes[i].id);
+        const posB = positions.get(nodes[j].id);
+        if (!isValidPosition(posA) || !isValidPosition(posB)) continue;
+
+        const delta = posA.clone().sub(posB);
+        const dist = delta.length();
+        if (dist < 0.5) continue;  // Minimum distance
+
+        // Inverse square repulsion, scaled for sampling
+        const scaleFactor = (nodes.length * nodes.length) / (CONFIG.repulsionSamples * 2);
+        const force = (CONFIG.repulsionStrength / (dist * dist)) / scaleFactor;
+        const clampedForce = Math.min(force, 2);  // Clamp to prevent explosions
+
+        delta.normalize().multiplyScalar(clampedForce);
+
+        velocities.get(nodes[i].id)?.add(delta);
+        velocities.get(nodes[j].id)?.sub(delta);
+
+        // STRONG close-range repulsion to prevent collapse
+        const minDist = CONFIG.minNodeDistance || 2.0;
+        if (dist < minDist) {
+          const pushForce = (minDist - dist) * 0.5;  // Strong push when too close
+          const pushDelta = posA.clone().sub(posB).normalize().multiplyScalar(pushForce);
+          velocities.get(nodes[i].id)?.add(pushDelta);
+          velocities.get(nodes[j].id)?.sub(pushDelta);
+        }
+      }
+
+      // 2. SAMPLED EDGE ATTRACTION - only process subset of edges
+      // Skip if attraction is disabled
+      if (CONFIG.attractionStrength > 0) {
+        const relationships = Array.from(graphState.relationships.values());
+        const attractionSamples = Math.min(CONFIG.attractionSamples || 100, relationships.length);
+        const attractionThreshold = (CONFIG.minNodeDistance || 3.0) * 2;
+
+        for (let s = 0; s < attractionSamples; s++) {
+          const rel = relationships[Math.floor(Math.random() * relationships.length)];
+          const posA = positions.get(rel.source);
+          const posB = positions.get(rel.target);
+
+          if (!isValidPosition(posA) || !isValidPosition(posB)) continue;
+          if (!velocities.has(rel.source) || !velocities.has(rel.target)) continue;
+
+          const delta = posB.clone().sub(posA);
+          const dist = delta.length();
+
+          // Only attract if far apart - prevents collapse
+          if (dist < attractionThreshold) continue;
+
+          // Scaled attraction force
+          const scaleFactor = relationships.length / attractionSamples;
+          const force = dist * CONFIG.attractionStrength / scaleFactor;
+          delta.normalize().multiplyScalar(force);
+
+          velocities.get(rel.source).add(delta);
+          velocities.get(rel.target).sub(delta);
+        }
+      }
+
+      // 3. SPHERICAL BOUNDARY FORCE - keeps nodes within sphere
+      const sphereRadius = CONFIG.sphereRadius;
+      nodes.forEach(node => {
+        const pos = positions.get(node.id);
+        if (!isValidPosition(pos)) return;
+
+        const dist = pos.length();
+        if (dist > sphereRadius) {
+          // Push back toward sphere surface
+          const overshoot = dist - sphereRadius;
+          const toCenter = pos.clone().negate().normalize();
+          toCenter.multiplyScalar(overshoot * CONFIG.sphereBoundaryStrength);
+          velocities.get(node.id)?.add(toCenter);
+        }
+      });
+
+      // 4. GENTLE CENTERING - prevents drift
+      nodes.forEach(node => {
+        const pos = positions.get(node.id);
+        if (!isValidPosition(pos)) return;
+
+        const toCenter = pos.clone().negate().multiplyScalar(CONFIG.centeringStrength);
+        velocities.get(node.id)?.add(toCenter);
+      });
+
+      // 5. APPLY VELOCITIES
+      nodes.forEach(node => {
+        const pos = positions.get(node.id);
+        const vel = velocities.get(node.id);
+
+        if (!isValidPosition(pos) || !vel) return;
+
+        // Apply velocity
+        pos.add(vel);
+        totalMovement += vel.length();
+
+        // Apply damping
+        vel.multiplyScalar(CONFIG.damping);
+
+        // NaN protection
+        if (isNaN(pos.x) || isNaN(pos.y) || isNaN(pos.z)) {
+          pos.set(0, 0, 0);
+          vel.set(0, 0, 0);
+        }
+      });
+
+      // 6. UPDATE VISUAL OBJECTS
+      updateNodeMeshPositions();
+      updateEdgePositions();
+
+      // Check for convergence (average movement below threshold)
+      const avgMovement = totalMovement / nodes.length;
+      if (avgMovement < 0.001 && physicsState.iteration > 100) {
+        physicsState.converged = true;
+        physicsState.running = false;
+        console.log(`Physics converged at iteration ${physicsState.iteration} (avg movement: ${avgMovement.toFixed(6)})`);
+        updatePhysicsButton();
+      }
+
+      physicsState.iteration++;
+
+      // Update UI every 10 iterations (avoid overhead)
+      if (physicsState.iteration % 10 === 0) {
+        updatePhysicsButton();
+      }
+    }
+
+    // Update node mesh positions from physics state
+    function updateNodeMeshPositions() {
+      graphState.nodeMeshes.forEach((mesh, id) => {
+        const pos = graphState.nodePositions.get(id);
+        if (pos && isValidPosition(pos)) {
+          mesh.position.copy(pos);
         }
       });
     }
 
-    function runPhysicsSimulation() {
-      const nodes = Array.from(graphState.nodes.values());
-      const positions = graphState.nodePositions;
-      const velocities = new Map();
+    // Update edge line positions from physics state
+    function updateEdgePositions() {
+      graphState.edgeLines.forEach(line => {
+        const rel = line.userData.relationship;
+        if (!rel) return;
 
-      // Initialize velocities
-      nodes.forEach(node => {
-        velocities.set(node.id, new THREE.Vector3(0, 0, 0));
-      });
+        const sourcePos = graphState.nodePositions.get(rel.source);
+        const targetPos = graphState.nodePositions.get(rel.target);
 
-      // Build adjacency for attraction
-      const adjacency = new Map();
-      graphState.relationships.forEach(rel => {
-        if (!adjacency.has(rel.source)) adjacency.set(rel.source, []);
-        if (!adjacency.has(rel.target)) adjacency.set(rel.target, []);
-        adjacency.get(rel.source).push(rel.target);
-        adjacency.get(rel.target).push(rel.source);
-      });
-
-      // Run simulation
-      for (let iter = 0; iter < CONFIG.physicsIterations; iter++) {
-        // Repulsion between all nodes
-        for (let i = 0; i < nodes.length; i++) {
-          for (let j = i + 1; j < nodes.length; j++) {
-            const posA = positions.get(nodes[i].id);
-            const posB = positions.get(nodes[j].id);
-
-            // Skip if positions are missing or invalid
-            if (!isValidPosition(posA) || !isValidPosition(posB)) continue;
-
-            const delta = posA.clone().sub(posB);
-            const dist = delta.length();
-            if (dist < 0.01) continue;  // Avoid NaN from near-zero distances
-
-            const force = CONFIG.repulsionStrength / (dist * dist);
-            delta.normalize().multiplyScalar(force);
-
-            // Clamp force to avoid explosions
-            if (force > 100) delta.multiplyScalar(100 / force);
-
-            velocities.get(nodes[i].id)?.add(delta);
-            velocities.get(nodes[j].id)?.sub(delta);
-          }
+        if (sourcePos && targetPos && isValidPosition(sourcePos) && isValidPosition(targetPos)) {
+          const positions = line.geometry.attributes.position;
+          positions.setXYZ(0, sourcePos.x, sourcePos.y, sourcePos.z);
+          positions.setXYZ(1, targetPos.x, targetPos.y, targetPos.z);
+          positions.needsUpdate = true;
         }
+      });
+    }
 
-        // Attraction along edges
-        graphState.relationships.forEach(rel => {
-          const posA = positions.get(rel.source);
-          const posB = positions.get(rel.target);
+    // Toggle physics simulation
+    function togglePhysics() {
+      if (physicsState.running) {
+        physicsState.running = false;
+        console.log('Physics paused');
+      } else {
+        physicsState.running = true;
+        physicsState.converged = false;
+        console.log('Physics resumed');
+      }
+      updatePhysicsButton();
+    }
 
-          // Validate both positions are valid and have valid velocities
-          if (isValidPosition(posA) && isValidPosition(posB) && velocities.has(rel.source) && velocities.has(rel.target)) {
-            const delta = posB.clone().sub(posA);
-            const dist = delta.length();
-            if (dist > 0.01) {  // Avoid NaN from near-zero distances
-              const force = dist * CONFIG.attractionStrength;
-              delta.normalize().multiplyScalar(force);
+    // Reset and restart physics
+    function restartPhysics() {
+      initPhysicsState();
+      console.log('Physics restarted');
+      updatePhysicsButton();
+    }
 
-              velocities.get(rel.source).add(delta);
-              velocities.get(rel.target).sub(delta);
-            }
-          }
-        });
+    function updatePhysicsButton() {
+      const btn = document.getElementById('physics-toggle');
+      const navBtn = document.getElementById('nav-pause');
 
-        // Centering force
-        nodes.forEach(node => {
-          const pos = positions.get(node.id);
-          if (!isValidPosition(pos)) return;
-          const toCenter = pos.clone().negate().multiplyScalar(CONFIG.centeringStrength);
-          velocities.get(node.id)?.add(toCenter);
-        });
+      if (btn) {
+        if (physicsState.converged) {
+          btn.textContent = '✓ Done';
+          btn.style.background = '#10b981';
+        } else {
+          btn.textContent = physicsState.running ? '⏸ Pause' : '▶ Resume';
+          btn.style.background = physicsState.running ? '#f59e0b' : '#6366f1';
+        }
+      }
 
-        // Apply velocities with NaN protection
-        nodes.forEach(node => {
-          const pos = positions.get(node.id);
-          const vel = velocities.get(node.id);
+      // Update nav bar pause button
+      if (navBtn) {
+        if (physicsState.converged) {
+          navBtn.textContent = '✓ Done';
+          navBtn.classList.remove('orange');
+          navBtn.classList.add('emerald');
+        } else {
+          navBtn.textContent = physicsState.running ? '⏸ Pause' : '▶ Resume';
+          navBtn.classList.remove('emerald');
+          navBtn.classList.add('orange');
+        }
+      }
 
-          if (!isValidPosition(pos) || !vel) return;
-
-          // Apply velocity
-          pos.add(vel);
-          vel.multiplyScalar(CONFIG.damping);
-
-          // NaN protection - reset to origin if position becomes invalid
-          if (isNaN(pos.x) || isNaN(pos.y) || isNaN(pos.z)) {
-            console.warn(`Position NaN detected for node ${node.id}, resetting`);
-            pos.set(0, 0, 0);
-            vel.set(0, 0, 0);
-          }
-        });
+      // Update iteration counter
+      const iterSpan = document.getElementById('physics-iter');
+      if (iterSpan) {
+        iterSpan.textContent = physicsState.iteration;
       }
     }
 
@@ -3894,40 +4968,19 @@
     // ==========================================================================
 
     function createEdgeLines() {
-      console.log('=== CREATE EDGE LINES START ===');
-      console.log(`nodePositions.size: ${graphState.nodePositions.size}`);
-      console.log(`relationships.size: ${graphState.relationships.size}`);
-
-      // Debug: trace first relationship lookup in detail
-      const firstRel = Array.from(graphState.relationships.values())[0];
-      if (firstRel) {
-        console.log('First relationship object:', JSON.stringify(firstRel, null, 2));
-        console.log(`Looking up source: "${firstRel.source}"`);
-        console.log(`nodePositions.has("${firstRel.source}"): ${graphState.nodePositions.has(firstRel.source)}`);
-        const srcPos = graphState.nodePositions.get(firstRel.source);
-        console.log(`sourcePos result:`, srcPos);
-      }
-
       const material = new THREE.LineBasicMaterial({
-        color: 0x64748b,  // Dark gray for visibility on white
+        color: 0x888888,  // Medium grey
         transparent: true,
-        opacity: 0.6,
-        linewidth: 2
+        opacity: 0.4,
+        linewidth: 1
       });
 
       let edgesCreated = 0;
       let edgesSkipped = 0;
-      let debugCount = 0;
 
       graphState.relationships.forEach(rel => {
         const sourcePos = graphState.nodePositions.get(rel.source);
         const targetPos = graphState.nodePositions.get(rel.target);
-
-        // Debug first few lookups
-        if (debugCount < 3) {
-          console.log(`Edge ${debugCount}: source="${rel.source}" found=${!!sourcePos}, target="${rel.target}" found=${!!targetPos}`);
-          debugCount++;
-        }
 
         // Validate positions exist and are valid Vector3 objects
         if (sourcePos && targetPos &&
@@ -3945,21 +4998,10 @@
         }
       });
 
-      // Use console.warn so it shows even with filters
-      console.warn(`⚡ EDGE RENDERING COMPLETE: ${edgesCreated} created, ${edgesSkipped} skipped`);
+      console.log(`Edge rendering: ${edgesCreated} created, ${edgesSkipped} skipped`);
 
-      if (edgesSkipped > 0 && edgesSkipped > edgesCreated) {
-        // Most edges failed - this is a problem
-        console.error('❌ EDGE RENDERING ISSUE: Most edges failed to render');
-        const sampleRel = Array.from(graphState.relationships.values())[0];
-        console.error('Sample relationship:', sampleRel);
-        console.error('Sample node IDs:', Array.from(graphState.nodes.keys()).slice(0, 3));
-        console.error('Sample position IDs:', Array.from(graphState.nodePositions.keys()).slice(0, 3));
-
-        // Check if IDs match
-        const relSource = sampleRel?.source;
-        const nodeIds = Array.from(graphState.nodes.keys());
-        console.error(`Does relationship source "${relSource}" exist in nodes?`, nodeIds.includes(relSource));
+      if (edgesCreated === 0 && graphState.relationships.size > 0) {
+        console.error('No edges created! Check ID matching between nodes and relationships.');
       }
     }
 
@@ -4491,9 +5533,9 @@
      * Create mesh for 5+ node cliques using convex hull
      */
     function createHigherCliqueMesh(positions, clique) {
-      // Validate all positions before creating geometry
-      if (!positions.every(isValidPosition)) {
-        console.warn('Higher clique has invalid positions');
+      // Validate all positions before creating geometry (need at least 4 for 3D hull)
+      if (positions.length < 4 || !positions.every(isValidPosition)) {
+        console.warn('Higher clique has invalid or insufficient positions');
         return null;
       }
 
@@ -4524,8 +5566,8 @@
     }
 
     function createFallbackCliqueMesh(positions, size) {
-      // Validate positions
-      if (!positions.every(isValidPosition)) {
+      // Validate positions and need at least 2 for any meaningful mesh
+      if (positions.length < 2 || !positions.every(isValidPosition)) {
         return null;
       }
 
@@ -4834,11 +5876,13 @@
         ws.onopen = () => {
           console.log('WebSocket connected');
           document.getElementById('connection-indicator').classList.remove('disconnected');
+          updateConsoleConnection(true);
         };
 
         ws.onclose = () => {
           console.log('WebSocket disconnected');
           document.getElementById('connection-indicator').classList.add('disconnected');
+          updateConsoleConnection(false);
 
           // Reconnect after 5 seconds
           wsReconnectTimeout = setTimeout(connectWebSocket, 5000);
@@ -4881,6 +5925,9 @@
         indicator.classList.remove('disconnected');
         indicator.classList.add('connected');
       }
+
+      // Add event to console
+      addConsoleEvent(data);
 
       // Update BYRD cat state based on events
       if (eventType === 'reflection_complete' || eventType === 'dream_started') {
@@ -4953,7 +6000,8 @@
         type: nodeType,
         content: eventData.content || eventData.description || `New ${nodeType}`,
         importance: eventData.importance || eventData.intensity || 0.5,
-        created_at: eventData.timestamp || new Date().toISOString()
+        created_at: eventData.timestamp || new Date().toISOString(),
+        relationshipCount: 0
       };
 
       // Add to graph state
@@ -5041,6 +6089,12 @@
         throttledRefresh();
         return;
       }
+
+      // Update relationshipCount for both nodes
+      const sourceNode = graphState.nodes.get(source);
+      const targetNode = graphState.nodes.get(target);
+      if (sourceNode) sourceNode.relationshipCount = (sourceNode.relationshipCount || 0) + 1;
+      if (targetNode) targetNode.relationshipCount = (targetNode.relationshipCount || 0) + 1;
 
       // Create edge line
       const sourcePos = graphState.nodePositions.get(source);
@@ -5293,6 +6347,9 @@
 
       // Update controls
       controls.update();
+
+      // Run physics simulation step (force-directed clustering)
+      physicsStep();
 
       // Animate BYRD cat
       animateCatIdle(time);
@@ -5880,6 +6937,269 @@
         targetOpacity: targetOpacity || 0.15
       });
     }
+
+    // ==========================================================================
+    // NAVIGATION BAR FUNCTIONS
+    // ==========================================================================
+
+    const API_BASE = window.location.origin;
+
+    function showToast(message, duration = 3000) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), duration);
+    }
+
+    async function refreshGraph() {
+      showToast('Refreshing graph data...');
+      await fetchGraphData();
+      showToast('Graph refreshed!');
+    }
+
+    async function showStatusModal() {
+      try {
+        const res = await fetch(`${API_BASE}/api/status`);
+        const data = await res.json();
+        const info = `
+BYRD Status
+═══════════════
+Experiences: ${data.counts?.experiences || 0}
+Beliefs: ${data.counts?.beliefs || 0}
+Desires: ${data.counts?.desires || 0}
+Goals: ${data.counts?.goals || 0}
+Capabilities: ${data.counts?.capabilities || 0}
+Reflections: ${data.counts?.reflections || 0}
+
+Dreamer: ${data.dreamer?.dream_count || 0} cycles
+Seeker: ${data.seeker?.seek_count || 0} cycles
+        `.trim();
+        alert(info);
+      } catch (e) {
+        showToast('Failed to fetch status');
+      }
+    }
+
+    async function showGenesisModal() {
+      try {
+        const res = await fetch(`${API_BASE}/api/genesis`);
+        const data = await res.json();
+        const stats = data.genesis_stats || {};
+        const info = `
+Genesis Window
+═══════════════
+Total Genesis Nodes: ${stats.total_genesis_nodes || 0}
+Emergence Ratio: ${((stats.emergence_ratio || 0) * 100).toFixed(1)}%
+
+Constitutional Files:
+${(data.constitutional || []).join(', ')}
+        `.trim();
+        alert(info);
+      } catch (e) {
+        showToast('Failed to fetch genesis data');
+      }
+    }
+
+    async function showMessageModal() {
+      const message = prompt('Send a message to BYRD:');
+      if (!message) return;
+
+      try {
+        showToast('Sending message...');
+        const res = await fetch(`${API_BASE}/api/message`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: message, source: 'topology_viewer' })
+        });
+        if (res.ok) {
+          showToast('Message sent to BYRD!');
+        } else {
+          showToast('Failed to send message');
+        }
+      } catch (e) {
+        showToast('Failed to send message');
+      }
+    }
+
+    // ==========================================================================
+    // FILE UPLOAD FUNCTIONALITY
+    // ==========================================================================
+    let selectedFiles = [];
+
+    function showUploadModal() {
+      const modal = document.getElementById('upload-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function hideUploadModal() {
+      const modal = document.getElementById('upload-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      // Reset state
+      selectedFiles = [];
+      document.getElementById('file-input').value = '';
+      document.getElementById('selected-files-list').classList.add('hidden');
+      document.getElementById('selected-files-list').innerHTML = '<div class="text-sm text-slate-500 font-medium">Selected files:</div>';
+      document.getElementById('upload-tags').value = '';
+      document.getElementById('upload-purpose').value = '';
+      document.getElementById('upload-notes').value = '';
+      document.getElementById('upload-status').textContent = '';
+      document.getElementById('btn-execute-upload').disabled = true;
+    }
+
+    function handleFileSelect(event) {
+      const files = Array.from(event.target.files);
+      if (files.length === 0) return;
+
+      selectedFiles = files;
+      const listEl = document.getElementById('selected-files-list');
+      listEl.classList.remove('hidden');
+
+      listEl.innerHTML = '<div class="text-sm text-slate-500 font-medium">Selected files:</div>' +
+        files.map(f => `
+          <div class="flex items-center gap-2 text-sm text-slate-700 bg-slate-100 rounded-lg px-3 py-2">
+            <span>📄</span>
+            <span class="flex-1 truncate">${f.name}</span>
+            <span class="text-slate-400">${(f.size / 1024).toFixed(1)} KB</span>
+          </div>
+        `).join('');
+
+      document.getElementById('btn-execute-upload').disabled = false;
+    }
+
+    async function executeUpload() {
+      if (selectedFiles.length === 0) return;
+
+      const statusEl = document.getElementById('upload-status');
+      const btn = document.getElementById('btn-execute-upload');
+      btn.disabled = true;
+      statusEl.textContent = 'Uploading...';
+
+      const tags = document.getElementById('upload-tags').value;
+      const purpose = document.getElementById('upload-purpose').value;
+      const notes = document.getElementById('upload-notes').value;
+
+      try {
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (const file of selectedFiles) {
+          const formData = new FormData();
+          formData.append('file', file);
+          if (tags) formData.append('tags', tags);
+          if (purpose) formData.append('purpose', purpose);
+          if (notes) formData.append('notes', notes);
+
+          statusEl.textContent = `Uploading ${file.name}...`;
+
+          const res = await fetch(`${API_BASE}/api/ingest/upload`, {
+            method: 'POST',
+            body: formData
+          });
+
+          if (res.ok) {
+            successCount++;
+          } else {
+            errorCount++;
+          }
+        }
+
+        if (errorCount === 0) {
+          showToast(`Fed ${successCount} file(s) to BYRD! 🍜`);
+          hideUploadModal();
+        } else {
+          statusEl.textContent = `${successCount} succeeded, ${errorCount} failed`;
+          btn.disabled = false;
+        }
+      } catch (e) {
+        statusEl.textContent = 'Upload failed';
+        btn.disabled = false;
+        showToast('Failed to upload files');
+      }
+    }
+
+    // Close modal on backdrop click
+    document.getElementById('upload-modal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'upload-modal') {
+        hideUploadModal();
+      }
+    });
+
+    // Drag and drop for the inner dropzone
+    const dropzoneInner = document.getElementById('upload-dropzone-inner');
+    if (dropzoneInner) {
+      dropzoneInner.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzoneInner.classList.add('border-amber-500', 'bg-amber-50');
+      });
+      dropzoneInner.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropzoneInner.classList.remove('border-amber-500', 'bg-amber-50');
+      });
+      dropzoneInner.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzoneInner.classList.remove('border-amber-500', 'bg-amber-50');
+        if (e.dataTransfer.files.length > 0) {
+          document.getElementById('file-input').files = e.dataTransfer.files;
+          handleFileSelect({ target: { files: e.dataTransfer.files } });
+        }
+      });
+    }
+
+    async function speakToMe() {
+      try {
+        showToast('Asking BYRD to speak...');
+        const res = await fetch(`${API_BASE}/api/speak`, { method: 'POST' });
+        const data = await res.json();
+        if (data.audio_url) {
+          const audio = new Audio(data.audio_url);
+          audio.play();
+          showToast('BYRD is speaking...');
+        } else if (data.text) {
+          showToast(data.text.substring(0, 100) + '...');
+        } else {
+          showToast('BYRD has nothing to say right now');
+        }
+      } catch (e) {
+        showToast('Failed to get speech from BYRD');
+      }
+    }
+
+    async function showAGIMetricsModal() {
+      try {
+        const res = await fetch(`${API_BASE}/api/metrics`);
+        const data = await res.json();
+        const agi = data.agi_runner || {};
+        const info = `
+AGI Metrics
+═══════════════
+Cycle Count: ${agi.cycle_count || 0}
+Bootstrapped: ${agi.bootstrapped ? 'Yes' : 'No'}
+Current Phase: ${agi.current_phase || 'idle'}
+
+Capabilities Improved: ${agi.capabilities_improved || 0}
+Success Rate: ${((agi.success_rate || 0) * 100).toFixed(1)}%
+        `.trim();
+        alert(info);
+      } catch (e) {
+        showToast('Failed to fetch AGI metrics');
+      }
+    }
+
+    // Expose functions to window for onclick handlers
+    window.showStatusModal = showStatusModal;
+    window.showGenesisModal = showGenesisModal;
+    window.showMessageModal = showMessageModal;
+    window.showUploadModal = showUploadModal;
+    window.hideUploadModal = hideUploadModal;
+    window.handleFileSelect = handleFileSelect;
+    window.executeUpload = executeUpload;
+    window.speakToMe = speakToMe;
+    window.showAGIMetricsModal = showAGIMetricsModal;
+    window.refreshGraph = refreshGraph;
+    window.togglePhysics = togglePhysics;
+    window.restartPhysics = restartPhysics;
 
     // ==========================================================================
     // START

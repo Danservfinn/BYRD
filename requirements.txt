@@ -44,3 +44,12 @@ python-multipart>=0.0.6
 
 # PDF text extraction for document processing (optional, graceful fallback)
 PyPDF2>=3.0.0
+
+# URL content extraction for web ingestion
+trafilatura>=1.6.0
+
+# YouTube transcript extraction (optional, graceful fallback)
+youtube-transcript-api>=0.6.0
+
+# PDF extraction alternative with better support (optional)
+pymupdf>=1.23.0

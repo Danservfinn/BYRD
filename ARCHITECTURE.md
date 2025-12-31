@@ -988,6 +988,88 @@ This ensures BYRD always has enough context to function while preventing overflo
 
 ---
 
+## URL Ingestion System
+
+BYRD can absorb web content by fetching URLs and storing them as WebDocument nodes in memory.
+
+### How It Works
+
+```
+URL Input (chat, API, desire)
+         │
+         ▼
+┌────────────────────┐
+│   URLIngestor      │
+│  (url_ingestor.py) │
+│                    │
+│  ┌──────────────┐  │
+│  │ Fetch URL    │  │
+│  └──────────────┘  │
+│         │          │
+│  ┌──────────────┐  │
+│  │ Extract Text │  │
+│  │ (trafilatura)│  │
+│  └──────────────┘  │
+│         │          │
+│  ┌──────────────┐  │
+│  │ Deduplicate  │  │
+│  │ (URL + hash) │  │
+│  └──────────────┘  │
+└────────────────────┘
+         │
+         ▼
+┌────────────────────┐
+│   Memory (Neo4j)   │
+│                    │
+│  Document:WebDoc   │
+│  - url, title      │
+│  - content         │
+│  - content_type    │
+│  - reflected_on    │
+└────────────────────┘
+         │
+         ▼
+    Dreamer reflects
+    (next cycle)
+```
+
+### Content Types Supported
+
+| Type | Source | Extraction Method |
+|------|--------|-------------------|
+| HTML | Web pages | trafilatura |
+| PDF | Documents | PyMuPDF |
+| YouTube | Videos | youtube-transcript-api |
+| GitHub | Repos/files | GitHub API |
+| JSON | APIs | json.loads |
+| Text | Plain text | Direct |
+
+### Input Methods
+
+| Method | Trigger |
+|--------|---------|
+| Chat message | URL detected in text → auto-ingest |
+| API call | `POST /api/ingest/url {"url": "..."}` |
+| Desire-driven | "I want to read https://..." |
+
+### Storage Limits
+
+- **2GB total** storage for web documents
+- Automatic archival of oldest documents when limit reached
+- Per-domain rate limiting (2s between requests)
+- Content deduplication via URL hash and content hash
+
+### API Endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/ingest/url` | Ingest a URL |
+| `GET /api/web-documents` | List all web documents |
+| `GET /api/web-documents/storage` | Storage usage stats |
+| `GET /api/web-documents/{id}` | Get document by ID |
+
+---
+
 ## Constitutional Constraints
 
 ### Protected Files (NEVER Modify)

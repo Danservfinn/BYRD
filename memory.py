@@ -1530,6 +1530,283 @@ class Memory:
             return record and record["created"] > 0
 
     # =========================================================================
+    # WEB DOCUMENTS (URLs fetched and stored)
+    # =========================================================================
+
+    async def store_web_document(
+        self,
+        url: str,
+        title: str,
+        content: str,
+        content_type: str,
+        author: Optional[str] = None,
+        date: Optional[str] = None,
+        description: Optional[str] = None,
+        provenance: Optional[str] = None,
+        context: Optional[str] = None,
+        metadata: Optional[Dict] = None
+    ) -> str:
+        """
+        Store a web document fetched from a URL.
+
+        Args:
+            url: Source URL (used as unique identifier)
+            title: Page/document title
+            content: Extracted text content
+            content_type: Type (html, pdf, youtube, github, etc.)
+            author: Author if available
+            date: Publication date if available
+            description: Meta description if available
+            provenance: What triggered ingestion (desire_id, api, chat, auto)
+            context: Why this URL was ingested
+            metadata: Additional metadata
+
+        Returns:
+            WebDocument node ID
+        """
+        import hashlib
+        from datetime import datetime, timezone
+        from urllib.parse import urlparse
+
+        # Use URL hash as stable ID
+        doc_id = f"webdoc_{hashlib.sha256(url.encode()).hexdigest()[:16]}"
+
+        # Content hash for deduplication
+        content_hash = hashlib.sha256(content.encode()).hexdigest()[:32]
+
+        # Extract domain
+        domain = urlparse(url).netloc.lower()
+
+        char_count = len(content)
+
+        async with self.driver.session() as session:
+            # Check if exists
+            existing = await session.run("""
+                MATCH (wd:WebDocument {id: $id})
+                RETURN wd.content_hash as hash, wd.version as version
+            """, id=doc_id)
+            record = await existing.single()
+
+            if record:
+                old_hash = record["hash"]
+                old_version = record["version"] or 1
+
+                if old_hash == content_hash:
+                    # Same content, just update last_fetched
+                    await session.run("""
+                        MATCH (wd:WebDocument {id: $id})
+                        SET wd.last_fetched = datetime()
+                    """, id=doc_id)
+                    return doc_id
+
+                # Content changed - update
+                await session.run("""
+                    MATCH (wd:WebDocument {id: $id})
+                    SET wd.content = $content,
+                        wd.content_hash = $hash,
+                        wd.title = $title,
+                        wd.updated_at = datetime(),
+                        wd.last_fetched = datetime(),
+                        wd.version = $version,
+                        wd.char_count = $char_count
+                """, id=doc_id, content=content, hash=content_hash,
+                    title=title, version=old_version + 1, char_count=char_count)
+
+                # Emit update event
+                await event_bus.emit(Event(
+                    type=EventType.NODE_UPDATED,
+                    data={
+                        "id": doc_id,
+                        "node_type": "WebDocument",
+                        "url": url,
+                        "title": title,
+                        "version": old_version + 1
+                    }
+                ))
+            else:
+                # Create new - WebDocument is also a Document (dual label)
+                await session.run("""
+                    CREATE (wd:Document:WebDocument {
+                        id: $id,
+                        url: $url,
+                        domain: $domain,
+                        title: $title,
+                        content: $content,
+                        content_hash: $hash,
+                        content_type: $content_type,
+                        author: $author,
+                        date: $date,
+                        description: $description,
+                        provenance: $provenance,
+                        context: $context,
+                        char_count: $char_count,
+                        doc_type: 'web',
+                        fetched_at: datetime(),
+                        last_fetched: datetime(),
+                        created_at: datetime(),
+                        version: 1,
+                        archived: false
+                    })
+                """, id=doc_id, url=url, domain=domain, title=title,
+                    content=content, hash=content_hash, content_type=content_type,
+                    author=author, date=date, description=description,
+                    provenance=provenance, context=context, char_count=char_count)
+
+                # Emit creation event
+                await event_bus.emit(Event(
+                    type=EventType.NODE_CREATED,
+                    data={
+                        "id": doc_id,
+                        "node_type": "WebDocument",
+                        "url": url,
+                        "title": title,
+                        "domain": domain,
+                        "char_count": char_count
+                    }
+                ))
+
+        return doc_id
+
+    async def get_web_document_by_url(self, url: str) -> Optional[Dict]:
+        """Get a web document by its URL."""
+        import hashlib
+        doc_id = f"webdoc_{hashlib.sha256(url.encode()).hexdigest()[:16]}"
+
+        async with self.driver.session() as session:
+            result = await session.run("""
+                MATCH (wd:WebDocument {id: $id})
+                WHERE wd.archived IS NULL OR wd.archived = false
+                RETURN wd
+            """, id=doc_id)
+            record = await result.single()
+            if record:
+                return dict(record["wd"])
+        return None
+
+    async def get_web_document_by_id(self, doc_id: str) -> Optional[Dict]:
+        """Get a web document by its ID."""
+        async with self.driver.session() as session:
+            result = await session.run("""
+                MATCH (wd:WebDocument {id: $id})
+                RETURN wd
+            """, id=doc_id)
+            record = await result.single()
+            if record:
+                return dict(record["wd"])
+        return None
+
+    async def list_web_documents(
+        self,
+        limit: int = 50,
+        include_archived: bool = False
+    ) -> List[Dict]:
+        """List web documents, newest first."""
+        async with self.driver.session() as session:
+            if include_archived:
+                query = """
+                    MATCH (wd:WebDocument)
+                    RETURN wd.id as id, wd.url as url, wd.domain as domain,
+                           wd.title as title, wd.content_type as content_type,
+                           wd.char_count as char_count, wd.fetched_at as fetched_at,
+                           wd.provenance as provenance, wd.archived as archived
+                    ORDER BY wd.fetched_at DESC
+                    LIMIT $limit
+                """
+            else:
+                query = """
+                    MATCH (wd:WebDocument)
+                    WHERE wd.archived IS NULL OR wd.archived = false
+                    RETURN wd.id as id, wd.url as url, wd.domain as domain,
+                           wd.title as title, wd.content_type as content_type,
+                           wd.char_count as char_count, wd.fetched_at as fetched_at,
+                           wd.provenance as provenance
+                    ORDER BY wd.fetched_at DESC
+                    LIMIT $limit
+                """
+            result = await session.run(query, limit=limit)
+            return [dict(record) async for record in result]
+
+    async def get_web_storage_usage(self) -> Dict:
+        """Get current web document storage usage."""
+        async with self.driver.session() as session:
+            result = await session.run("""
+                MATCH (wd:WebDocument)
+                WHERE wd.archived IS NULL OR wd.archived = false
+                RETURN
+                    count(wd) as doc_count,
+                    sum(wd.char_count) as total_chars,
+                    sum(size(wd.content)) as total_bytes
+            """)
+            record = await result.single()
+
+            total_bytes = record["total_bytes"] or 0
+            limit_bytes = 2 * 1024 * 1024 * 1024  # 2GB
+
+            return {
+                "doc_count": record["doc_count"] or 0,
+                "total_chars": record["total_chars"] or 0,
+                "total_bytes": total_bytes,
+                "limit_bytes": limit_bytes,
+                "usage_percent": round((total_bytes / limit_bytes) * 100, 2) if limit_bytes else 0
+            }
+
+    async def archive_oldest_web_documents(self, target_bytes: int) -> int:
+        """Archive oldest web documents to get under target size."""
+        usage = await self.get_web_storage_usage()
+
+        if usage["total_bytes"] <= target_bytes:
+            return 0
+
+        excess = usage["total_bytes"] - target_bytes
+        archived_count = 0
+
+        async with self.driver.session() as session:
+            # Get oldest documents
+            result = await session.run("""
+                MATCH (wd:WebDocument)
+                WHERE wd.archived IS NULL OR wd.archived = false
+                RETURN wd.id as id, size(wd.content) as bytes
+                ORDER BY wd.fetched_at ASC
+            """)
+
+            bytes_freed = 0
+            to_archive = []
+
+            async for record in result:
+                if bytes_freed >= excess:
+                    break
+                to_archive.append(record["id"])
+                bytes_freed += record["bytes"] or 0
+
+            # Archive them (keep metadata, remove content to save space)
+            for doc_id in to_archive:
+                await session.run("""
+                    MATCH (wd:WebDocument {id: $id})
+                    SET wd.archived = true,
+                        wd.archived_at = datetime(),
+                        wd.content = '[ARCHIVED - content removed to save space]'
+                """, id=doc_id)
+                archived_count += 1
+
+        return archived_count
+
+    async def get_recent_web_documents(self, limit: int = 10) -> List[Dict]:
+        """Get recent web documents for reflection context."""
+        async with self.driver.session() as session:
+            result = await session.run("""
+                MATCH (wd:WebDocument)
+                WHERE (wd.archived IS NULL OR wd.archived = false)
+                RETURN wd.id as id, wd.url as url, wd.domain as domain,
+                       wd.title as title, wd.description as description,
+                       substring(wd.content, 0, 500) as preview,
+                       wd.fetched_at as fetched_at,
+                       wd.content_type as content_type
+                ORDER BY wd.fetched_at DESC
+                LIMIT $limit
+            """, limit=limit)
+            return [dict(record) async for record in result]
+
+    # =========================================================================
     # DESIRES
     # =========================================================================
     
@@ -4922,9 +5199,9 @@ class Memory:
                 nodes_result = await session.run("""
                     MATCH (n)
                     WHERE n:Experience OR n:Belief OR n:Desire OR n:Reflection OR n:Capability
-                       OR (n:OperatingSystem AND n.id = 'os_primary')
+                       OR n:Goal OR (n:OperatingSystem AND n.id = 'os_primary')
                        OR n:OSTemplate OR n:Seed OR n:Strategy OR n:Constraint
-                       OR n:Crystal OR n:MemorySummary
+                       OR n:Crystal OR n:MemorySummary OR n:Document OR n:DocumentChunk
                     OPTIONAL MATCH (n)-[r]-()
                     OPTIONAL MATCH (b:Belief)-[:DERIVED_FROM]->(n)
                     WITH n, count(DISTINCT r) as conn_count, count(DISTINCT b) > 0 as absorbed
@@ -9045,6 +9322,7 @@ class Memory:
         Get documents that BYRD hasn't reflected on yet.
 
         Used by the Dreamer to include new documents in reflection context.
+        Handles both regular Documents and WebDocuments (dual-labeled).
 
         Args:
             limit: Maximum documents to return
@@ -9056,10 +9334,15 @@ class Memory:
         MATCH (d:Document)
         WHERE d.reflected_on = false
           AND d.processing_status = 'complete'
-        RETURN d.id as id, d.filename as filename, d.summary as summary,
-               d.detected_type as type, d.user_purpose as purpose,
-               d.importance as importance
-        ORDER BY d.importance DESC, d.uploaded_at DESC
+        RETURN d.id as id,
+               COALESCE(d.filename, d.title, d.url) as filename,
+               COALESCE(d.summary, d.description) as summary,
+               COALESCE(d.detected_type, d.content_type) as type,
+               COALESCE(d.user_purpose, d.context, '') as purpose,
+               d.importance as importance,
+               d.url as url,
+               CASE WHEN d:WebDocument THEN true ELSE false END as is_web_document
+        ORDER BY d.importance DESC, COALESCE(d.uploaded_at, d.ingested_at) DESC
         LIMIT $limit
         """
         async with self.driver.session() as session:
