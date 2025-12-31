@@ -1,4 +1,4 @@
-# BYRD Dependencies
+# BYRD Dependencies - v2.1.1
 
 # Neo4j driver for memory
 neo4j>=5.0.0
