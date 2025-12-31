@@ -506,6 +506,105 @@
     .console-event.type-reflection { border-left-color: var(--node-reflection); }
     .console-event.type-system { border-left-color: #22c55e; }
     .console-event.type-error { border-left-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+    .console-event.filtered { display: none; }
+
+    /* Console Filter Bar */
+    .console-filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 6px 10px;
+      background: rgba(248, 250, 252, 0.5);
+      border-bottom: 1px solid rgba(147, 197, 253, 0.15);
+    }
+
+    .console-filter-bar.hidden {
+      display: none;
+    }
+
+    .filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      font-size: 9px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      border: 1px solid transparent;
+      opacity: 0.5;
+    }
+
+    .filter-chip.active {
+      opacity: 1;
+    }
+
+    .filter-chip:hover {
+      transform: scale(1.05);
+    }
+
+    .filter-chip-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .filter-chip.type-belief { background: rgba(59, 130, 246, 0.15); color: var(--node-belief); }
+    .filter-chip.type-belief .filter-chip-dot { background: var(--node-belief); }
+    .filter-chip.type-belief.active { background: rgba(59, 130, 246, 0.3); border-color: var(--node-belief); }
+
+    .filter-chip.type-desire { background: rgba(249, 115, 22, 0.15); color: var(--node-desire); }
+    .filter-chip.type-desire .filter-chip-dot { background: var(--node-desire); }
+    .filter-chip.type-desire.active { background: rgba(249, 115, 22, 0.3); border-color: var(--node-desire); }
+
+    .filter-chip.type-experience { background: rgba(168, 85, 247, 0.15); color: var(--node-experience); }
+    .filter-chip.type-experience .filter-chip-dot { background: var(--node-experience); }
+    .filter-chip.type-experience.active { background: rgba(168, 85, 247, 0.3); border-color: var(--node-experience); }
+
+    .filter-chip.type-goal { background: rgba(236, 72, 153, 0.15); color: var(--node-goal); }
+    .filter-chip.type-goal .filter-chip-dot { background: var(--node-goal); }
+    .filter-chip.type-goal.active { background: rgba(236, 72, 153, 0.3); border-color: var(--node-goal); }
+
+    .filter-chip.type-capability { background: rgba(34, 197, 94, 0.15); color: var(--node-capability); }
+    .filter-chip.type-capability .filter-chip-dot { background: var(--node-capability); }
+    .filter-chip.type-capability.active { background: rgba(34, 197, 94, 0.3); border-color: var(--node-capability); }
+
+    .filter-chip.type-reflection { background: rgba(6, 182, 212, 0.15); color: var(--node-reflection); }
+    .filter-chip.type-reflection .filter-chip-dot { background: var(--node-reflection); }
+    .filter-chip.type-reflection.active { background: rgba(6, 182, 212, 0.3); border-color: var(--node-reflection); }
+
+    .filter-chip.type-system { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+    .filter-chip.type-system .filter-chip-dot { background: #22c55e; }
+    .filter-chip.type-system.active { background: rgba(34, 197, 94, 0.3); border-color: #22c55e; }
+
+    .filter-chip.type-error { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+    .filter-chip.type-error .filter-chip-dot { background: #ef4444; }
+    .filter-chip.type-error.active { background: rgba(239, 68, 68, 0.3); border-color: #ef4444; }
+
+    .filter-actions {
+      display: flex;
+      gap: 4px;
+      margin-left: auto;
+    }
+
+    .filter-action-btn {
+      font-size: 8px;
+      padding: 2px 6px;
+      border: 1px solid rgba(147, 197, 253, 0.3);
+      background: rgba(255, 255, 255, 0.5);
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.15s ease;
+    }
+
+    .filter-action-btn:hover {
+      background: rgba(147, 197, 253, 0.2);
+      color: var(--text-primary);
+    }
 
     .console-event-time {
       font-size: 10px;
@@ -1503,10 +1602,42 @@
         <span class="console-count" id="console-count">0</span>
       </div>
       <div class="console-controls">
+        <button class="console-btn" id="btn-toggle-filter" title="Filter Events">⚙</button>
         <button class="console-btn active" id="btn-auto-scroll" title="Auto-scroll">▶</button>
         <button class="console-btn" id="btn-clear-console" title="Clear">🗑</button>
         <button class="console-btn" id="btn-export-console" title="Export">⤓</button>
         <button class="console-btn" id="btn-minimize-console" title="Minimize">▼</button>
+      </div>
+    </div>
+    <!-- Event Type Filter Bar -->
+    <div class="console-filter-bar hidden" id="console-filter-bar">
+      <div class="filter-chip type-belief active" data-filter="belief" title="Beliefs">
+        <span class="filter-chip-dot"></span>Belief
+      </div>
+      <div class="filter-chip type-desire active" data-filter="desire" title="Desires">
+        <span class="filter-chip-dot"></span>Desire
+      </div>
+      <div class="filter-chip type-experience active" data-filter="experience" title="Experiences">
+        <span class="filter-chip-dot"></span>Exp
+      </div>
+      <div class="filter-chip type-goal active" data-filter="goal" title="Goals">
+        <span class="filter-chip-dot"></span>Goal
+      </div>
+      <div class="filter-chip type-capability active" data-filter="capability" title="Capabilities">
+        <span class="filter-chip-dot"></span>Cap
+      </div>
+      <div class="filter-chip type-reflection active" data-filter="reflection" title="Reflections">
+        <span class="filter-chip-dot"></span>Refl
+      </div>
+      <div class="filter-chip type-system active" data-filter="system" title="System Events">
+        <span class="filter-chip-dot"></span>Sys
+      </div>
+      <div class="filter-chip type-error active" data-filter="error" title="Errors">
+        <span class="filter-chip-dot"></span>Err
+      </div>
+      <div class="filter-actions">
+        <button class="filter-action-btn" id="btn-filter-all" title="Show All">All</button>
+        <button class="filter-action-btn" id="btn-filter-none" title="Hide All">None</button>
       </div>
     </div>
     <div class="console-body" id="console-body">
@@ -2137,7 +2268,18 @@
       autoScroll: true,
       maxEvents: 500,
       eventTimestamps: [],
-      eventRate: 0
+      eventRate: 0,
+      filterBarVisible: false,
+      activeFilters: {
+        belief: true,
+        desire: true,
+        experience: true,
+        goal: true,
+        capability: true,
+        reflection: true,
+        system: true,
+        error: true
+      }
     };
 
     // Map event types to categories for styling
@@ -2193,8 +2335,11 @@
       if (!consoleBody) return;
 
       const category = eventTypeToCategory[event.type] || 'system';
+      const isFiltered = !consoleState.activeFilters[category];
+
       const eventEl = document.createElement('div');
-      eventEl.className = `console-event type-${category}`;
+      eventEl.className = `console-event type-${category}${isFiltered ? ' filtered' : ''}`;
+      eventEl.dataset.category = category;
       eventEl.style.cursor = 'pointer';
       eventEl.innerHTML = `
         <span class="console-event-time">${formatEventTime(event.timestamp)}</span>
@@ -2278,6 +2423,81 @@
           consoleBody.scrollTop = consoleBody.scrollHeight;
         }
       }
+    }
+
+    // ==========================================================================
+    // CONSOLE FILTER FUNCTIONS
+    // ==========================================================================
+
+    function toggleFilterBar() {
+      consoleState.filterBarVisible = !consoleState.filterBarVisible;
+      const filterBar = document.getElementById('console-filter-bar');
+      const filterBtn = document.getElementById('btn-toggle-filter');
+
+      if (filterBar) {
+        filterBar.classList.toggle('hidden', !consoleState.filterBarVisible);
+      }
+      if (filterBtn) {
+        filterBtn.classList.toggle('active', consoleState.filterBarVisible);
+      }
+    }
+
+    function toggleFilter(category) {
+      consoleState.activeFilters[category] = !consoleState.activeFilters[category];
+      updateFilterChips();
+      applyFiltersToConsole();
+    }
+
+    function setAllFilters(active) {
+      Object.keys(consoleState.activeFilters).forEach(category => {
+        consoleState.activeFilters[category] = active;
+      });
+      updateFilterChips();
+      applyFiltersToConsole();
+    }
+
+    function updateFilterChips() {
+      document.querySelectorAll('.filter-chip[data-filter]').forEach(chip => {
+        const category = chip.dataset.filter;
+        chip.classList.toggle('active', consoleState.activeFilters[category]);
+      });
+    }
+
+    function applyFiltersToConsole() {
+      const consoleBody = document.getElementById('console-body');
+      if (!consoleBody) return;
+
+      consoleBody.querySelectorAll('.console-event').forEach(eventEl => {
+        const category = eventEl.dataset.category;
+        const isFiltered = !consoleState.activeFilters[category];
+        eventEl.classList.toggle('filtered', isFiltered);
+      });
+
+      // Scroll to bottom if auto-scroll is enabled
+      if (consoleState.autoScroll) {
+        consoleBody.scrollTop = consoleBody.scrollHeight;
+      }
+    }
+
+    function initializeFilterListeners() {
+      // Filter bar toggle button
+      const filterBtn = document.getElementById('btn-toggle-filter');
+      if (filterBtn) {
+        filterBtn.addEventListener('click', toggleFilterBar);
+      }
+
+      // Filter chips
+      document.querySelectorAll('.filter-chip[data-filter]').forEach(chip => {
+        chip.addEventListener('click', () => {
+          toggleFilter(chip.dataset.filter);
+        });
+      });
+
+      // All/None buttons
+      const allBtn = document.getElementById('btn-filter-all');
+      const noneBtn = document.getElementById('btn-filter-none');
+      if (allBtn) allBtn.addEventListener('click', () => setAllFilters(true));
+      if (noneBtn) noneBtn.addEventListener('click', () => setAllFilters(false));
     }
 
     // Event modal state
@@ -2440,6 +2660,9 @@
       document.getElementById('btn-clear-console')?.addEventListener('click', clearConsole);
       document.getElementById('btn-export-console')?.addEventListener('click', exportConsole);
       document.getElementById('btn-minimize-console')?.addEventListener('click', toggleConsoleMinimize);
+
+      // Initialize filter listeners
+      initializeFilterListeners();
 
       // Smart auto-scroll: disable when user scrolls up, re-enable when at bottom
       const consoleBody = document.getElementById('console-body');
