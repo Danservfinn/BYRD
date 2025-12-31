@@ -277,11 +277,7 @@ class BYRD:
         )
 
         if self.coder.enabled:
-            if hasattr(self.coder, '_limited_mode') and self.coder._limited_mode:
-                print(f"💻 Coder: Limited mode (subprocess only)")
-            else:
-                cli_name = self.coder._cli_command or "subprocess"
-                print(f"💻 Coder: OpenCode ({cli_name})")
+            print(f"💻 Coder: OpenCode (ACP mode)")
         else:
             print(f"⚠️  Coder: Disabled")
 

@@ -1985,9 +1985,8 @@ async def test_coder():
             "files_modified": result.files_modified,
             "files_created": result.files_created,
             "duration_seconds": result.duration_seconds,
-            "cli_command": byrd_instance.coder._cli_command,
-            "cli_args": byrd_instance.coder._cli_args,
-            "limited_mode": byrd_instance.coder._limited_mode,
+            "mode": "acp",
+            "model": byrd_instance.coder._model,
         }
     except Exception as e:
         return {
