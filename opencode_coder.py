@@ -1,22 +1,16 @@
 """
-OpenCode Coder - Non-Interactive CLI Mode
+OpenCode Coder - Direct Z.AI API Mode
 
-Uses OpenCode's run command: `opencode run --model <model> --format json "prompt"`
-Designed for headless operation in Docker/HuggingFace.
-
-Key flags:
-- run         : Non-interactive execution
-- --model     : Specify model (e.g., zai/glm-4.7)
-- --format    : Output format (json for structured output)
-- [message..] : The prompt/task as positional argument
+Uses Z.AI API directly for code generation.
+OpenCode CLI doesn't work in headless Docker containers.
 """
 
 import asyncio
 import json
 import logging
 import os
+import httpx
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
@@ -54,11 +48,13 @@ class CoderResult:
 
 class OpenCodeCoder:
     """
-    BYRD's coding capability via OpenCode CLI.
+    BYRD's coding capability via direct Z.AI API.
 
-    Uses non-interactive mode: opencode -p "prompt" -f json -q -m model
-    No server required - direct CLI invocation per request.
+    Uses Z.AI's GLM model directly since OpenCode CLI
+    doesn't work in headless Docker containers.
     """
+
+    ZAI_API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
 
     def __init__(
         self,
@@ -72,7 +68,8 @@ class OpenCodeCoder:
         self.context_loader = context_loader
         self.memory = memory
 
-        self._model = "zai/glm-4.7"
+        self._model = "glm-4-plus"  # Z.AI model
+        self._api_key = os.environ.get("ZAI_API_KEY")
 
         # Execution tracking
         self._execution_count = 0
@@ -87,8 +84,8 @@ class OpenCodeCoder:
             "safety_monitor.py",
         ])
 
-        # Ensure OpenCode auth is configured
-        self._ensure_opencode_auth()
+        if not self._api_key:
+            logger.warning("ZAI_API_KEY not set - coder will not work")
 
     @property
     def enabled(self) -> bool:
@@ -97,24 +94,6 @@ class OpenCodeCoder:
     @enabled.setter
     def enabled(self, value: bool):
         self._enabled = value
-
-    def _ensure_opencode_auth(self):
-        """Ensure OpenCode has auth configured for Z.AI."""
-        zai_key = os.environ.get("ZAI_API_KEY")
-        if not zai_key:
-            logger.warning("ZAI_API_KEY not set - OpenCode may not authenticate")
-            return
-
-        auth_dir = Path.home() / ".local" / "share" / "opencode"
-        auth_file = auth_dir / "auth.json"
-
-        try:
-            auth_dir.mkdir(parents=True, exist_ok=True)
-            auth_data = {"zai": {"type": "api", "key": zai_key}}
-            auth_file.write_text(json.dumps(auth_data))
-            logger.info(f"OpenCode auth configured at {auth_file}")
-        except Exception as e:
-            logger.error(f"Failed to configure OpenCode auth: {e}")
 
     def _check_constitutional(self, task: str) -> Dict[str, Any]:
         """Check if task violates constitutional constraints."""
@@ -138,7 +117,7 @@ class OpenCodeCoder:
         working_dir: Optional[str] = None,
         desire_id: str = None,
     ) -> CoderResult:
-        """Execute a coding task via OpenCode CLI non-interactive mode."""
+        """Execute a coding task via direct Z.AI API."""
         start_time = datetime.now()
         self._execution_count += 1
 
@@ -147,6 +126,9 @@ class OpenCodeCoder:
 
         if not self._enabled:
             return CoderResult(success=False, output="", error="Coder is disabled", session_id=desire_id)
+
+        if not self._api_key:
+            return CoderResult(success=False, output="", error="ZAI_API_KEY not set", session_id=desire_id)
 
         constraint_check = self._check_constitutional(prompt)
         if not constraint_check["allowed"]:
@@ -162,125 +144,63 @@ class OpenCodeCoder:
             context_str = "\n".join(f"# {k}\n{v}" for k, v in context.items() if v)
             task = f"Context:\n{context_str}\n\nTask:\n{prompt}"
 
-        logger.info(f"[Coder] Executing via CLI: {task[:100]}...")
+        logger.info(f"[Coder] Executing via Z.AI API: {task[:100]}...")
 
         if self.coordinator:
             self.coordinator.coder_started(task[:50])
 
         try:
-            # Build CLI command using script for pseudo-TTY
-            # script -q -c "command" /dev/null  (Linux syntax)
-            opencode_cmd = f'opencode run --model {self._model} --format json {json.dumps(task)}'
-            cmd = [
-                "script",
-                "-q",  # Quiet mode
-                "-c", opencode_cmd,  # Command to execute
-                "/dev/null",  # Typescript file (discard)
-            ]
+            # Build system prompt for coding
+            system_prompt = """You are an expert programmer. Generate clean, working code.
+Follow these guidelines:
+- Write complete, runnable code
+- Include necessary imports
+- Add brief comments for complex logic
+- Handle edge cases appropriately
+- Follow language best practices"""
 
-            # Set environment for headless operation
-            env = os.environ.copy()
-            env["TERM"] = "xterm"  # Provide terminal type for pseudo-TTY
-            env["CI"] = "true"  # Common flag to disable interactive prompts
-
-            logger.info(f"[Coder] Running via script: opencode run --model {self._model} --format json '...'")
-
-            # Run with timeout
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                cwd=working_dir,
-                env=env,
-            )
-
-            try:
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(),
-                    timeout=120.0  # 2 minute timeout
-                )
-            except asyncio.TimeoutError:
-                process.kill()
-                await process.wait()
-                duration = (datetime.now() - start_time).total_seconds()
-                return CoderResult(
-                    success=False, output="",
-                    error="Request timed out after 120 seconds",
-                    session_id=desire_id,
-                    duration_seconds=duration,
-                    duration_ms=int(duration * 1000),
+            # Call Z.AI API directly
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                response = await client.post(
+                    self.ZAI_API_URL,
+                    headers={
+                        "Authorization": f"Bearer {self._api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": self._model,
+                        "messages": [
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": task},
+                        ],
+                        "temperature": 0.7,
+                        "max_tokens": 4096,
+                    },
                 )
 
             duration = (datetime.now() - start_time).total_seconds()
 
-            stdout_text = stdout.decode() if stdout else ""
-            stderr_text = stderr.decode() if stderr else ""
-
-            # Check for errors
-            if process.returncode != 0:
-                # Combine stdout and stderr for debugging
-                error_parts = []
-                if stderr_text:
-                    error_parts.append(f"STDERR: {stderr_text[:400]}")
-                if stdout_text:
-                    error_parts.append(f"STDOUT: {stdout_text[:400]}")
-                if not error_parts:
-                    error_parts.append(f"Exit code {process.returncode}")
-                error_msg = " | ".join(error_parts)
-
-                logger.error(f"[Coder] CLI failed: {error_msg[:200]}")
-
+            if response.status_code != 200:
+                error_text = response.text[:500]
+                logger.error(f"[Coder] Z.AI API error: {response.status_code} - {error_text}")
                 return CoderResult(
                     success=False, output="",
-                    error=error_msg,
+                    error=f"API error {response.status_code}: {error_text}",
                     session_id=desire_id,
                     duration_seconds=duration,
                     duration_ms=int(duration * 1000),
                 )
 
-            # Parse JSON output
+            data = response.json()
+
+            # Extract content from response
             content = ""
-            try:
-                # Output should be JSON with the response
-                data = json.loads(stdout_text)
+            if "choices" in data and len(data["choices"]) > 0:
+                choice = data["choices"][0]
+                if "message" in choice:
+                    content = choice["message"].get("content", "")
 
-                # Extract content from response structure
-                if isinstance(data, dict):
-                    # Try various response structures
-                    if "content" in data:
-                        content = data["content"]
-                    elif "text" in data:
-                        content = data["text"]
-                    elif "response" in data:
-                        content = data["response"]
-                    elif "parts" in data:
-                        # Extract text from parts
-                        parts = data["parts"]
-                        text_parts = []
-                        for part in parts:
-                            if isinstance(part, dict) and part.get("type") == "text":
-                                text_parts.append(part.get("text", ""))
-                            elif isinstance(part, str):
-                                text_parts.append(part)
-                        content = "\n".join(text_parts)
-                    else:
-                        # Just use the whole thing
-                        content = json.dumps(data)
-                elif isinstance(data, str):
-                    content = data
-
-            except json.JSONDecodeError:
-                # Not JSON - use raw stdout
-                content = stdout_text
-
-            # If content is empty, check if there's useful stderr info
-            if not content.strip() and stderr_text:
-                # Filter out INFO logs, keep actual content
-                lines = stderr_text.split('\n')
-                content_lines = [l for l in lines if not l.startswith('INFO ')]
-                content = '\n'.join(content_lines)
-
-            logger.info(f"[Coder] CLI success, {len(content)} chars in {duration:.1f}s")
+            logger.info(f"[Coder] Z.AI success, {len(content)} chars in {duration:.1f}s")
 
             if self.memory:
                 await self._record_provenance(prompt, desire_id, content)
@@ -293,16 +213,18 @@ class OpenCodeCoder:
                 duration_ms=int(duration * 1000),
             )
 
-        except FileNotFoundError:
+        except httpx.TimeoutException:
             duration = (datetime.now() - start_time).total_seconds()
             return CoderResult(
                 success=False, output="",
-                error="OpenCode CLI not found - install with: npm install -g opencode-ai",
+                error="Request timed out after 120 seconds",
                 session_id=desire_id,
                 duration_seconds=duration,
+                duration_ms=int(duration * 1000),
             )
         except Exception as e:
             duration = (datetime.now() - start_time).total_seconds()
+            logger.error(f"[Coder] Error: {e}")
             return CoderResult(
                 success=False, output="",
                 error=str(e),
@@ -329,7 +251,7 @@ class OpenCodeCoder:
             logger.error(f"Error recording provenance: {e}")
 
     async def stop(self):
-        """No-op for CLI mode - no persistent server to stop."""
+        """No-op for API mode."""
         pass
 
     async def generate_code(self, prompt: str) -> str:
@@ -360,18 +282,19 @@ class OpenCodeCoder:
         """Check if a task can be executed."""
         constitutional = self._check_constitutional(task)
         return {
-            "can_execute": constitutional["allowed"],
+            "can_execute": constitutional["allowed"] and bool(self._api_key),
             "constitutional_ok": constitutional["allowed"],
-            "mode": "cli",
-            "reason": constitutional.get("reason"),
+            "mode": "zai-api",
+            "reason": constitutional.get("reason") or ("No API key" if not self._api_key else None),
         }
 
     def get_stats(self) -> Dict[str, Any]:
         """Get coder statistics."""
         return {
             "execution_count": self._execution_count,
-            "mode": "cli",
+            "mode": "zai-api",
             "model": self._model,
+            "api_key_set": bool(self._api_key),
             "protected_paths": self._protected_paths,
         }
 
