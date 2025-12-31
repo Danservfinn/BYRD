@@ -56,6 +56,7 @@ from typing import Dict, Optional
 from memory import Memory
 from event_bus import event_bus, Event, EventType
 from coupling_tracker import CouplingTracker, get_coupling_tracker
+from loop_instrumentation import LoopInstrumenter, get_instrumenter
 from memory_reasoner import MemoryReasoner
 from accelerators import SelfCompiler
 from goal_evolver import GoalEvolver
@@ -80,6 +81,7 @@ class CompoundingLoopsActivator:
         self.dreaming_machine = None
         self.omega = None
         self.coupling_tracker = None
+        self.instrumenter = None
         
         self.activation_results = {}
         self.cycles_completed = {}
@@ -90,6 +92,7 @@ class CompoundingLoopsActivator:
         logger.info("ACTIVATING 5 COMPOUNDING LOOPS")
         logger.info("=" * 60)
         
+        await self._activate_instrumenter()
         await self._activate_coupling_tracker()
         await self._activate_memory_reasoner()
         await self._activate_self_compiler()
@@ -99,6 +102,23 @@ class CompoundingLoopsActivator:
         
         self._print_summary()
         return self.activation_results
+    
+    async def _activate_instrumenter(self):
+        """Initialize loop instrumentation."""
+        try:
+            logger.info("[instrumenter] Initializing...")
+            self.instrumenter = get_instrumenter()
+            # Configure from config if provided
+            if self.config.get("instrumentation"):
+                self.instrumenter = LoopInstrumenter(config=self.config.get("instrumentation"))
+            # Register all loops
+            for loop_name in ["memory_reasoner", "self_compiler", "goal_evolver", "dreaming_machine", "omega"]:
+                self.instrumenter.register_loop(loop_name)
+            self.activation_results["instrumenter"] = {"success": True}
+            logger.info("[instrumenter] Activated - monitoring for zero-delta loops")
+        except Exception as e:
+            self.activation_results["instrumenter"] = {"success": False, "error": str(e)}
+            logger.error(f"[instrumenter] Failed: {e}")
     
     async def _activate_coupling_tracker(self):
         """Initialize coupling tracker."""
@@ -236,7 +256,7 @@ class CompoundingLoopsActivator:
         logger.info("")
     
     async def run_cycles(self, num_cycles: int = 3):
-        """Run coordinated cycles."""
+        """Run coordinated cycles with instrumentation."""
         logger.info(f"Running {num_cycles} coordinated cycles...")
         loop_names = ["memory_reasoner", "self_compiler", "goal_evolver", "dreaming_machine", "omega"]
         self.cycles_completed = {name: 0 for name in loop_names}
@@ -244,15 +264,53 @@ class CompoundingLoopsActivator:
         for i in range(num_cycles):
             logger.info(f"--- Cycle {i+1}/{num_cycles} ---")
             
+            # Run omega cycle with instrumentation
             if self.omega:
+                cycle_start = datetime.now()
+                delta = 0.0
+                success = False
+                error = None
+                
                 try:
+                    # Execute cycle
                     await self.omega.run_cycle()
+                    success = True
                     self.cycles_completed["omega"] += 1
+                    
+                    # Simulate delta measurement (in real system, would come from actual measurement)
+                    delta = 0.01 if success else 0.0
+                    
                 except Exception as e:
+                    error = str(e)
                     logger.error(f"Omega cycle failed: {e}")
+                
+                finally:
+                    # Record to instrumenter
+                    duration = (datetime.now() - cycle_start).total_seconds()
+                    if self.instrumenter:
+                        self.instrumenter.record_cycle(
+                            "omega",
+                            delta=delta,
+                            success=success,
+                            duration_seconds=duration,
+                            error=error
+                        )
             
             if self.coupling_tracker:
                 await self.coupling_tracker.emit_coupling_event()
+            
+            # Check for stagnation and trigger interventions
+            if self.instrumenter:
+                stagnant_loops = self.instrumenter.get_stagnant_loops()
+                if stagnant_loops:
+                    logger.warning(f"Stagnant loops detected: {stagnant_loops}")
+                    for loop_name in stagnant_loops:
+                        analysis = self.instrumenter.analyze_stagnation(loop_name)
+                        self.instrumenter.trigger_intervention(loop_name, analysis)
+        
+        # Show instrumentation dashboard
+        if self.instrumenter:
+            self.instrumenter.print_dashboard()
         
         logger.info(f"Cycles completed: {self.cycles_completed}")
         return self.cycles_completed

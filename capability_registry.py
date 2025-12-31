@@ -194,6 +194,15 @@ class CapabilityRegistry:
                 intents=["introspection"],
                 category="introspection"
             ),
+            Capability(
+                id="surface_orphans",
+                name="Surface Orphan Content",
+                description="Retrieve, classify, and present orphaned experiences from memory with actionable recommendations",
+                handler="_execute_surface_orphans",
+                keywords=["orphan", "orphaned", "isolated", "disconnected", "show orphans", "find orphans", "surface content"],
+                intents=["introspection", "connection", "organization"],
+                category="introspection"
+            ),
 
             # === GRAPH OPERATIONS ===
             # DISABLED: Aggressive orphan reconciliation was causing fragmentation
@@ -511,26 +520,62 @@ Reply with ONLY the number (1-{len(candidates)}) of the best option."""
     async def record_outcome(
         self,
         capability_id: str,
-        success: bool,
+        value_delta: float,
         desire_id: str = None
     ):
-        """Record capability usage outcome for learning."""
+        """
+        Record capability usage outcome for learning.
+        
+        CRITICAL: Requires value_delta to prevent false-positive loops.
+        Simple success/failure is insufficient - must measure actual value delivered.
+        
+        Args:
+            capability_id: The capability that was executed
+            value_delta: Actual value delivered (-1.0 to 1.0). Measures impact, not just success.
+                        Positive = value created, Negative = value destroyed/lost
+            desire_id: Optional desire context
+        
+        Example values:
+            +1.0: Exceeded expectations, created significant new value
+            +0.5: Succeeded with moderate value
+            +0.1: Technically succeeded but minimal value
+            -0.1: Technically succeeded but wasted resources (false positive)
+            -0.5: Failed with moderate cost
+            -1.0: Complete failure with significant negative impact
+        """
         if capability_id not in self._capabilities:
             return
 
+        if not isinstance(value_delta, (int, float)):
+            raise ValueError(f"record_outcome requires numeric value_delta, got {type(value_delta)}")
+        
+        if value_delta < -1.0 or value_delta > 1.0:
+            raise ValueError(f"value_delta must be between -1.0 and 1.0, got {value_delta}")
+
         cap = self._capabilities[capability_id]
 
-        if success:
+        # Track both binary outcomes for compatibility AND value deltas
+        if value_delta > 0:
             cap.success_count += 1
         else:
             cap.failure_count += 1
+
+        # Store value delta for more sophisticated tracking
+        if not hasattr(cap, 'value_deltas'):
+            cap.value_deltas = []
+        cap.value_deltas.append(float(value_delta))
+        # Keep only recent 100 values to avoid unbounded growth
+        if len(cap.value_deltas) > 100:
+            cap.value_deltas = cap.value_deltas[-100:]
 
         cap.last_used = datetime.now().isoformat()
 
         # Persist to OS node
         await self._save_to_os_node()
 
-        print(f"📊 {cap.name}: {'✓' if success else '✗'} ({cap.success_count}/{cap.total_uses})")
+        # Show both binary status and value score
+        status = "✓" if value_delta > 0 else "✗"
+        print(f"📊 {cap.name}: {status} (value: {value_delta:+.2f}, success_rate: {cap.success_count}/{cap.total_uses})")
 
     async def register_capability(
         self,

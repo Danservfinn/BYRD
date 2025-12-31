@@ -21,6 +21,14 @@ from enum import Enum
 from memory import Memory
 from llm_client import LLMClient
 
+# Import loop instrumentation to break zero-delta loops
+try:
+    from loop_instrumentation import LoopInstrumenter, CycleMetrics, get_instrumenter
+    HAS_INSTRUMENTATION = True
+except ImportError:
+    HAS_INSTRUMENTATION = False
+    print("[WARNING] loop_instrumentation not available - zero-delta detection disabled")
+
 
 class ChallengeType(Enum):
     """Types of self-improvement challenges."""
@@ -317,7 +325,7 @@ Output JSON:
                 description=f"[CHALLENGE] {challenge.description}",
                 type="challenge",
                 intensity=0.7,
-                intent="self_improvement"
+                intent="creation"  # Valid intent: create/practice to improve self
             )
 
             return challenge
@@ -809,6 +817,21 @@ class SelfCompiler:
         self._patterns_lifted = 0
         self._total_compilations = 0
 
+        # Initialize loop instrumentation to break zero-delta loops
+        self.instrumenter: Optional['LoopInstrumenter'] = None
+        self.loop_name: str = "self_compiler"
+        if HAS_INSTRUMENTATION:
+            try:
+                self.instrumenter = get_instrumenter()
+                if self.instrumenter:
+                    self.instrumenter.register_loop(self.loop_name)
+                    print(f"[INSTRUMENTATION] Registered loop '{self.loop_name}' for zero-delta detection")
+            except Exception:
+                pass
+
+        # Cycle counter for instrumentation
+        self._cycle_counter = 0
+
         # Embedding provider (lazy init)
         self._embedder = None
 
@@ -857,11 +880,19 @@ class SelfCompiler:
         self._patterns_matched += 1
 
         # Return the solution template with adaptation prompt
-        return f"""Pattern Match (similarity={best.similarity:.2f}, success_rate={best.success_rate:.2f}):
+        result = f"""Pattern Match (similarity={best.similarity:.2f}, success_rate={best.success_rate:.2f}):
 
 {best.solution_template}
 
 Adapt this pattern for the current problem: {problem}"""
+        
+        # INTEGRATION WITH LOOP INSTRUMENTATION
+        # Record compilation cycle metrics to break zero-delta loops
+        if self.instrumenter and HAS_INSTRUMENTATION:
+            self._record_compiler_cycle(matched=True, start_time=datetime.now(), 
+                                    pattern_used=True, pattern_id=best.pattern_id)
+        
+        return result
 
     async def learn_from_success(
         self,
@@ -892,6 +923,13 @@ Adapt this pattern for the current problem: {problem}"""
         else:
             # Extract a new pattern
             await self._extract_pattern(problem, solution, domains)
+        
+        # INTEGRATION WITH LOOP INSTRUMENTATION
+        # Record learning cycle metrics
+        if self.instrumenter and HAS_INSTRUMENTATION:
+            self._record_compiler_cycle(matched=True, start_time=datetime.now(),
+                                    pattern_used=(matched_pattern_id is not None),
+                                    pattern_id=matched_pattern_id)
 
     async def learn_from_failure(
         self,
@@ -971,6 +1009,71 @@ Template:"""
                 continue
 
         return lifted_count
+
+    def _record_compiler_cycle(
+        self,
+        matched: bool,
+        start_time: datetime,
+        pattern_used: bool,
+        pattern_id: Optional[str] = None
+    ) -> None:
+        """
+        Record compiler cycle metrics with loop instrumenter.
+        
+        This breaks the zero-delta loop by tracking:
+        - Pattern match rate improvement (delta)
+        - Success based on whether patterns matched or were learned
+        - Duration of the compilation cycle
+        - Whether the improvement was meaningful
+        """
+        if not self.instrumenter:
+            return
+        
+        self._cycle_counter += 1
+        
+        # Calculate delta as change in pattern match rate
+        if self._total_compilations > 0:
+            current_match_rate = self._patterns_matched / self._total_compilations
+        else:
+            current_match_rate = 0.0
+        
+        # Track baseline match rate from previous cycles
+        if not hasattr(self, '_baseline_match_rate'):
+            self._baseline_match_rate = 0.0
+        
+        # Delta is improvement in match rate
+        delta = current_match_rate - self._baseline_match_rate
+        self._baseline_match_rate = current_match_rate
+        
+        # Success if we matched a pattern or learned from new one
+        success = matched and (pattern_used or self._patterns_created > 0)
+        
+        # Duration
+        duration_seconds = (datetime.now() - start_time).total_seconds()
+        
+        # Meaningful if delta >= 0.5% (MIN_MEANINGFUL_DELTA)
+        MIN_MEANINGFUL_DELTA = 0.005
+        is_meaningful = delta >= MIN_MEANINGFUL_DELTA
+        
+        # Create cycle metrics
+        from loop_instrumentation import CycleMetrics
+        metrics = CycleMetrics(
+            cycle_number=self._cycle_counter,
+            timestamp=datetime.now(),
+            delta=delta,
+            success=success,
+            meaningful=is_meaningful,
+            duration_seconds=duration_seconds,
+            error=None
+        )
+        
+        # Record with instrumenter
+        self.instrumenter.record_cycle(self.loop_name, metrics)
+        
+        # Check for stagnation and log warning
+        if self.instrumenter.is_stagnant(self.loop_name):
+            analysis = self.instrumenter.analyze_stagnation(self.loop_name)
+            print(f"[INSTRUMENTATION] Self-Compiler stagnation detected: {analysis}")
 
     async def _lift_pattern(self, pattern: Dict) -> bool:
         """

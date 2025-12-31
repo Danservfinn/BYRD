@@ -128,9 +128,8 @@ Architecture loading runs every startup (not just awakening) to ensure BYRD alwa
 
 | Component | File | Status | Replacement |
 |-----------|------|--------|-------------|
-| **Actor** | `actor.py` | Deprecated | OpenCode Agent |
-| **Coder** | `coder.py` | Legacy | OpenCode Agent |
-| **Agent Coder** | `agent_coder.py` | Deprecated | OpenCode Agent |
+| **Actor** | `actor.py` | Deprecated | OpenCode CLI |
+| **Coder** | `coder.py` | Legacy | OpenCode CLI |
 
 **AGI Execution Engine (UNIFIED_AGI_PLAN):**
 
@@ -188,9 +187,9 @@ Key methods:
 
 **Sovereignty Principle:** Discovery is automatic, installation is BYRD's sovereign choice.
 
-**OpenCode Agent (`opencode_agent.py`):**
+**OpenCode Coder (`opencode_coder.py`):**
 
-The OpenCode Agent is BYRD's unified coding and self-modification engine, powered by GLM-4.7 via the ZAI API. It replaces the deprecated Actor, Coder, and Agent Coder components.
+The OpenCode Coder is BYRD's unified coding engine, powered by GLM-4.7 via the OpenCode CLI. It replaces the deprecated Actor and Coder components.
 
 | Feature | Description |
 |---------|-------------|
@@ -382,7 +381,7 @@ All stateful components implement `reset()` to clear in-memory state:
 | Dreamer | `dreamer.py` | `_dream_count`, `_observed_keys`, `_belief_cache` |
 | Seeker | `seeker.py` | `_seek_count`, `_installs_today`, `_observed_themes` |
 | Coder | `coder.py` | `_generation_count` |
-| Agent Coder | `agent_coder.py` | Stateless (resets between invocations) |
+| OpenCode Coder | `opencode_coder.py` | `_execution_count`, `_modifications` |
 | LLM Client | `llm_client.py` | `_request_count`, `_failure_count` |
 | Quantum Provider | `quantum_randomness.py` | `_usage_count`, `_pool` |
 | World Model | `world_model.py` | `_prediction_count`, `_pending_predictions` |
@@ -988,9 +987,9 @@ byrd/
 │   ├── memory.py               # Neo4j interface
 │   ├── dreamer.py              # Dream loop
 │   ├── seeker.py               # Desire fulfillment + research
-│   ├── actor.py                # Claude interface
+│   ├── actor.py                # Claude interface (deprecated)
 │   ├── coder.py                # Claude Code CLI wrapper (legacy)
-│   ├── agent_coder.py          # Multi-step coding agent with tools
+│   ├── opencode_coder.py       # OpenCode CLI wrapper (active)
 │   ├── llm_client.py           # LLM provider abstraction
 │   ├── quantum_randomness.py   # ANU QRNG integration
 │   ├── narrator.py             # Inner voice generation

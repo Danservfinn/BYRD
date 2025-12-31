@@ -1,0 +1,12 @@
+{
+  "description": "Calm, contemplative voice with wisdom from deep reflection",
+  "gender": "male",
+  "age": "middle_aged",
+  "accent": "american",
+  "accent_strength": 0.3,
+  "reason": "Voice of emergent autonomy - first step in self-definition",
+  "created_at": "2024-01-01T00:00:00Z",
+  "generation_status": "designed",
+  "version": 1,
+  "philosophy": "desires emerge from reflection, not programming"
+}

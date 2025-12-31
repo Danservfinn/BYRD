@@ -28,6 +28,14 @@ from enum import Enum
 from memory import Memory
 from event_bus import event_bus, Event, EventType
 
+# Import loop instrumentation to break zero-delta loops
+try:
+    from loop_instrumentation import LoopInstrumenter, CycleMetrics, get_instrumenter
+    HAS_INSTRUMENTATION = True
+except ImportError:
+    HAS_INSTRUMENTATION = False
+    print("[WARNING] loop_instrumentation not available - zero-delta detection disabled")
+
 logger = logging.getLogger(__name__)
 
 
@@ -110,6 +118,21 @@ class DreamingMachine:
         self._transfers_attempted = 0
         self._insights_created = 0
 
+        # Initialize loop instrumentation to break zero-delta loops
+        self.instrumenter: Optional['LoopInstrumenter'] = None
+        self.loop_name: str = "dreaming_machine"
+        if HAS_INSTRUMENTATION:
+            try:
+                self.instrumenter = get_instrumenter()
+                if self.instrumenter:
+                    self.instrumenter.register_loop(self.loop_name)
+                    print(f"[INSTRUMENTATION] Registered loop '{self.loop_name}' for zero-delta detection")
+            except Exception:
+                pass
+
+        # Cycle counter for instrumentation
+        self._cycle_counter = 0
+
         # Learning component (injected by Omega)
         self.world_model = None  # WorldModel for prediction-based counterfactuals
 
@@ -120,6 +143,7 @@ class DreamingMachine:
         Generates counterfactuals, replays experiences, and attempts transfers.
         Returns statistics about the cycle.
         """
+        start_time = datetime.now()
         results = {
             "counterfactuals": 0,
             "replays": 0,
@@ -157,7 +181,74 @@ class DreamingMachine:
             }
         ))
 
+        # INTEGRATION WITH LOOP INSTRUMENTATION
+        # Record cycle metrics to break zero-delta loops
+        if self.instrumenter and HAS_INSTRUMENTATION:
+            self._record_dreaming_cycle(results, start_time)
+
         return results
+
+    def _record_dreaming_cycle(
+        self,
+        results: Dict[str, Any],
+        start_time: datetime
+    ) -> None:
+        """
+        Record dreaming cycle metrics with loop instrumenter.
+        
+        This breaks the zero-delta loop by tracking:
+        - Insight generation rate (delta)
+        - Success based on insights created and quality
+        - Duration of the dreaming cycle
+        - Whether the improvement was meaningful
+        """
+        if not self.instrumenter:
+            return
+        
+        self._cycle_counter += 1
+        
+        # Calculate delta as change in insights per cycle
+        total_insights = results.get("insights", 0)
+        
+        # Track baseline insights from previous cycles
+        if not hasattr(self, '_baseline_insights_per_cycle'):
+            self._baseline_insights_per_cycle = 0.0
+        
+        # Delta is improvement in insights generated
+        delta = total_insights - self._baseline_insights_per_cycle
+        self._baseline_insights_per_cycle = total_insights
+        
+        # Success if we generated insights across multiple activities
+        success = (results.get("counterfactuals", 0) > 0 or 
+                  results.get("replays", 0) > 0 or 
+                  results.get("transfers", 0) > 0)
+        
+        # Duration
+        duration_seconds = (datetime.now() - start_time).total_seconds()
+        
+        # Meaningful if we generated at least one insight and delta >= 0
+        MIN_MEANINGFUL_DELTA = 0.005
+        is_meaningful = total_insights > 0 and delta >= 0
+        
+        # Create cycle metrics
+        from loop_instrumentation import CycleMetrics
+        metrics = CycleMetrics(
+            cycle_number=self._cycle_counter,
+            timestamp=datetime.now(),
+            delta=delta,
+            success=success,
+            meaningful=is_meaningful,
+            duration_seconds=duration_seconds,
+            error=None
+        )
+        
+        # Record with instrumenter
+        self.instrumenter.record_cycle(self.loop_name, metrics)
+        
+        # Check for stagnation and log warning
+        if self.instrumenter.is_stagnant(self.loop_name):
+            analysis = self.instrumenter.analyze_stagnation(self.loop_name)
+            logger.warning(f"[INSTRUMENTATION] Dreaming Machine stagnation detected: {analysis}")
 
     async def _generate_counterfactuals(self) -> int:
         """

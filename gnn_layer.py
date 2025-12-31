@@ -11,6 +11,12 @@ The GNN learns patterns from the graph structure itself - no prescribed
 categories or hard-coded importance. Relationship strength emerges from
 BYRD's actual connections and their utility.
 
+VERIFIED CAPABILITY PRINCIPLE:
+All calculations produce observable side effects in the graph. Salience scores,
+relationship strengths, and training metrics are persisted as nodes, edges,
+and properties, creating an audit trail that capabilities are actually being used.
+This transforms computational operations into verifiable, observable phenomena.
+
 Key improvements over v1:
 - Actual training loop with link prediction loss
 - Directed edge handling (DERIVED_FROM is directional)
@@ -18,6 +24,7 @@ Key improvements over v1:
 - Semantic initialization option (sentence-transformers)
 - Neo4j 5.x compatible queries
 - Learning from BYRD's behavior (usage feedback)
+- Observable side effects for capability verification
 """
 
 import numpy as np
@@ -825,7 +832,11 @@ class MemoryGNNIntegration:
     Integration layer between StructuralLearner and BYRD's Memory system.
 
     Extracts graph structure from Neo4j, computes GNN embeddings,
-    and provides enhanced retrieval methods.
+    and provides enhanced retrieval methods with observable side effects.
+
+    VERIFIED CAPABILITY PRINCIPLE:
+    All calculations are persisted to the graph as observable side effects,
+    creating an audit trail of computational activity and enabling verification.
     """
 
     def __init__(
@@ -851,6 +862,9 @@ class MemoryGNNIntegration:
         self._edges_cache: List[GraphEdge] = []
         self._last_update: Optional[datetime] = None
         self._cache_ttl_seconds: int = 300  # 5 minutes, configurable
+
+        # Write tracking for verification
+        self._calculation_writes: Dict[str, int] = {}
 
     async def extract_graph_from_memory(self, memory) -> Tuple[List[GraphNode], List[GraphEdge]]:
         """
@@ -935,11 +949,22 @@ class MemoryGNNIntegration:
 
         return embeddings
 
-    async def train_on_memory(self, memory) -> Optional[TrainingResult]:
+    async def train_on_memory(
+        self,
+        memory,
+        write_to_graph: bool = True
+    ) -> Optional[TrainingResult]:
         """
         Train the GNN on current memory graph.
 
         Call this during DREAMING mode.
+
+        Args:
+            memory: Memory system with Neo4j driver
+            write_to_graph: If True, persist training metrics as observable side effects
+
+        Returns:
+            TrainingResult with epoch metrics, or None if training cannot run
         """
         if self._is_cache_stale():
             await self.update_embeddings(memory)
@@ -955,33 +980,72 @@ class MemoryGNNIntegration:
         print(f"   GNN training epoch {result.epoch}: loss={result.loss:.4f}, "
               f"pos_acc={result.positive_accuracy:.2%}, neg_acc={result.negative_accuracy:.2%}")
 
+        # Write to graph for verification (observable side effect)
+        if write_to_graph:
+            await self.write_training_metrics_to_graph(memory, result)
+
         return result
 
     async def get_enhanced_salience(
         self,
         memory,
-        node_ids: List[str]
+        node_ids: List[str],
+        write_to_graph: bool = True
     ) -> Dict[str, float]:
-        """Get GNN-enhanced salience scores for nodes."""
+        """
+        Get GNN-enhanced salience scores for nodes.
+
+        Args:
+            memory: Memory system with Neo4j driver
+            node_ids: List of node IDs to compute salience for
+            write_to_graph: If True, persist results as observable side effects
+
+        Returns:
+            Dict mapping node_id to salience score
+        """
         if self._is_cache_stale():
             await self.update_embeddings(memory)
 
-        return {
+        salience_scores = {
             node_id: self.gnn.compute_node_salience(node_id)
             for node_id in node_ids
         }
+
+        # Write to graph for verification (observable side effect)
+        if write_to_graph:
+            await self.write_salience_to_graph(memory, node_ids, salience_scores)
+
+        return salience_scores
 
     async def get_related_memories(
         self,
         memory,
         source_id: str,
-        top_k: int = 10
+        top_k: int = 10,
+        write_to_graph: bool = True
     ) -> List[Tuple[str, float]]:
-        """Get memories most related to a source node using GNN embeddings."""
+        """
+        Get memories most related to a source node using GNN embeddings.
+
+        Args:
+            memory: Memory system with Neo4j driver
+            source_id: ID of source node
+            top_k: Number of related nodes to return
+            write_to_graph: If True, persist results as observable side effects
+
+        Returns:
+            List of (node_id, similarity_score) tuples
+        """
         if self._is_cache_stale():
             await self.update_embeddings(memory)
 
-        return self.gnn.get_most_related(source_id, top_k)
+        related = self.gnn.get_most_related(source_id, top_k)
+
+        # Write to graph for verification (observable side effect)
+        if write_to_graph and related:
+            await self.write_related_nodes_to_graph(memory, source_id, related)
+
+        return related
 
     async def record_retrieval_feedback(
         self,
@@ -1000,3 +1064,156 @@ class MemoryGNNIntegration:
 
         # Save updated weights
         self.gnn.save_state(self.state_path)
+
+    async def write_salience_to_graph(
+        self,
+        memory,
+        node_ids: List[str],
+        salience_scores: Dict[str, float]
+    ) -> int:
+        """
+        Write salience scores to graph as observable side effect.
+
+        This creates a verifiable record of salience calculations,
+        enabling audit trails and capability verification.
+        """
+        writes = 0
+        timestamp = datetime.now().isoformat()
+
+        try:
+            async with memory.driver.session() as session:
+                for node_id, salience in salience_scores.items():
+                    if node_id not in node_ids:
+                        continue
+
+                    # Write salience as node property (observable side effect)
+                    await session.run("""
+                        MATCH (n {id: $node_id})
+                        SET n.gnn_salience = $salience,
+                            n.gnn_salience_updated = $timestamp
+                    """, {
+                        'node_id': node_id,
+                        'salience': round(salience, 6),
+                        'timestamp': timestamp
+                    })
+                    writes += 1
+
+                # Track calculation for verification
+                calculation_id = f"salience_{timestamp.replace(':', '-')}"
+                self._calculation_writes[calculation_id] = writes
+
+                print(f"   ✅ Wrote {writes} salience scores to graph")
+
+        except Exception as e:
+            print(f"   ❌ Error writing salience to graph: {e}")
+
+        return writes
+
+    async def write_related_nodes_to_graph(
+        self,
+        memory,
+        source_id: str,
+        related: List[Tuple[str, float]]
+    ) -> int:
+        """
+        Write relationship strengths to graph as observable side effect.
+
+        Creates edges with computed strengths, making GNN calculations
+        visible and verifiable in the graph structure.
+        """
+        writes = 0
+        timestamp = datetime.now().isoformat()
+
+        try:
+            async with memory.driver.session() as session:
+                for related_id, strength in related:
+                    # Create relationship edge with computed strength
+                    await session.run("""
+                        MATCH (source {id: $source_id})
+                        MATCH (target {id: $target_id})
+                        MERGE (source)-[r:GNN_RELATED]->(target)
+                        SET r.strength = $strength,
+                            r.computed_at = $timestamp,
+                            r.embedding_similarity = round($strength, 6)
+                    """, {
+                        'source_id': source_id,
+                        'target_id': related_id,
+                        'strength': round(strength, 6),
+                        'timestamp': timestamp
+                    })
+                    writes += 1
+
+                # Track calculation for verification
+                calculation_id = f"related_{source_id}_{timestamp.replace(':', '-')}"
+                self._calculation_writes[calculation_id] = writes
+
+                print(f"   ✅ Wrote {writes} relationship strengths to graph")
+
+        except Exception as e:
+            print(f"   ❌ Error writing relationships to graph: {e}")
+
+        return writes
+
+    async def write_training_metrics_to_graph(
+        self,
+        memory,
+        result: TrainingResult
+    ) -> bool:
+        """
+        Write training metrics to graph as observable side effect.
+
+        Creates a permanent record of GNN training activity,
+        enabling capability verification and audit trails.
+        """
+        timestamp = datetime.now().isoformat()
+
+        try:
+            async with memory.driver.session() as session:
+                # Create training epoch node
+                await session.run("""
+                    MERGE (t:GNNTraining {epoch: $epoch})
+                    SET t.loss = $loss,
+                        t.positive_accuracy = $pos_acc,
+                        t.negative_accuracy = $neg_acc,
+                        t.edges_trained = $edges,
+                        t.timestamp = $timestamp
+                """, {
+                    'epoch': result.epoch,
+                    'loss': round(result.loss, 6),
+                    'pos_acc': round(result.positive_accuracy, 6),
+                    'neg_acc': round(result.negative_accuracy, 6),
+                    'edges': result.edges_trained,
+                    'timestamp': timestamp
+                })
+
+                # Track calculation for verification
+                calculation_id = f"training_epoch_{result.epoch}"
+                self._calculation_writes[calculation_id] = 1
+
+                print(f"   ✅ Wrote training epoch {result.epoch} metrics to graph")
+                return True
+
+        except Exception as e:
+            print(f"   ❌ Error writing training metrics to graph: {e}")
+            return False
+
+    def get_verification_stats(self) -> Dict[str, Any]:
+        """
+        Get statistics about calculation writes for verification.
+
+        Returns information about observable side effects created,
+        enabling verification that capabilities are actually being used.
+        """
+        total_writes = sum(self._calculation_writes.values())
+        calculation_types = {
+            'salience': sum(v for k, v in self._calculation_writes.items() if k.startswith('salience')),
+            'related': sum(v for k, v in self._calculation_writes.items() if k.startswith('related')),
+            'training': sum(v for k, v in self._calculation_writes.items() if k.startswith('training'))
+        }
+
+        return {
+            'total_writes': total_writes,
+            'calculation_count': len(self._calculation_writes),
+            'by_type': calculation_types,
+            'recent_calculations': list(self._calculation_writes.keys())[-10:]
+        }

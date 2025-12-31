@@ -4049,8 +4049,9 @@ class Memory:
 
     async def get_orphaned_experiences(
         self,
-        limit: int = 50,
-        min_content_length: int = None
+        limit: int = 200,
+        min_content_length: int = None,
+        include_drift: bool = True
     ) -> List[Dict]:
         """
         Find Experience nodes with no relationships to other nodes.
@@ -4058,12 +4059,14 @@ class Memory:
         These are isolated memories that haven't been integrated into
         BYRD's knowledge graph through beliefs, reflections, or desires.
 
-        Drift nodes (reconciliation_attempts >= 3) are excluded to prevent
-        wasting cycles on nodes that consistently fail to reconcile.
+        FIXED: Increased default limit from 50 to 200 to break 7-cycle deadlock.
+        FIXED: Changed reconciliation_attempts limit from 3 to 30.
+        FIXED: Added include_drift parameter to control retry behavior.
 
         Args:
-            limit: Maximum number of orphaned experiences to return
+            limit: Maximum number of orphaned experiences to return (default: 200)
             min_content_length: Minimum content length to consider (filters noise)
+            include_drift: Include nodes that have failed reconciliation (default: True)
 
         Returns:
             List of orphaned Experience dicts with id, content, type, timestamp
@@ -4072,17 +4075,35 @@ class Memory:
 
         try:
             async with self.driver.session() as session:
-                result = await session.run("""
-                    MATCH (e:Experience)
-                    WHERE NOT (e)--()
-                    AND size(e.content) >= $min_len
-                    AND NOT coalesce(e.archived, false)
-                    AND (coalesce(e.reconciliation_attempts, 0) < 3)
-                    RETURN e.id as id, e.content as content,
-                           e.type as type, e.timestamp as timestamp
-                    ORDER BY e.timestamp DESC
-                    LIMIT $limit
-                """, min_len=min_len, limit=limit)
+                # Increased retry limit from 3 to 30 to break deadlock
+                if include_drift:
+                    # Include drift nodes but with higher threshold
+                    result = await session.run("""
+                        MATCH (e:Experience)
+                        WHERE NOT (e)--()
+                        AND size(e.content) >= $min_len
+                        AND NOT coalesce(e.archived, false)
+                        AND (coalesce(e.reconciliation_attempts, 0) < 30)
+                        RETURN e.id as id, e.content as content,
+                               e.type as type, e.timestamp as timestamp,
+                               coalesce(e.reconciliation_attempts, 0) as attempts
+                        ORDER BY e.timestamp DESC
+                        LIMIT $limit
+                    """, min_len=min_len, limit=limit)
+                else:
+                    # Original strict behavior
+                    result = await session.run("""
+                        MATCH (e:Experience)
+                        WHERE NOT (e)--()
+                        AND size(e.content) >= $min_len
+                        AND NOT coalesce(e.archived, false)
+                        AND (coalesce(e.reconciliation_attempts, 0) < 3)
+                        RETURN e.id as id, e.content as content,
+                               e.type as type, e.timestamp as timestamp,
+                               coalesce(e.reconciliation_attempts, 0) as attempts
+                        ORDER BY e.timestamp DESC
+                        LIMIT $limit
+                    """, min_len=min_len, limit=limit)
                 return await result.data()
         except Exception as e:
             print(f"Error finding orphaned experiences: {e}")

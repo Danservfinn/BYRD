@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-"""Simple test to check Neo4j connection."""
+"""Simple test of Neo4j connection."""
 
 import os
 import sys
 
 # Load .env
-def load_env():
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
     env_file = '.env'
     if os.path.exists(env_file):
         with open(env_file) as f:
@@ -15,36 +18,40 @@ def load_env():
                     key, value = line.split('=', 1)
                     os.environ[key.strip()] = value.strip()
 
-load_env()
-
-uri = os.getenv("NEO4J_URI")
-user = os.getenv("NEO4J_USER")
-password = os.getenv("NEO4J_PASSWORD")
-
-print("Environment loaded:")
-print(f"  URI: {uri}")
-print(f"  User: {user}")
-print(f"  Password: {'*' * len(password) if password else 'None'}")
-print()
-
+# Test imports
 try:
     from neo4j import GraphDatabase
-    print("neo4j package imported successfully")
-    
+    print("[OK] Neo4j driver imported")
+except ImportError as e:
+    print(f"[ERROR] Cannot import neo4j: {e}")
+    sys.exit(1)
+
+# Get connection params
+uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+user = os.getenv("NEO4J_USER", "neo4j")
+password = os.getenv("NEO4J_PASSWORD", "password")
+
+print(f"URI: {uri}")
+print(f"User: {user}")
+print(f"Password: {'*' * len(password)}")
+
+# Test connection
+try:
     driver = GraphDatabase.driver(uri, auth=(user, password))
-    print("Driver created")
-    
     driver.verify_connectivity()
-    print("Connectivity verified!")
+    print("[OK] Connection verified")
+    
+    # Test a simple query
+    with driver.session() as session:
+        result = session.run("RETURN 1 as test")
+        print(f"[OK] Test query successful: {result.single()['test']}")
     
     driver.close()
-    print("Connection closed")
+    print("[OK] Connection closed")
+    print("\n✓ Neo4j connection works!")
     
-except ImportError as e:
-    print(f"ImportError: {e}")
-    sys.exit(1)
 except Exception as e:
-    print(f"Exception: {type(e).__name__}: {e}")
+    print(f"[ERROR] Connection failed: {e}")
     import traceback
     traceback.print_exc()
     sys.exit(1)

@@ -136,15 +136,29 @@ class IntuitionNetwork:
 
         return dot / (mag1 * mag2)
 
-    async def record_outcome(self, situation: str, action: str, success: bool):
+    async def record_outcome(self, situation: str, action: str, success: bool, delta: float = 0.0):
         """
         Record an action outcome to train intuition.
 
+        BREAKING FALSE-POSITIVE LOOP: Only treats outcomes as successful if delta is meaningful.
+        
         Args:
             situation: Context/situation description
             action: Action taken
-            success: Whether the action succeeded
+            success: Whether the action succeeded (nominal claim)
+            delta: Actual improvement delta (-1.0 to 1.0). Required for meaningful success.
         """
+        # Override nominal success with delta-based determination
+        MIN_MEANINGFUL_DELTA = 0.005  # 0.5% minimum improvement
+        
+        if success and delta < MIN_MEANINGFUL_DELTA:
+            # False positive detected - claimed success but no meaningful delta
+            success = False
+            if delta > 0:
+                print(f"   ⚠️  Intuition: FALSE POSITIVE for '{action}' - "
+                      f"delta={delta:.4%} < {MIN_MEANINGFUL_DELTA:.1%}")
+            elif delta == 0:
+                print(f"   ⚠️  Intuition: NO DELTA for '{action}' - cannot confirm improvement")
         embedding = self._encode(situation)
 
         if action not in self._intuitions:

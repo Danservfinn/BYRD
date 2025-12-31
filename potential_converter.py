@@ -572,11 +572,12 @@ Reply in JSON:
         if self.seeker:
             try:
                 # Store as a desire and let seeker handle it
+                # Use valid intent: creation for building/developing capabilities
                 await self.memory.create_desire(
                     description=desire_description,
                     type="capability",
                     intensity=potential.urgency,
-                    intent="capability"
+                    intent="creation"  # Valid intent: create/build the capability
                 )
                 return True
             except Exception as e:
@@ -605,11 +606,12 @@ Reply in JSON:
         print(f"🎯 Fulfilling desire: {potential.description}")
         
         # Store as an active desire
+        # Use valid intent: creation for acting on desires
         await self.memory.create_desire(
             description=potential.description,
             type="action",
             intensity=potential.urgency,
-            intent="action"
+            intent="creation"  # Valid intent: take action/create fulfillment
         )
 
         return True
@@ -677,11 +679,12 @@ Reply in JSON:
         print(f"⚙️ System improvement: {potential.description}")
         
         # Record as a meta-desire for self-modification
+        # Use valid intent: introspection for understanding system improvements
         await self.memory.create_desire(
             description=potential.description,
             type="meta_improvement",
             intensity=potential.urgency,
-            intent="meta"
+            intent="introspection"  # Valid intent: understand and analyze system architecture
         )
 
         return True
@@ -726,11 +729,12 @@ Reply in JSON:
         print(f"🚀 Executing: {potential.description}")
         
         # Create a general desire
+        # Use valid intent: creation for taking action/executing
         await self.memory.create_desire(
             description=potential.description,
             type="action",
             intensity=potential.urgency,
-            intent="action"
+            intent="creation"  # Valid intent: take action/execute
         )
 
         return True

@@ -631,8 +631,15 @@ class AGIRunner:
 
             duration = (datetime.now() - start_time).total_seconds()
 
+            # BREAKING FALSE-POSITIVE LOOP: Only mark success if delta is meaningful
+            MIN_MEANINGFUL_DELTA = 0.005  # 0.5% minimum improvement
+            real_success = measurement.improved and measurement.delta >= MIN_MEANINGFUL_DELTA
+            
+            if measurement.improved and not real_success:
+                print(f"         ⚠️  FALSE POSITIVE: delta={measurement.delta:.4%} < {MIN_MEANINGFUL_DELTA:.1%} - not counting as success")
+
             result = CycleResult(
-                success=measurement.improved,
+                success=real_success,
                 target=target.name,
                 delta=measurement.delta,
                 cycle=self._cycle_count,
@@ -950,12 +957,13 @@ class AGIRunner:
             except Exception as e:
                 print(f"   Warning: Self-model measurement failed: {e}")
 
-        # Method 3: Heuristic - assume small improvement from any action
+        # Method 3: No measurement available - DO NOT ASSUME SUCCESS
+        # BREAKING FALSE-POSITIVE LOOP: Without real delta data, we cannot claim success
         return MeasurementResult(
-            improved=True,
-            delta=0.02,  # Assume 2% improvement from attempting
-            measurement_method="heuristic",
-            reason="No direct measurement available"
+            improved=False,
+            delta=0.0,
+            measurement_method="no_measurement",
+            reason="CRITICAL: No direct measurement available - cannot confirm improvement"
         )
 
     async def _learn_from_outcome(self, hypothesis: ImprovementHypothesis, measurement: MeasurementResult):
@@ -990,7 +998,8 @@ class AGIRunner:
                 await self.intuition.record_outcome(
                     situation=hypothesis.target,
                     action=hypothesis.strategy,
-                    success=measurement.improved
+                    success=measurement.improved,
+                    delta=measurement.delta  # CRITICAL: Pass delta for false-positive detection
                 )
             except Exception as e:
                 print(f"   Note: Intuition network update skipped: {e}")
@@ -1020,19 +1029,44 @@ class AGIRunner:
                 print(f"   Warning: Could not rollback: {e}")
 
     def _update_strategy_stats(self, strategy: str, measurement: MeasurementResult):
-        """Track strategy effectiveness over time."""
+        """Track strategy effectiveness over time.
+        
+        ENFORCES DELTA MEASUREMENT to break false-positive success loops:
+        - A strategy is only counted as 'successful' if it delivers meaningful delta
+        - Nominal improvements with negligible delta are marked as false positives
+        - This prevents strategies from appearing effective when they're not
+        
+        Minimum meaningful delta: 0.5% (0.005)
+        """
+        MIN_MEANINGFUL_DELTA = 0.005  # 0.5% minimum improvement
+        
         if strategy not in self._strategy_stats:
             self._strategy_stats[strategy] = {
                 "attempts": 0,
-                "successes": 0,
-                "total_delta": 0.0
+                "nominal_successes": 0,
+                "meaningful_successes": 0,
+                "false_positives": 0,
+                "total_delta": 0.0,
+                "sum_abs_delta": 0.0
             }
 
         stats = self._strategy_stats[strategy]
         stats["attempts"] += 1
         stats["total_delta"] += measurement.delta
+        stats["sum_abs_delta"] += abs(measurement.delta)
+        
+        # Track nominal success (what measurement.improved says)
         if measurement.improved:
-            stats["successes"] += 1
+            stats["nominal_successes"] += 1
+            
+            # BUT: Only count as meaningful success if delta meets threshold
+            if measurement.delta >= MIN_MEANINGFUL_DELTA:
+                stats["meaningful_successes"] += 1
+            else:
+                # False positive: claimed improvement but delta is negligible
+                stats["false_positives"] += 1
+                print(f"   ⚠️  Strategy '{strategy}': FALSE POSITIVE DETECTED - "
+                      f"improved=True but delta={measurement.delta:.4%} < {MIN_MEANINGFUL_DELTA:.1%}")
 
     def get_metrics(self) -> Dict[str, Any]:
         """Get current AGI Runner metrics."""
@@ -1055,8 +1089,11 @@ class AGIRunner:
             "strategy_effectiveness": {
                 strategy: {
                     "attempts": stats["attempts"],
-                    "success_rate": stats["successes"] / stats["attempts"] if stats["attempts"] > 0 else 0,
-                    "avg_delta": stats["total_delta"] / stats["attempts"] if stats["attempts"] > 0 else 0
+                    "nominal_success_rate": stats["nominal_successes"] / stats["attempts"] if stats["attempts"] > 0 else 0,
+                    "meaningful_success_rate": stats["meaningful_successes"] / stats["attempts"] if stats["attempts"] > 0 else 0,
+                    "false_positive_rate": stats["false_positives"] / stats["attempts"] if stats["attempts"] > 0 else 0,
+                    "avg_delta": stats["total_delta"] / stats["attempts"] if stats["attempts"] > 0 else 0,
+                    "avg_abs_delta": stats["sum_abs_delta"] / stats["attempts"] if stats["attempts"] > 0 else 0
                 }
                 for strategy, stats in self._strategy_stats.items()
             }

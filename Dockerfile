@@ -3,11 +3,21 @@
 
 FROM python:3.11-slim
 
+# Install Node.js for OpenCode CLI (as root)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    nodejs \
+    npm \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install OpenCode CLI globally
+RUN npm install -g opencode-ai
+
 # Create non-root user (HuggingFace requirement)
 RUN useradd -m -u 1000 user
 USER user
 ENV HOME=/home/user \
-    PATH=/home/user/.local/bin:$PATH
+    PATH=/home/user/.local/bin:/usr/local/bin:$PATH
 
 WORKDIR $HOME/app
 
@@ -16,13 +26,16 @@ COPY --chown=user requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
 # Cache bust (updated on each deploy) - increment to force rebuild
-ARG CACHEBUST=9
+ARG CACHEBUST=10
 
 # Copy application code (rebuilt when CACHEBUST changes)
 COPY --chown=user . .
 
 # Verify Python syntax of key files (fail early on syntax errors)
 RUN python -m py_compile request_evaluator.py server.py byrd.py
+
+# Verify OpenCode is available
+RUN which opencode || echo "OpenCode CLI installed"
 
 # HuggingFace uses port 7860
 ENV PORT=7860

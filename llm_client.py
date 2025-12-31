@@ -588,7 +588,7 @@ Example format: {"output": {...your reflection...}}"""
 
         # Allow model override for specific use cases (e.g., voice uses glm-4-flash)
         model_to_use = model_override or self.model
-        max_retries = 5
+        max_retries = 15  # BREAK 7-CYCLE DEADLOCK: Increased from 5 to prevent orphan bottleneck
         base_delay = 20  # seconds
         max_delay = 90   # cap delay at 90 seconds
 

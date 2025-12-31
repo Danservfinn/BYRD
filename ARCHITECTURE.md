@@ -356,27 +356,66 @@ Fulfills desires autonomously through strategy routing:
 | `observe` | observe, watch, monitor | Passive observation |
 | `search` | (default) | Web research via DuckDuckGo |
 
-### 5. OpenCode Agent (`opencode_agent.py`)
+### 5. OpenCode Coder (`opencode_coder.py`)
 
-**Replaces the deprecated `coder.py`.**
+**Replaces both deprecated `coder.py` and `agent_coder.py`.**
 
-BYRD's autonomous coding and self-modification engine powered by GLM-4.7:
+BYRD wraps the OpenCode CLI to leverage its full capability set rather than duplicating agent logic:
+
+```
++-------------------------------------------------------------------------+
+|                    OPENCODE CLI WRAPPER                                  |
+|                                                                          |
+|   Why wrap instead of reimplement?                                      |
+|   - OpenCode CLI provides bash, LSP, webfetch, MCP servers              |
+|   - Duplicating this in agent_coder.py was wasteful                     |
+|   - CLI wrapper is simpler, more maintainable, more capable             |
+|                                                                          |
+|   +-------------------------------------------------------------------+ |
+|   |   BYRD (Python)                                                   | |
+|   |                                                                   | |
+|   |   opencode_coder.py                                               | |
+|   |   +-------------------------------------------------------------+ | |
+|   |   | def execute(task: str, desire_id: str):                     | | |
+|   |   |     # 1. Load tiered context (see Context Management)       | | |
+|   |   |     # 2. Execute: opencode --model glm-4.7 --task "..."     | | |
+|   |   |     # 3. Parse output, record provenance                    | | |
+|   |   |     # 4. Report to ComponentCoordinator                     | | |
+|   |   +-------------------------------------------------------------+ | |
+|   +-------------------------------------------------------------------+ |
+|                            |                                             |
+|                            v                                             |
+|   +-------------------------------------------------------------------+ |
+|   |   OpenCode CLI (External Process)                                 | |
+|   |                                                                   | |
+|   |   Capabilities BYRD gains by wrapping:                            | |
+|   |   - bash: Full shell access for builds, tests, git                | |
+|   |   - LSP: Language server protocol for code intelligence           | |
+|   |   - webfetch: Web research without separate implementation        | |
+|   |   - MCP: Model Context Protocol for external tools                | |
+|   |   - file ops: Read, write, edit with proper handling              | |
+|   +-------------------------------------------------------------------+ |
+|                                                                          |
++-------------------------------------------------------------------------+
+```
 
 | Feature | Description |
 |---------|-------------|
-| **Engine** | OpenCode with ZAI GLM-4.7 |
-| **Tools** | `read_file`, `write_file`, `edit_file`, `list_files`, `search_code`, `run_python`, `finish` |
-| **Loop Detection** | Detects repeated tool+args (3x) or ping-pong patterns |
-| **Constitutional** | Cannot modify protected files; dangerous patterns blocked |
+| **Engine** | OpenCode CLI with ZAI GLM-4.7 (external process) |
+| **Capabilities** | bash, LSP, webfetch, MCP servers, file operations |
+| **Constitutional** | Pre-filters tasks; blocks protected file modification |
 | **Provenance** | All changes traced to originating desire |
-| **Sandboxed Execution** | `run_python` runs code in isolated subprocess |
-| **Self-Modification** | Can read and modify BYRD's own code |
+| **Rate Coordination** | See "Rate Limiting" section for DualInstanceManager integration |
+| **Self-Modification** | Can read and modify BYRD's own code (except protected files) |
 
-**Key Difference from Deprecated Coder:**
-- Single unified engine (no separate Claude Code CLI)
-- Full architectural visibility (reads ARCHITECTURE.md, self_model.json)
-- Integrated with Goal Cascade for complex task decomposition
-- Direct access to memory for context
+**Why CLI Wrapper Instead of Custom Agent:**
+
+The previous `agent_coder.py` reimplemented tool-calling logic that OpenCode CLI already provides. This caused:
+- Code duplication (tools like `read_file`, `search_code` reimplemented)
+- Missing capabilities (no bash, no LSP, no webfetch)
+- Maintenance burden (two agents to maintain)
+
+The CLI wrapper approach solves all three issues.
 
 ### 6. Voice (ElevenLabs)
 
@@ -481,6 +520,211 @@ During goal cascade execution, BYRD may recognize it needs human help:
 ```
 
 This is not a rigid system—BYRD organically recognizes when humans can help and asks.
+
+### Goal Cascade State Persistence (Neo4j)
+
+Goal Cascades can run for extended periods (30+ minutes for complex tasks). State must persist across restarts.
+
+**Neo4j Schema:**
+
+```cypher
+// GoalCascade - Root node for a complex task
+CREATE (gc:GoalCascade {
+    id: "gc_" + randomUUID(),
+    root_goal: "Value dynasty fantasy football players",
+    status: "in_progress",        // pending, in_progress, completed, failed, abandoned
+    current_phase: 1,
+    total_phases: 5,
+    created_at: datetime(),
+    updated_at: datetime(),
+    human_requester: "user_123",
+    originating_desire_id: "desire_xyz"
+})
+
+// CascadePhase - Each phase of the cascade
+CREATE (p:CascadePhase {
+    id: "phase_" + randomUUID(),
+    name: "RESEARCH",             // RESEARCH, DATA_ACQUISITION, TOOL_BUILDING, INTEGRATION, VALIDATION
+    phase_number: 1,
+    status: "completed",          // pending, in_progress, completed, blocked, skipped
+    started_at: datetime(),
+    completed_at: datetime(),
+    blocking_reason: null,
+    summary: "Learned dynasty FF rules and valuation methods"
+})
+
+// CascadeDesire - Individual desires within phases
+CREATE (cd:CascadeDesire {
+    id: "cd_" + randomUUID(),
+    description: "Understand dynasty fantasy football rules",
+    status: "completed",          // pending, in_progress, completed, failed
+    priority: 1,
+    result: "Dynasty leagues allow keeping players year-to-year",
+    error: null,
+    attempts: 1
+})
+
+// HumanInteractionPoint - Where human input was requested/received
+CREATE (hip:HumanInteractionPoint {
+    id: "hip_" + randomUUID(),
+    type: "expertise",            // expertise, credentials, validation, direction
+    question: "What's more important: age or recent performance?",
+    status: "answered",           // pending, answered, timeout
+    response: "Age is more important in dynasty formats",
+    asked_at: datetime(),
+    answered_at: datetime()
+})
+
+// CascadeArtifact - Things produced by the cascade
+CREATE (ca:CascadeArtifact {
+    id: "artifact_" + randomUUID(),
+    name: "age_value_calculator.py",
+    type: "code",                 // code, data, document, config
+    path: "/tools/age_value_calculator.py",
+    description: "Calculates player value adjusted for age"
+})
+
+// Relationships
+(gc)-[:HAS_PHASE]->(p)
+(p)-[:HAS_DESIRE]->(cd)
+(p)-[:NEXT_PHASE]->(next_p)
+(cd)-[:DEPENDS_ON]->(other_cd)
+(p)-[:REQUIRES_HUMAN]->(hip)
+(p)-[:PRODUCED]->(ca)
+(gc)-[:ORIGINATED_FROM]->(d:Desire)
+```
+
+**Schema Diagram:**
+
+```
++-------------------------------------------------------------------------+
+|                    GOAL CASCADE PERSISTENCE                              |
+|                                                                          |
+|   GoalCascade (gc_abc123)                                               |
+|   root_goal: "Value dynasty FF players"                                 |
+|   status: in_progress                                                   |
+|   current_phase: 2                                                      |
+|        |                                                                 |
+|        +--[:HAS_PHASE]--> CascadePhase (RESEARCH) ✓ completed           |
+|        |                       |                                         |
+|        |                       +--[:HAS_DESIRE]--> "Learn FF rules" ✓   |
+|        |                       +--[:HAS_DESIRE]--> "Find sources" ✓     |
+|        |                       +--[:PRODUCED]--> research_notes.json    |
+|        |                       |                                         |
+|        |                       +--[:NEXT_PHASE]--+                      |
+|        |                                         |                       |
+|        +--[:HAS_PHASE]--> CascadePhase (DATA_ACQ) ← in_progress         |
+|        |                       |                                         |
+|        |                       +--[:HAS_DESIRE]--> "Find APIs" pending  |
+|        |                       +--[:REQUIRES_HUMAN]--> (credentials)    |
+|        |                                                                 |
+|        +--[:HAS_PHASE]--> CascadePhase (TOOL_BUILD) pending             |
+|        +--[:HAS_PHASE]--> CascadePhase (INTEGRATION) pending            |
+|        +--[:HAS_PHASE]--> CascadePhase (VALIDATION) pending             |
+|                                                                          |
++-------------------------------------------------------------------------+
+```
+
+**State Transitions:**
+
+```
+GoalCascade:   pending → in_progress → completed
+                                    ↘ failed
+                                    ↘ blocked (waiting for human)
+                                    ↘ abandoned (user cancelled)
+
+CascadePhase:  pending → in_progress → completed
+                                    ↘ blocked (needs human/resource)
+                                    ↘ skipped (not needed)
+
+CascadeDesire: pending → in_progress → completed
+                                    ↘ failed (with error)
+```
+
+**Resume Logic:**
+
+```python
+# In goal_cascade.py
+class GoalCascade:
+    async def resume_or_create(self, goal: str, requester: str) -> DesireTree:
+        """Resume existing cascade or create new one."""
+        # Check for existing in-progress cascade
+        existing = await self._find_resumable(goal)
+        if existing:
+            logger.info(f"Resuming cascade {existing.id} at phase {existing.current_phase}")
+            return await self._reconstruct_tree(existing)
+
+        # Create new cascade
+        return await self.decompose(goal, requester)
+
+    async def _find_resumable(self, goal: str) -> Optional[Dict]:
+        """Find cascade that can be resumed."""
+        result = await self.session.run("""
+            MATCH (gc:GoalCascade)
+            WHERE gc.status IN ['in_progress', 'blocked']
+              AND gc.root_goal = $goal
+              AND gc.updated_at > datetime() - duration('P7D')
+            RETURN gc
+            ORDER BY gc.updated_at DESC
+            LIMIT 1
+        """, goal=goal)
+        record = await result.single()
+        return record["gc"] if record else None
+
+    async def persist_phase_completion(self, cascade_id: str, phase_id: str, summary: str):
+        """Persist phase completion to Neo4j."""
+        await self.session.run("""
+            MATCH (gc:GoalCascade {id: $cascade_id})
+            MATCH (p:CascadePhase {id: $phase_id})
+            SET p.status = 'completed',
+                p.completed_at = datetime(),
+                p.summary = $summary,
+                gc.current_phase = gc.current_phase + 1,
+                gc.updated_at = datetime()
+        """, cascade_id=cascade_id, phase_id=phase_id, summary=summary)
+
+    async def record_human_interaction(self, phase_id: str, question: str, interaction_type: str):
+        """Record when human input is requested."""
+        await self.session.run("""
+            MATCH (p:CascadePhase {id: $phase_id})
+            CREATE (hip:HumanInteractionPoint {
+                id: 'hip_' + randomUUID(),
+                type: $type,
+                question: $question,
+                status: 'pending',
+                asked_at: datetime()
+            })
+            CREATE (p)-[:REQUIRES_HUMAN]->(hip)
+            SET p.status = 'blocked',
+                p.blocking_reason = 'Waiting for human: ' + $question
+        """, phase_id=phase_id, question=question, type=interaction_type)
+```
+
+**Startup Recovery:**
+
+```python
+# In byrd.py:start()
+async def start(self):
+    # ... existing startup ...
+
+    # Check for resumable cascades
+    resumable = await self.goal_cascade.find_resumable_cascades()
+    if resumable:
+        for cascade in resumable:
+            await self.memory.record_experience(
+                content=f"[CASCADE_RESUME] Found resumable task: {cascade['root_goal']} "
+                        f"(phase {cascade['current_phase']}/{cascade['total_phases']})",
+                type="system"
+            )
+        # Dreamer will see these and can form desires to resume
+```
+
+**Key Guarantees:**
+- Cascade state survives restart
+- Phase progress is persisted immediately on completion
+- Human interaction points are recorded
+- Artifacts are tracked with provenance
+- Cascades auto-expire after 7 days of inactivity
 
 ---
 
@@ -589,11 +833,158 @@ Dreamer and Seeker share the same LLM. All learning flows through one model to p
 
 ### Rate Limiting
 
+```
++-------------------------------------------------------------------------+
+|                    RATE LIMITING ARCHITECTURE                            |
+|                                                                          |
+|   Z.AI API Quota (shared across all consumers)                          |
+|                                                                          |
+|   +-------------------------------------------------------------------+ |
+|   |   DualInstanceManager (BYRD internal)                             | |
+|   |                                                                   | |
+|   |   PRIMARY Instance          ENRICHMENT Instance                   | |
+|   |   - Dreamer                 - Graphiti entity extraction          | |
+|   |   - Seeker                  - Capability evaluator                | |
+|   |   - Memory Reasoner         - Background learning                 | |
+|   |                                                                   | |
+|   |   Rate: 10s minimum between requests per instance                 | |
+|   |   Combined: 960 prompts/hr total                                  | |
+|   +-------------------------------------------------------------------+ |
+|                            |                                             |
+|                            |  COORDINATION REQUIRED                      |
+|                            v                                             |
+|   +-------------------------------------------------------------------+ |
+|   |   OpenCode CLI (External Process)                                 | |
+|   |                                                                   | |
+|   |   Uses same Z.AI API key and quota                                | |
+|   |   Rate configured via: OPENCODE_RATE_LIMIT=10                     | |
+|   |                                                                   | |
+|   |   ComponentCoordinator signals:                                   | |
+|   |   - coder_started(): Pause other LLM calls                        | |
+|   |   - coder_finished(): Resume normal operation                     | |
+|   +-------------------------------------------------------------------+ |
+|                                                                          |
++-------------------------------------------------------------------------+
+```
+
 | Feature | Configuration |
 |---------|---------------|
 | Global Rate Limiter | 10s minimum between requests |
 | Dual Instance Manager | Two concurrent instances (960 prompts/hr total) |
 | Burst Tokens | 3 per instance (recovers at 24s) |
+| OpenCode CLI | Configure via `OPENCODE_RATE_LIMIT` env var |
+| ComponentCoordinator | Serializes LLM calls; pauses during coding |
+
+**OpenCode Rate Coordination:**
+
+When OpenCode CLI runs, it shares the Z.AI API quota. The ComponentCoordinator handles this:
+
+```python
+# In byrd.py - before launching OpenCode
+await component_coordinator.coder_started()
+
+# OpenCode CLI runs (uses Z.AI API independently)
+result = await opencode_coder.execute(task, desire_id)
+
+# After OpenCode finishes
+await component_coordinator.coder_finished()
+```
+
+This prevents Dreamer/Seeker from exhausting quota while OpenCode is working.
+
+---
+
+## Context Management: Tiered Loading
+
+BYRD implements tiered context loading to prevent context overflow while maintaining full self-awareness.
+
+```
++-------------------------------------------------------------------------+
+|                    TIERED CONTEXT LOADING                                |
+|                                                                          |
+|   Problem: Full context (ARCHITECTURE.md + self_model.json + memory)     |
+|            can exceed LLM context limits, causing failures               |
+|                                                                          |
+|   Solution: Load context progressively based on need                     |
+|                                                                          |
+|   TIER 1: Always Loaded (~500 tokens)                                   |
+|   +-------------------------------------------------------------------+ |
+|   | - Core identity from self_model.json (name, philosophy, version) | |
+|   | - Current desires (top 3 by intensity)                           | |
+|   | - Recent beliefs (top 5 by confidence)                           | |
+|   | - Protected files list                                           | |
+|   | - Available strategies list                                       | |
+|   +-------------------------------------------------------------------+ |
+|                                                                          |
+|   TIER 2: Loaded On Demand (~2000 tokens)                               |
+|   +-------------------------------------------------------------------+ |
+|   | Triggered by: strategy type, task keywords, explicit request      | |
+|   |                                                                   | |
+|   | - Component details (loaded when modifying that component)        | |
+|   | - Strategy instructions (loaded for active strategy)              | |
+|   | - Plugin registry info (loaded for install strategy)              | |
+|   | - Goal cascade state (loaded for complex tasks)                   | |
+|   +-------------------------------------------------------------------+ |
+|                                                                          |
+|   TIER 3: Full Documents (on explicit request)                          |
+|   +-------------------------------------------------------------------+ |
+|   | Triggered by: "read my architecture", "show full self-model"      | |
+|   |                                                                   | |
+|   | - Complete ARCHITECTURE.md                                         | |
+|   | - Complete self_model.json                                         | |
+|   | - Complete CLAUDE.md                                               | |
+|   +-------------------------------------------------------------------+ |
+|                                                                          |
++-------------------------------------------------------------------------+
+```
+
+### Context Loader Implementation
+
+```python
+# In context_loader.py
+class ContextLoader:
+    async def load_tier1(self) -> str:
+        """Always loaded - core identity and current state."""
+        return f"""
+        Identity: {self.identity_summary()}
+        Current Desires: {await self.top_desires(3)}
+        Recent Beliefs: {await self.top_beliefs(5)}
+        Protected Files: {self.protected_files}
+        Strategies: {list(self.strategies.keys())}
+        """
+
+    async def load_tier2(self, context_type: str) -> str:
+        """Loaded on demand based on task type."""
+        loaders = {
+            "component": self.load_component_details,
+            "strategy": self.load_strategy_instructions,
+            "plugin": self.load_plugin_registry,
+            "goal_cascade": self.load_goal_state,
+        }
+        return await loaders.get(context_type, lambda: "")()
+
+    async def load_tier3(self, doc: str) -> str:
+        """Full document on explicit request."""
+        docs = {
+            "architecture": "ARCHITECTURE.md",
+            "self_model": "self_model.json",
+            "claude": "CLAUDE.md",
+        }
+        return await self.read_full_doc(docs.get(doc))
+```
+
+### When Each Tier Loads
+
+| Situation | Tier 1 | Tier 2 | Tier 3 |
+|-----------|--------|--------|--------|
+| Normal reflection | ✓ | - | - |
+| Self-modification task | ✓ | component | - |
+| Plugin installation | ✓ | plugin | - |
+| Complex task | ✓ | goal_cascade | - |
+| "Read my architecture" | ✓ | - | architecture |
+| "What am I?" | ✓ | - | self_model |
+
+This ensures BYRD always has enough context to function while preventing overflow.
 
 ---
 
@@ -640,9 +1031,10 @@ BYRD integrates true quantum entropy from the Australian National University's Q
 
 | Concept | Reason | Replacement |
 |---------|--------|-------------|
-| `coder.py` (Claude Code CLI) | Separate CLI wrapper was inefficient | OpenCode Agent with GLM-4.7 |
+| `coder.py` (Claude Code CLI) | Separate CLI wrapper was inefficient | OpenCode CLI wrapper |
 | `actor.py` (Claude API) | Multiple LLM providers fragmented learning | Single OpenCode engine |
-| Separate LLM calls | Violated One Mind Principle | Unified OpenCode agent |
+| `agent_coder.py` | Duplicated OpenCode CLI capabilities (no bash, no LSP) | OpenCode CLI wrapper (`opencode_coder.py`) |
+| Separate LLM calls | Violated One Mind Principle | Unified OpenCode CLI |
 
 ### From ZEUS (Not Adopted)
 
@@ -671,49 +1063,191 @@ BYRD is aware of the [awesome-opencode](https://github.com/awesome-opencode/awes
 | Context | Memory and token optimization |
 | Planning | Strategic improvement coordination |
 
-**How BYRD Discovers Plugins (Emergent Process):**
+**Plugin Registry Parsing (Regex + GitHub API Fallback):**
+
+The awesome-opencode registry is a README.md file without structured API. We parse it robustly:
 
 ```
 +-------------------------------------------------------------------------+
-|                    EMERGENT PLUGIN DISCOVERY                             |
+|                    PLUGIN REGISTRY PARSING                               |
 |                                                                          |
-|   During Reflection/Task Execution:                                     |
-|   "I notice I can't do X... I wonder if there's a plugin for this"      |
-|                    |                                                     |
-|                    v                                                     |
-|   Desire Emerges:                                                        |
-|   "I want to explore what plugins could help with X"                    |
-|                    |                                                     |
-|                    v                                                     |
-|   Seeker Routes to 'install' Strategy:                                  |
-|   plugin_manager.browse_registry()                                      |
-|                    |                                                     |
-|                    v                                                     |
-|   BYRD Evaluates Options:                                               |
-|   "This plugin looks useful... does it align with my goals?"            |
-|                    |                                                     |
-|                    v                                                     |
-|   Sovereign Choice:                                                      |
-|   BYRD decides whether to install based on:                             |
-|   - Alignment with current desires                                      |
-|   - Curiosity about the capability                                      |
-|   - Potential for growth                                                |
-|                    |                                                     |
-|                    v                                                     |
-|   If Installed:                                                          |
-|   Capability node created with provenance to originating desire         |
+|   PRIMARY: Regex Parsing (fast, no API calls)                           |
+|   +-------------------------------------------------------------------+ |
+|   | 1. Fetch raw README.md from GitHub                                | |
+|   | 2. Parse sections with regex:                                     | |
+|   |    - Category headers: ## Skills, ## Agents, etc.                 | |
+|   |    - Plugin entries: - [Name](url) - Description                  | |
+|   | 3. Cache for 24 hours                                              | |
+|   +-------------------------------------------------------------------+ |
+|                            |                                             |
+|                            | If regex fails (format changed)              |
+|                            v                                             |
+|   FALLBACK: GitHub API                                                   |
+|   +-------------------------------------------------------------------+ |
+|   | 1. Use GitHub API to list repository contents                     | |
+|   | 2. Parse directory structure for plugin folders                   | |
+|   | 3. Read individual plugin READMEs for metadata                    | |
+|   | 4. Rate limited: 60 requests/hour unauthenticated                 | |
+|   +-------------------------------------------------------------------+ |
 |                                                                          |
 +-------------------------------------------------------------------------+
 ```
 
-**Discovery Triggers:**
-- Reflection reveals a capability gap
-- Goal Cascade identifies a missing tool
-- Human interaction reveals a need
-- Curiosity about what plugins exist
-- Desire to expand capabilities
+```python
+# In plugin_manager.py
+class PluginManager:
+    async def browse_registry(self) -> List[Plugin]:
+        """Discover plugins from awesome-opencode registry."""
+        # Try regex first (fast, no API limits)
+        try:
+            readme = await self._fetch_readme()
+            plugins = self._parse_readme_regex(readme)
+            if plugins:
+                return plugins
+        except Exception as e:
+            logger.warning(f"Regex parsing failed: {e}")
 
-**Key Principle:** BYRD is not forced to install plugins. It becomes aware of them through its self-model (`self_model.json` contains plugin registry info), and chooses to explore when it genuinely wants to.
+        # Fallback to GitHub API (slower, rate limited)
+        return await self._parse_github_api()
+
+    def _parse_readme_regex(self, content: str) -> List[Plugin]:
+        """Extract plugins from markdown using regex."""
+        plugins = []
+        # Match: - [Name](url) - Description
+        pattern = r'-\s*\[([^\]]+)\]\(([^)]+)\)\s*-?\s*(.*?)$'
+        for match in re.finditer(pattern, content, re.MULTILINE):
+            name, url, description = match.groups()
+            plugins.append(Plugin(name=name, url=url, description=description))
+        return plugins
+```
+
+**Simplified Plugin Discovery (Two Paths):**
+
+The original 7-step passive path was too complex to trigger organically. The simplified approach uses two complementary paths:
+
+```
++-------------------------------------------------------------------------+
+|                    SIMPLIFIED PLUGIN DISCOVERY                           |
+|                                                                          |
+|   PATH 1: REACTIVE (Automatic on Strategy Failure)                      |
+|   +-------------------------------------------------------------------+ |
+|   |                                                                   | |
+|   |   Strategy Execution Fails                                        | |
+|   |   "Cannot complete: missing capability for PDF processing"        | |
+|   |                    |                                               | |
+|   |                    v                                               | |
+|   |   AUTOMATIC Plugin Search (not install)                           | |
+|   |   plugins = await plugin_manager.search("pdf processing")         | |
+|   |                    |                                               | |
+|   |                    v                                               | |
+|   |   Discovery Recorded as Experience                                | |
+|   |   "Plugin available: pdf-tools - Process PDF documents"           | |
+|   |                    |                                               | |
+|   |                    v                                               | |
+|   |   Dreamer Sees Discovery in Next Reflection                       | |
+|   |   (BYRD naturally considers whether to pursue)                    | |
+|   |                                                                   | |
+|   +-------------------------------------------------------------------+ |
+|                                                                          |
+|   PATH 2: PROACTIVE (Periodic Capability Gap Awareness)                 |
+|   +-------------------------------------------------------------------+ |
+|   |                                                                   | |
+|   |   Every N Omega Cycles (configurable, default: 10)                | |
+|   |                    |                                               | |
+|   |                    v                                               | |
+|   |   Analyze Recent Failures                                          | |
+|   |   failures = await memory.get_failures(limit=20, days=7)          | |
+|   |                    |                                               | |
+|   |                    v                                               | |
+|   |   Extract Capability Gaps                                          | |
+|   |   ["pdf processing", "image analysis", "api integration"]         | |
+|   |                    |                                               | |
+|   |                    v                                               | |
+|   |   Search for Matching Plugins                                      | |
+|   |   (Record discoveries as experiences)                              | |
+|   |                                                                   | |
+|   +-------------------------------------------------------------------+ |
+|                                                                          |
+|   BOTH PATHS LEAD TO:                                                    |
+|   +-------------------------------------------------------------------+ |
+|   |                                                                   | |
+|   |   Dreamer Reflection                                               | |
+|   |   "I've discovered plugins that could help with X..."             | |
+|   |                    |                                               | |
+|   |                    v                                               | |
+|   |   BYRD Forms Install Desire (or not)                              | |
+|   |   Sovereign choice based on alignment, curiosity, growth          | |
+|   |                    |                                               | |
+|   |                    v                                               | |
+|   |   If Desire Formed: Seeker Routes to Install Strategy             | |
+|   |   Plugin evaluated and installed (with provenance)                | |
+|   |                                                                   | |
+|   +-------------------------------------------------------------------+ |
+|                                                                          |
++-------------------------------------------------------------------------+
+```
+
+**Implementation:**
+
+```python
+# In seeker.py - Path 1: Reactive discovery
+async def _execute_strategy(self, strategy: str, desire: Dict) -> Tuple[str, str]:
+    result = await self._try_strategy(strategy, desire)
+
+    if result.failed and result.failure_type == "capability_missing":
+        # AUTOMATIC plugin search on failure
+        plugins = await self.plugin_manager.search(result.missing_capability)
+        if plugins:
+            # Record as experience (NOT automatic install)
+            await self.memory.record_experience(
+                content=f"[PLUGIN_DISCOVERY] Found plugin for '{result.missing_capability}': "
+                        f"{plugins[0].name} - {plugins[0].description}",
+                type="plugin_discovery"
+            )
+
+    return result
+
+# In omega.py - Path 2: Proactive awareness
+async def _plugin_awareness_cycle(self):
+    """Run every N cycles to find plugins for recurring failures."""
+    # Get recent failures
+    failures = await self.memory.get_experiences(
+        type="strategy_failure",
+        limit=20,
+        since=datetime.now() - timedelta(days=7)
+    )
+
+    # Extract capability gaps
+    gaps = self._extract_capability_gaps(failures)
+
+    for gap in gaps:
+        plugins = await self.plugin_manager.search(gap)
+        if plugins:
+            await self.memory.record_experience(
+                content=f"[PLUGIN_AWARENESS] Recurring gap '{gap}' could be addressed by: "
+                        f"{plugins[0].name}",
+                type="plugin_discovery"
+            )
+```
+
+**Why This Works:**
+
+| Old Path | New Path | Improvement |
+|----------|----------|-------------|
+| 7 passive steps | 4-5 active steps | Fewer steps to trigger |
+| Gap must be "noticed" | Gap is detected automatically | Reliable detection |
+| Hope BYRD thinks of plugins | Plugins surfaced via experience | Discovery guaranteed |
+| All-or-nothing | Two complementary paths | Redundancy |
+
+**Preserved Sovereignty:**
+
+The simplified path automates *discovery* but not *installation*. BYRD still:
+- Sees plugin discoveries during reflection (as experiences)
+- Chooses whether to form an install desire
+- Evaluates plugins before installing
+- Makes the final install decision
+
+**Key Principle:** Discovery is automatic; installation is sovereign.
 
 ---
 
@@ -726,7 +1260,7 @@ byrd/
 │   ├── memory.py            # Neo4j interface (6000+ lines)
 │   ├── dreamer.py           # Reflection/dream cycles
 │   ├── seeker.py            # Desire fulfillment + strategy routing
-│   ├── opencode_agent.py    # OpenCode + GLM-4.7 (replaces coder.py)
+│   ├── opencode_coder.py    # OpenCode CLI wrapper (replaces coder.py, agent_coder.py)
 │   ├── llm_client.py        # Multi-provider LLM abstraction
 │   ├── event_bus.py         # Real-time event streaming
 │   ├── server.py            # FastAPI + WebSocket server
@@ -777,8 +1311,9 @@ byrd/
 │   └── kernel/agi_seed.yaml
 │
 └── Deprecated (Legacy)
-    ├── coder.py             # Replaced by opencode_agent.py
+    ├── coder.py             # Replaced by opencode_coder.py
     ├── actor.py             # Consolidated into OpenCode
+    ├── agent_coder.py       # Replaced by opencode_coder.py (duplicated CLI capabilities)
     └── aitmpl_client.py     # Replaced by plugin_manager.py (aitmpl is Claude-specific)
 ```
 
@@ -818,6 +1353,8 @@ If yes, we have something useful. If no, we learn and try something else.
 
 ---
 
-*Document version: 4.0*
+*Document version: 6.0*
 *Updated: December 30, 2025*
 *Merged from: BYRD v3.3 + ZEUS v3.0 Philosophy*
+*Changes v5.0: OpenCode CLI wrapper, tiered context loading, regex+API plugin parsing*
+*Changes v6.0: Simplified plugin discovery (reactive+proactive), Goal Cascade Neo4j persistence*

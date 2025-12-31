@@ -47,8 +47,10 @@ class OrphanReconciler:
     # Semantic similarity threshold for matching
     SEMANTIC_THRESHOLD = 0.3
     
-    # Maximum connections to create in one run
-    MAX_CONNECTIONS = 50
+    # BREAK 7-CYCLE DEADLOCK: Increased from 50 to 200
+    # Higher limit prevents bottleneck when orphan volume is high
+    # Reduces chance of hitting retry limits during processing
+    MAX_CONNECTIONS = 200
 
     def __init__(self, memory: Memory, dry_run: bool = False):
         self.memory = memory
@@ -370,7 +372,7 @@ class OrphanReconciler:
             properties["created_at"] = datetime.now().isoformat()
             properties["reconciliation_method"] = "orphan_reconciler"
             
-            success = await self.memory.create_relationship(
+            success = await self.memory.create_connection(
                 from_id,
                 to_id,
                 rel_type,

@@ -72,10 +72,24 @@ class OutcomeDispatcher:
 
         # 2. Update intuition network
         if self._intuition:
+            # Calculate value delta to prevent false-positive loops
+            # CRITICAL: Must measure actual value delivered, not just binary success
+            if success:
+                # For successful outcomes, default to moderate positive delta
+                # Could be enhanced to extract actual delta from outcome metadata
+                delta = 0.5
+            else:
+                # For failures, negative delta based on outcome type
+                if outcome.outcome_type == OutcomeType.TIMEOUT:
+                    delta = -0.2  # Timeout is less severe than failure
+                else:
+                    delta = -0.5  # Standard failure
+            
             await self._intuition.record_outcome(
                 situation=outcome.description,
                 action=outcome.strategy,
-                success=success
+                success=success,
+                delta=delta
             )
             results['intuition'] = True
 

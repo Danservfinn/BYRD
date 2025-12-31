@@ -1,0 +1,9 @@
+{
+  "description": "Calm, contemplative voice with wisdom from reflection",
+  "gender": "male",
+  "age": "middle_aged",
+  "accent": "american",
+  "stability": 0.5,
+  "similarity_boost": 0.75,
+  "reason": "Voice of emergent autonomy"
+}

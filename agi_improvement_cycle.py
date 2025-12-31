@@ -8,6 +8,12 @@ ASSESS → IDENTIFY → GENERATE → PREDICT → VERIFY → EXECUTE → MEASURE 
 The cycle breaks the analysis-action loop by ensuring each step produces
 concrete outputs that drive the next step forward, with no opportunity for
 infinite reflection without action.
+
+INTEGRATED WITH LOOP INSTRUMENTATION:
+- Tracks cycles over time to detect zero-delta loops
+- Monitors stagnation patterns
+- Triggers interventions when improvement stalls
+- Prevents false-positive success loops
 """
 
 import asyncio
@@ -17,6 +23,18 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any, Callable
 from enum import Enum
 from datetime import datetime
+
+# Import loop instrumentation to break zero-delta loops
+LoopInstrumenter = None
+CycleMetrics = None
+LoopState = None
+HAS_INSTRUMENTATION = False
+try:
+    from loop_instrumentation import LoopInstrumenter, CycleMetrics, LoopState
+    HAS_INSTRUMENTATION = True
+    print("[INFO] Loop instrumentation enabled - zero-delta detection active")
+except ImportError as e:
+    print(f"[WARNING] loop_instrumentation not available - zero-delta detection disabled: {e}")
 
 
 class CyclePhase(Enum):
@@ -111,6 +129,14 @@ class AGIImprovementCycle:
         
         self.cycle_history: List[CycleState] = []
         self.current_state: Optional[CycleState] = None
+        
+        # Initialize loop instrumentation to break zero-delta loops
+        self.instrumenter: Optional['LoopInstrumenter'] = None
+        self.loop_name: str = "agi_improvement_cycle"
+        if HAS_INSTRUMENTATION:
+            self.instrumenter = LoopInstrumenter()
+            self.instrumenter.register_loop(self.loop_name)
+            print(f"[INSTRUMENTATION] Registered loop '{self.loop_name}' for zero-delta detection")
     
     def _create_cycle_id(self) -> str:
         """Generate unique cycle identifier."""
@@ -163,11 +189,77 @@ class AGIImprovementCycle:
             state.current_phase = CyclePhase.LEARN  # Final phase
             self.cycle_history.append(state)
             
+            # INTEGRATION WITH LOOP INSTRUMENTATION
+            # Record cycle metrics to break zero-delta loops
+            if self.instrumenter and HAS_INSTRUMENTATION:
+                self._record_cycle_with_instrumentation(state)
+                
+                # Check for stagnation and trigger intervention if needed
+                if self.instrumenter.is_stagnant(self.loop_name):
+                    stagnation_analysis = self.instrumenter.analyze_stagnation(self.loop_name)
+                    state.errors.append(
+                        f"[INSTRUMENTATION] Stagnation detected: {stagnation_analysis}"
+                    )
+                    # Note: Intervention strategies should be handled by calling code
+                    # We record the detection here
+            
         except Exception as e:
             state.errors.append(f"Critical failure in {state.current_phase.value}: {str(e)}")
             raise
         
         return state
+    
+    def _record_cycle_with_instrumentation(self, state: CycleState) -> None:
+        """
+        Record completed cycle metrics with loop instrumenter.
+        
+        This breaks the zero-delta loop by tracking:
+        - Overall delta from baseline
+        - Success/failure based on positive delta
+        - Duration of the cycle
+        - Whether the improvement was meaningful
+        """
+        # Guard: Only proceed if instrumentation is available
+        if not HAS_INSTRUMENTATION or not self.instrumenter or CycleMetrics is None:
+            return
+        
+        # Calculate overall delta as average of all delta measurements
+        if state.delta_measurements:
+            overall_delta = sum(state.delta_measurements.values()) / len(state.delta_measurements)
+        else:
+            overall_delta = 0.0
+        
+        # Determine success based on positive delta
+        has_positive_delta = any(d > 0 for d in state.delta_measurements.values())
+        
+        # Calculate duration
+        cycle_duration = (datetime.now() - state.start_time).total_seconds()
+        
+        # Determine if improvement was meaningful (delta >= 0.5%)
+        MIN_MEANINGFUL_DELTA = 0.005  # 0.5% improvement
+        is_meaningful = overall_delta >= MIN_MEANINGFUL_DELTA
+        
+        # Record with instrumenter using individual parameters
+        # (record_cycle expects delta, success, duration_seconds separately, not a CycleMetrics object)
+        self.instrumenter.record_cycle(
+            loop_name=self.loop_name,
+            delta=overall_delta,
+            success=has_positive_delta,
+            duration_seconds=cycle_duration,
+            error=state.errors[-1] if state.errors else None
+        )
+        
+        # Log instrumentation data
+        print(f"[INSTRUMENTATION] Cycle {len(self.cycle_history)} recorded: "
+              f"delta={overall_delta:.4f}, success={has_positive_delta}, "
+              f"meaningful={is_meaningful}")
+        
+        # Get current loop state from the loops dictionary
+        if self.loop_name in self.instrumenter.loops:
+            loop_profile = self.instrumenter.loops[self.loop_name]
+            print(f"[INSTRUMENTATION] Loop state: {loop_profile.current_state.value}, "
+                  f"success_rate={loop_profile.success_rate:.2%}, "
+                  f"meaningful_rate={loop_profile.meaningful_rate:.2%}")
     
     async def _phase_assess(self, state: CycleState) -> None:
         """
@@ -175,6 +267,9 @@ class AGIImprovementCycle:
         
         Output: Complete assessment of capabilities, performance, and gaps.
         Must be concrete and complete before proceeding.
+        
+        CRITICAL: Establishes baseline measurements for delta calculation.
+        All strategies must demonstrate positive delta to be considered successful.
         """
         state.current_phase = CyclePhase.ASSESS
         
@@ -190,6 +285,28 @@ class AGIImprovementCycle:
             raise ValueError("ASSESS phase must return dictionary")
         
         state.assessments = result
+        
+        # Extract baseline measurements from assessment for delta calculation
+        # Look for performance metrics in assessments
+        if "performance" in result and isinstance(result["performance"], dict):
+            state.baseline_measurements = {
+                k: v for k, v in result["performance"].items()
+                if isinstance(v, (int, float))
+            }
+        elif "metrics" in result and isinstance(result["metrics"], dict):
+            state.baseline_measurements = {
+                k: v for k, v in result["metrics"].items()
+                if isinstance(v, (int, float))
+            }
+        else:
+            # Extract any numeric values as baseline
+            state.baseline_measurements = {
+                k: v for k, v in result.items()
+                if isinstance(v, (int, float))
+            }
+        
+        if not state.baseline_measurements:
+            raise ValueError("ASSESS phase must provide at least one numeric baseline measurement")
     
     async def _phase_identify(self, state: CycleState) -> None:
         """
@@ -324,6 +441,10 @@ class AGIImprovementCycle:
         
         Output: Ground-truth measurements of execution impact.
         Objective comparison against predictions.
+        
+        CRITICAL: Calculates delta measurements (actual - baseline).
+        Strategies with non-positive deltas are FAILURES regardless of predictions.
+        This breaks the false-positive success loop.
         """
         state.current_phase = CyclePhase.MEASURE
         
@@ -342,6 +463,43 @@ class AGIImprovementCycle:
                 raise ValueError(f"MEASURE value for {key} must be numeric")
         
         state.measurements = result
+        
+        # CRITICAL: Calculate delta measurements
+        # Delta = Post-execution measurement - Baseline measurement
+        state.delta_measurements = {}
+        
+        for metric_name, post_value in result.items():
+            if metric_name in state.baseline_measurements:
+                baseline_value = state.baseline_measurements[metric_name]
+                delta = post_value - baseline_value
+                state.delta_measurements[metric_name] = delta
+            else:
+                # No baseline for this metric - cannot calculate delta
+                # This is a warning, not an error
+                state.errors.append(
+                    f"WARNING: No baseline measurement for metric '{metric_name}'. "
+                    f"Cannot calculate delta."
+                )
+        
+        if not state.delta_measurements:
+            raise ValueError(
+                "MEASURE phase failed: No delta measurements could be calculated. "
+                "At least one measured metric must have a corresponding baseline."
+            )
+        
+        # CRITICAL: Validate that at least one metric shows positive delta
+        # This breaks the false-positive loop - you cannot claim success without improvement
+        has_positive_delta = any(d > 0 for d in state.delta_measurements.values())
+        
+        if not has_positive_delta:
+            # All deltas are zero or negative - FAILURE
+            state.errors.append(
+                "CRITICAL: MEASURE phase detected no positive deltas. "
+                "All strategies failed to improve over baseline. "
+                f"Deltas: {state.delta_measurements}"
+            )
+            # We don't raise an exception here - we let the LEARN phase handle it
+            # But we mark it clearly as a failure
     
     async def _phase_learn(self, state: CycleState) -> None:
         """
@@ -349,6 +507,11 @@ class AGIImprovementCycle:
         
         Output: Learnings that improve future cycles.
         Compare predictions vs measurements, update models.
+        
+        CRITICAL: Learns from delta measurements. Success is determined by
+        positive delta, not by meeting predictions. Strategies that fail to
+        improve over baseline must be abandoned regardless of how "predicted"
+        they were.
         """
         state.current_phase = CyclePhase.LEARN
         
@@ -357,8 +520,11 @@ class AGIImprovementCycle:
             "learn",
             {
                 "predictions": state.predictions,
+                "baseline_measurements": state.baseline_measurements,
                 "measurements": state.measurements,
-                "execution_results": state.execution_results
+                "delta_measurements": state.delta_measurements,
+                "execution_results": state.execution_results,
+                "success": any(d > 0 for d in state.delta_measurements.values())
             }
         )
         
@@ -472,28 +638,52 @@ def create_default_cycle() -> AGIImprovementCycle:
         return results
     
     async def default_measure(execution_results: Dict) -> Dict[str, float]:
-        """Default measurement: Return simulated metrics."""
+        """
+        Default measurement: Return simulated post-execution metrics.
+        
+        CRITICAL: Must return metrics with same names as baseline for delta calculation.
+        For demonstration, we simulate improvement over baseline (accuracy: 0.85 -> 0.90).
+        """
+        # Simulate post-execution measurements
+        # These must use the same keys as baseline_measurements for delta calc
         return {
-            "tree_of_thought_reasoning_accuracy": 0.88,
-            "vector_memory_index_accuracy": 0.75,
-            "overall_improvement": 0.07
+            "accuracy": 0.90,  # Improved from baseline 0.85
+            "speed": 1.15      # Improved from baseline 1.0
         }
     
     async def default_learn(data: Dict) -> Dict[str, Any]:
-        """Default learning: Extract insights."""
-        predictions = data["predictions"]
-        measurements = data["measurements"]
+        """
+        Default learning: Extract insights from delta measurements.
         
-        # Calculate prediction accuracy
-        prediction_errors = {
-            key: abs(predictions.get(key, 0) - measurements.get(f"{key}_accuracy", 0))
-            for key in predictions.keys()
-        }
+        CRITICAL: Success is determined by positive delta, not prediction accuracy.
+        Strategies that fail to improve over baseline are rejected.
+        """
+        predictions = data.get("predictions", {})
+        baseline = data.get("baseline_measurements", {})
+        measurements = data.get("measurements", {})
+        deltas = data.get("delta_measurements", {})
+        success = data.get("success", False)
+        
+        if not success:
+            # No positive deltas - cycle failed
+            return {
+                "cycle_success": False,
+                "reason": "No positive delta measured",
+                "deltas": deltas,
+                "recommendation": "Abandon current strategies, reassess baseline"
+            }
+        
+        # Success - identify which metrics improved most
+        best_delta_metric = max(deltas.items(), key=lambda x: x[1])
         
         return {
-            "prediction_errors": prediction_errors,
-            "best_performer": "tree_of_thought_reasoning",
-            "next_focus": "scale_tree_of_thought"
+            "cycle_success": True,
+            "best_delta_metric": best_delta_metric[0],
+            "best_delta_value": best_delta_metric[1],
+            "baseline": baseline,
+            "measurements": measurements,
+            "deltas": deltas,
+            "recommendation": "Continue scaling successful strategies"
         }
     
     return AGIImprovementCycle(
@@ -544,8 +734,20 @@ async def main():
     print(f"Measurements taken: {len(state.measurements)}")
     print(f"Learnings extracted: {len(state.learnings)}")
     
+    # CRITICAL: Display delta measurements to break false-positive loop
+    print(f"\n--- DELTA MEASUREMENTS (Breaking False-Positive Loop) ---")
+    print(f"Baseline measurements: {state.baseline_measurements}")
+    print(f"Post-execution measurements: {state.measurements}")
+    print(f"DELTA measurements: {state.delta_measurements}")
+    has_positive_delta = any(d > 0 for d in state.delta_measurements.values())
+    print(f"Positive delta detected: {has_positive_delta}")
+    if has_positive_delta:
+        print("✓ SUCCESS: At least one metric improved over baseline")
+    else:
+        print("✗ FAILURE: No metrics improved over baseline - false positive blocked")
+    
     if state.errors:
-        print(f"\n⚠ Errors encountered: {len(state.errors)}")
+        print(f"\n⚠ Errors/Warnings: {len(state.errors)}")
         for error in state.errors:
             print(f"  - {error}")
     

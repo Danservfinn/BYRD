@@ -105,7 +105,8 @@ class ReflectionEngine:
     def __init__(self,
                  pattern_analyzer: Optional[Callable] = None,
                  desire_generator: Optional[Callable] = None,
-                 validator: Optional[Callable] = None):
+                 validator: Optional[Callable] = None,
+                 orphan_reader: Optional[Any] = None):
         """
         Initialize the Reflection Engine.
         
@@ -113,6 +114,7 @@ class ReflectionEngine:
             pattern_analyzer: Function to identify patterns in context
             desire_generator: Function to generate desires from patterns
             validator: Function to validate desire quality and consistency
+            orphan_reader: Optional OrphanReader for orphan state integration
         """
         self.reflection_history: List[ReflectionContext] = []
         self.desires: Dict[str, Desire] = {}
@@ -123,16 +125,20 @@ class ReflectionEngine:
         self.desire_generator = desire_generator or self._default_desire_generator
         self.validator = validator or self._default_validator
         
+        # Optional orphan reader for memory state awareness
+        self.orphan_reader = orphan_reader
+        
         # Statistics
         self.reflections_performed = 0
         self.desires_generated = 0
         
-    def capture_context(self,
+    async def capture_context(self,
                         internal_state: Dict[str, Any],
                         recent_experiences: List[str],
                         current_goals: List[str],
                         environmental_factors: Optional[Dict[str, Any]] = None,
-                        depth: int = 1) -> ReflectionContext:
+                        depth: int = 1,
+                        include_orphan_state: bool = True) -> ReflectionContext:
         """
         Capture the current context for reflection.
         
@@ -142,13 +148,25 @@ class ReflectionEngine:
             current_goals: Currently active goals
             environmental_factors: External context and constraints
             depth: How deep to reflect (1=surface, higher=deeper)
+            include_orphan_state: Whether to include orphan memory state
         
         Returns:
             ReflectionContext containing all captured information
         """
+        # Enrich internal state with orphan memory information if available
+        enriched_state = dict(internal_state) if internal_state else {}
+        
+        if include_orphan_state and self.orphan_reader:
+            try:
+                orphan_additions = await self.orphan_reader.get_reflection_context_additions()
+                enriched_state.update(orphan_additions)
+            except Exception as e:
+                # Log but don't fail if orphan reading has issues
+                print(f"⚠️ Could not enrich context with orphan state: {e}")
+        
         context = ReflectionContext(
             timestamp=time.time(),
-            internal_state=internal_state,
+            internal_state=enriched_state,
             recent_experiences=recent_experiences,
             current_goals=current_goals,
             environmental_factors=environmental_factors or {},

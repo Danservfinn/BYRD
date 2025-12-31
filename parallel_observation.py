@@ -251,6 +251,9 @@ class ObservationPath:
             return 0
             
         transmitted = 0
+        consecutive_unhealthy = 0
+        MAX_CONSECUTIVE_UNHEALTHY = 3  # Break thrash loop after this many unhealthy targets
+        
         while True:
             obs = await self.buffer.get_next()
             if obs is None:
@@ -258,8 +261,17 @@ class ObservationPath:
                 
             target = obs.original_target or "event_bus"
             if not transmission_status.is_healthy(target):
-                logger.debug("Target still unhealthy, pausing")
+                consecutive_unhealthy += 1
+                logger.debug(f"Target unhealthy ({consecutive_unhealthy}/{MAX_CONSECUTIVE_UNHEALTHY}), pausing")
+                # Put observation back and break to prevent thrash loop
+                await self.buffer.remove(obs.id)
+                await self.buffer.add(obs)
+                if consecutive_unhealthy >= MAX_CONSECUTIVE_UNHEALTHY:
+                    logger.warning("Thrash loop detected - stopping flush to wait for target recovery")
+                    break
                 break
+            
+            consecutive_unhealthy = 0  # Reset on healthy target
                 
             try:
                 success = await transmit_fn(obs)

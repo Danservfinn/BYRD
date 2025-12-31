@@ -34,6 +34,14 @@ from enum import Enum
 from memory import Memory
 from event_bus import event_bus, Event, EventType
 
+# Import loop instrumentation to break zero-delta loops
+try:
+    from loop_instrumentation import LoopInstrumenter, CycleMetrics, get_instrumenter
+    HAS_INSTRUMENTATION = True
+except ImportError:
+    HAS_INSTRUMENTATION = False
+    print("[WARNING] loop_instrumentation not available - zero-delta detection disabled")
+
 logger = logging.getLogger(__name__)
 
 
@@ -125,6 +133,21 @@ class GoalEvolver:
         self._total_goals_created = 0
         self._total_goals_completed = 0
         self._total_capability_delta = 0.0
+
+        # Initialize loop instrumentation to break zero-delta loops
+        self.instrumenter: Optional['LoopInstrumenter'] = None
+        self.loop_name: str = "goal_evolver"
+        if HAS_INSTRUMENTATION:
+            try:
+                self.instrumenter = get_instrumenter()
+                if self.instrumenter:
+                    self.instrumenter.register_loop(self.loop_name)
+                    print(f"[INSTRUMENTATION] Registered loop '{self.loop_name}' for zero-delta detection")
+            except Exception:
+                pass
+
+        # Cycle counter for instrumentation
+        self._cycle_counter = 0
 
         # Learning component (injected by Omega)
         self.intuition = None  # IntuitionNetwork for fitness adjustment
@@ -258,10 +281,12 @@ class GoalEvolver:
         # Record outcome to intuition network for learning
         if self.intuition and goal_description:
             try:
+                # BREAKING FALSE-POSITIVE LOOP: Pass capability_delta for meaningful success detection
                 await self.intuition.record_outcome(
                     situation=f"pursuing goal: {goal_description[:200]}",
                     action="pursue_goal",
-                    success=completed and capability_delta > 0
+                    success=completed and capability_delta > 0,
+                    delta=capability_delta  # CRITICAL: Actual capability improvement delta
                 )
             except Exception as e:
                 logger.debug(f"Intuition recording failed: {e}")
@@ -282,6 +307,71 @@ class GoalEvolver:
         # Archive if fitness too low
         if fitness < self.archive_threshold and not completed:
             await self.memory.archive_goal(goal_id)
+
+    def _record_evolution_cycle(
+        self,
+        population_before: List[EvolvedGoal],
+        population_after: List[str],
+        start_time: datetime,
+        new_goals_created: int
+    ) -> None:
+        """
+        Record evolution cycle metrics with loop instrumenter.
+        
+        This breaks the zero-delta loop by tracking:
+        - Average fitness improvement (delta)
+        - Success based on new goals created and fitness growth
+        - Duration of the evolution cycle
+        - Whether the improvement was meaningful
+        """
+        if not self.instrumenter:
+            return
+        
+        self._cycle_counter += 1
+        
+        # Calculate delta as change in average fitness
+        if population_before:
+            avg_fitness_before = sum(g.fitness for g in population_before) / len(population_before)
+        else:
+            avg_fitness_before = 0.0
+        
+        # Track baseline fitness from previous cycles
+        if not hasattr(self, '_baseline_avg_fitness'):
+            self._baseline_avg_fitness = avg_fitness_before
+        
+        # Delta is improvement in average fitness
+        delta = avg_fitness_before - self._baseline_avg_fitness
+        self._baseline_avg_fitness = avg_fitness_before
+        
+        # Success if we created new goals and fitness improved or stayed stable
+        success = new_goals_created > 0 and delta >= 0
+        
+        # Duration
+        duration_seconds = (datetime.now() - start_time).total_seconds()
+        
+        # Meaningful if delta >= 0.5% (MIN_MEANINGFUL_DELTA)
+        MIN_MEANINGFUL_DELTA = 0.005
+        is_meaningful = delta >= MIN_MEANINGFUL_DELTA
+        
+        # Create cycle metrics
+        from loop_instrumentation import CycleMetrics
+        metrics = CycleMetrics(
+            cycle_number=self._cycle_counter,
+            timestamp=datetime.now(),
+            delta=delta,
+            success=success,
+            meaningful=is_meaningful,
+            duration_seconds=duration_seconds,
+            error=None
+        )
+        
+        # Record with instrumenter
+        self.instrumenter.record_cycle(self.loop_name, metrics)
+        
+        # Check for stagnation and log warning
+        if self.instrumenter.is_stagnant(self.loop_name):
+            analysis = self.instrumenter.analyze_stagnation(self.loop_name)
+            logger.warning(f"[INSTRUMENTATION] Goal Evolver stagnation detected: {analysis}")
 
     def _tournament_select(
         self,
@@ -555,6 +645,7 @@ DO NOT include analysis, reasoning, or explanation. Just the JSON."""
         Returns:
             Statistics about the evolution
         """
+        start_time = datetime.now()
         population = await self.get_current_population()
 
         if len(population) < 2:
@@ -595,6 +686,14 @@ DO NOT include analysis, reasoning, or explanation. Just the JSON."""
                 await self.memory.archive_goal(goal.id)
 
         self._current_generation += 1
+
+        # INTEGRATION WITH LOOP INSTRUMENTATION
+        # Record evolution cycle metrics to break zero-delta loops
+        if self.instrumenter and HAS_INSTRUMENTATION:
+            self._record_evolution_cycle(population_before=population, 
+                                        population_after=new_goal_ids, 
+                                        start_time=start_time,
+                                        new_goals_created=len(new_goal_ids) - self.elite_count)
 
         # Emit evolution event
         await event_bus.emit(Event(

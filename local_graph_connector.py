@@ -211,7 +211,8 @@ class LocalGraphConnector:
             monitoring_desire_id = await self.memory.create_desire(
                 description=monitoring_content,
                 type="monitoring",
-                intensity=0.5
+                intensity=0.5,
+                intent="introspection"  # Monitoring is about observing system state
                 # Note: metadata fields removed - not supported by create_desire
             )
             nodes_created.append(monitoring_desire_id)

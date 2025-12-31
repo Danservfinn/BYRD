@@ -103,12 +103,22 @@ class RealAGIRunner:
         
         # Create result
         duration_seconds = (datetime.now() - start_time).total_seconds()
+        
+        # BREAKING FALSE-POSITIVE LOOP: Only mark success if delta is meaningful
+        MIN_MEANINGFUL_DELTA = 0.005  # 0.5% minimum improvement
+        real_success = delta >= MIN_MEANINGFUL_DELTA
+        
+        if not real_success:
+            print(f"         ⚠️  FALSE POSITIVE: delta={delta:.4%} < {MIN_MEANINGFUL_DELTA:.1%} - not counting as success")
+        else:
+            print(f"         ✅ MEANINGFUL IMPROVEMENT: delta={delta:.2%}")
+        
         result = CycleResult(
-            success=True,
+            success=real_success,  # Only true if delta meets threshold
             target=target,
             delta=delta,
             cycle=self._cycle_count,
-            reason="Pattern recognition improved through memory crystallization",
+            reason="Pattern recognition improved through memory crystallization" if real_success else "Delta below meaningful threshold",
             duration_seconds=duration_seconds,
             hypotheses_tried=1,
             strategy=strategy,

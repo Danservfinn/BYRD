@@ -562,7 +562,7 @@ Output JSON:
                 description="Increase difficulty of self-improvement challenges",
                 type="meta_learning",
                 intensity=0.6,
-                intent="self_improvement"
+                intent="creation"  # Valid intent: create more challenging tasks
             )
 
         elif analysis.severity == PlateauSeverity.MODERATE:
@@ -572,7 +572,7 @@ Output JSON:
                     description=f"[PLATEAU_RESPONSE] {action}",
                     type="meta_learning",
                     intensity=0.7,
-                    intent="self_improvement"
+                    intent="creation"  # Valid intent: create/implement new approaches
                 )
 
         elif analysis.severity in [PlateauSeverity.SEVERE, PlateauSeverity.CRITICAL]:
@@ -589,7 +589,7 @@ Output JSON:
                     description=f"[URGENT] {action}",
                     type="meta_learning",
                     intensity=0.9,
-                    intent="self_improvement"
+                    intent="creation"  # Valid intent: take urgent action/create solutions
                 )
 
             print(f"🚨 Plateau response: {len(analysis.suggested_actions)} urgent actions created")
