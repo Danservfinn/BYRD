@@ -54,7 +54,8 @@ class OpenCodeCoder:
     doesn't work in headless Docker containers.
     """
 
-    ZAI_API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+    # Z.AI Coding Plan endpoint (separate quota from default endpoint)
+    ZAI_API_URL = "https://api.z.ai/api/coding/paas/v4/chat/completions"
 
     def __init__(
         self,
@@ -68,7 +69,7 @@ class OpenCodeCoder:
         self.context_loader = context_loader
         self.memory = memory
 
-        self._model = "glm-4-plus"  # Z.AI model
+        self._model = "glm-4.7"  # Z.AI model (same as llm_client)
         self._api_key = os.environ.get("ZAI_API_KEY")
 
         # Execution tracking
