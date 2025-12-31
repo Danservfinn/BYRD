@@ -242,8 +242,13 @@ class DreamingMachine:
             error=None
         )
         
-        # Record with instrumenter
-        self.instrumenter.record_cycle(self.loop_name, metrics)
+        # Record with instrumenter (pass individual params, not metrics object)
+        self.instrumenter.record_cycle(
+            self.loop_name,
+            delta=metrics.delta,
+            success=metrics.success,
+            duration_seconds=metrics.duration_seconds
+        )
         
         # Check for stagnation and log warning
         if self.instrumenter.is_stagnant(self.loop_name):

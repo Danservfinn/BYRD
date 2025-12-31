@@ -25,7 +25,7 @@ from memory import Memory
 from dreamer import Dreamer
 from seeker import Seeker
 from actor import Actor
-from opencode_coder import OpenCodeCoder, create_opencode_coder, CoderResult
+from stub_coder import StubCoder, create_stub_coder, CoderResult
 from interactive_coder import RalphLoop, RalphLoopConfig
 
 # Hybrid LLM Architecture (Z.AI reasoning + Claude SDK execution)
@@ -274,22 +274,9 @@ class BYRD:
         # Inject self-modification system into Seeker
         self.seeker.self_mod = self.self_mod
 
-        # Initialize OpenCode Coder (CLI wrapper with auto-detection)
-        # Tries 'opencode' CLI first, falls back to 'claude' CLI
-        coder_config = self.config.get("coder", {})
-        coder_config["project_root"] = "."
-
-        self.coder = create_opencode_coder(
-            config=coder_config,
-            coordinator=None,  # Will be set up later if ComponentCoordinator is used
-            context_loader=None,  # Will be injected after context_loader is initialized
-            memory=self.memory
-        )
-
-        if self.coder.enabled:
-            print(f"💻 Coder: OpenCode (ACP mode)")
-        else:
-            print(f"⚠️  Coder: Disabled")
+        # Initialize Stub Coder (OpenCode integration removed)
+        self.coder = create_stub_coder()
+        print("💻 Coder: Disabled (OpenCode integration removed)")
 
         # Inject Coder into Seeker
         self.seeker.coder = self.coder
@@ -829,7 +816,7 @@ class BYRD:
 
             # Show Coder status
             coder_status = "enabled" if self.coder.enabled else "disabled"
-            print(f"💻 Coder (Claude Code): {coder_status}")
+            print(f"💻 Coder: {coder_status}")
 
             # Start background processes
             print("\n💭 Starting Dreamer (continuous reflection)...")

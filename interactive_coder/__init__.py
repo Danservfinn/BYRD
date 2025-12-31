@@ -1,8 +1,10 @@
 """
-interactive_coder - Interactive OpenCode CLI System for BYRD
+interactive_coder - Interactive Coding System for BYRD
 
 Implements the Ralph Loop pattern for multi-turn coding interactions
 until BYRD is satisfied with the result.
+
+NOTE: The OpenCode integration has been removed. The coder is currently disabled.
 
 Components:
 - RalphLoop: Main loop controller (execute until satisfied)

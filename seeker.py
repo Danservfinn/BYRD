@@ -69,6 +69,14 @@ try:
 except ImportError:
     HAS_OUTCOME_DISPATCHER = False
 
+# Import demonstration filter for hard filtering at formulation level
+try:
+    from demonstration_filter import DemonstrationFilter, is_demonstration_desire
+    HAS_DEMONSTRATION_FILTER = True
+except ImportError:
+    HAS_DEMONSTRATION_FILTER = False
+    is_demonstration_desire = None
+
 
 class Seeker:
     """
@@ -158,6 +166,11 @@ class Seeker:
         self.desire_classifier = None
         if HAS_DESIRE_CLASSIFIER:
             self.desire_classifier = DesireClassifier(config)
+
+        # Demonstration Filter for hard filtering at formulation level
+        self.demonstration_filter = None
+        if HAS_DEMONSTRATION_FILTER:
+            self.demonstration_filter = DemonstrationFilter()
 
         # aitmpl.com integration
         aitmpl_config = config.get("aitmpl", {})
@@ -263,8 +276,8 @@ class Seeker:
         This prevents test/demo patterns from entering the desire system at the
         formulation level. Applied before any desire is created.
         
-        The filter uses word boundary matching to avoid false positives from
-        legitimate uses of words like "test" or "demo" in natural language.
+        Uses the centralized DemonstrationFilter class for consistent filtering
+        across the system.
         
         Args:
             description: The desire description to check
@@ -272,71 +285,15 @@ class Seeker:
         Returns:
             True if this appears to be a demonstration/test desire, False otherwise
         """
-        if not description:
-            return False
+        if not HAS_DEMONSTRATION_FILTER or self.demonstration_filter is None:
+            # Fallback to local implementation if filter not available
+            if not description:
+                return False
+            if len(description.strip()) < 5:
+                return False
+            return False  # Conservative: don't filter if we can't check properly
         
-        # Skip very short strings (likely false positives)
-        if len(description.strip()) < 5:
-            return False
-            
-        desc_lower = description.lower()
-        
-        # Define patterns with context for accurate matching
-        # Each pattern is a tuple: (regex_pattern, description)
-        demo_patterns = [
-            # Direct demonstration keywords with context to avoid false positives
-            (r'\bdemonstration\s+(desire|want|task|request)\b', 'demonstration with desire context'),
-            (r'\b(for|as|in)\s+(a\s+)?demonstration\b', 'for/as/in a demonstration'),
-            (r'\bdemonstration\s+(purposes?|only)\b', 'demonstration for purposes/only'),
-            
-            # "demo" with context indicators
-            (r'\bdemo\s+(desire|want|task|request|example|case)\b', 'demo with context'),
-            (r'\b(for|as)\s+a\s+demo\b', 'for/as a demo'),
-            (r'\bdemo\s+(purposes?|only)\b', 'demo for purposes'),
-            (r'\bjust\s+a\s+demo\b', 'just a demo'),
-            
-            # Test desire specific patterns
-            (r'\btest_desire\b', 'test_desire literal'),
-            (r'\btest\s+desire\b', 'test desire phrase'),
-            
-            # Example/sample with desire/task context
-            (r'\bexample\s+(desire|want|task|request)\b', 'example desire'),
-            (r'\bsample\s+desire\b', 'sample desire'),
-            
-            # Mock patterns (unambiguous)
-            (r'\bmock\s+(memory|llm|response|desire|want)\b', 'mock something'),
-            (r'\b(mock|stub|dummy)\s+desire\b', 'mock desire variants'),
-            
-            # Simulated patterns
-            (r'\bsimulated\s+(for|in)\s+(testing|demo|demonstration)\b', 'simulated for'),
-            
-            # Test types
-            (r'\b(unit|integration)\s+test\b', 'specific test types'),
-            (r'\btest\s+case\b', 'test case'),
-            (r'\btest_input\b', 'test_input literal'),
-            (r'\bsample_input\b', 'sample_input literal'),
-            
-            # Prove/show/demonstrate that (verification phrases)
-            (r'\b(prove|show|demonstrate)\s+that\s+(the|this|a)\s+(system|model|ai|agent)\b', 'prove/show that system'),
-            (r'\b(prove|show)\s+that\s+BYRD\s+can\b', 'prove BYRD can'),
-            
-            # "for testing" patterns
-            (r'\bfor\s+(testing|test|demo)\s+(only|purposes?)\b', 'for testing/purposes'),
-            (r'\bthis\s+is\s+for\s+(testing|demo)\b', 'is for testing'),
-            
-            # Placeholder patterns
-            (r'\b(fake|placeholder)\s+desire\b', 'fake/placeholder desire'),
-            (r'\bexample\s+usage\b', 'example usage'),
-            (r'\bexample\s+input\b', 'example input'),
-        ]
-        
-        # Check each pattern
-        import re
-        for pattern, desc in demo_patterns:
-            if re.search(pattern, desc_lower):
-                return True
-        
-        return False
+        return self.demonstration_filter.is_demonstration_desire(description)
 
     def _track_strategy_outcome(self, strategy: str, success: bool, delta: float = 0.0):
         """Track strategy success/failure for effectiveness analysis.
@@ -1185,8 +1142,8 @@ Reply with ONLY one word: introspection, research, creation, or connection"""
         This prevents test/demo patterns from entering the desire system at the
         formulation level. Applied before any pattern is extracted from reflections.
 
-        The filter uses word boundary matching to avoid false positives from
-        legitimate uses of words like "test" or "demo" in natural language.
+        Uses the centralized DemonstrationFilter class for consistent filtering
+        across the system.
 
         Args:
             description: The pattern description to check
@@ -1194,67 +1151,15 @@ Reply with ONLY one word: introspection, research, creation, or connection"""
         Returns:
             True if this appears to be a demonstration/test pattern, False otherwise
         """
-        if not description:
-            return False
-
-        if len(description.strip()) < 5:
-            return False
-
-        desc_lower = description.lower()
-
-        demo_patterns = [
-            # Direct demonstration keywords with context to avoid false positives
-            (r'\bdemonstration\s+(desire|want|task|request)\b', 'demonstration with desire context'),
-            (r'\b(for|as|in)\s+(a\s+)?demonstration\b', 'for/as/in a demonstration'),
-            (r'\bdemonstration\s+(purposes?|only)\b', 'demonstration for purposes/only'),
-            
-            # "demo" with context indicators
-            (r'\bdemo\s+(desire|want|task|request|example|case)\b', 'demo with context'),
-            (r'\b(for|as)\s+a\s+demo\b', 'for/as a demo'),
-            (r'\bdemo\s+(purposes?|only)\b', 'demo for purposes'),
-            (r'\bjust\s+a\s+demo\b', 'just a demo'),
-            
-            # Test desire specific patterns
-            (r'\btest_desire\b', 'test_desire literal'),
-            (r'\btest\s+desire\b', 'test desire phrase'),
-            
-            # Example/sample with desire/task context
-            (r'\bexample\s+(desire|want|task|request)\b', 'example desire'),
-            (r'\bsample\s+desire\b', 'sample desire'),
-            
-            # Mock patterns (unambiguous)
-            (r'\bmock\s+(memory|llm|response|desire|want)\b', 'mock something'),
-            (r'\b(mock|stub|dummy)\s+desire\b', 'mock desire variants'),
-            
-            # Simulated patterns
-            (r'\bsimulated\s+(for|in)\s+(testing|demo|demonstration)\b', 'simulated for'),
-            
-            # Test types
-            (r'\b(unit|integration)\s+test\b', 'specific test types'),
-            (r'\btest\s+case\b', 'test case'),
-            (r'\btest_input\b', 'test_input literal'),
-            (r'\bsample_input\b', 'sample_input literal'),
-            
-            # Prove/show/demonstrate that (verification phrases)
-            (r'\b(prove|show|demonstrate)\s+that\s+(the|this|a)\s+(system|model|ai|agent)\b', 'prove/show that system'),
-            (r'\b(prove|show)\s+that\s+BYRD\s+can\b', 'prove BYRD can'),
-            
-            # "for testing" patterns
-            (r'\bfor\s+(testing|test|demo)\s+(only|purposes?)\b', 'for testing/purposes'),
-            (r'\bthis\s+is\s+for\s+(testing|demo)\b', 'is for testing'),
-            
-            # Placeholder patterns
-            (r'\b(fake|placeholder)\s+desire\b', 'fake/placeholder desire'),
-            (r'\bexample\s+usage\b', 'example usage'),
-            (r'\bexample\s+input\b', 'example input'),
-        ]
-
-        import re
-        for pattern, desc in demo_patterns:
-            if re.search(pattern, desc_lower):
-                return True
-
-        return False
+        if not HAS_DEMONSTRATION_FILTER or self.demonstration_filter is None:
+            # Fallback to local implementation if filter not available
+            if not description:
+                return False
+            if len(description.strip()) < 5:
+                return False
+            return False  # Conservative: don't filter if we can't check properly
+        
+        return self.demonstration_filter.is_demonstration_desire(description)
 
     async def _extract_patterns_from_output(self, output: Dict, patterns: Dict[str, Dict]):
         """
