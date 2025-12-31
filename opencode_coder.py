@@ -121,6 +121,10 @@ class OpenCodeCoder:
         # Find available CLI
         self._cli_command, self._cli_args = self._find_cli()
 
+        # Ensure OpenCode auth is configured
+        if self._cli_command == "opencode":
+            self._ensure_opencode_auth()
+
         # Modification tracking
         self._modifications: List[ModificationRecord] = []
         self._execution_count = 0
@@ -162,6 +166,62 @@ class OpenCodeCoder:
 
         logger.warning("No coding CLI found - will use subprocess fallback")
         return None, []
+
+    def _ensure_opencode_auth(self):
+        """Ensure OpenCode has auth configured for Z.AI.
+
+        OpenCode stores credentials in ~/.local/share/opencode/auth.json.
+        If ZAI_API_KEY is set but auth.json doesn't have Z.AI credentials,
+        create them automatically.
+        """
+        import json
+
+        zai_key = os.environ.get("ZAI_API_KEY")
+        if not zai_key:
+            logger.info("ZAI_API_KEY not set - OpenCode may not work with Z.AI")
+            return
+
+        # Path to OpenCode auth file
+        auth_dir = Path.home() / ".local" / "share" / "opencode"
+        auth_file = auth_dir / "auth.json"
+
+        # Check if auth already configured
+        if auth_file.exists():
+            try:
+                with open(auth_file) as f:
+                    auth_data = json.load(f)
+                if "zai" in auth_data:
+                    logger.info("OpenCode Z.AI auth already configured")
+                    return
+            except (json.JSONDecodeError, IOError):
+                pass
+
+        # Create auth directory and file
+        try:
+            auth_dir.mkdir(parents=True, exist_ok=True)
+
+            # Load existing or create new
+            auth_data = {}
+            if auth_file.exists():
+                try:
+                    with open(auth_file) as f:
+                        auth_data = json.load(f)
+                except (json.JSONDecodeError, IOError):
+                    pass
+
+            # Add Z.AI credentials
+            auth_data["zai"] = {
+                "type": "api",
+                "key": zai_key
+            }
+
+            # Write auth file
+            with open(auth_file, 'w') as f:
+                json.dump(auth_data, f, indent=2)
+
+            logger.info(f"Created OpenCode Z.AI auth at {auth_file}")
+        except Exception as e:
+            logger.error(f"Failed to create OpenCode auth: {e}")
 
     async def execute(
         self,
