@@ -26,7 +26,7 @@ COPY --chown=user requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
 # Cache bust (updated on each deploy) - increment to force rebuild
-ARG CACHEBUST=26
+ARG CACHEBUST=27
 
 # Copy application code (rebuilt when CACHEBUST changes)
 COPY --chown=user . .

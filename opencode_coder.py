@@ -168,21 +168,22 @@ class OpenCodeCoder:
             self.coordinator.coder_started(task[:50])
 
         try:
-            # Build CLI command
-            # opencode run --model <model> --format json
-            # Pass prompt via stdin using echo pipe
+            # Build CLI command using script for pseudo-TTY
+            # script -q -c "command" /dev/null  (Linux syntax)
+            opencode_cmd = f'opencode run --model {self._model} --format json {json.dumps(task)}'
             cmd = [
-                "bash", "-c",
-                f'echo {json.dumps(task)} | opencode run --model {self._model} --format json'
+                "script",
+                "-q",  # Quiet mode
+                "-c", opencode_cmd,  # Command to execute
+                "/dev/null",  # Typescript file (discard)
             ]
 
             # Set environment for headless operation
             env = os.environ.copy()
-            env["TERM"] = "dumb"
+            env["TERM"] = "xterm"  # Provide terminal type for pseudo-TTY
             env["CI"] = "true"  # Common flag to disable interactive prompts
-            env["NO_COLOR"] = "1"  # Disable color output
 
-            logger.info(f"[Coder] Running: echo '...' | opencode run --model {self._model} --format json")
+            logger.info(f"[Coder] Running via script: opencode run --model {self._model} --format json '...'")
 
             # Run with timeout
             process = await asyncio.create_subprocess_exec(
