@@ -1988,7 +1988,7 @@
 
       // API
       apiBase: '',
-      wsUrl: `ws://${window.location.host}/ws/events`
+      wsUrl: `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/events`
     };
 
     // ==========================================================================
