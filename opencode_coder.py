@@ -4,14 +4,18 @@ OpenCode Coder - ACP Mode Only
 Uses OpenCode's Agent Client Protocol (JSON-RPC over stdin/stdout).
 Designed for headless operation in Docker/HuggingFace.
 
-Replaces the previous CLI wrapper implementation.
-ACP = Agent Client Protocol - no TTY required, perfect for containers.
+ACP Protocol Flow:
+1. session/initialize - establish capabilities
+2. session/new - create a session (get sessionId)
+3. session/prompt - send prompts with sessionId
+4. Read session/update notifications for responses
 """
 
 import asyncio
 import json
 import logging
 import os
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, List, Dict, Any
@@ -57,12 +61,6 @@ class OpenCodeCoder:
 
     ACP = Agent Client Protocol (JSON-RPC over stdin/stdout)
     No fallbacks - if ACP fails, the operation fails.
-
-    Why ACP mode:
-    - Designed for headless operation (no TTY required)
-    - JSON-RPC over stdin/stdout for structured communication
-    - Perfect for Docker containers and HuggingFace Spaces
-    - Same capabilities as CLI (bash, LSP, webfetch, MCP tools)
     """
 
     def __init__(
@@ -72,15 +70,6 @@ class OpenCodeCoder:
         context_loader=None,
         memory=None,
     ):
-        """
-        Initialize the OpenCode coder.
-
-        Args:
-            config: Configuration dict
-            coordinator: ComponentCoordinator for signaling
-            context_loader: ContextLoader for tiered context
-            memory: Memory instance for provenance
-        """
         self.config = config or {}
         self.coordinator = coordinator
         self.context_loader = context_loader
@@ -91,6 +80,10 @@ class OpenCodeCoder:
         self._request_id = 0
         self._lock = asyncio.Lock()
         self._model = "zai/glm-4.7"
+
+        # ACP session state
+        self._initialized = False
+        self._acp_session_id: Optional[str] = None
 
         # Execution tracking
         self._execution_count = 0
@@ -110,12 +103,10 @@ class OpenCodeCoder:
 
     @property
     def enabled(self) -> bool:
-        """Check if coder is enabled."""
         return self._enabled
 
     @enabled.setter
     def enabled(self, value: bool):
-        """Set enabled state."""
         self._enabled = value
 
     def _ensure_opencode_auth(self):
@@ -139,7 +130,7 @@ class OpenCodeCoder:
     async def _start_acp(self) -> bool:
         """Start the ACP subprocess."""
         if self._process and self._process.returncode is None:
-            return True  # Already running
+            return True
 
         try:
             self._process = await asyncio.create_subprocess_exec(
@@ -149,6 +140,8 @@ class OpenCodeCoder:
                 stderr=asyncio.subprocess.PIPE,
             )
             logger.info("OpenCode ACP process started")
+            self._initialized = False
+            self._acp_session_id = None
             return True
         except FileNotFoundError:
             logger.error("OpenCode CLI not found - install with: npm install -g opencode-ai")
@@ -157,11 +150,85 @@ class OpenCodeCoder:
             logger.error(f"Failed to start ACP: {e}")
             return False
 
+    async def _send_request(self, method: str, params: Dict = None) -> Dict:
+        """Send a JSON-RPC request and wait for response."""
+        self._request_id += 1
+        request = {
+            "jsonrpc": "2.0",
+            "method": method,
+            "id": self._request_id
+        }
+        if params:
+            request["params"] = params
+
+        request_line = json.dumps(request) + "\n"
+        self._process.stdin.write(request_line.encode())
+        await self._process.stdin.drain()
+
+        # Read response
+        response_line = await asyncio.wait_for(
+            self._process.stdout.readline(),
+            timeout=60.0
+        )
+
+        if not response_line:
+            raise Exception("Empty response from ACP")
+
+        return json.loads(response_line.decode())
+
+    async def _initialize_session(self) -> bool:
+        """Initialize ACP session with capabilities."""
+        if self._initialized:
+            return True
+
+        try:
+            # Step 1: Initialize - tell agent what we support
+            init_response = await self._send_request("session/initialize", {
+                "clientInfo": {
+                    "name": "byrd",
+                    "version": "1.0.0"
+                },
+                "capabilities": {
+                    "prompts": {
+                        "text": True
+                    }
+                }
+            })
+
+            if "error" in init_response:
+                logger.error(f"ACP initialize failed: {init_response['error']}")
+                return False
+
+            logger.info("ACP session initialized")
+
+            # Step 2: Create new session
+            session_response = await self._send_request("session/new", {
+                "model": self._model
+            })
+
+            if "error" in session_response:
+                logger.error(f"ACP session/new failed: {session_response['error']}")
+                return False
+
+            result = session_response.get("result", {})
+            self._acp_session_id = result.get("sessionId")
+
+            if not self._acp_session_id:
+                # Generate our own session ID if not provided
+                self._acp_session_id = f"sess_{uuid.uuid4().hex[:12]}"
+
+            logger.info(f"ACP session created: {self._acp_session_id}")
+            self._initialized = True
+            return True
+
+        except Exception as e:
+            logger.error(f"ACP initialization failed: {e}")
+            return False
+
     def _check_constitutional(self, task: str) -> Dict[str, Any]:
         """Check if task violates constitutional constraints."""
         task_lower = task.lower()
 
-        # Check for protected file references
         for protected in self._protected_paths:
             if protected.lower() in task_lower:
                 return {
@@ -169,20 +236,10 @@ class OpenCodeCoder:
                     "reason": f"Cannot modify protected file: {protected}",
                 }
 
-        # Check for dangerous patterns
-        dangerous_patterns = [
-            "rm -rf",
-            "format c:",
-            "del /s",
-            "drop database",
-            "sudo rm",
-        ]
+        dangerous_patterns = ["rm -rf", "format c:", "del /s", "drop database", "sudo rm"]
         for pattern in dangerous_patterns:
             if pattern in task_lower:
-                return {
-                    "allowed": False,
-                    "reason": f"Dangerous pattern detected: {pattern}",
-                }
+                return {"allowed": False, "reason": f"Dangerous pattern detected: {pattern}"}
 
         return {"allowed": True, "reason": None}
 
@@ -193,45 +250,24 @@ class OpenCodeCoder:
         working_dir: Optional[str] = None,
         desire_id: str = None,
     ) -> CoderResult:
-        """
-        Execute a coding task via OpenCode ACP.
-
-        Args:
-            prompt: The coding task prompt
-            context: Optional context dict
-            working_dir: Optional working directory (ignored in ACP mode)
-            desire_id: ID of the originating desire
-
-        Returns:
-            CoderResult with success status and output
-        """
+        """Execute a coding task via OpenCode ACP."""
         start_time = datetime.now()
         self._execution_count += 1
 
-        # Generate desire_id if not provided
         if not desire_id:
             desire_id = datetime.now().strftime("%Y%m%d%H%M%S%f")
 
-        # Check if enabled
         if not self._enabled:
-            return CoderResult(
-                success=False,
-                output="",
-                error="Coder is disabled",
-                session_id=desire_id,
-            )
+            return CoderResult(success=False, output="", error="Coder is disabled", session_id=desire_id)
 
-        # Check constitutional constraints
         constraint_check = self._check_constitutional(prompt)
         if not constraint_check["allowed"]:
             return CoderResult(
-                success=False,
-                output="",
+                success=False, output="",
                 error=f"Constitutional constraint violation: {constraint_check['reason']}",
                 session_id=desire_id,
             )
 
-        # Build task with context
         task = prompt
         if context:
             context_str = "\n".join(f"# {k}\n{v}" for k, v in context.items() if v)
@@ -239,77 +275,75 @@ class OpenCodeCoder:
 
         logger.info(f"[Coder] Executing via ACP: {task[:100]}...")
 
-        # Signal coordinator - other components pause LLM calls
         if self.coordinator:
             self.coordinator.coder_started(task[:50])
 
         try:
-            # Start ACP if needed
             if not await self._start_acp():
                 return CoderResult(
-                    success=False,
-                    output="",
+                    success=False, output="",
                     error="Failed to start OpenCode ACP process",
                     session_id=desire_id,
                     duration_seconds=(datetime.now() - start_time).total_seconds(),
                 )
 
-            # Send request via JSON-RPC
             async with self._lock:
-                self._request_id += 1
-                request = {
-                    "jsonrpc": "2.0",
-                    "method": "message.send",
-                    "params": {
-                        "content": task,
-                        "model": self._model
-                    },
-                    "id": self._request_id
-                }
+                # Initialize session if needed
+                if not await self._initialize_session():
+                    return CoderResult(
+                        success=False, output="",
+                        error="Failed to initialize ACP session",
+                        session_id=desire_id,
+                        duration_seconds=(datetime.now() - start_time).total_seconds(),
+                    )
 
                 try:
-                    # Send request
-                    request_line = json.dumps(request) + "\n"
-                    self._process.stdin.write(request_line.encode())
-                    await self._process.stdin.drain()
-
-                    # Read response with timeout (60 seconds)
-                    response_line = await asyncio.wait_for(
-                        self._process.stdout.readline(),
-                        timeout=60.0
-                    )
+                    # Send prompt using session/prompt method
+                    prompt_response = await self._send_request("session/prompt", {
+                        "sessionId": self._acp_session_id,
+                        "prompt": [
+                            {
+                                "type": "text",
+                                "text": task
+                            }
+                        ]
+                    })
 
                     duration = (datetime.now() - start_time).total_seconds()
 
-                    if not response_line:
+                    if "error" in prompt_response:
+                        error_msg = prompt_response["error"].get("message", str(prompt_response["error"]))
                         return CoderResult(
-                            success=False,
-                            output="",
-                            error="Empty response from ACP",
-                            session_id=desire_id,
-                            duration_seconds=duration,
-                            duration_ms=int(duration * 1000),
-                        )
-
-                    response = json.loads(response_line.decode())
-
-                    if "error" in response:
-                        error_msg = response["error"].get("message", "Unknown ACP error")
-                        return CoderResult(
-                            success=False,
-                            output="",
+                            success=False, output="",
                             error=error_msg,
                             session_id=desire_id,
                             duration_seconds=duration,
                             duration_ms=int(duration * 1000),
                         )
 
-                    result = response.get("result", {})
-                    content = result.get("content", "")
+                    # Extract content from response
+                    result = prompt_response.get("result", {})
+
+                    # The response might be in different formats
+                    content = ""
+                    if isinstance(result, str):
+                        content = result
+                    elif isinstance(result, dict):
+                        # Try various content locations
+                        content = result.get("content", "")
+                        if not content:
+                            content = result.get("text", "")
+                        if not content:
+                            # Check for message array
+                            messages = result.get("messages", [])
+                            if messages:
+                                content = "\n".join(
+                                    m.get("content", "") or m.get("text", "")
+                                    for m in messages if isinstance(m, dict)
+                                )
 
                     logger.info(f"[Coder] ACP success, {len(content)} chars in {duration:.1f}s")
 
-                    # Record provenance if memory available
                     if self.memory:
                         await self._record_provenance(prompt, desire_id, content)
 
@@ -324,8 +358,7 @@ class OpenCodeCoder:
                 except asyncio.TimeoutError:
                     duration = (datetime.now() - start_time).total_seconds()
                     return CoderResult(
-                        success=False,
-                        output="",
+                        success=False, output="",
                         error="ACP request timed out after 60 seconds",
                         session_id=desire_id,
                         duration_seconds=duration,
@@ -334,8 +367,7 @@ class OpenCodeCoder:
                 except Exception as e:
                     duration = (datetime.now() - start_time).total_seconds()
                     return CoderResult(
-                        success=False,
-                        output="",
+                        success=False, output="",
                         error=str(e),
                         session_id=desire_id,
                         duration_seconds=duration,
@@ -350,19 +382,13 @@ class OpenCodeCoder:
         """Record modification provenance to memory."""
         if not self.memory:
             return
-
         try:
             content = (
                 f"[CODE_GENERATION] Task: {task[:100]}\n"
                 f"Output length: {len(output)} chars\n"
                 f"Desire ID: {desire_id}"
             )
-
-            await self.memory.record_experience(
-                content=content,
-                type="code_generation",
-            )
-
+            await self.memory.record_experience(content=content, type="code_generation")
         except Exception as e:
             logger.error(f"Error recording provenance: {e}")
 
@@ -375,21 +401,12 @@ class OpenCodeCoder:
             except asyncio.TimeoutError:
                 self._process.kill()
             self._process = None
+            self._initialized = False
+            self._acp_session_id = None
             logger.info("OpenCode ACP process stopped")
 
     async def generate_code(self, prompt: str) -> str:
-        """
-        Generate code from a prompt.
-
-        Convenience method for code generation that returns
-        just the output string. Used by seeker.py for capability creation.
-
-        Args:
-            prompt: The code generation prompt
-
-        Returns:
-            Generated code as a string
-        """
+        """Generate code from a prompt."""
         result = await self.execute(prompt)
         return result.output if result.success else ""
 
@@ -401,37 +418,20 @@ class OpenCodeCoder:
         session_id: str = None,
         working_dir: Optional[str] = None,
     ) -> CoderResult:
-        """
-        Execute a single turn within an interactive session.
-
-        This method is used by RalphLoop for multi-turn interactions.
-
-        Args:
-            prompt: The coding task prompt
-            context: Optional context dict
-            turn_number: Turn number in the session (1-indexed)
-            session_id: Session identifier for tracking
-            working_dir: Optional working directory override
-
-        Returns:
-            CoderResult with turn and session metadata
-        """
+        """Execute a single turn within an interactive session."""
         result = await self.execute(
             prompt=prompt,
             context=context,
             working_dir=working_dir,
             desire_id=session_id,
         )
-
         result.turns_used = turn_number
         result.session_id = session_id
-
         return result
 
     async def can_execute(self, task: str) -> Dict[str, Any]:
         """Check if a task can be executed."""
         constitutional = self._check_constitutional(task)
-
         return {
             "can_execute": constitutional["allowed"],
             "constitutional_ok": constitutional["allowed"],
@@ -446,6 +446,8 @@ class OpenCodeCoder:
             "mode": "acp",
             "model": self._model,
             "process_running": self._process is not None and self._process.returncode is None,
+            "acp_initialized": self._initialized,
+            "acp_session_id": self._acp_session_id,
             "protected_paths": self._protected_paths,
         }
 
@@ -454,7 +456,6 @@ class OpenCodeCoder:
         self._execution_count = 0
 
 
-# Convenience function
 def create_opencode_coder(
     config: Dict = None,
     coordinator=None,
