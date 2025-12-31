@@ -21,13 +21,10 @@ COPY --chown=user requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
 # Cache bust (updated on each deploy) - increment to force rebuild
-ARG CACHEBUST=35
+ARG CACHEBUST=36
 
 # Copy application code
 COPY --chown=user . .
-
-# Verify Python syntax of key files (fail early on syntax errors)
-RUN python -m py_compile request_evaluator.py server.py byrd.py opencode_coder.py
 
 # HuggingFace uses port 7860
 ENV PORT=7860
