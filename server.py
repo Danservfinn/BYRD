@@ -1954,9 +1954,28 @@ async def get_coder_status():
     for cli_name, cli_info in cli_checks.items():
         cli_info["found_locations"] = [loc for loc in cli_info["locations"] if os.path.exists(loc)]
 
+    # Check OpenCode auth file
+    from pathlib import Path
+    import json as json_module
+    auth_file = Path.home() / ".local" / "share" / "opencode" / "auth.json"
+    auth_info = {
+        "path": str(auth_file),
+        "exists": auth_file.exists(),
+        "has_zai": False,
+    }
+    if auth_file.exists():
+        try:
+            with open(auth_file) as f:
+                auth_data = json_module.load(f)
+            auth_info["has_zai"] = "zai" in auth_data
+            auth_info["providers"] = list(auth_data.keys())
+        except Exception as e:
+            auth_info["error"] = str(e)
+
     result = {
         "opencode_cli": cli_checks["opencode"],
         "claude_cli": cli_checks["claude"],
+        "opencode_auth": auth_info,
         "coder_enabled": False,
         "coder_cli_command": None,
         "coder_limited_mode": None,
