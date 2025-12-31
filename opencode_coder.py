@@ -299,6 +299,12 @@ class OpenCodeCoder:
             # Execute (pass working_dir to CLI runner)
             if self._cli_command:
                 result = await self._run_cli(full_prompt, task, working_dir)
+                # If CLI failed or produced no output, try Z.AI API fallback
+                if not result.success or (result.success and not result.output):
+                    logger.info("CLI produced no output - trying Z.AI API fallback")
+                    api_result = await self._run_zai_api(task)
+                    if api_result.success and api_result.output:
+                        result = api_result
             else:
                 result = await self._run_subprocess(full_prompt, task, working_dir)
 
@@ -413,9 +419,14 @@ class OpenCodeCoder:
             proc.stdin.close()
             await proc.stdin.wait_closed()
 
+            # Use shorter timeout for initial CLI test - OpenCode should respond quickly if working
+            cli_timeout = self.config.get("timeout_seconds", 60)
+            if cli_timeout > 120:
+                cli_timeout = 120  # Cap at 2 minutes for CLI calls
+
             stdout, stderr = await asyncio.wait_for(
                 proc.communicate(),
-                timeout=self.config.get("timeout_seconds", 300),
+                timeout=cli_timeout,
             )
 
             output = stdout.decode() if stdout else ""
@@ -524,6 +535,69 @@ class OpenCodeCoder:
             output="",
             error="No coding CLI available. Install 'opencode' or 'claude' CLI for full coding support.",
         )
+
+    async def _run_zai_api(self, task: str) -> CoderResult:
+        """Fallback: Execute task via Z.AI API directly."""
+        import httpx
+
+        api_key = os.environ.get("ZAI_API_KEY")
+        if not api_key:
+            return CoderResult(
+                success=False,
+                output="",
+                error="ZAI_API_KEY not set for API fallback",
+            )
+
+        try:
+            endpoint = "https://api.z.ai/api/coding/paas/v4/chat/completions"
+
+            # Build coding prompt
+            system_prompt = """You are an expert Python programmer. Generate clean, working code based on the task.
+Output ONLY the code with no explanation, wrapped in ```python code blocks."""
+
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(
+                    endpoint,
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": "glm-4.7",
+                        "messages": [
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": task},
+                        ],
+                        "temperature": 0.1,
+                        "max_tokens": 2000,
+                    },
+                )
+
+                if response.status_code != 200:
+                    return CoderResult(
+                        success=False,
+                        output="",
+                        error=f"Z.AI API error: {response.status_code} - {response.text[:200]}",
+                    )
+
+                result = response.json()
+                content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+
+                logger.info(f"Z.AI API fallback produced {len(content)} chars")
+
+                return CoderResult(
+                    success=True,
+                    output=f"[Z.AI API FALLBACK]\n{content}",
+                    error=None,
+                )
+
+        except Exception as e:
+            logger.error(f"Z.AI API fallback error: {e}")
+            return CoderResult(
+                success=False,
+                output="",
+                error=f"Z.AI API fallback failed: {str(e)}",
+            )
 
     def _parse_file_changes(self, output: str) -> Tuple[List[str], List[str]]:
         """Parse file changes from CLI output."""
