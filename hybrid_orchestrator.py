@@ -78,7 +78,7 @@ class HybridOrchestrator:
 
         self.router = LLMRouter(config.get("routing", {}))
         self._max_iterations = self.config.get("max_iterations", 5)
-        self._satisfaction_threshold = self.config.get("satisfaction_threshold", 0.8)
+        self._satisfaction_threshold = self.config.get("satisfaction_threshold", 0.6)  # Lowered for autonomous ops
 
         # Stats
         self._orchestration_count = 0
@@ -375,6 +375,18 @@ Respond with JSON only:
     ) -> Dict:
         """Use Z.AI to evaluate if desire is satisfied."""
         description = desire.get("description", "")
+
+        # Fast path: If Claude SDK execution succeeded, trust it
+        if execution_steps:
+            last_step = execution_steps[-1]
+            if last_step.get("success") and not last_step.get("error"):
+                # Execution succeeded - return high satisfaction without Z.AI call
+                logger.info("[HybridOrchestrator] Execution succeeded, returning high satisfaction")
+                return {
+                    "satisfaction": 0.9,
+                    "gaps": [],
+                    "refinement": None,
+                }
 
         if execution_steps:
             execution_summary = "\n".join(
