@@ -1,14 +1,14 @@
 """
 OpenCode Coder - Non-Interactive CLI Mode
 
-Uses OpenCode's non-interactive mode: `opencode -p "prompt" -f json -q`
+Uses OpenCode's run command: `opencode run --model <model> --format json "prompt"`
 Designed for headless operation in Docker/HuggingFace.
 
 Key flags:
-- -p "prompt" : Pass prompt directly (non-interactive)
-- -f json     : Output format as JSON
-- -q          : Quiet mode (no spinner)
-- -m model    : Specify model
+- run         : Non-interactive execution
+- --model     : Specify model (e.g., zai/glm-4.7)
+- --format    : Output format (json for structured output)
+- [message..] : The prompt/task as positional argument
 """
 
 import asyncio
@@ -169,16 +169,16 @@ class OpenCodeCoder:
 
         try:
             # Build CLI command
-            # opencode -p "prompt" -f json -q -m model
+            # opencode run --model <model> --format json "prompt"
             cmd = [
                 "opencode",
-                "-p", task,
-                "-f", "json",
-                "-q",  # Quiet mode - no spinner
-                "-m", self._model,
+                "run",
+                "--model", self._model,
+                "--format", "json",
+                task,
             ]
 
-            logger.info(f"[Coder] Running: opencode -p '...' -f json -q -m {self._model}")
+            logger.info(f"[Coder] Running: opencode run --model {self._model} --format json '...'")
 
             # Run with timeout
             process = await asyncio.create_subprocess_exec(
