@@ -85,8 +85,9 @@ class OpenCodeCoder:
     """
 
     # CLI options to try in order of preference
+    # OpenCode uses: opencode run -m provider/model "message"
     CLI_OPTIONS = [
-        ("opencode", ["--model", "glm-4.7"]),  # Primary: OpenCode CLI
+        ("opencode", ["-m", "zai/glm-4.7"]),  # Primary: OpenCode CLI with Z.AI
         ("claude", []),  # Fallback: Claude Code CLI
     ]
 
@@ -323,7 +324,9 @@ class OpenCodeCoder:
 
             # Add task argument based on CLI type
             if self._cli_command == "opencode":
-                cmd.extend(["--task", task])
+                # OpenCode syntax: opencode run -m model "message"
+                cmd.insert(1, "run")  # Add 'run' subcommand after 'opencode'
+                cmd.append(task)  # Add task as the final argument
             elif self._cli_command == "claude":
                 cmd.extend(["--print", task])
 
