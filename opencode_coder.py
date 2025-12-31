@@ -324,11 +324,14 @@ class OpenCodeCoder:
 
             # Add task argument based on CLI type
             if self._cli_command == "opencode":
-                # OpenCode syntax: opencode run -m model "message"
+                # OpenCode syntax: opencode run -m model --format json "message"
                 cmd.insert(1, "run")  # Add 'run' subcommand after 'opencode'
+                cmd.extend(["--format", "json"])  # Use JSON format for programmatic output
                 cmd.append(task)  # Add task as the final argument
             elif self._cli_command == "claude":
                 cmd.extend(["--print", task])
+
+            logger.info(f"Executing CLI command: {' '.join(cmd[:5])}... [task truncated]")
 
             # Set environment
             env = os.environ.copy()
@@ -352,6 +355,11 @@ class OpenCodeCoder:
 
             output = stdout.decode() if stdout else ""
             error = stderr.decode() if stderr else None
+
+            # Log result for debugging
+            logger.info(f"CLI result: returncode={proc.returncode}, output_len={len(output)}, error_len={len(error) if error else 0}")
+            if proc.returncode != 0:
+                logger.warning(f"CLI error: {error[:500] if error else 'No error output'}")
 
             # Parse modified files from output
             files_modified, files_created = self._parse_file_changes(output)

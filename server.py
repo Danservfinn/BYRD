@@ -1977,6 +1977,45 @@ async def get_coder_status():
     return result
 
 
+@app.post("/api/coder-test")
+async def test_coder():
+    """Test the coder with a simple task and return diagnostics."""
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    if not byrd_instance.coder:
+        raise HTTPException(status_code=503, detail="Coder not initialized")
+
+    test_task = "Write a Python function called hello that prints 'Hello World'"
+
+    try:
+        result = await byrd_instance.coder.execute(
+            prompt=test_task,
+            context=None,
+            desire_id="test_coder_diagnostic"
+        )
+
+        return {
+            "success": result.success,
+            "output_length": len(result.output) if result.output else 0,
+            "output_preview": result.output[:1000] if result.output else None,
+            "error": result.error,
+            "files_modified": result.files_modified,
+            "files_created": result.files_created,
+            "duration_seconds": result.duration_seconds,
+            "cli_command": byrd_instance.coder._cli_command,
+            "cli_args": byrd_instance.coder._cli_args,
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__,
+        }
+
+
 @app.get("/api/llm-debug")
 async def get_llm_debug():
     """Get LLM configuration and debug info."""
