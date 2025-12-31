@@ -380,6 +380,76 @@ coder:
   step_timeout: 60
 
 # =============================================================================
+# INTERACTIVE CODER (Ralph Loop)
+# =============================================================================
+# Multi-turn interactive coding sessions where BYRD iterates until satisfied.
+# Implements the Ralph Loop pattern from oh-my-opencode.
+interactive_coder:
+  # Enable/disable interactive mode
+  enabled: true
+
+  # Maximum turns before giving up
+  max_turns: 10
+
+  # Satisfaction threshold (0-1) to consider task complete
+  satisfaction_threshold: 0.8
+
+  # Feature flags
+  todo_continuation: true      # Extract and complete TODOs from output
+  error_recovery: true         # Attempt automatic error recovery
+  session_transcripts: true    # Log sessions to JSONL files
+
+  # Evaluation settings
+  use_llm_evaluation: true     # Use LLM for satisfaction scoring
+  evaluation_temperature: 0.1  # Low temperature for consistent evaluation
+
+  # Session storage
+  session_dir: "coding_sessions"
+  keep_sessions_days: 30
+
+# =============================================================================
+# KNOWLEDGE PROVIDER (External Knowledge Access)
+# =============================================================================
+# Multi-source knowledge provider for fulfilling information-seeking desires.
+knowledge_provider:
+  enabled: true
+
+  # Cache settings
+  cache_ttl: 3600              # Cache TTL in seconds (1 hour)
+
+  # Tavily API (optional - for enhanced web search)
+  # Set TAVILY_API_KEY env var if available
+  tavily_api_key: "${TAVILY_API_KEY:-}"
+
+# =============================================================================
+# COUPLING HANDLERS (Option B Loop Integration)
+# =============================================================================
+# Actual implementations for cross-loop coupling events.
+coupling_handlers:
+  enabled: true
+
+  # Pattern extraction settings
+  max_patterns: 100            # Maximum patterns to store
+  pattern_min_confidence: 0.5  # Minimum confidence to store pattern
+
+  # Counterfactual queue
+  max_counterfactual_queue: 50
+
+# =============================================================================
+# IMPROVEMENT RUNNER (Capability Improvement Cycles)
+# =============================================================================
+# Runs improvement cycles with 6 strategies to improve BYRD's capabilities.
+improvement:
+  enabled: true
+
+  # Improvement thresholds
+  min_improvement_threshold: 0.02  # Minimum delta to count as success
+  max_cycles_per_session: 10       # Maximum improvement cycles per session
+
+  # Improvement interval (seconds between automatic improvement cycles)
+  improvement_interval: 600        # 10 minutes
+
+# =============================================================================
 # QUANTUM RANDOMNESS (Physical Indeterminacy)
 # =============================================================================
 # Enables true quantum randomness from ANU QRNG to modulate LLM temperature.

@@ -549,6 +549,24 @@ class BYRD:
                 except Exception as e:
                     learning_components_status.append(f"CouplingHandlers: {e}")
 
+                # Initialize ImprovementRunner for capability improvement cycles
+                try:
+                    from improvement_runner import ImprovementRunner
+                    improvement_config = option_b_config.get("improvement", {})
+                    improvement_runner = ImprovementRunner(
+                        memory=self.memory,
+                        llm_client=self.llm_client,
+                        knowledge_provider=self.seeker.knowledge_provider if hasattr(self.seeker, 'knowledge_provider') else None,
+                        capability_evaluator=self.capability_evaluator if hasattr(self, 'capability_evaluator') else None,
+                        meta_learner=self.meta_learner if hasattr(self, 'meta_learner') else None,
+                        config=improvement_config
+                    )
+                    if self.omega:
+                        self.omega.improvement_runner = improvement_runner
+                    learning_components_status.append("ImprovementRunner: initialized")
+                except Exception as e:
+                    learning_components_status.append(f"ImprovementRunner: {e}")
+
                 # Inject learning components INTO Option B loops
                 if self.omega:
                     injections = self.omega.inject_learning_components()

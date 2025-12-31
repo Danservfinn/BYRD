@@ -144,6 +144,14 @@ class BYRDOmega:
         self.world_model = None
         self.gnn_layer = None  # StructuralLearner
 
+        # Coupling handlers for Option B loop integration
+        self.coupling_handlers = None  # CouplingHandlers instance
+
+        # Improvement runner for capability improvement cycles
+        self.improvement_runner = None  # ImprovementRunner instance
+        self._improvement_interval = config.get("improvement_interval", 600)  # 10 minutes
+        self._last_improvement = 0
+
         # Compute introspection (injected later)
         self.compute_introspector = None
 
@@ -890,6 +898,170 @@ class BYRDOmega:
         loop_health = self.get_loop_health()
         healthy_count = sum(1 for k, v in loop_health.items() if v and k != "omega")
         return healthy_count >= 3
+
+    # =========================================================================
+    # COUPLING HANDLERS (IMPLEMENTATION_PLAN_v2 Phase 2)
+    # Cross-loop integration via CouplingHandlers
+    # =========================================================================
+
+    async def _handle_goal_success_for_compiler(
+        self,
+        goal_description: str,
+        outcome: Dict[str, Any]
+    ) -> bool:
+        """
+        Extract pattern from successful goal (Goal Evolver -> Self-Compiler).
+
+        When a goal succeeds, extract a reusable pattern that the Self-Compiler
+        can codify for future use.
+        """
+        if not self.coupling_handlers:
+            return False
+
+        try:
+            pattern = await self.coupling_handlers.extract_pattern_from_success(
+                goal_description=goal_description,
+                outcome=outcome
+            )
+
+            if pattern:
+                # Index the pattern for Memory Reasoner retrieval
+                await self.coupling_handlers.index_pattern(pattern)
+                print(f"   🔄 Pattern extracted from goal success: {pattern.description[:50]}...")
+                return True
+
+            return False
+
+        except Exception as e:
+            print(f"   ⚠️ Pattern extraction failed: {e}")
+            return False
+
+    async def _handle_pattern_for_reasoner(
+        self,
+        pattern_id: str,
+        pattern_data: Dict[str, Any]
+    ) -> bool:
+        """
+        Index pattern for Memory Reasoner (Self-Compiler -> Memory Reasoner).
+
+        Makes patterns searchable during spreading activation.
+        """
+        if not self.coupling_handlers:
+            return False
+
+        try:
+            from coupling_handlers import ExtractedPattern
+            import time
+
+            pattern = ExtractedPattern(
+                id=pattern_data.get("id", pattern_id),
+                description=pattern_data.get("description", ""),
+                preconditions=pattern_data.get("preconditions", []),
+                actions=pattern_data.get("actions", []),
+                postconditions=pattern_data.get("postconditions", []),
+                success_indicators=pattern_data.get("success_indicators", []),
+                confidence=pattern_data.get("confidence", 0.5),
+                source_goal_id=pattern_data.get("source_goal_id", ""),
+                created_at=pattern_data.get("created_at", time.time())
+            )
+
+            success = await self.coupling_handlers.index_pattern(pattern)
+            if success:
+                print(f"   🔄 Pattern indexed for Memory Reasoner: {pattern.id}")
+            return success
+
+        except Exception as e:
+            print(f"   ⚠️ Pattern indexing failed: {e}")
+            return False
+
+    async def _handle_memory_for_dreamer(
+        self,
+        query: str,
+        answer: str,
+        confidence: float = 0.5
+    ) -> bool:
+        """
+        Queue memory answer for counterfactual exploration (Memory Reasoner -> Dreaming Machine).
+
+        Low-confidence answers are especially valuable for dream exploration.
+        """
+        if not self.coupling_handlers:
+            return False
+
+        try:
+            success = await self.coupling_handlers.queue_counterfactual_seed(
+                query=query,
+                answer=answer,
+                confidence=confidence
+            )
+            if success:
+                print(f"   🔄 Queued counterfactual seed (confidence={confidence:.2f})")
+            return success
+
+        except Exception as e:
+            print(f"   ⚠️ Counterfactual queueing failed: {e}")
+            return False
+
+    async def _handle_insight_for_evolver(
+        self,
+        insight: str,
+        proposed_goal: str = None
+    ) -> bool:
+        """
+        Propose goal from counterfactual insight (Dreaming Machine -> Goal Evolver).
+
+        Insights that reveal gaps or opportunities generate goals to address them.
+        """
+        if not self.coupling_handlers:
+            return False
+
+        try:
+            result = await self.coupling_handlers.propose_goal_from_insight(
+                insight=insight,
+                proposed_goal=proposed_goal
+            )
+
+            if result:
+                print(f"   🔄 Goal proposed from insight: {result.description[:50]}...")
+                return True
+
+            return False
+
+        except Exception as e:
+            print(f"   ⚠️ Goal proposal failed: {e}")
+            return False
+
+    async def process_dream_insights(self) -> int:
+        """
+        Process pending counterfactual seeds from the queue.
+
+        Called during dreaming mode to generate counterfactual insights
+        and potentially propose new goals.
+
+        Returns:
+            Number of insights processed
+        """
+        if not self.coupling_handlers:
+            return 0
+
+        processed = 0
+
+        try:
+            # Generate counterfactual from next seed
+            counterfactual = await self.coupling_handlers.generate_counterfactual()
+
+            if counterfactual and counterfactual.get("insight"):
+                # Feed insight to Goal Evolver
+                await self._handle_insight_for_evolver(
+                    insight=counterfactual["insight"],
+                    proposed_goal=None  # Let handler generate goal
+                )
+                processed += 1
+
+        except Exception as e:
+            print(f"   ⚠️ Dream insight processing failed: {e}")
+
+        return processed
 
 
 # Factory function

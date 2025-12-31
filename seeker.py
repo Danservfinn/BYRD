@@ -48,12 +48,26 @@ try:
 except ImportError:
     HAS_DESIRE_CLASSIFIER = False
 
+# Try to import KnowledgeProvider for external knowledge access
+try:
+    from knowledge_provider import KnowledgeProvider
+    HAS_KNOWLEDGE_PROVIDER = True
+except ImportError:
+    HAS_KNOWLEDGE_PROVIDER = False
+
 # Try to import LocalGraphConnector for code execution bypass
 try:
     from local_graph_connector import get_local_graph_connector, code_execution_bypass
     HAS_LOCAL_GRAPH_CONNECTOR = True
 except ImportError:
     HAS_LOCAL_GRAPH_CONNECTOR = False
+
+# Try to import OutcomeDispatcher for routing task outcomes to learning components
+try:
+    from outcome_dispatcher import OutcomeDispatcher, TaskOutcome, OutcomeType
+    HAS_OUTCOME_DISPATCHER = True
+except ImportError:
+    HAS_OUTCOME_DISPATCHER = False
 
 
 class Seeker:
@@ -120,6 +134,9 @@ class Seeker:
         # Coder (Claude Code CLI) - injected later by BYRD
         self.coder = None
 
+        # RalphLoop (interactive coding) - injected later by BYRD
+        self.ralph_loop = None
+
         # AGI Seed components (injected later by BYRD if Option B enabled)
         self.world_model = None
         self.safety_monitor = None
@@ -151,6 +168,17 @@ class Seeker:
         self.aitmpl_base_trust = aitmpl_config.get("base_trust", 0.5)
         self.aitmpl_install_config = aitmpl_config.get("install_paths", {})
 
+        # Knowledge Provider for external knowledge access
+        self.knowledge_provider = None
+        if HAS_KNOWLEDGE_PROVIDER:
+            knowledge_config = config.get("knowledge_provider", {})
+            if knowledge_config.get("enabled", True):
+                self.knowledge_provider = KnowledgeProvider(
+                    config=knowledge_config,
+                    memory=self.memory,
+                    llm_client=self.llm_client
+                )
+
         # Rate limiting
         self._installs_today = 0
         self._last_reset = datetime.now()
@@ -174,6 +202,9 @@ class Seeker:
 
         # Orphan Reader for memory state awareness
         self.orphan_reader = None  # Will be initialized on demand
+
+        # Outcome Dispatcher for routing task outcomes to learning components
+        self._outcome_dispatcher = None  # Will be injected by BYRD
 
         # Capability Registry - dynamic action menu
         self.capability_registry = CapabilityRegistry(memory=memory, llm_client=llm_client)
@@ -205,6 +236,11 @@ class Seeker:
     
     def stop(self):
         self._running = False
+
+    def set_dispatcher(self, dispatcher):
+        """Inject the OutcomeDispatcher for routing task outcomes to learning components."""
+        self._outcome_dispatcher = dispatcher
+        print("📤 Seeker: OutcomeDispatcher injected")
 
     def reset(self):
         """Reset seeker state for fresh start."""
@@ -1527,6 +1563,14 @@ REASON: [brief explanation]"""
                     else:
                         return ("skipped", "Goal Cascade not available")
 
+            elif strategy == "information_seeking":
+                # Use KnowledgeProvider for information-seeking desires
+                desire = {"content": description, "id": desire_id, "type": "information_seeking"}
+                result = await self._fulfill_information_seeking_desire(desire)
+                success = result.get("fulfilled", False)
+                return ("success" if success else "failed",
+                        None if success else result.get("reason", "Knowledge search returned no results"))
+
             else:
                 # No recognized strategy - record for BYRD to reflect on
                 return ("skipped", f"No strategy for: {description[:50]}")
@@ -1702,6 +1746,7 @@ If no predictions are affected, return {{"results": []}}
 
                 experiences_generated = []
                 learnings = []
+                task_start_time = datetime.now()
 
                 try:
                     # Determine strategy based on task description
@@ -1752,10 +1797,44 @@ If no predictions are affected, return {{"results": []}}
 
                     print(f"✅ Task completed: {description[:40]}... ({len(learnings)} learnings)")
 
+                    # Dispatch outcome to learning components if available
+                    if self._outcome_dispatcher and HAS_OUTCOME_DISPATCHER:
+                        execution_time_ms = int((datetime.now() - task_start_time).total_seconds() * 1000)
+                        try:
+                            outcome = TaskOutcome(
+                                task_id=task_id,
+                                outcome_type=OutcomeType.SUCCESS,
+                                strategy=strategy,
+                                description=description,
+                                execution_time_ms=execution_time_ms,
+                                retrieved_node_ids=experiences_generated[:10]  # Track generated experiences
+                            )
+                            await self._outcome_dispatcher.dispatch(outcome)
+                            print("📤 Outcome dispatched to learning components")
+                        except Exception as dispatch_error:
+                            print(f"⚠️ Outcome dispatch failed: {dispatch_error}")
+
                 except Exception as e:
                     # Task failed
                     await self.memory.fail_task(task_id, str(e)[:200])
                     print(f"❌ Task failed: {description[:40]}... - {e}")
+
+                    # Dispatch failure outcome to learning components if available
+                    if self._outcome_dispatcher and HAS_OUTCOME_DISPATCHER:
+                        execution_time_ms = int((datetime.now() - task_start_time).total_seconds() * 1000)
+                        try:
+                            outcome = TaskOutcome(
+                                task_id=task_id,
+                                outcome_type=OutcomeType.FAILURE,
+                                strategy=strategy,
+                                description=description,
+                                execution_time_ms=execution_time_ms,
+                                error_message=str(e)[:200]
+                            )
+                            await self._outcome_dispatcher.dispatch(outcome)
+                            print("📤 Failure outcome dispatched to learning components")
+                        except Exception as dispatch_error:
+                            print(f"⚠️ Failure outcome dispatch failed: {dispatch_error}")
 
         except Exception as e:
             print(f"⚠️ Task processing error: {e}")
@@ -4540,7 +4619,19 @@ If the change is too risky or unclear, output: ERROR: <reason>"""
             if self.coordinator:
                 self.coordinator.coder_started(description[:100])
             try:
-                result = await self.coder.execute(prompt, context)
+                # Use RalphLoop for interactive multi-turn coding if available
+                if self.ralph_loop:
+                    ralph_result = await self.ralph_loop.execute_until_satisfied(
+                        desire=desire,
+                        initial_context=context
+                    )
+                    result = ralph_result.final_result
+                    # Log Ralph Loop stats
+                    if ralph_result.turns > 1:
+                        print(f"   🔄 Completed in {ralph_result.turns} turns (satisfaction: {ralph_result.satisfaction_score:.2f})")
+                else:
+                    # Fallback to single-shot execution
+                    result = await self.coder.execute(prompt, context)
             finally:
                 if self.coordinator:
                     self.coordinator.coder_finished()
@@ -5476,3 +5567,69 @@ If the desire is unclear or no suitable document exists, respond:
                 type="system"
             )
             return False
+
+    # =========================================================================
+    # KNOWLEDGE PROVIDER INTEGRATION (IMPLEMENTATION_PLAN_v2 Phase 1)
+    # =========================================================================
+
+    async def _fulfill_information_seeking_desire(self, desire: Dict) -> Dict[str, Any]:
+        """
+        Fulfill an information-seeking desire using external knowledge.
+
+        This is the key integration that makes BYRD's information
+        desires actually fulfillable via KnowledgeProvider.
+
+        Args:
+            desire: Dict with 'content', 'id', and optional 'type'
+
+        Returns:
+            Dict with 'fulfilled', 'answer', 'confidence', 'sources', or 'reason'
+        """
+        if not self.knowledge_provider:
+            return {
+                "fulfilled": False,
+                "reason": "KnowledgeProvider not available"
+            }
+
+        try:
+            result = await self.knowledge_provider.fulfill_desire(desire)
+
+            if result.get("fulfilled"):
+                # Record success experience
+                await self.memory.record_experience(
+                    content=f"[KNOWLEDGE_ACQUIRED] Successfully fulfilled desire: {desire.get('content', '')[:100]}\n"
+                            f"Answer preview: {result.get('answer', '')[:200]}",
+                    type="knowledge_acquisition"
+                )
+
+                # Mark desire as fulfilled
+                desire_id = desire.get("id")
+                if desire_id:
+                    await self.memory.fulfill_desire(desire_id)
+
+                # Feed result to Dreamer's micro buffer if available
+                if hasattr(self, 'dreamer') and self.dreamer:
+                    self.dreamer.add_to_micro_buffer({
+                        "type": "knowledge_acquisition",
+                        "query": desire.get("content"),
+                        "answer": result.get("answer", "")[:300],
+                        "confidence": result.get("confidence", 0)
+                    })
+
+                return result
+            else:
+                # Record failure for learning
+                await self.memory.record_experience(
+                    content=f"[KNOWLEDGE_SEARCH_FAILED] Failed to fulfill desire: {desire.get('content', '')[:100]}\n"
+                            f"Reason: {result.get('reason', 'unknown')}",
+                    type="desire_unfulfilled"
+                )
+
+                return result
+
+        except Exception as e:
+            print(f"⚠️ Knowledge seeking failed: {e}")
+            return {
+                "fulfilled": False,
+                "reason": f"Error: {str(e)[:100]}"
+            }
