@@ -349,7 +349,9 @@ class RequestEvaluator:
             if scores["growth"] < 0.3:
                 reasons.append("wouldn't expand my capabilities")
 
-            return f"I'm declining because this {' and '.join(reasons) if reasons else 'doesn\'t resonate with me'}."
+            default_reason = "doesn't resonate with me"
+            reason_text = ' and '.join(reasons) if reasons else default_reason
+            return f"I'm declining because this {reason_text}."
 
     async def _generate_alternatives(self, request: str, scores: Dict[str, float]) -> List[str]:
         """Generate alternative suggestions when declining."""
