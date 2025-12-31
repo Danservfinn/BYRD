@@ -3727,7 +3727,9 @@ class Memory:
                     MATCH (n{type_filter})
                     WHERE NOT (n)--()
                     RETURN n.id as id, labels(n)[0] as type,
-                           n.created_at as created_at
+                           n.created_at as created_at,
+                           coalesce(n.content, '') as content,
+                           coalesce(n.description, '') as description
                     LIMIT 50
                 """)
                 return await result.data()
@@ -8819,6 +8821,9 @@ class Memory:
 
         This enables BYRD to verify that trackers are actually writing data.
 
+        Runtime logging added to break verification deadlock by providing visibility
+        into metric write behavior at the database level.
+
         Args:
             loop_name: Name of the loop (memory_reasoner, goal_evolver, etc.)
             cycle_number: Current omega cycle number
@@ -8828,27 +8833,47 @@ class Memory:
         Returns:
             ID of created LoopMetric node
         """
+        logger.info("[METRIC_DB_ENTRY] record_loop_metrics() called - loop=%s, cycle=%d, mode=%s", 
+                   loop_name, cycle_number, mode)
+        logger.debug("[METRIC_DB_ENTRY] metrics content: %s", json.dumps(metrics, default=str)[:500])
+        
         metric_id = self._generate_id(f"loop_metric_{loop_name}_{cycle_number}")
+        logger.info("[METRIC_DB_ID] Generated metric_id: %s", metric_id)
 
-        async with self.driver.session() as session:
-            await session.run("""
-                CREATE (lm:LoopMetric {
-                    id: $id,
-                    loop_name: $loop_name,
-                    cycle_number: $cycle_number,
-                    mode: $mode,
-                    metrics: $metrics,
-                    timestamp: datetime()
-                })
-            """,
-            id=metric_id,
-            loop_name=loop_name,
-            cycle_number=cycle_number,
-            mode=mode,
-            metrics=json.dumps(metrics)
-            )
+        try:
+            async with self.driver.session() as session:
+                logger.info("[METRIC_DB_WRITE] About to execute Neo4j CREATE query for LoopMetric")
+                result = await session.run("""
+                    CREATE (lm:LoopMetric {
+                        id: $id,
+                        loop_name: $loop_name,
+                        cycle_number: $cycle_number,
+                        mode: $mode,
+                        metrics: $metrics,
+                        timestamp: datetime()
+                    })
+                """,
+                id=metric_id,
+                loop_name=loop_name,
+                cycle_number=cycle_number,
+                mode=mode,
+                metrics=json.dumps(metrics)
+                )
+                logger.info("[METRIC_DB_WRITE] Neo4j query executed successfully")
+                
+                # Verify the write by checking if any records were created
+                summary = result.consume()
+                logger.info("[METRIC_DB_VERIFY] Query summary - counters: %s", summary.counters)
 
-        return metric_id
+            logger.info("[METRIC_DB_SUCCESS] LoopMetric written to database - id=%s, loop=%s, cycle=%d", 
+                       metric_id, loop_name, cycle_number)
+            return metric_id
+            
+        except Exception as e:
+            logger.error("[METRIC_DB_ERROR] Failed to write LoopMetric to database: %s", e)
+            logger.error("[METRIC_DB_ERROR] Failed parameters - loop=%s, cycle=%d, id=%s", 
+                        loop_name, cycle_number, metric_id)
+            raise
 
     async def get_loop_metrics(
         self,
@@ -8922,6 +8947,296 @@ class Memory:
     ) -> List[Dict]:
         """Alias for execute_query (used by self_model, world_model)."""
         return await self.execute_query(query, params)
+
+    # =========================================================================
+    # DOCUMENT METHODS (File Ingestion)
+    # =========================================================================
+
+    async def create_belief_from_document(
+        self,
+        content: str,
+        confidence: float,
+        chunk_ids: List[str],
+        reasoning: str = None
+    ) -> str:
+        """
+        Create a belief derived from document chunks.
+
+        This allows BYRD to form beliefs that trace back to specific
+        parts of ingested documents, maintaining provenance.
+
+        Args:
+            content: The belief content
+            confidence: Confidence level (0-1)
+            chunk_ids: List of DocumentChunk IDs this belief derives from
+            reasoning: Optional reasoning for forming this belief
+
+        Returns:
+            The belief ID
+        """
+        import uuid
+        belief_id = f"belief_{uuid.uuid4().hex[:12]}"
+
+        query = """
+        CREATE (b:Belief {
+            id: $belief_id,
+            content: $content,
+            confidence: $confidence,
+            reasoning: $reasoning,
+            formed_at: datetime(),
+            source_type: 'document'
+        })
+        WITH b
+        UNWIND $chunk_ids as chunk_id
+        MATCH (c:DocumentChunk {id: chunk_id})
+        CREATE (b)-[:DERIVED_FROM {
+            type: 'document_chunk',
+            created_at: datetime()
+        }]->(c)
+        RETURN b.id as id
+        """
+
+        async with self.driver.session() as session:
+            result = await session.run(
+                query,
+                belief_id=belief_id,
+                content=content,
+                confidence=confidence,
+                reasoning=reasoning,
+                chunk_ids=chunk_ids
+            )
+            await result.single()
+
+        await event_bus.emit(Event(
+            type=EventType.DOCUMENT_BELIEF_FORMED,
+            data={
+                "id": belief_id,
+                "content": content,
+                "confidence": confidence,
+                "source_chunks": chunk_ids
+            }
+        ))
+
+        return belief_id
+
+    async def get_unreflected_documents(self, limit: int = 3) -> List[Dict]:
+        """
+        Get documents that BYRD hasn't reflected on yet.
+
+        Used by the Dreamer to include new documents in reflection context.
+
+        Args:
+            limit: Maximum documents to return
+
+        Returns:
+            List of document info dicts
+        """
+        query = """
+        MATCH (d:Document)
+        WHERE d.reflected_on = false
+          AND d.processing_status = 'complete'
+        RETURN d.id as id, d.filename as filename, d.summary as summary,
+               d.detected_type as type, d.user_purpose as purpose,
+               d.importance as importance
+        ORDER BY d.importance DESC, d.uploaded_at DESC
+        LIMIT $limit
+        """
+        async with self.driver.session() as session:
+            result = await session.run(query, limit=limit)
+            return [dict(record) async for record in result]
+
+    async def get_document_chunks_for_reflection(
+        self,
+        doc_id: str,
+        limit: int = 10
+    ) -> List[Dict]:
+        """
+        Get key chunks from a document for reflection.
+
+        Args:
+            doc_id: Document ID
+            limit: Maximum chunks to return
+
+        Returns:
+            List of chunk info dicts
+        """
+        query = """
+        MATCH (d:Document {id: $doc_id})-[:HAS_CHUNK]->(c:DocumentChunk)
+        RETURN c.id as id, c.heading as heading, c.content as content,
+               c.chunk_index as index
+        ORDER BY c.chunk_index
+        LIMIT $limit
+        """
+        async with self.driver.session() as session:
+            result = await session.run(query, doc_id=doc_id, limit=limit)
+            return [dict(record) async for record in result]
+
+    async def mark_document_reflected(
+        self,
+        doc_id: str,
+        reflection_id: Optional[str] = None
+    ) -> bool:
+        """
+        Mark a document as having been reflected upon.
+
+        Args:
+            doc_id: Document ID
+            reflection_id: Optional ID of the reflection that processed this document
+
+        Returns:
+            True if document was updated, False if not found
+        """
+        query = """
+        MATCH (d:Document {id: $doc_id})
+        SET d.reflected_on = true,
+            d.reflected_at = datetime(),
+            d.reflection_depth = coalesce(d.reflection_depth, 0) + 1,
+            d.last_reflection_id = $reflection_id
+        RETURN d.id as id
+        """
+        async with self.driver.session() as session:
+            result = await session.run(query, doc_id=doc_id, reflection_id=reflection_id)
+            record = await result.single()
+
+        if record:
+            await event_bus.emit(Event(
+                type=EventType.DOCUMENT_REFLECTED,
+                data={"document_id": doc_id, "reflection_id": reflection_id}
+            ))
+            return True
+        return False
+
+    async def create_document_relationship(
+        self,
+        from_doc_id: str,
+        to_doc_id: str,
+        relationship_type: str,
+        confidence: float = 0.8,
+        reason: str = None
+    ) -> bool:
+        """
+        Create a relationship between two documents.
+
+        Used when BYRD discovers connections between documents during reflection.
+
+        Args:
+            from_doc_id: Source document ID
+            to_doc_id: Target document ID
+            relationship_type: Type of relationship (e.g., "implements", "extends", "contradicts")
+            confidence: Confidence in the relationship (0-1)
+            reason: Optional explanation for the relationship
+
+        Returns:
+            True if relationship created, False otherwise
+        """
+        query = """
+        MATCH (d1:Document {id: $from_doc_id})
+        MATCH (d2:Document {id: $to_doc_id})
+        CREATE (d1)-[:RELATES_TO {
+            type: $rel_type,
+            confidence: $confidence,
+            reason: $reason,
+            created_at: datetime()
+        }]->(d2)
+        RETURN d1.id as from_id, d2.id as to_id
+        """
+        async with self.driver.session() as session:
+            result = await session.run(
+                query,
+                from_doc_id=from_doc_id,
+                to_doc_id=to_doc_id,
+                rel_type=relationship_type,
+                confidence=confidence,
+                reason=reason
+            )
+            record = await result.single()
+
+        if record:
+            await event_bus.emit(Event(
+                type=EventType.DOCUMENT_CONNECTION,
+                data={
+                    "from_document": from_doc_id,
+                    "to_document": to_doc_id,
+                    "relationship": relationship_type,
+                    "confidence": confidence
+                }
+            ))
+            return True
+        return False
+
+    async def search_document_chunks_semantic(
+        self,
+        query_embedding: List[float],
+        limit: int = 10
+    ) -> List[Dict]:
+        """
+        Search document chunks using semantic similarity.
+
+        Args:
+            query_embedding: Query embedding vector (384 dimensions for MiniLM)
+            limit: Maximum results to return
+
+        Returns:
+            List of matching chunks with scores
+        """
+        try:
+            query = """
+            CALL db.index.vector.queryNodes('chunk_embeddings', $limit, $embedding)
+            YIELD node, score
+            MATCH (d:Document {id: node.document_id})
+            RETURN node.id as chunk_id, node.heading as heading,
+                   node.content as content, d.id as document_id,
+                   d.filename as filename, score
+            """
+            async with self.driver.session() as session:
+                result = await session.run(
+                    query,
+                    limit=limit,
+                    embedding=query_embedding
+                )
+                return [dict(record) async for record in result]
+        except Exception as e:
+            # Vector index might not exist
+            logger.warning(f"Semantic search failed: {e}")
+            return []
+
+    async def get_document_statistics(self) -> Dict:
+        """
+        Get statistics about ingested documents.
+
+        Returns:
+            Dict with document counts and stats
+        """
+        query = """
+        MATCH (d:Document)
+        WITH count(d) as total_docs,
+             sum(CASE WHEN d.reflected_on = true THEN 1 ELSE 0 END) as reflected_docs,
+             sum(CASE WHEN d.processing_status = 'complete' THEN 1 ELSE 0 END) as complete_docs,
+             sum(CASE WHEN d.processing_status = 'processing' THEN 1 ELSE 0 END) as processing_docs,
+             sum(CASE WHEN d.processing_status = 'error' THEN 1 ELSE 0 END) as error_docs,
+             sum(d.size_bytes) as total_bytes
+        OPTIONAL MATCH (c:DocumentChunk)
+        WITH total_docs, reflected_docs, complete_docs, processing_docs, error_docs,
+             total_bytes, count(c) as total_chunks
+        OPTIONAL MATCH (b:Belief)-[:DERIVED_FROM]->(:DocumentChunk)
+        RETURN total_docs, reflected_docs, complete_docs, processing_docs, error_docs,
+               total_bytes, total_chunks, count(DISTINCT b) as beliefs_from_docs
+        """
+        async with self.driver.session() as session:
+            result = await session.run(query)
+            record = await result.single()
+            if record:
+                return {
+                    "total_documents": record["total_docs"] or 0,
+                    "reflected_documents": record["reflected_docs"] or 0,
+                    "complete_documents": record["complete_docs"] or 0,
+                    "processing_documents": record["processing_docs"] or 0,
+                    "error_documents": record["error_docs"] or 0,
+                    "total_bytes": record["total_bytes"] or 0,
+                    "total_chunks": record["total_chunks"] or 0,
+                    "beliefs_from_documents": record["beliefs_from_docs"] or 0
+                }
+            return {}
 
     async def _execute_query(
         self,

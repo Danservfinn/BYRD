@@ -21,12 +21,15 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 import httpx
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 import yaml
+
+# Document processor for file ingestion (lazy loaded)
+_document_processor = None
 
 from byrd import BYRD
 from kernel import load_kernel
@@ -2590,6 +2593,472 @@ async def restore_document_from_disk(path: str):
         return {"restored": True, "doc_id": doc_id, "document": doc}
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# FILE INGESTION ENDPOINTS
+# =============================================================================
+# These endpoints handle file uploads for BYRD to parse, analyze, and store.
+# Distinct from the architecture document endpoints above.
+
+def get_document_processor():
+    """Get or initialize the document processor."""
+    global _document_processor, byrd_instance
+
+    if _document_processor is None and byrd_instance:
+        try:
+            from document_processor import DocumentProcessor
+            from llm_client import create_llm_client
+
+            # Load config
+            config_path = Path(__file__).parent / "config.yaml"
+            config = {}
+            if config_path.exists():
+                with open(config_path) as f:
+                    config = yaml.safe_load(f) or {}
+
+            # Create LLM client
+            llm_client = create_llm_client(config)
+
+            # Initialize processor
+            _document_processor = DocumentProcessor(
+                byrd_instance.memory,
+                llm_client,
+                config
+            )
+        except Exception as e:
+            print(f"[Server] Failed to initialize document processor: {e}")
+            return None
+
+    return _document_processor
+
+
+@app.post("/api/ingest/upload")
+async def upload_file_for_ingestion(
+    file: UploadFile = File(...),
+    tags: str = Form(None),
+    purpose: str = Form(None),
+    notes: str = Form(None),
+    collection_id: str = Form(None)
+):
+    """
+    Upload a file for BYRD to parse, analyze, and store.
+
+    This is the primary file ingestion endpoint. Files are processed in two phases:
+    1. Quick ingest: Validate, hash, create pending document (returns immediately)
+    2. Background processing: Extract, analyze, chunk, embed, store
+
+    Args:
+        file: The file to upload
+        tags: Comma-separated tags (optional)
+        purpose: knowledge | context | memory (optional)
+        notes: Notes for BYRD about this file (optional)
+        collection_id: Add to existing collection (optional)
+
+    Returns:
+        Quick ingest result with document_id and status
+    """
+    processor = get_document_processor()
+    if not processor:
+        raise HTTPException(status_code=503, detail="Document processor not available")
+
+    try:
+        # Read file content
+        content = await file.read()
+
+        # Parse tags
+        user_tags = [t.strip() for t in tags.split(",")] if tags else []
+
+        # Quick ingest
+        result = await processor.quick_ingest(
+            content=content,
+            filename=file.filename,
+            mime_type=file.content_type,
+            user_tags=user_tags,
+            user_purpose=purpose,
+            user_notes=notes,
+            collection_id=collection_id
+        )
+
+        if result.status == "error":
+            raise HTTPException(status_code=400, detail=result.message)
+
+        if result.status == "duplicate":
+            return {
+                "document_id": result.document_id,
+                "status": "duplicate",
+                "message": result.message,
+                "existing_document": result.existing_document
+            }
+
+        return {
+            "document_id": result.document_id,
+            "status": "processing",
+            "message": result.message,
+            "estimated_time_seconds": result.estimated_time_seconds
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/ingest/upload-multiple")
+async def upload_multiple_files(
+    files: List[UploadFile] = File(...),
+    tags: str = Form(None),
+    purpose: str = Form(None),
+    notes: str = Form(None),
+    collection_name: str = Form(None)
+):
+    """
+    Upload multiple files for ingestion.
+
+    Files are processed concurrently using asyncio.gather.
+
+    Args:
+        files: List of files to upload
+        tags: Comma-separated tags for all files (optional)
+        purpose: Purpose for all files (optional)
+        notes: Notes for all files (optional)
+        collection_name: Create new collection with this name (optional)
+
+    Returns:
+        Collection ID (if created) and results for each file
+    """
+    processor = get_document_processor()
+    if not processor:
+        raise HTTPException(status_code=503, detail="Document processor not available")
+
+    try:
+        # Parse tags
+        user_tags = [t.strip() for t in tags.split(",")] if tags else []
+
+        # Create collection if name provided
+        collection_id = None
+        if collection_name:
+            collection_id = await processor.create_collection(
+                name=collection_name,
+                notes=notes
+            )
+
+        # Read all files
+        file_contents = []
+        for f in files:
+            content = await f.read()
+            file_contents.append((f.filename, content, f.content_type))
+
+        # Process all files concurrently
+        async def ingest_one(filename, content, mime_type):
+            return await processor.quick_ingest(
+                content=content,
+                filename=filename,
+                mime_type=mime_type,
+                user_tags=user_tags,
+                user_purpose=purpose,
+                user_notes=notes,
+                collection_id=collection_id
+            )
+
+        results = await asyncio.gather(
+            *[ingest_one(fn, c, mt) for fn, c, mt in file_contents],
+            return_exceptions=True
+        )
+
+        # Format results
+        formatted_results = []
+        processing_count = 0
+        duplicate_count = 0
+        error_count = 0
+
+        for i, result in enumerate(results):
+            filename = file_contents[i][0]
+
+            if isinstance(result, Exception):
+                formatted_results.append({
+                    "filename": filename,
+                    "status": "error",
+                    "message": str(result)
+                })
+                error_count += 1
+            else:
+                formatted_results.append({
+                    "filename": filename,
+                    "document_id": result.document_id,
+                    "status": result.status,
+                    "message": result.message
+                })
+                if result.status == "processing":
+                    processing_count += 1
+                elif result.status == "duplicate":
+                    duplicate_count += 1
+                else:
+                    error_count += 1
+
+        return {
+            "collection_id": collection_id,
+            "results": formatted_results,
+            "total": len(results),
+            "processing": processing_count,
+            "duplicates": duplicate_count,
+            "errors": error_count
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/ingest/{doc_id}")
+async def get_ingested_document(doc_id: str):
+    """
+    Get an ingested document by ID.
+    """
+    processor = get_document_processor()
+    if not processor:
+        raise HTTPException(status_code=503, detail="Document processor not available")
+
+    try:
+        doc = await processor.get_document(doc_id)
+        if not doc:
+            raise HTTPException(status_code=404, detail=f"Document not found: {doc_id}")
+        return doc
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/ingest/{doc_id}/content")
+async def get_ingested_document_content(doc_id: str):
+    """
+    Get the content of an ingested document (inline or chunks).
+    """
+    processor = get_document_processor()
+    if not processor:
+        raise HTTPException(status_code=503, detail="Document processor not available")
+
+    try:
+        content = await processor.get_document_content(doc_id)
+        if not content:
+            raise HTTPException(status_code=404, detail=f"Document not found: {doc_id}")
+        return content
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/ingest/{doc_id}/progress")
+async def get_ingestion_progress(doc_id: str):
+    """
+    Get the processing progress for a document.
+    """
+    processor = get_document_processor()
+    if not processor:
+        raise HTTPException(status_code=503, detail="Document processor not available")
+
+    try:
+        progress = await processor.get_processing_progress(doc_id)
+        if not progress:
+            raise HTTPException(status_code=404, detail=f"Document not found: {doc_id}")
+
+        return {
+            "document_id": progress.document_id,
+            "status": progress.status,
+            "stage": progress.current_stage,
+            "progress_percent": progress.progress_percent,
+            "stages_completed": progress.stages_completed,
+            "stages_remaining": progress.stages_remaining,
+            "estimated_seconds_remaining": progress.estimated_seconds_remaining
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/ingest")
+async def list_ingested_documents(
+    offset: int = 0,
+    limit: int = 20,
+    purpose: str = None,
+    status: str = None,
+    collection_id: str = None
+):
+    """
+    List ingested documents with pagination.
+    """
+    processor = get_document_processor()
+    if not processor:
+        raise HTTPException(status_code=503, detail="Document processor not available")
+
+    try:
+        result = await processor.list_documents(
+            offset=offset,
+            limit=limit,
+            purpose=purpose,
+            status=status,
+            collection_id=collection_id
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/ingest/search")
+async def search_ingested_documents(
+    q: str,
+    mode: str = "hybrid",
+    limit: int = 10,
+    offset: int = 0
+):
+    """
+    Search ingested documents and chunks.
+
+    Args:
+        q: Search query
+        mode: semantic | keyword | hybrid (default: hybrid)
+        limit: Maximum results
+        offset: Pagination offset
+
+    Returns:
+        Unified search results from documents and chunks
+    """
+    processor = get_document_processor()
+    if not processor:
+        raise HTTPException(status_code=503, detail="Document processor not available")
+
+    try:
+        result = await processor.search_documents(
+            query=q,
+            mode=mode,
+            limit=limit,
+            offset=offset
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/ingest/{doc_id}")
+async def delete_ingested_document(doc_id: str):
+    """
+    Delete an ingested document and all related data (cascade delete).
+
+    This removes:
+    - The document itself
+    - All chunks
+    - Beliefs derived from chunks
+    - Orphaned entities
+    - Experiences about the document
+    """
+    processor = get_document_processor()
+    if not processor:
+        raise HTTPException(status_code=503, detail="Document processor not available")
+
+    try:
+        result = await processor.delete_document_cascade(doc_id)
+        return {
+            "deleted": {
+                "document": result.document_id,
+                "chunks": result.chunks_deleted,
+                "beliefs": result.beliefs_deleted,
+                "entities": result.entities_deleted,
+                "experiences": result.experiences_deleted
+            },
+            "message": "Document and related data deleted"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/ingest/stats")
+async def get_ingestion_stats():
+    """
+    Get statistics about ingested documents.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        await byrd_instance.memory.connect()
+        stats = await byrd_instance.memory.get_document_statistics()
+        return stats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Collection endpoints
+@app.post("/api/ingest/collections")
+async def create_collection(name: str = Form(...), notes: str = Form(None)):
+    """Create a new document collection."""
+    processor = get_document_processor()
+    if not processor:
+        raise HTTPException(status_code=503, detail="Document processor not available")
+
+    try:
+        collection_id = await processor.create_collection(name=name, notes=notes)
+        return {"collection_id": collection_id, "name": name}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/ingest/collections")
+async def list_collections(offset: int = 0, limit: int = 20):
+    """List all document collections."""
+    processor = get_document_processor()
+    if not processor:
+        raise HTTPException(status_code=503, detail="Document processor not available")
+
+    try:
+        result = await processor.list_collections(offset=offset, limit=limit)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/ingest/collections/{collection_id}")
+async def get_collection(collection_id: str):
+    """Get a specific collection."""
+    processor = get_document_processor()
+    if not processor:
+        raise HTTPException(status_code=503, detail="Document processor not available")
+
+    try:
+        collection = await processor.get_collection(collection_id)
+        if not collection:
+            raise HTTPException(status_code=404, detail=f"Collection not found: {collection_id}")
+        return collection
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/ingest/collections/{collection_id}")
+async def delete_collection(collection_id: str, delete_documents: bool = False):
+    """
+    Delete a collection.
+
+    Args:
+        collection_id: Collection ID
+        delete_documents: If true, also delete all documents in the collection
+    """
+    processor = get_document_processor()
+    if not processor:
+        raise HTTPException(status_code=503, detail="Document processor not available")
+
+    try:
+        result = await processor.delete_collection(
+            collection_id=collection_id,
+            delete_documents=delete_documents
+        )
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -28,6 +28,15 @@ class EventType(Enum):
     CONNECTION_HEURISTIC = "connection_heuristic"  # Generic heuristic events (e.g., orphan reconciliation)
     CONNECTION_HEURISTIC_APPLIED = "connection_heuristic_applied"
 
+    # Document events (file ingestion and processing)
+    DOCUMENT_UPLOADED = "document_uploaded"           # File received, quick ingest complete
+    DOCUMENT_PROCESSING = "document_processing"       # Background processing progress
+    DOCUMENT_PROCESSED = "document_processed"         # Processing complete, ready for reflection
+    DOCUMENT_REFLECTED = "document_reflected"         # Dreamer reflected on document
+    DOCUMENT_BELIEF_FORMED = "document_belief_formed" # Belief derived from document chunk
+    DOCUMENT_CONNECTION = "document_connection"       # Relationship discovered between documents
+    DOCUMENT_ERROR = "document_error"                 # Processing failed
+
     # External input events (communication from outside BYRD)
     EXTERNAL_INPUT_RECEIVED = "external_input_received"  # Message/media from external source
     FEEDING_RECEIVED = "feeding_received"  # Nurturing/care act from caretaker
@@ -73,6 +82,14 @@ class EventType(Enum):
     CODER_STEP = "coder_step"  # Individual step/tool usage during coder execution
     CODER_TOOL_RESULT = "coder_tool_result"  # Result of a tool execution
     SYNTHETIC_ACTION = "synthetic_action"  # Graph-based action created without code execution
+
+    # Ralph Loop events (interactive coding sessions)
+    RALPH_LOOP_STARTED = "ralph_loop_started"        # Interactive session began
+    RALPH_LOOP_TURN = "ralph_loop_turn"              # Single turn executed
+    RALPH_LOOP_EVALUATION = "ralph_loop_evaluation"  # Satisfaction evaluated
+    RALPH_LOOP_REFINEMENT = "ralph_loop_refinement"  # Refinement generated
+    RALPH_LOOP_COMPLETE = "ralph_loop_complete"      # Session completed successfully
+    RALPH_LOOP_FAILED = "ralph_loop_failed"          # Session failed
 
     # System events
     SYSTEM_STARTED = "system_started"

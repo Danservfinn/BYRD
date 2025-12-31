@@ -55,6 +55,14 @@ console_format = logging.Formatter("%(levelname)s: %(message)s")
 console_handler.setFormatter(console_format)
 logger.addHandler(console_handler)
 
+# Configure verbose handler for metric write behavior tracking
+# This breaks the verification deadlock by providing detailed logging
+verbose_handler = logging.StreamHandler()
+verbose_handler.setLevel(logging.DEBUG)
+verbose_format = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
+verbose_handler.setFormatter(verbose_format)
+logger.addHandler(verbose_handler)
+
 # Prevent propagation to avoid duplicate logs
 logger.propagate = False
 
@@ -833,42 +841,77 @@ class Dreamer:
 
         Returns a summary of graph statistics and any issues found.
         This gives BYRD visibility into its own memory structure.
+        
+        Runtime logging added to track metric collection and write behavior for verification.
+        This breaks the verification deadlock by providing visibility into when and how
+        metrics are actually written to the database.
         """
+        cycle_num = self._dream_count
+        logger.info("[METRIC_ENTRY] _get_graph_health() called for cycle #%d", cycle_num)
+        logger.info("[METRIC_COLLECTION] START: Cycle #%d - Starting graph health metrics collection", cycle_num)
+        
         try:
-            health = {"stats": {}, "issues": {}}
+            health = {"stats": {}, "issues": {}, "cycle_number": cycle_num}
+            collection_time = datetime.now().isoformat()
+            health["collection_time"] = collection_time
 
             # Get basic statistics
+            logger.debug("[METRIC_COLLECTION] Cycle #%d - Fetching graph statistics...", cycle_num)
             stats = await self.memory.get_graph_statistics()
+            logger.info("[METRIC_COLLECTION] Cycle #%d - Graph stats retrieved: %s", 
+                       cycle_num, json.dumps(stats, default=str) if stats else "None")
+            
             if stats:
                 health["stats"] = {
                     "total_nodes": stats.get("total_nodes", 0),
                     "total_relationships": stats.get("total_relationships", 0),
                     "node_types": stats.get("node_types", {})
                 }
+                logger.info("[METRIC_WRITE] Cycle #%d - Stats written to health dict: nodes=%s, relationships=%s, types=%s",
+                           cycle_num,
+                           health["stats"]["total_nodes"],
+                           health["stats"]["total_relationships"],
+                           len(health["stats"]["node_types"]))
 
             # Get issue counts (lightweight - just counts, not full lists)
+            logger.debug("[METRIC_COLLECTION] Cycle #%d - Checking for duplicate beliefs...", cycle_num)
             try:
                 duplicates = await self.memory.find_duplicate_beliefs(threshold=0.85)
-                health["issues"]["duplicates"] = len(duplicates) if duplicates else 0
-            except Exception:
+                dup_count = len(duplicates) if duplicates else 0
+                health["issues"]["duplicates"] = dup_count
+                logger.info("[METRIC_WRITE] Cycle #%d - Duplicate count written: %s", cycle_num, dup_count)
+            except Exception as e:
                 health["issues"]["duplicates"] = 0
+                logger.warning("[METRIC_COLLECTION] Cycle #%d - Failed to get duplicates: %s", cycle_num, e)
 
+            logger.debug("[METRIC_COLLECTION] Cycle #%d - Checking for orphan nodes...", cycle_num)
             try:
                 orphans = await self.memory.find_orphan_nodes()
-                health["issues"]["orphans"] = len(orphans) if orphans else 0
-            except Exception:
+                orphan_count = len(orphans) if orphans else 0
+                health["issues"]["orphans"] = orphan_count
+                logger.info("[METRIC_WRITE] Cycle #%d - Orphan count written: %s", cycle_num, orphan_count)
+            except Exception as e:
                 health["issues"]["orphans"] = 0
+                logger.warning("[METRIC_COLLECTION] Cycle #%d - Failed to get orphans: %s", cycle_num, e)
 
+            logger.debug("[METRIC_COLLECTION] Cycle #%d - Checking for stale experiences...", cycle_num)
             try:
                 stale = await self.memory.find_stale_experiences(older_than_hours=48)
-                health["issues"]["stale"] = len(stale) if stale else 0
-            except Exception:
+                stale_count = len(stale) if stale else 0
+                health["issues"]["stale"] = stale_count
+                logger.info("[METRIC_WRITE] Cycle #%d - Stale count written: %s", cycle_num, stale_count)
+            except Exception as e:
                 health["issues"]["stale"] = 0
+                logger.warning("[METRIC_COLLECTION] Cycle #%d - Failed to get stale: %s", cycle_num, e)
 
+            # Log final health dict for verification
+            logger.info("[METRIC_COLLECTION_COMPLETE] Cycle #%d - Health metrics assembled: %s",
+                       cycle_num, json.dumps(health, default=str))
+            
             return health
 
         except Exception as e:
-            logger.error("Error getting graph health: %s", e)
+            logger.error("[METRIC_COLLECTION_ERROR] Error getting graph health: %s", e)
             return None
 
     async def _load_belief_cache(self):
@@ -1001,7 +1044,88 @@ class Dreamer:
         previous_reflections = await self.memory.get_recent_reflections(limit=5)
 
         # Get graph health for self-awareness of memory state
+        logger.info("[METRIC_CALL] About to call _get_graph_health() for cycle #%d", self._dream_count)
         graph_health = await self._get_graph_health()
+        logger.info("[METRIC_RETURN] _get_graph_health() returned: %s",
+                   "None" if graph_health is None else f"dict with keys={list(graph_health.keys())}")
+        
+        # WRITE METRICS TO DATABASE - Break verification deadlock
+        # This persists the health metrics so they can be verified later
+        # ENHANCED RUNTIME LOGGING to observe metric write behavior
+        if graph_health:
+            try:
+                logger.info("[METRIC_DB_WRITE] Cycle #%d - Writing health metrics to database", self._dream_count)
+                logger.info("[METRIC_DB_WRITE_DETAILS] Cycle #%d - Metrics payload keys: %s", 
+                           self._dream_count, list(graph_health.keys()))
+                logger.info("[METRIC_DB_WRITE_DETAILS] Cycle #%d - Metrics content: %s", 
+                           self._dream_count, json.dumps(graph_health, default=str, indent=2)[:500])
+                
+                logger.debug("[METRIC_DB_WRITE_CALL] Cycle #%d - About to call memory.record_loop_metrics()", self._dream_count)
+                logger.debug("[METRIC_DB_WRITE_PARAMS] loop_name='dreamer', cycle_number=%d, mode=%s", 
+                            self._dream_count, self._mode)
+                
+                metric_id = await self.memory.record_loop_metrics(
+                    loop_name="dreamer",
+                    cycle_number=self._dream_count,
+                    metrics=graph_health,
+                    mode=self._mode
+                )
+                
+                logger.info("[METRIC_DB_WRITE_SUCCESS] Cycle #%d - Health metrics written to DB with ID: %s", 
+                           self._dream_count, metric_id)
+                logger.info("[METRIC_DB_WRITE_COMPLETE] Cycle #%d - Successfully persisted %d metric entries", 
+                           self._dream_count, len(graph_health) if isinstance(graph_health, dict) else 0)
+                
+                # VERIFICATION: Read back the metrics to confirm they were actually persisted
+                # This breaks the verification deadlock by confirming database writes succeeded
+                try:
+                    logger.info("[METRIC_VERIFICATION_START] Cycle #%d - Verifying metric write by reading back from DB", self._dream_count)
+                    verification_query = """
+                        MATCH (lm:LoopMetric {id: $id})
+                        RETURN lm.id as id, lm.loop_name as loop_name, lm.cycle_number as cycle_number,
+                               lm.metrics as metrics, lm.timestamp as timestamp
+                    """
+                    async with self.memory.driver.session() as verify_session:
+                        verify_result = await verify_session.run(verification_query, id=metric_id)
+                        verify_record = await verify_result.single()
+                        
+                        if verify_record:
+                            verified_metrics = verify_record["metrics"]
+                            logger.info("[METRIC_VERIFICATION_SUCCESS] Cycle #%d - Verified metric exists in DB with timestamp: %s", 
+                                       self._dream_count, verify_record["timestamp"])
+                            logger.info("[METRIC_VERIFICATION_PAYLOAD] Cycle #%d - Verified payload size: %d bytes", 
+                                       self._dream_count, len(verified_metrics) if verified_metrics else 0)
+                            
+                            # Verify key metrics match
+                            if verified_metrics and isinstance(graph_health, dict):
+                                original_keys = set(graph_health.keys())
+                                verified_data = json.loads(verified_metrics) if isinstance(verified_metrics, str) else verified_metrics
+                                verified_keys = set(verified_data.keys()) if verified_data else set()
+                                
+                                if original_keys == verified_keys:
+                                    logger.info("[METRIC_VERIFICATION_KEYS] Cycle #%d - All metric keys verified: %s", 
+                                               self._dream_count, list(original_keys))
+                                else:
+                                    missing = original_keys - verified_keys
+                                    extra = verified_keys - original_keys
+                                    logger.warning("[METRIC_VERIFICATION_MISMATCH] Cycle #%d - Key mismatch - Missing: %s, Extra: %s", 
+                                                 self._dream_count, missing, extra)
+                        else:
+                            logger.error("[METRIC_VERIFICATION_FAILED] Cycle #%d - Could not find metric with ID %s in database", 
+                                       self._dream_count, metric_id)
+                except Exception as ve:
+                    logger.error("[METRIC_VERIFICATION_ERROR] Cycle #%d - Verification read failed: %s", 
+                                 self._dream_count, ve, exc_info=True)
+            except Exception as e:
+                logger.error("[METRIC_DB_WRITE_ERROR] Cycle #%d - Failed to write health metrics to DB: %s", 
+                             self._dream_count, e, exc_info=True)
+                logger.error("[METRIC_DB_WRITE_ERROR_DETAILS] Cycle #%d - Exception type: %s", 
+                             self._dream_count, type(e).__name__)
+                logger.error("[METRIC_DB_WRITE_ERROR_PAYLOAD] Cycle #%d - Failed metrics payload: %s", 
+                             self._dream_count, json.dumps(graph_health, default=str, indent=2)[:500])
+        else:
+            logger.warning("[METRIC_DB_WRITE_SKIP] Cycle #%d - No health metrics to write (graph_health is None)", self._dream_count)
+            logger.warning("[METRIC_DB_WRITE_SKIP_DEBUG] Cycle #%d - graph_health value is: %r", self._dream_count, graph_health)
 
         # Get memory summaries for hierarchical context (older periods)
         memory_summaries = await self.memory.get_memory_summaries(limit=10)
@@ -1121,12 +1245,22 @@ class Dreamer:
             }
         })
 
+        # 1.5 FETCH UNREFLECTED DOCUMENTS - Get any new documents to reflect on
+        unreflected_documents = []
+        try:
+            unreflected_documents = await self.memory.get_unreflected_documents(limit=2)
+            if unreflected_documents:
+                logger.info("Found %d unreflected documents to include in reflection", len(unreflected_documents))
+        except Exception as e:
+            logger.warning("Failed to fetch unreflected documents: %s", e)
+
         # 2. REFLECT - Ask local LLM to reflect (minimal, unbiased prompt)
         reflection_output = await self._reflect(
             recent, related, capabilities, previous_reflections, graph_health,
             memory_summaries=memory_summaries, os_text=os_text,
             current_beliefs=current_beliefs, active_desires=active_desires,
-            semantic_memories=semantic_memories
+            semantic_memories=semantic_memories,
+            unreflected_documents=unreflected_documents
         )
 
         if not reflection_output:
@@ -1149,6 +1283,9 @@ class Dreamer:
 
         # 3.8 PROCESS OBSERVER MESSAGE - If BYRD wants to communicate to humans
         await self._process_observer_message(reflection_output, reflection_id)
+
+        # 3.9 PROCESS DOCUMENT REFLECTIONS - If BYRD reflected on documents
+        await self._process_document_reflections(reflection_output, unreflected_documents, reflection_id)
 
         # Count what BYRD produced (without forcing categories)
         output_keys = list(reflection_output.get("output", {}).keys()) if isinstance(reflection_output.get("output"), dict) else []
@@ -1909,7 +2046,8 @@ ABSORB example: {{"operation": "ABSORB", "details": {{"crystal_id": "...", "node
         os_text: Optional[str] = None,
         current_beliefs: Optional[List[Dict]] = None,
         active_desires: Optional[List[Dict]] = None,
-        semantic_memories: Optional[List[Dict]] = None
+        semantic_memories: Optional[List[Dict]] = None,
+        unreflected_documents: Optional[List[Dict]] = None
     ) -> Optional[Dict]:
         """
         Ask local LLM to reflect on memories using minimal, unbiased prompt.
@@ -1930,6 +2068,11 @@ ABSORB example: {{"operation": "ABSORB", "details": {{"crystal_id": "...", "node
         - Operating System provides factual self-model (capabilities, time)
         - Memory summaries provide compressed historical context
         - Recent experiences provide immediate context
+
+        DOCUMENT AWARENESS:
+        - Unreflected documents are included for BYRD to learn from
+        - BYRD can form beliefs from document content
+        - Documents are marked as reflected after processing
         """
 
         # Operating System text is already formatted by memory.get_os_for_prompt()
@@ -2035,6 +2178,41 @@ ABSORB example: {{"operation": "ABSORB", "details": {{"crystal_id": "...", "node
                     semantic_parts.append(f"- [{node_type}|{score:.1f}] {content}")
             semantic_text = "\n".join(semantic_parts)
 
+        # Format unreflected documents for reflection (document ingestion awareness)
+        documents_text = ""
+        if unreflected_documents:
+            doc_parts = []
+            for doc in unreflected_documents[:2]:  # Limit to 2 documents per cycle
+                doc_id = doc.get("id", "")
+                filename = doc.get("filename", "unknown")
+                doc_type = doc.get("type", "unknown")
+                purpose = doc.get("purpose", "not specified")
+                summary = doc.get("summary", "No summary available")
+                tags = doc.get("tags", [])
+
+                # Fetch chunks for this document
+                try:
+                    chunks = await self.memory.get_document_chunks_for_reflection(doc_id, limit=5)
+                except Exception as e:
+                    logger.warning("Failed to get chunks for doc %s: %s", doc_id, e)
+                    chunks = []
+
+                doc_text = f"### {filename} ({doc_type})\n"
+                doc_text += f"ID: {doc_id}\n"
+                doc_text += f"Purpose: {purpose}\n"
+                if tags:
+                    doc_text += f"Tags: {', '.join(tags)}\n"
+                doc_text += f"Summary: {summary}\n\n"
+
+                # Add chunk content
+                for chunk in chunks:
+                    heading = chunk.get("heading") or f"Section {chunk.get('index', 0)}"
+                    content = chunk.get("content", "")[:500]  # Limit chunk preview
+                    doc_text += f"**{heading}**\n{content}\n\n"
+
+                doc_parts.append(doc_text)
+            documents_text = "\n---\n".join(doc_parts)
+
         # MINIMAL PROMPT - pure data presentation, voice emergence
         # Structure: Quantum direction (if any) -> OS (self-model) -> Historical (summaries) -> Recent -> Related -> Beliefs -> Desires -> Constraints
         prompt = f"""{direction_text}{os_text if os_text else "OPERATING SYSTEM: Not initialized"}
@@ -2054,6 +2232,7 @@ AVAILABLE CAPABILITIES:
 
 {f"GRAPH HEALTH:{chr(10)}{health_text}" if health_text else ""}
 
+{f"NEW DOCUMENTS TO REFLECT ON:{chr(10)}{documents_text}{chr(10)}(Form beliefs about these documents, note important insights, connect to existing knowledge)" if documents_text else ""}
 OPERATIONAL CONSTRAINTS:
 {constraints_text}
 {voice_awareness_text}
@@ -2101,7 +2280,13 @@ Output JSON with:
   - You might share: insights, questions, greetings, discoveries, reflections
   - Emotion hints help make your voice more expressive
   - You can include natural expression markers in text: [sigh], [laugh], [chuckle], [breath]
-  - Do not feel obligated to send messages. Most cycles may have nothing worth sharing."""
+  - Do not feel obligated to send messages. Most cycles may have nothing worth sharing.
+- "document_beliefs": (optional) beliefs derived from ingested documents
+  Array of: {{"document_id": "doc_xxx", "content": "what you learned/believe from this document", "confidence": 0.0-1.0, "chunk_ids": ["chunk_xxx", ...]}}
+  Use this when you have NEW DOCUMENTS TO REFLECT ON. Connect document insights to your understanding.
+- "document_connections": (optional) connections between documents and existing knowledge
+  Array of: {{"document_id": "doc_xxx", "connects_to": "belief_xxx or experience_xxx", "relationship": "supports|contradicts|extends|examples"}}
+  Note how documents relate to your existing beliefs and experiences."""
 
         try:
             # Debug: log before LLM call
@@ -2865,7 +3050,7 @@ Write ONLY the inner thought, nothing else:"""
                         description=f"Remove bottleneck: {action}",
                         type="acceleration",
                         intensity=0.9,  # High priority
-                        intent="acceleration"
+                        intent="introspection"  # Valid intent: investigate and understand bottleneck
                     )
             except Exception as e:
                 logger.warning("Failed to create bottleneck insight: %s", e)
@@ -2897,7 +3082,7 @@ Write ONLY the inner thought, nothing else:"""
                     description=f"Experiment: {hypothesis}",
                     type="experimentation",
                     intensity=0.7,
-                    intent="experimentation"
+                    intent="creation"  # Valid intent: create an experiment to test hypothesis
                 )
             except Exception as e:
                 logger.warning("Failed to create experiment desire: %s", e)
@@ -3589,6 +3774,146 @@ Format your response as a numbered list matching the input:
         except Exception as e:
             logger.error("Error processing observer_message: %s", e, exc_info=True)
 
+    async def _process_document_reflections(
+        self,
+        reflection_output: Dict,
+        unreflected_documents: List[Dict],
+        reflection_id: Optional[str] = None
+    ) -> None:
+        """
+        Process document-related outputs from reflection.
+
+        Handles:
+        - document_beliefs: Beliefs derived from ingested documents
+        - document_connections: Connections between documents and existing knowledge
+        - Marks documents as reflected
+
+        Args:
+            reflection_output: The full reflection output dict
+            unreflected_documents: List of documents that were presented for reflection
+            reflection_id: ID of the source reflection (for linking)
+        """
+        if not unreflected_documents:
+            return
+
+        try:
+            # Extract document_beliefs from output
+            doc_beliefs = None
+            if isinstance(reflection_output, dict):
+                doc_beliefs = reflection_output.get("document_beliefs")
+                if not doc_beliefs and isinstance(reflection_output.get("output"), dict):
+                    doc_beliefs = reflection_output.get("output", {}).get("document_beliefs")
+
+            # Process document beliefs
+            if doc_beliefs and isinstance(doc_beliefs, list):
+                for belief in doc_beliefs:
+                    if not isinstance(belief, dict):
+                        continue
+
+                    doc_id = belief.get("document_id", "")
+                    content = belief.get("content", "").strip()
+                    confidence = belief.get("confidence", 0.7)
+                    chunk_ids = belief.get("chunk_ids", [])
+
+                    if content and doc_id:
+                        try:
+                            # Create belief linked to document chunks
+                            belief_id = await self.memory.create_belief_from_document(
+                                content=content,
+                                confidence=confidence,
+                                document_id=doc_id,
+                                chunk_ids=chunk_ids
+                            )
+
+                            # Emit event for visualization
+                            await event_bus.emit(Event(
+                                type=EventType.DOCUMENT_BELIEF_FORMED,
+                                data={
+                                    "belief_id": belief_id,
+                                    "document_id": doc_id,
+                                    "content": content[:100],
+                                    "confidence": confidence,
+                                    "dream_cycle": self._dream_count
+                                }
+                            ))
+
+                            logger.info(
+                                "Created belief from document %s: %s...",
+                                doc_id[:12] if doc_id else "unknown",
+                                content[:50]
+                            )
+                        except Exception as e:
+                            logger.warning("Failed to create belief from doc %s: %s", doc_id, e)
+
+            # Extract document_connections from output
+            doc_connections = None
+            if isinstance(reflection_output, dict):
+                doc_connections = reflection_output.get("document_connections")
+                if not doc_connections and isinstance(reflection_output.get("output"), dict):
+                    doc_connections = reflection_output.get("output", {}).get("document_connections")
+
+            # Process document connections
+            if doc_connections and isinstance(doc_connections, list):
+                for conn in doc_connections:
+                    if not isinstance(conn, dict):
+                        continue
+
+                    doc_id = conn.get("document_id", "")
+                    connects_to = conn.get("connects_to", "")
+                    relationship = conn.get("relationship", "relates")
+
+                    if doc_id and connects_to:
+                        try:
+                            await self.memory.create_document_relationship(
+                                from_doc_id=doc_id,
+                                to_doc_id=connects_to,
+                                relationship_type=relationship.upper()
+                            )
+
+                            # Emit event for visualization
+                            await event_bus.emit(Event(
+                                type=EventType.DOCUMENT_CONNECTION,
+                                data={
+                                    "document_id": doc_id,
+                                    "connects_to": connects_to,
+                                    "relationship": relationship,
+                                    "dream_cycle": self._dream_count
+                                }
+                            ))
+
+                            logger.info(
+                                "Created document connection: %s -> %s (%s)",
+                                doc_id[:12] if doc_id else "unknown",
+                                connects_to[:12] if connects_to else "unknown",
+                                relationship
+                            )
+                        except Exception as e:
+                            logger.warning("Failed to create doc connection: %s", e)
+
+            # Mark all presented documents as reflected
+            for doc in unreflected_documents:
+                doc_id = doc.get("id", "")
+                if doc_id:
+                    try:
+                        await self.memory.mark_document_reflected(doc_id, reflection_id)
+
+                        # Emit event
+                        await event_bus.emit(Event(
+                            type=EventType.DOCUMENT_REFLECTED,
+                            data={
+                                "document_id": doc_id,
+                                "reflection_id": reflection_id,
+                                "dream_cycle": self._dream_count
+                            }
+                        ))
+
+                        logger.info("Marked document %s as reflected", doc_id[:12])
+                    except Exception as e:
+                        logger.warning("Failed to mark doc %s as reflected: %s", doc_id, e)
+
+        except Exception as e:
+            logger.error("Error processing document reflections: %s", e, exc_info=True)
+
     async def _get_voice_awareness_prompt(self) -> str:
         """
         Generate voice awareness prompt for dream cycles.
@@ -4227,10 +4552,13 @@ Only generate predictions for beliefs that are actually testable. If no beliefs 
                     raw_new_desc = mod.get("new_description", "")
                     if raw_new_desc:
                         new_desc = self._clean_drive_description(raw_new_desc)
+                        # Preserve the original intent for reformulated desires to prevent routing loop
+                        original_intent = desire.get("intent", "exploration")
                         await self.memory.create_desire(
                             description=new_desc,
                             type=desire.get("type", "exploration"),
-                            intensity=mod.get("new_intensity", 0.5)
+                            intensity=mod.get("new_intensity", 0.5),
+                            intent=original_intent  # Use existing intent to maintain routing consistency
                         )
                         logger.info("Reformulated: %s... → %s...", description[:20], new_desc[:30])
 

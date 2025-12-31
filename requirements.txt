@@ -38,3 +38,9 @@ scipy>=1.10.0
 
 # Semantic embeddings for IntuitionNetwork (optional, graceful fallback)
 sentence-transformers>=2.2.0
+
+# File uploads for document ingestion
+python-multipart>=0.0.6
+
+# PDF text extraction for document processing (optional, graceful fallback)
+PyPDF2>=3.0.0

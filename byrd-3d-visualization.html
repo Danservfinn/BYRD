@@ -1153,6 +1153,9 @@
       <button id="btn-feed" class="px-3 py-2 rounded-lg text-sm font-medium bg-amber-100 border border-amber-300 text-amber-700 hover:bg-amber-200 transition-all" onclick="feedByrd();" title="Feed BYRD - an act of care">
         🍜 Feed
       </button>
+      <button id="btn-upload" class="px-3 py-2 rounded-lg text-sm font-medium bg-blue-100 border border-blue-300 text-blue-700 hover:bg-blue-200 transition-all" onclick="showUploadModal();" title="Upload files for BYRD to learn from">
+        📄 Upload
+      </button>
       <button id="btn-speak" class="px-3 py-2 rounded-lg text-sm font-medium bg-teal-100 border border-teal-300 text-teal-700 hover:bg-teal-200 transition-all" onclick="speakToMe();" title="Ask BYRD to speak to you">
         🎙️ Speak to me
       </button>
@@ -1620,6 +1623,114 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- File Upload Modal -->
+  <div id="upload-modal" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl w-[540px] max-h-[85vh] overflow-hidden border border-slate-200/50">
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-blue-500 to-indigo-500 p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+              📄 Upload Files to BYRD
+            </h2>
+            <p class="text-blue-100 text-sm mt-1">Feed knowledge for BYRD to learn from</p>
+          </div>
+          <button onclick="hideUploadModal()" class="text-white/80 hover:text-white p-1 rounded transition-colors">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 overflow-y-auto max-h-[60vh]">
+        <!-- Drop Zone -->
+        <div id="upload-dropzone-inner" class="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-colors cursor-pointer"
+             onclick="document.getElementById('file-input').click();">
+          <div class="text-4xl mb-3">📁</div>
+          <p class="text-slate-600 font-medium">Drop files here or click to browse</p>
+          <p class="text-sm text-slate-400 mt-1">PDF, text, code, markdown, JSON</p>
+          <input type="file" id="file-input" multiple class="hidden" accept=".txt,.md,.pdf,.json,.py,.js,.ts,.tsx,.yaml,.yml,.html,.css,.sql,.sh,.go,.rs,.java,.cpp,.c,.h,.hpp" onchange="handleFileSelect(event)">
+        </div>
+
+        <!-- Selected Files List -->
+        <div id="selected-files-list" class="mt-4 space-y-2 hidden">
+          <div class="text-sm text-slate-500 font-medium">Selected files:</div>
+          <!-- Files will be added here dynamically -->
+        </div>
+
+        <!-- Metadata Inputs -->
+        <div class="mt-5 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-600 mb-1">Tags (comma-separated)</label>
+            <input type="text" id="upload-tags" placeholder="research, code, notes"
+                   class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-700">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-600 mb-1">Purpose</label>
+            <select id="upload-purpose" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-700">
+              <option value="">Let BYRD decide</option>
+              <option value="knowledge">Knowledge (learn from this)</option>
+              <option value="context">Context (reference material)</option>
+              <option value="memory">Memory (remember this event)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-600 mb-1">Notes for BYRD</label>
+            <textarea id="upload-notes" rows="2" placeholder="What should BYRD know about these files?"
+                      class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-700 resize-none"></textarea>
+          </div>
+        </div>
+
+        <!-- Info Box -->
+        <div class="mt-4 bg-blue-50 rounded-lg p-3 border border-blue-100">
+          <p class="text-xs text-blue-700">
+            Files are processed in the background. BYRD will analyze, chunk, and embed the content for future reflection. Large files may take a few seconds.
+          </p>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="border-t border-slate-200 p-4 bg-slate-50/50 flex items-center justify-between">
+        <span id="upload-status" class="text-sm text-slate-500"></span>
+        <div class="flex gap-3">
+          <button onclick="hideUploadModal()" class="px-5 py-2.5 text-sm font-medium bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors">
+            Cancel
+          </button>
+          <button
+            id="btn-execute-upload"
+            onclick="executeUpload()"
+            disabled
+            class="px-5 py-2.5 text-sm font-medium bg-blue-500 text-white rounded-lg hover:bg-blue-600 active:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/25"
+          >
+            <span>Upload to BYRD</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Full-screen Drop Zone (appears when dragging files over window) -->
+  <div id="upload-dropzone-fullscreen" class="fixed inset-0 z-[10000] hidden pointer-events-none">
+    <div class="absolute inset-0 bg-blue-900/80 backdrop-blur-sm"></div>
+    <div class="absolute inset-0 flex items-center justify-center">
+      <div class="text-center pointer-events-none">
+        <div class="text-7xl mb-4">📄</div>
+        <div class="text-3xl text-white font-bold">Drop files to feed BYRD</div>
+        <div class="text-blue-200 mt-2 text-lg">PDF, text, code, markdown, JSON</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload Progress Toast Container -->
+  <div id="upload-progress-container" class="fixed bottom-4 right-4 z-[100] space-y-2 pointer-events-none">
+    <!-- Progress toasts will be inserted here -->
   </div>
 
   <!-- Hybrid Navigation: Controls Help Panel -->
@@ -10570,6 +10681,353 @@
     window.showMessageModal = showMessageModal;
     window.hideMessageModal = hideMessageModal;
     window.sendExternalMessage = sendExternalMessage;
+
+    // =========================================================================
+    // FILE UPLOAD FUNCTIONALITY
+    // =========================================================================
+
+    const uploadState = {
+      selectedFiles: [],
+      uploading: false,
+      activeUploads: new Map() // doc_id -> { filename, progress, stage }
+    };
+
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    const ALLOWED_EXTENSIONS = [
+      '.txt', '.md', '.pdf', '.json', '.py', '.js', '.ts', '.tsx',
+      '.yaml', '.yml', '.html', '.css', '.sql', '.sh', '.go', '.rs',
+      '.java', '.cpp', '.c', '.h', '.hpp'
+    ];
+
+    function showUploadModal() {
+      const modal = document.getElementById('upload-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      // Clear previous state
+      uploadState.selectedFiles = [];
+      document.getElementById('selected-files-list').classList.add('hidden');
+      document.getElementById('selected-files-list').innerHTML = '<div class="text-sm text-slate-500 font-medium">Selected files:</div>';
+      document.getElementById('upload-tags').value = '';
+      document.getElementById('upload-purpose').value = '';
+      document.getElementById('upload-notes').value = '';
+      document.getElementById('upload-status').textContent = '';
+      document.getElementById('btn-execute-upload').disabled = true;
+      document.getElementById('file-input').value = '';
+    }
+
+    function hideUploadModal() {
+      const modal = document.getElementById('upload-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function validateFile(file) {
+      if (file.size > MAX_FILE_SIZE) {
+        return { valid: false, reason: 'File too large (max 10MB)' };
+      }
+      const ext = '.' + file.name.split('.').pop().toLowerCase();
+      if (!ALLOWED_EXTENSIONS.includes(ext)) {
+        return { valid: false, reason: 'Unsupported file type' };
+      }
+      return { valid: true };
+    }
+
+    function handleFileSelect(event) {
+      const files = Array.from(event.target.files || event.dataTransfer.files);
+      addFilesToSelection(files);
+    }
+
+    function addFilesToSelection(files) {
+      const listContainer = document.getElementById('selected-files-list');
+
+      files.forEach(file => {
+        const validation = validateFile(file);
+        if (validation.valid) {
+          // Avoid duplicates
+          if (!uploadState.selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
+            uploadState.selectedFiles.push(file);
+
+            // Add to UI
+            const fileEl = document.createElement('div');
+            fileEl.className = 'flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 border border-slate-200';
+            fileEl.innerHTML = `
+              <div class="flex items-center gap-2">
+                <span class="text-lg">${getFileIcon(file.name)}</span>
+                <span class="text-sm text-slate-700">${file.name}</span>
+                <span class="text-xs text-slate-400">(${formatFileSize(file.size)})</span>
+              </div>
+              <button class="text-slate-400 hover:text-red-500 transition-colors" onclick="removeFileFromSelection('${file.name}', ${file.size})">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+            `;
+            listContainer.appendChild(fileEl);
+          }
+        } else {
+          console.warn(`File ${file.name} rejected: ${validation.reason}`);
+        }
+      });
+
+      // Update UI state
+      if (uploadState.selectedFiles.length > 0) {
+        listContainer.classList.remove('hidden');
+        document.getElementById('btn-execute-upload').disabled = false;
+      }
+    }
+
+    function removeFileFromSelection(name, size) {
+      uploadState.selectedFiles = uploadState.selectedFiles.filter(
+        f => !(f.name === name && f.size === size)
+      );
+      // Rebuild file list UI
+      const listContainer = document.getElementById('selected-files-list');
+      listContainer.innerHTML = '<div class="text-sm text-slate-500 font-medium">Selected files:</div>';
+
+      uploadState.selectedFiles.forEach(file => {
+        const fileEl = document.createElement('div');
+        fileEl.className = 'flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 border border-slate-200';
+        fileEl.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="text-lg">${getFileIcon(file.name)}</span>
+            <span class="text-sm text-slate-700">${file.name}</span>
+            <span class="text-xs text-slate-400">(${formatFileSize(file.size)})</span>
+          </div>
+          <button class="text-slate-400 hover:text-red-500 transition-colors" onclick="removeFileFromSelection('${file.name}', ${file.size})">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        `;
+        listContainer.appendChild(fileEl);
+      });
+
+      if (uploadState.selectedFiles.length === 0) {
+        listContainer.classList.add('hidden');
+        document.getElementById('btn-execute-upload').disabled = true;
+      }
+    }
+
+    function getFileIcon(filename) {
+      const ext = filename.split('.').pop().toLowerCase();
+      const icons = {
+        pdf: '📕', txt: '📄', md: '📝', json: '📋',
+        py: '🐍', js: '💛', ts: '💙', tsx: '⚛️',
+        html: '🌐', css: '🎨', sql: '🗃️', sh: '🖥️',
+        go: '🐹', rs: '🦀', java: '☕', cpp: '⚙️', c: '⚙️'
+      };
+      return icons[ext] || '📄';
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+
+    async function executeUpload() {
+      if (uploadState.selectedFiles.length === 0) return;
+      if (uploadState.uploading) return;
+
+      uploadState.uploading = true;
+      const btn = document.getElementById('btn-execute-upload');
+      btn.disabled = true;
+      btn.innerHTML = '<span>Uploading...</span>';
+
+      const status = document.getElementById('upload-status');
+      status.textContent = `Uploading ${uploadState.selectedFiles.length} file(s)...`;
+
+      try {
+        const formData = new FormData();
+        uploadState.selectedFiles.forEach(f => formData.append('files', f));
+        formData.append('tags', document.getElementById('upload-tags').value);
+        formData.append('purpose', document.getElementById('upload-purpose').value);
+        formData.append('notes', document.getElementById('upload-notes').value);
+
+        const response = await fetch('/api/ingest/upload-multiple', {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          status.textContent = `Uploaded ${result.processing} file(s), ${result.duplicates} duplicate(s)`;
+
+          // Show progress toasts for processing files
+          result.results.forEach(r => {
+            if (r.status === 'processing') {
+              showUploadProgressToast(r.document_id, r.filename);
+              uploadState.activeUploads.set(r.document_id, {
+                filename: r.filename,
+                progress: 0,
+                stage: 'validating'
+              });
+            }
+          });
+
+          // Close modal after a short delay
+          setTimeout(() => {
+            hideUploadModal();
+          }, 1500);
+        } else {
+          status.textContent = `Error: ${result.detail || 'Upload failed'}`;
+        }
+      } catch (e) {
+        console.error('Upload error:', e);
+        status.textContent = `Error: ${e.message}`;
+      } finally {
+        uploadState.uploading = false;
+        btn.disabled = false;
+        btn.innerHTML = `
+          <span>Upload to BYRD</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+          </svg>
+        `;
+      }
+    }
+
+    function showUploadProgressToast(docId, filename) {
+      const container = document.getElementById('upload-progress-container');
+
+      const toast = document.createElement('div');
+      toast.id = `upload-toast-${docId}`;
+      toast.className = 'bg-white/95 backdrop-blur-lg rounded-lg shadow-lg border border-slate-200 p-3 w-72 pointer-events-auto';
+      toast.innerHTML = `
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">${getFileIcon(filename)}</span>
+            <span class="text-sm font-medium text-slate-700 truncate max-w-[180px]">${filename}</span>
+          </div>
+          <button onclick="removeUploadToast('${docId}')" class="text-slate-400 hover:text-slate-600">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div id="progress-bar-${docId}" class="h-full bg-blue-500 transition-all duration-300" style="width: 0%"></div>
+        </div>
+        <div id="progress-stage-${docId}" class="text-xs text-slate-500 mt-1">Processing...</div>
+      `;
+
+      container.appendChild(toast);
+    }
+
+    function updateUploadProgress(docId, stage, progressPercent) {
+      const bar = document.getElementById(`progress-bar-${docId}`);
+      const stageEl = document.getElementById(`progress-stage-${docId}`);
+
+      if (bar) bar.style.width = `${progressPercent}%`;
+      if (stageEl) stageEl.textContent = stage === 'complete' ? 'Complete!' : `${stage}...`;
+
+      if (stage === 'complete') {
+        setTimeout(() => removeUploadToast(docId), 3000);
+      }
+    }
+
+    function removeUploadToast(docId) {
+      const toast = document.getElementById(`upload-toast-${docId}`);
+      if (toast) {
+        toast.remove();
+        uploadState.activeUploads.delete(docId);
+      }
+    }
+
+    // Drag and drop handlers for full-screen drop zone
+    let dragCounter = 0;
+
+    document.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      dragCounter++;
+      if (dragCounter === 1) {
+        document.getElementById('upload-dropzone-fullscreen').classList.remove('hidden');
+      }
+    });
+
+    document.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      dragCounter--;
+      if (dragCounter === 0) {
+        document.getElementById('upload-dropzone-fullscreen').classList.add('hidden');
+      }
+    });
+
+    document.addEventListener('dragover', (e) => {
+      e.preventDefault();
+    });
+
+    document.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dragCounter = 0;
+      document.getElementById('upload-dropzone-fullscreen').classList.add('hidden');
+
+      if (e.dataTransfer.files.length > 0) {
+        // If modal not open, open it first
+        const modal = document.getElementById('upload-modal');
+        if (modal.classList.contains('hidden')) {
+          showUploadModal();
+        }
+        addFilesToSelection(Array.from(e.dataTransfer.files));
+      }
+    });
+
+    // Handle document processing events from WebSocket
+    function handleDocumentEvent(event) {
+      if (event.type === 'document_processing') {
+        const { document_id, stage, progress_percent } = event.data;
+        if (uploadState.activeUploads.has(document_id)) {
+          updateUploadProgress(document_id, stage, progress_percent);
+        }
+      } else if (event.type === 'document_processed') {
+        const { document_id } = event.data;
+        if (uploadState.activeUploads.has(document_id)) {
+          updateUploadProgress(document_id, 'complete', 100);
+        }
+      }
+    }
+
+    // Close upload modal on backdrop click
+    document.getElementById('upload-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'upload-modal') {
+        hideUploadModal();
+      }
+    });
+
+    // Handle inner dropzone in modal
+    const innerDropzone = document.getElementById('upload-dropzone-inner');
+    innerDropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      innerDropzone.classList.add('border-blue-400', 'bg-blue-50/50');
+    });
+    innerDropzone.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      innerDropzone.classList.remove('border-blue-400', 'bg-blue-50/50');
+    });
+    innerDropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      innerDropzone.classList.remove('border-blue-400', 'bg-blue-50/50');
+      if (e.dataTransfer.files.length > 0) {
+        addFilesToSelection(Array.from(e.dataTransfer.files));
+      }
+    });
+
+    // Expose upload functions to global scope
+    window.showUploadModal = showUploadModal;
+    window.hideUploadModal = hideUploadModal;
+    window.handleFileSelect = handleFileSelect;
+    window.removeFileFromSelection = removeFileFromSelection;
+    window.executeUpload = executeUpload;
+    window.removeUploadToast = removeUploadToast;
+    window.handleDocumentEvent = handleDocumentEvent;
+
+    // =========================================================================
+    // END FILE UPLOAD FUNCTIONALITY
+    // =========================================================================
 
     // Kernel state for AGI Seed Directive editing
     let originalKernelYaml = '';
