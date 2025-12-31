@@ -808,12 +808,12 @@ class Memory:
                 metadata=json.dumps(exp_metadata) if exp_metadata else None
             )
 
-        # Emit event for real-time UI
+        # Emit event for real-time UI (full content, no truncation)
         await event_bus.emit(Event(
             type=EventType.EXTERNAL_INPUT_RECEIVED,
             data={
                 "id": exp_id,
-                "content": content[:200] if len(content) > 200 else content,
+                "content": content,
                 "source_type": source_type,
                 "type": exp_type
             }
@@ -5339,13 +5339,13 @@ class Memory:
                                 parsed.get("summary") or
                                 # For insights, get first one if it's a list
                                 (parsed.get("insights", [{}])[0] if isinstance(parsed.get("insights"), list) and parsed.get("insights") else None) or
-                                str(list(parsed.keys()))[:100]  # Fallback: show keys
+                                str(list(parsed.keys()))  # Fallback: show keys
                             )
                             # If content is a dict, stringify it nicely
                             if isinstance(content, dict):
-                                content = content.get("content") or content.get("insight") or str(content)[:150]
+                                content = content.get("content") or content.get("insight") or str(content)
                         except:
-                            content = str(raw_output)[:200] if raw_output else ""
+                            content = str(raw_output) if raw_output else ""
                     else:
                         # Debug: print crystal essence
                         if node_type == "crystal":
