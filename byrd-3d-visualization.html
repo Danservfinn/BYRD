@@ -1194,59 +1194,123 @@
 
   <!-- Old controls hint removed - replaced by Phase 4 keyboard shortcuts hint -->
 
-  <!-- UI Overlay: Right - Event Log -->
+  <!-- UI Overlay: Right - Event Console (Virtual Scrolling) -->
   <div id="event-panel-container" class="ui-overlay top-16 right-4 bottom-4 w-96 transition-all duration-300">
-    <div class="event-panel h-full bg-white/90 rounded-lg border border-slate-200 overflow-hidden flex flex-col shadow-xl">
-      <div class="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-slate-50">
+    <div class="event-panel h-full bg-white/95 rounded-lg border border-slate-200 overflow-hidden flex flex-col shadow-xl">
+      <!-- Console Header -->
+      <div class="flex items-center justify-between px-3 py-2 border-b border-slate-200 bg-slate-50">
         <div class="flex items-center gap-2">
-          <span class="text-sm font-semibold text-slate-700">EVENT LOG</span>
-          <span id="event-count" class="text-xs text-slate-500 bg-slate-200 px-2 py-0.5 rounded-full">0 events</span>
+          <span class="text-xs font-bold text-slate-600 tracking-wider">CONSOLE</span>
+          <span id="event-count" class="text-[10px] text-slate-500 bg-slate-200 px-1.5 py-0.5 rounded font-mono">0</span>
         </div>
-        <div class="flex items-center gap-1">
-          <button id="btn-toggle-filter" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-200" title="Toggle Filter">🔽</button>
-          <button id="btn-export-log" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-200">Export</button>
-          <button id="btn-clear-log" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-200">Clear</button>
-          <button id="btn-toggle-log" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-200" title="Minimize/Expand">▼</button>
-        </div>
-      </div>
-      <!-- Event Type Filter -->
-      <div id="event-filter" class="hidden px-3 py-2 border-b border-slate-200 bg-slate-100/50">
-        <div class="flex flex-wrap gap-1.5">
-          <button class="event-filter-chip active" data-filter="dream_cycle" title="Dream Cycles">
-            <span class="text-indigo-600">💭</span> Dreams
-          </button>
-          <button class="event-filter-chip active" data-filter="belief" title="Beliefs">
-            <span class="text-amber-600">◆</span> Beliefs
-          </button>
-          <button class="event-filter-chip active" data-filter="desire" title="Desires">
-            <span class="text-rose-600">♥</span> Desires
-          </button>
-          <button class="event-filter-chip active" data-filter="experience" title="Experiences">
-            <span class="text-blue-600">●</span> Exp
-          </button>
-          <button class="event-filter-chip active" data-filter="reflection" title="Reflections">
-            <span class="text-emerald-600">✦</span> Reflect
-          </button>
-          <button class="event-filter-chip active" data-filter="voice" title="Inner Voice & Narrator">
-            <span class="text-teal-600">🎙</span> Voice
-          </button>
-          <button class="event-filter-chip active" data-filter="system" title="System Events">
-            <span class="text-green-600">▶</span> System
-          </button>
-          <button class="event-filter-chip active" data-filter="external" title="External Input">
-            <span class="text-pink-600">📨</span> External
-          </button>
-          <button class="event-filter-chip active" data-filter="other" title="Other Events">
-            <span class="text-slate-600">•</span> Other
-          </button>
-        </div>
-        <div class="flex justify-end mt-2 gap-2">
-          <button id="btn-filter-all" class="text-xs text-slate-500 hover:text-slate-700">All</button>
-          <button id="btn-filter-none" class="text-xs text-slate-500 hover:text-slate-700">None</button>
+        <div class="flex items-center gap-0.5">
+          <button id="btn-auto-scroll" class="text-xs px-1.5 py-0.5 rounded text-emerald-600 bg-emerald-100 hover:bg-emerald-200" title="Auto-scroll (Space)">▶ AUTO</button>
+          <button id="btn-toggle-filter" class="text-xs text-slate-500 hover:text-slate-700 px-1.5 py-0.5 rounded hover:bg-slate-200" title="Filters (F)">🔽</button>
+          <button id="btn-export-log" class="text-xs text-slate-500 hover:text-slate-700 px-1.5 py-0.5 rounded hover:bg-slate-200" title="Export (E)">⤓</button>
+          <button id="btn-clear-log" class="text-xs text-slate-500 hover:text-slate-700 px-1.5 py-0.5 rounded hover:bg-slate-200" title="Clear (K)">🗑</button>
+          <button id="btn-toggle-log" class="text-xs text-slate-500 hover:text-slate-700 px-1.5 py-0.5 rounded hover:bg-slate-200" title="Minimize">▼</button>
         </div>
       </div>
-      <div id="event-list" class="flex-1 overflow-y-auto p-2 space-y-1 transition-all duration-300">
-        <div class="text-sm text-slate-500 text-center py-4">Connecting to BYRD...</div>
+
+      <!-- Search Bar -->
+      <div class="px-3 py-2 border-b border-slate-200 bg-slate-50/50">
+        <div class="relative">
+          <input id="console-search" type="text" placeholder="Search events... (Ctrl+F)"
+            class="w-full text-xs px-2 py-1.5 pl-7 rounded border border-slate-300 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
+          <span class="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
+          <span id="search-count" class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 font-mono"></span>
+        </div>
+      </div>
+
+      <!-- Filter Bar (collapsible) -->
+      <div id="event-filter" class="hidden border-b border-slate-200 bg-slate-100/50">
+        <!-- Type Filters -->
+        <div class="px-3 py-2">
+          <div class="text-[10px] text-slate-500 font-medium mb-1.5 uppercase tracking-wide">Type</div>
+          <div class="flex flex-wrap gap-1">
+            <button class="event-filter-chip active" data-filter="dream_cycle" title="Dream Cycles">
+              <span class="text-indigo-600">💭</span> Dreams
+            </button>
+            <button class="event-filter-chip active" data-filter="belief" title="Beliefs">
+              <span class="text-amber-600">◆</span> Beliefs
+            </button>
+            <button class="event-filter-chip active" data-filter="desire" title="Desires">
+              <span class="text-rose-600">♥</span> Desires
+            </button>
+            <button class="event-filter-chip active" data-filter="experience" title="Experiences">
+              <span class="text-blue-600">●</span> Exp
+            </button>
+            <button class="event-filter-chip active" data-filter="reflection" title="Reflections">
+              <span class="text-emerald-600">✦</span> Reflect
+            </button>
+            <button class="event-filter-chip active" data-filter="voice" title="Inner Voice">
+              <span class="text-teal-600">🎙</span> Voice
+            </button>
+            <button class="event-filter-chip active" data-filter="system" title="System">
+              <span class="text-green-600">▶</span> System
+            </button>
+            <button class="event-filter-chip active" data-filter="external" title="External">
+              <span class="text-pink-600">📨</span> External
+            </button>
+            <button class="event-filter-chip active" data-filter="other" title="Other">
+              <span class="text-slate-600">•</span> Other
+            </button>
+          </div>
+        </div>
+        <!-- Severity Filters -->
+        <div class="px-3 py-2 border-t border-slate-200/50">
+          <div class="text-[10px] text-slate-500 font-medium mb-1.5 uppercase tracking-wide">Severity</div>
+          <div class="flex flex-wrap gap-1">
+            <button class="event-filter-chip severity-chip active" data-severity="critical" title="Critical Errors">
+              <span class="w-2 h-2 rounded-full bg-red-500"></span> Critical
+            </button>
+            <button class="event-filter-chip severity-chip active" data-severity="warning" title="Warnings">
+              <span class="w-2 h-2 rounded-full bg-amber-500"></span> Warning
+            </button>
+            <button class="event-filter-chip severity-chip active" data-severity="info" title="Info">
+              <span class="w-2 h-2 rounded-full bg-blue-500"></span> Info
+            </button>
+            <button class="event-filter-chip severity-chip active" data-severity="debug" title="Debug">
+              <span class="w-2 h-2 rounded-full bg-slate-400"></span> Debug
+            </button>
+          </div>
+        </div>
+        <!-- Filter Actions -->
+        <div class="flex justify-between px-3 py-1.5 border-t border-slate-200/50 bg-slate-100">
+          <div class="flex gap-2">
+            <button id="btn-filter-all" class="text-[10px] text-slate-600 hover:text-slate-800 font-medium">Select All</button>
+            <button id="btn-filter-none" class="text-[10px] text-slate-600 hover:text-slate-800 font-medium">Clear All</button>
+          </div>
+          <span id="filter-status" class="text-[10px] text-slate-500 font-mono"></span>
+        </div>
+      </div>
+
+      <!-- Virtual Scroll Container -->
+      <div id="event-list-container" class="flex-1 relative overflow-hidden">
+        <!-- Scroll Viewport -->
+        <div id="event-list" class="absolute inset-0 overflow-y-auto" style="scroll-behavior: auto;">
+          <!-- Virtual spacer for total height -->
+          <div id="event-spacer" class="relative" style="height: 0px;">
+            <!-- Visible rows rendered here -->
+            <div id="event-rows" class="absolute left-0 right-0" style="top: 0px;"></div>
+          </div>
+        </div>
+        <!-- Paused indicator overlay -->
+        <div id="scroll-paused-indicator" class="hidden absolute top-2 left-1/2 -translate-x-1/2 bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded-full font-medium shadow-sm z-10">
+          ⏸ PAUSED
+        </div>
+      </div>
+
+      <!-- Status Bar -->
+      <div class="flex items-center justify-between px-3 py-1.5 border-t border-slate-200 bg-slate-50 text-[10px]">
+        <div class="flex items-center gap-3 text-slate-500">
+          <span id="console-status">Showing <span id="visible-count" class="font-mono">0</span>/<span id="total-count" class="font-mono">0</span></span>
+          <span id="error-count" class="text-red-600 font-medium hidden">0 errors</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span id="event-rate" class="text-slate-400 font-mono">0/s</span>
+          <span id="console-connection" class="w-1.5 h-1.5 rounded-full bg-slate-400" title="Disconnected"></span>
+        </div>
       </div>
     </div>
   </div>
@@ -3274,6 +3338,408 @@
     const crystalSourcesList = document.getElementById('crystal-sources-list');
     const crystalQuantumSeed = document.getElementById('crystal-quantum-seed');
     const btnCloseCrystalModal = document.getElementById('btn-close-crystal-modal');
+
+    // Console DOM References
+    const consoleSearch = document.getElementById('console-search');
+    const searchCount = document.getElementById('search-count');
+    const btnAutoScroll = document.getElementById('btn-auto-scroll');
+    const eventSpacer = document.getElementById('event-spacer');
+    const eventRows = document.getElementById('event-rows');
+    const scrollPausedIndicator = document.getElementById('scroll-paused-indicator');
+    const visibleCountEl = document.getElementById('visible-count');
+    const totalCountEl = document.getElementById('total-count');
+    const errorCountEl = document.getElementById('error-count');
+    const eventRateEl = document.getElementById('event-rate');
+    const consoleConnectionEl = document.getElementById('console-connection');
+    const filterStatusEl = document.getElementById('filter-status');
+    const eventListContainer = document.getElementById('event-list-container');
+
+    // ==========================================================================
+    // EVENT CONSOLE: Virtual Scrolling & Severity Classification
+    // ==========================================================================
+
+    // Severity classification for event types
+    const EVENT_SEVERITY = {
+      // Critical (red) - errors, failures, blocks
+      critical: new Set([
+        'llm_error', 'reflection_error', 'coder_failed', 'agent_coder_error',
+        'corrigibility_alert', 'kill_criterion_triggered', 'modification_blocked',
+        'budget_exceeded', 'system_error', 'constitutional_violation',
+        'self_modification_failed', 'rollback_failed'
+      ]),
+      // Warning (amber) - alerts, near-limits, concerns
+      warning: new Set([
+        'quantum_pool_low', 'resource_alert', 'voice_credits_low',
+        'desire_stuck', 'bottleneck_detected', 'rollback_triggered',
+        'rate_limit_warning', 'memory_pressure', 'timeout_warning',
+        'validation_failed', 'retry_attempt'
+      ]),
+      // Debug (gray) - verbose, internal details
+      debug: new Set([
+        'resource_snapshot', 'llm_usage_recorded', 'memories_accessed',
+        'cache_hit', 'cache_miss', 'pool_refill', 'heartbeat',
+        'connection_ping', 'metrics_snapshot'
+      ])
+      // Info (blue) - everything else (default)
+    };
+
+    function getEventSeverity(type) {
+      if (EVENT_SEVERITY.critical.has(type)) return 'critical';
+      if (EVENT_SEVERITY.warning.has(type)) return 'warning';
+      if (EVENT_SEVERITY.debug.has(type)) return 'debug';
+      return 'info';
+    }
+
+    // Severity filter state
+    const severityFilters = {
+      critical: true,
+      warning: true,
+      info: true,
+      debug: true
+    };
+
+    // Console state
+    const consoleState = {
+      autoScroll: true,
+      userScrolled: false,
+      searchQuery: '',
+      filteredEvents: [],
+      visibleRange: { start: 0, end: 0 },
+      rowHeight: 52, // Estimated row height in pixels
+      bufferRows: 5,
+      errorCount: 0,
+      eventRate: 0,
+      eventTimestamps: [], // For calculating rate
+      rowPool: [], // Object pool for row elements
+      maxPoolSize: 100
+    };
+
+    // ==========================================================================
+    // VIRTUAL EVENT LIST
+    // ==========================================================================
+
+    class VirtualEventList {
+      constructor() {
+        this.rowHeight = consoleState.rowHeight;
+        this.bufferRows = consoleState.bufferRows;
+        this.lastScrollTop = 0;
+        this.renderScheduled = false;
+      }
+
+      // Apply all filters (type, severity, search)
+      applyFilters() {
+        const query = consoleState.searchQuery.toLowerCase();
+        consoleState.filteredEvents = events.filter((e, idx) => {
+          // Attach original index for click handling
+          e._originalIdx = idx;
+
+          // Type filter
+          const category = eventTypeToCategory[e.type] || 'other';
+          if (!eventFilters[category]) return false;
+
+          // Severity filter
+          const severity = getEventSeverity(e.type);
+          if (!severityFilters[severity]) return false;
+
+          // Search filter
+          if (query) {
+            const searchableText = [
+              e.type,
+              e.narration || '',
+              e.data?.content || '',
+              e.data?.description || '',
+              e.data?.message || ''
+            ].join(' ').toLowerCase();
+            if (!searchableText.includes(query)) return false;
+          }
+
+          return true;
+        });
+
+        // Update counts
+        this.updateCounts();
+        this.updateFilterStatus();
+
+        // Re-render
+        this.scheduleRender();
+      }
+
+      updateCounts() {
+        const total = events.length;
+        const filtered = consoleState.filteredEvents.length;
+
+        // Count errors in all events
+        consoleState.errorCount = events.filter(e =>
+          EVENT_SEVERITY.critical.has(e.type)
+        ).length;
+
+        if (totalCountEl) totalCountEl.textContent = total;
+        if (eventCount) eventCount.textContent = total;
+
+        if (errorCountEl) {
+          if (consoleState.errorCount > 0) {
+            errorCountEl.textContent = `${consoleState.errorCount} error${consoleState.errorCount > 1 ? 's' : ''}`;
+            errorCountEl.classList.remove('hidden');
+          } else {
+            errorCountEl.classList.add('hidden');
+          }
+        }
+      }
+
+      updateFilterStatus() {
+        const total = events.length;
+        const filtered = consoleState.filteredEvents.length;
+
+        if (filterStatusEl) {
+          if (filtered < total) {
+            filterStatusEl.textContent = `${filtered}/${total}`;
+          } else {
+            filterStatusEl.textContent = '';
+          }
+        }
+      }
+
+      updateEventRate() {
+        const now = Date.now();
+        // Remove timestamps older than 1 second
+        consoleState.eventTimestamps = consoleState.eventTimestamps.filter(
+          t => now - t < 1000
+        );
+        consoleState.eventRate = consoleState.eventTimestamps.length;
+
+        if (eventRateEl) {
+          eventRateEl.textContent = `${consoleState.eventRate}/s`;
+        }
+      }
+
+      scheduleRender() {
+        if (this.renderScheduled) return;
+        this.renderScheduled = true;
+        requestAnimationFrame(() => {
+          this.render();
+          this.renderScheduled = false;
+        });
+      }
+
+      render() {
+        if (!eventList || !eventSpacer || !eventRows) return;
+
+        const containerHeight = eventList.clientHeight;
+        const totalHeight = consoleState.filteredEvents.length * this.rowHeight;
+        const scrollTop = eventList.scrollTop;
+
+        // Calculate visible range
+        const startRow = Math.floor(scrollTop / this.rowHeight);
+        const visibleRows = Math.ceil(containerHeight / this.rowHeight);
+
+        consoleState.visibleRange = {
+          start: Math.max(0, startRow - this.bufferRows),
+          end: Math.min(consoleState.filteredEvents.length, startRow + visibleRows + this.bufferRows)
+        };
+
+        // Update spacer height
+        eventSpacer.style.height = `${totalHeight}px`;
+
+        // Position the rows container
+        const offsetTop = consoleState.visibleRange.start * this.rowHeight;
+        eventRows.style.top = `${offsetTop}px`;
+
+        // Render only visible rows
+        const visibleEvents = consoleState.filteredEvents.slice(
+          consoleState.visibleRange.start,
+          consoleState.visibleRange.end
+        );
+
+        eventRows.innerHTML = visibleEvents.map((e, localIdx) => {
+          const globalIdx = consoleState.visibleRange.start + localIdx;
+          return this.renderRow(e, e._originalIdx, globalIdx);
+        }).join('');
+
+        // Update visible count
+        if (visibleCountEl) {
+          visibleCountEl.textContent = consoleState.filteredEvents.length;
+        }
+      }
+
+      renderRow(event, originalIdx, displayIdx) {
+        const typeColors = {
+          dream_cycle_start: 'text-indigo-600',
+          dream_cycle_end: 'text-indigo-500',
+          belief_created: 'text-amber-600',
+          desire_created: 'text-rose-600',
+          goal_created: 'text-green-600',
+          experience_created: 'text-blue-600',
+          reflection_created: 'text-emerald-600',
+          capability_created: 'text-purple-600',
+          node_type_discovered: 'text-cyan-600',
+          custom_node_created: 'text-violet-600',
+          seek_started: 'text-cyan-600',
+          narrator_update: 'text-teal-600',
+          inner_voice: 'text-teal-500',
+          byrd_message: 'text-emerald-600',
+          awakening: 'text-amber-500',
+          system_started: 'text-green-600',
+          system_reset: 'text-orange-600',
+          external_input_received: 'text-pink-600',
+          feeding_received: 'text-amber-600',
+          connection_created: 'text-yellow-600'
+        };
+
+        const typeIcons = {
+          dream_cycle_start: '💭', dream_cycle_end: '💭',
+          belief_created: '◆', desire_created: '♥', goal_created: '⬢',
+          experience_created: '●', reflection_created: '✦',
+          capability_created: '★', node_type_discovered: '🆕',
+          custom_node_created: '✧', seek_started: '🔍',
+          narrator_update: '🎙', inner_voice: '💭', byrd_message: '💬',
+          awakening: '🌅', system_started: '▶', system_reset: '🔄',
+          external_input_received: '📨', feeding_received: '🍜',
+          connection_created: '🔗'
+        };
+
+        const severity = getEventSeverity(event.type);
+        const severityColors = {
+          critical: 'border-l-red-500 bg-red-50/50',
+          warning: 'border-l-amber-500 bg-amber-50/30',
+          info: 'border-l-transparent',
+          debug: 'border-l-slate-300 bg-slate-50/30'
+        };
+
+        const colorClass = typeColors[event.type] || 'text-slate-600';
+        const icon = typeIcons[event.type] || '•';
+        const time = event.timestamp
+          ? new Date(event.timestamp).toLocaleTimeString('en-US', { hour12: false })
+          : new Date().toLocaleTimeString('en-US', { hour12: false });
+        const preview = event.narration || event.data?.content || event.data?.description || event.data?.inner_voice || '';
+        const severityClass = severityColors[severity] || '';
+
+        // Highlight search matches
+        let displayPreview = preview;
+        if (consoleState.searchQuery && preview) {
+          const regex = new RegExp(`(${consoleState.searchQuery})`, 'gi');
+          displayPreview = preview.replace(regex, '<mark class="bg-yellow-200 rounded px-0.5">$1</mark>');
+        }
+
+        return `
+          <div class="px-2 py-1.5 rounded hover:bg-slate-200/50 cursor-pointer transition-colors border-l-2 ${severityClass}"
+               onclick="showEventDetail(${originalIdx})"
+               style="min-height: ${this.rowHeight - 4}px;">
+            <div class="flex items-center gap-1.5">
+              <span class="text-[10px] text-slate-400 font-mono w-14">${time}</span>
+              <span class="${colorClass} text-sm">${icon}</span>
+              <span class="text-[11px] ${colorClass} font-medium truncate flex-1">${event.type.replace(/_/g, ' ')}</span>
+            </div>
+            ${displayPreview ? `<div class="text-[11px] text-slate-600 mt-0.5 pl-[62px] leading-relaxed truncate italic">${displayPreview}</div>` : ''}
+          </div>
+        `;
+      }
+
+      onScroll() {
+        const scrollTop = eventList.scrollTop;
+        const scrollHeight = eventList.scrollHeight;
+        const clientHeight = eventList.clientHeight;
+
+        // Check if user scrolled up (away from bottom)
+        const isAtBottom = scrollHeight - scrollTop <= clientHeight + 50;
+
+        if (!isAtBottom && consoleState.autoScroll) {
+          // User scrolled up, pause auto-scroll
+          consoleState.userScrolled = true;
+          this.updateAutoScrollUI(false);
+        } else if (isAtBottom && consoleState.userScrolled) {
+          // User scrolled back to bottom, resume auto-scroll
+          consoleState.userScrolled = false;
+          if (consoleState.autoScroll) {
+            this.updateAutoScrollUI(true);
+          }
+        }
+
+        // Check if we need to re-render
+        const scrollDelta = Math.abs(scrollTop - this.lastScrollTop);
+        if (scrollDelta > this.rowHeight / 2) {
+          this.lastScrollTop = scrollTop;
+          this.scheduleRender();
+        }
+      }
+
+      updateAutoScrollUI(active) {
+        if (btnAutoScroll) {
+          if (active && !consoleState.userScrolled) {
+            btnAutoScroll.textContent = '▶ AUTO';
+            btnAutoScroll.className = 'text-xs px-1.5 py-0.5 rounded text-emerald-600 bg-emerald-100 hover:bg-emerald-200';
+          } else {
+            btnAutoScroll.textContent = '⏸ PAUSED';
+            btnAutoScroll.className = 'text-xs px-1.5 py-0.5 rounded text-amber-600 bg-amber-100 hover:bg-amber-200';
+          }
+        }
+
+        if (scrollPausedIndicator) {
+          if (!active || consoleState.userScrolled) {
+            scrollPausedIndicator.classList.remove('hidden');
+          } else {
+            scrollPausedIndicator.classList.add('hidden');
+          }
+        }
+      }
+
+      scrollToBottom() {
+        if (eventList) {
+          eventList.scrollTop = eventList.scrollHeight;
+          consoleState.userScrolled = false;
+          this.updateAutoScrollUI(consoleState.autoScroll);
+        }
+      }
+
+      toggleAutoScroll() {
+        consoleState.autoScroll = !consoleState.autoScroll;
+        consoleState.userScrolled = false;
+        this.updateAutoScrollUI(consoleState.autoScroll);
+        if (consoleState.autoScroll) {
+          this.scrollToBottom();
+        }
+      }
+
+      onNewEvent(event) {
+        // Record timestamp for rate calculation
+        consoleState.eventTimestamps.push(Date.now());
+        this.updateEventRate();
+
+        // Re-apply filters
+        this.applyFilters();
+
+        // Auto-scroll if enabled and not user-scrolled
+        if (consoleState.autoScroll && !consoleState.userScrolled) {
+          this.scrollToBottom();
+        }
+      }
+
+      setSearch(query) {
+        consoleState.searchQuery = query;
+        this.applyFilters();
+
+        // Update search count indicator
+        if (searchCount) {
+          if (query && consoleState.filteredEvents.length !== events.length) {
+            searchCount.textContent = `${consoleState.filteredEvents.length}`;
+            searchCount.classList.remove('hidden');
+          } else {
+            searchCount.classList.add('hidden');
+          }
+        }
+      }
+
+      clear() {
+        events.length = 0;
+        consoleState.filteredEvents = [];
+        consoleState.errorCount = 0;
+        consoleState.eventTimestamps = [];
+        this.scheduleRender();
+        this.updateCounts();
+      }
+    }
+
+    // Create virtual event list instance
+    const virtualEventList = new VirtualEventList();
 
     // Phase 4: State
     let selectedNode = null;
@@ -7907,6 +8373,14 @@
         connectionStatus.className = 'flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/30';
         updateStatus('Connected to BYRD', 'green');
 
+        // Update console connection indicator
+        const consoleConn = document.getElementById('console-connection');
+        if (consoleConn) {
+          consoleConn.classList.remove('bg-slate-400', 'bg-red-500');
+          consoleConn.classList.add('bg-green-500');
+          consoleConn.title = 'Connected';
+        }
+
         // Awakening node removed - consciousness represented by the belief network itself
 
         // Start 60-second narrator refresh timer
@@ -7921,6 +8395,14 @@
         connectionText.textContent = 'Disconnected';
         connectionText.className = 'text-xs text-red-400';
         connectionStatus.className = 'flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30';
+
+        // Update console connection indicator
+        const consoleConn = document.getElementById('console-connection');
+        if (consoleConn) {
+          consoleConn.classList.remove('bg-slate-400', 'bg-green-500');
+          consoleConn.classList.add('bg-red-500');
+          consoleConn.title = 'Disconnected';
+        }
 
         // Stop narrator refresh when disconnected
         stopNarratorRefresh();
@@ -7946,9 +8428,10 @@
 
     function handleEvent(event) {
       events.unshift(event);
-      if (events.length > 500) events.pop();
-      // PERF: Use debounced rendering instead of immediate DOM rebuild
-      scheduleEventLogRender();
+      // Increased limit to 10,000 for virtual scrolling
+      if (events.length > 10000) events.pop();
+      // Use virtual event list for efficient rendering
+      virtualEventList.onNewEvent(event);
 
       // Trigger cat animations for this event
       if (catAnimationController) {
@@ -10472,30 +10955,86 @@
       if (e.target.id === 'seed-modal') hideSeedModal();
     });
 
+    // ==========================================================================
+    // EVENT CONSOLE: Event Listeners
+    // ==========================================================================
+
+    // Clear console
     btnClearLog.addEventListener('click', () => {
-      events = [];
-      renderEventLog();
+      virtualEventList.clear();
     });
 
-    // Event log minimize/expand toggle
+    // Auto-scroll toggle
+    if (btnAutoScroll) {
+      btnAutoScroll.addEventListener('click', () => {
+        virtualEventList.toggleAutoScroll();
+      });
+    }
+
+    // Scroll event for virtual scrolling
+    if (eventList) {
+      eventList.addEventListener('scroll', () => {
+        virtualEventList.onScroll();
+      });
+    }
+
+    // Pause on hover
+    if (eventListContainer) {
+      eventListContainer.addEventListener('mouseenter', () => {
+        if (consoleState.autoScroll && !consoleState.userScrolled) {
+          consoleState.userScrolled = true;
+          virtualEventList.updateAutoScrollUI(false);
+        }
+      });
+      eventListContainer.addEventListener('mouseleave', () => {
+        if (consoleState.autoScroll) {
+          consoleState.userScrolled = false;
+          virtualEventList.updateAutoScrollUI(true);
+          virtualEventList.scrollToBottom();
+        }
+      });
+    }
+
+    // Search input
+    if (consoleSearch) {
+      let searchTimeout = null;
+      consoleSearch.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          virtualEventList.setSearch(e.target.value);
+        }, 150); // Debounce search
+      });
+      consoleSearch.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          consoleSearch.value = '';
+          virtualEventList.setSearch('');
+          consoleSearch.blur();
+        }
+      });
+    }
+
+    // Console minimize/expand toggle
     let eventLogMinimized = false;
     btnToggleLog.addEventListener('click', () => {
       eventLogMinimized = !eventLogMinimized;
       if (eventLogMinimized) {
         eventPanelContainer.style.bottom = 'auto';
         eventPanelContainer.style.height = '52px';
-        eventList.style.display = 'none';
+        if (eventListContainer) eventListContainer.style.display = 'none';
         btnToggleLog.textContent = '▲';
         btnToggleLog.title = 'Expand';
       } else {
         eventPanelContainer.style.bottom = '1rem';
         eventPanelContainer.style.height = '';
-        eventList.style.display = '';
+        if (eventListContainer) eventListContainer.style.display = '';
         btnToggleLog.textContent = '▼';
         btnToggleLog.title = 'Minimize';
+        // Re-render after expanding
+        virtualEventList.scheduleRender();
       }
     });
 
+    // Export with severity information
     btnExportLog.addEventListener('click', () => {
       if (events.length === 0) {
         alert('No events to export');
@@ -10504,7 +11043,12 @@
       const exportData = {
         exported_at: new Date().toISOString(),
         event_count: events.length,
-        events: events
+        filtered_count: consoleState.filteredEvents.length,
+        error_count: consoleState.errorCount,
+        events: events.map(e => ({
+          ...e,
+          severity: getEventSeverity(e.type)
+        }))
       };
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -10525,28 +11069,108 @@
       btnToggleFilter.textContent = eventFilter.classList.contains('hidden') ? '🔽' : '🔼';
     });
 
-    // Event filter chip click handlers
-    document.querySelectorAll('.event-filter-chip').forEach(chip => {
+    // Type filter chip click handlers
+    document.querySelectorAll('.event-filter-chip:not(.severity-chip)').forEach(chip => {
       chip.addEventListener('click', () => {
         const category = chip.dataset.filter;
-        eventFilters[category] = !eventFilters[category];
-        chip.classList.toggle('active', eventFilters[category]);
-        renderEventLog();
+        if (category) {
+          eventFilters[category] = !eventFilters[category];
+          chip.classList.toggle('active', eventFilters[category]);
+          virtualEventList.applyFilters();
+        }
+      });
+    });
+
+    // Severity filter chip click handlers
+    document.querySelectorAll('.event-filter-chip.severity-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const severity = chip.dataset.severity;
+        if (severity) {
+          severityFilters[severity] = !severityFilters[severity];
+          chip.classList.toggle('active', severityFilters[severity]);
+          virtualEventList.applyFilters();
+        }
       });
     });
 
     // Filter all/none buttons
     document.getElementById('btn-filter-all').addEventListener('click', () => {
+      // Select all type filters
       Object.keys(eventFilters).forEach(key => eventFilters[key] = true);
-      document.querySelectorAll('.event-filter-chip').forEach(chip => chip.classList.add('active'));
-      renderEventLog();
+      document.querySelectorAll('.event-filter-chip:not(.severity-chip)').forEach(chip => chip.classList.add('active'));
+      // Select all severity filters
+      Object.keys(severityFilters).forEach(key => severityFilters[key] = true);
+      document.querySelectorAll('.event-filter-chip.severity-chip').forEach(chip => chip.classList.add('active'));
+      virtualEventList.applyFilters();
     });
 
     document.getElementById('btn-filter-none').addEventListener('click', () => {
+      // Deselect all type filters
       Object.keys(eventFilters).forEach(key => eventFilters[key] = false);
-      document.querySelectorAll('.event-filter-chip').forEach(chip => chip.classList.remove('active'));
-      renderEventLog();
+      document.querySelectorAll('.event-filter-chip:not(.severity-chip)').forEach(chip => chip.classList.remove('active'));
+      // Deselect all severity filters
+      Object.keys(severityFilters).forEach(key => severityFilters[key] = false);
+      document.querySelectorAll('.event-filter-chip.severity-chip').forEach(chip => chip.classList.remove('active'));
+      virtualEventList.applyFilters();
     });
+
+    // ==========================================================================
+    // CONSOLE KEYBOARD SHORTCUTS
+    // ==========================================================================
+    document.addEventListener('keydown', (e) => {
+      // Ignore if typing in an input
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      // Console shortcuts
+      switch (e.key.toLowerCase()) {
+        case 'f':
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            if (consoleSearch) consoleSearch.focus();
+          }
+          break;
+        case 'k':
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            virtualEventList.clear();
+          }
+          break;
+        case 'g':
+          if (!e.shiftKey) {
+            virtualEventList.scrollToBottom();
+          } else {
+            if (eventList) eventList.scrollTop = 0;
+          }
+          break;
+        case ' ':
+          // Space toggles auto-scroll when console is focused
+          if (document.activeElement === eventList || document.activeElement === eventListContainer) {
+            e.preventDefault();
+            virtualEventList.toggleAutoScroll();
+          }
+          break;
+      }
+    });
+
+    // Update connection status indicator
+    function updateConsoleConnection(connected) {
+      if (consoleConnectionEl) {
+        if (connected) {
+          consoleConnectionEl.classList.remove('bg-slate-400', 'bg-red-500');
+          consoleConnectionEl.classList.add('bg-green-500');
+          consoleConnectionEl.title = 'Connected';
+        } else {
+          consoleConnectionEl.classList.remove('bg-slate-400', 'bg-green-500');
+          consoleConnectionEl.classList.add('bg-red-500');
+          consoleConnectionEl.title = 'Disconnected';
+        }
+      }
+    }
+
+    // Initial render
+    virtualEventList.applyFilters();
 
     // Graph Mode Toggle
     const btnGraphMode = document.getElementById('btn-graph-mode');
@@ -10741,7 +11365,7 @@
 
         setInterval(fetchStatus, 10000);
         setInterval(fetchQuantumStatus, 30000);
-        renderEventLog();
+        virtualEventList.applyFilters(); // Initial console render
         console.log('🎉 init() complete!');
       } catch (err) {
         console.error('❌ init() failed:', err);
