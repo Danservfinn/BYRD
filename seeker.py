@@ -1049,6 +1049,12 @@ Reply with ONLY one word: introspect, reconcile_orphans, curate, self_modify, in
         Returns:
             Intent classification: introspection, research, creation, or connection
         """
+        # HARD FILTER: Reject demonstration desires at formulation level
+        # This prevents test/demo patterns from being classified, saving cycles
+        if self._is_demonstration_desire(description):
+            print(f"🚫 Hard filter rejected demonstration desire during intent classification: {description[:60]}...")
+            return "introspection"  # Return safe default to avoid processing
+        
         desc_lower = description.lower()
 
         # KEYWORD PRE-CHECK: Fast path for common internal operations
