@@ -26,6 +26,7 @@ from dreamer import Dreamer
 from seeker import Seeker
 from actor import Actor
 from opencode_coder import OpenCodeCoder, create_opencode_coder, CoderResult
+from interactive_coder import RalphLoop, RalphLoopConfig
 from self_modification import SelfModificationSystem
 from context_loader import ContextLoader, create_context_loader
 from plugin_manager import PluginManager, create_plugin_manager
@@ -271,7 +272,7 @@ class BYRD:
         self.coder = create_opencode_coder(
             config=coder_config,
             coordinator=None,  # Will be set up later if ComponentCoordinator is used
-            context_loader=self.context_loader,
+            context_loader=None,  # Will be injected after context_loader is initialized
             memory=self.memory
         )
 
@@ -283,6 +284,28 @@ class BYRD:
 
         # Inject Coder into Seeker
         self.seeker.coder = self.coder
+
+        # Initialize Ralph Loop (interactive coding sessions)
+        interactive_config = self.config.get("interactive_coder", {})
+        ralph_config = RalphLoopConfig(
+            max_turns=interactive_config.get("max_turns", 10),
+            satisfaction_threshold=interactive_config.get("satisfaction_threshold", 0.8),
+            enable_todo_continuation=interactive_config.get("todo_continuation", True),
+            enable_error_recovery=interactive_config.get("error_recovery", True),
+            use_llm_evaluation=interactive_config.get("use_llm_evaluation", True),
+        )
+
+        self.ralph_loop = RalphLoop(
+            coder=self.coder,
+            llm_client=self.llm_client,
+            memory=self.memory,
+            config=ralph_config,
+            event_bus=event_bus,
+        )
+
+        # Inject RalphLoop into Seeker
+        self.seeker.ralph_loop = self.ralph_loop
+        print("🔄 Ralph Loop: Interactive coding enabled")
 
         # Initialize Voice (ElevenLabs TTS)
         self.voice = None
@@ -511,6 +534,21 @@ class BYRD:
                     self.omega.world_model = self.world_model
                     learning_components_status.append("WorldModel: assigned to Omega")
 
+                # Initialize CouplingHandlers for Option B loop integration
+                try:
+                    from coupling_handlers import CouplingHandlers
+                    coupling_config = option_b_config.get("coupling_handlers", {})
+                    coupling_handlers = CouplingHandlers(
+                        memory=self.memory,
+                        llm_client=self.llm_client,
+                        config=coupling_config
+                    )
+                    if self.omega:
+                        self.omega.coupling_handlers = coupling_handlers
+                    learning_components_status.append("CouplingHandlers: initialized")
+                except Exception as e:
+                    learning_components_status.append(f"CouplingHandlers: {e}")
+
                 # Inject learning components INTO Option B loops
                 if self.omega:
                     injections = self.omega.inject_learning_components()
@@ -586,6 +624,11 @@ class BYRD:
             self.seeker.context_loader = self.context_loader
             self.seeker.request_evaluator = self.request_evaluator
             print("   → Injected into Seeker")
+
+            # Inject context_loader into Coder (was None during initial creation)
+            if self.coder and self.context_loader:
+                self.coder.context_loader = self.context_loader
+                print("   → Injected ContextLoader into Coder")
 
         except Exception as e:
             print(f"⚠️ v2.1 components: partial initialization - {e}")

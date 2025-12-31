@@ -48,6 +48,14 @@
       filter: drop-shadow(0 0 12px currentColor);
     }
 
+    .component-box.deprecated {
+      opacity: 0.5;
+    }
+
+    .component-box.deprecated .box-outline {
+      stroke-dasharray: 4 2;
+    }
+
     /* Flow line animations */
     .flow-line {
       stroke-dasharray: 8 4;
@@ -173,6 +181,12 @@
       opacity: 0.8;
       filter: drop-shadow(0 0 4px currentColor);
     }
+
+    .deprecated-badge {
+      fill: #ef4444;
+      font-size: 6px;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -187,7 +201,7 @@
         </a>
         <div>
           <h1 class="text-2xl font-bold sacred-title">BYRD Unified AGI Architecture</h1>
-          <p class="text-xs text-slate-500 mt-0.5">Core Components + AGI Execution + Learning + Compute Self-Awareness</p>
+          <p class="text-xs text-slate-500 mt-0.5">Core + OpenCode + Goal Cascade + Learning + Rate Limiting + Sovereignty</p>
         </div>
       </div>
       <div class="flex items-center gap-4">
@@ -209,7 +223,7 @@
 
   <!-- Main Flowchart -->
   <div class="fixed top-24 left-4 right-80 bottom-20 flex items-center justify-center overflow-auto">
-    <svg id="flowchart" viewBox="0 0 1100 720" class="w-full h-full max-w-6xl">
+    <svg id="flowchart" viewBox="0 0 1200 780" class="w-full h-full max-w-7xl">
       <defs>
         <!-- Arrowhead markers -->
         <marker id="arrow-violet" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
@@ -235,6 +249,9 @@
         </marker>
         <marker id="arrow-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
           <polygon points="0 0, 10 3.5, 0 7" fill="#f97316"/>
+        </marker>
+        <marker id="arrow-pink" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#ec4899"/>
         </marker>
 
         <!-- Gradients for component boxes -->
@@ -270,8 +287,6 @@
           <stop offset="0%" style="stop-color:#7f1d1d;stop-opacity:1" />
           <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
         </linearGradient>
-
-        <!-- New gradients for complete architecture -->
         <linearGradient id="grad-dreamer" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" style="stop-color:#581c87;stop-opacity:1" />
           <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
@@ -280,11 +295,7 @@
           <stop offset="0%" style="stop-color:#1d4ed8;stop-opacity:1" />
           <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
         </linearGradient>
-        <linearGradient id="grad-actor" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#0891b2;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
-        </linearGradient>
-        <linearGradient id="grad-coder" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id="grad-opencode" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" style="stop-color:#059669;stop-opacity:1" />
           <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
         </linearGradient>
@@ -304,11 +315,27 @@
           <stop offset="0%" style="stop-color:#0d9488;stop-opacity:1" />
           <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
         </linearGradient>
+        <linearGradient id="grad-cascade" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#7c3aed;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="grad-sovereignty" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#db2777;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="grad-rate" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#0369a1;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="grad-deprecated" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#374151;stop-opacity:0.5" />
+          <stop offset="100%" style="stop-color:#1e293b;stop-opacity:0.5" />
+        </linearGradient>
       </defs>
 
       <!-- Philosophy Quote -->
-      <text x="500" y="25" text-anchor="middle" fill="#64748b" font-size="11" font-style="italic">
-        "Desires emerge from reflection, not programming. A system that truly wants must change itself."
+      <text x="550" y="25" text-anchor="middle" fill="#64748b" font-size="11" font-style="italic">
+        "Desires emerge from reflection, not programming. Human interaction is the wellspring of growth."
       </text>
 
       <!-- Flow Lines (drawn first, behind components) -->
@@ -316,73 +343,81 @@
         <!-- Memory feeds all components -->
         <path class="flow-line" d="M550,105 L125,140" stroke="#3b82f6" stroke-width="1.5" fill="none" marker-end="url(#arrow-blue)" data-from="Memory" data-to="Dreamer"/>
         <path class="flow-line" d="M550,105 L265,140" stroke="#3b82f6" stroke-width="1.5" fill="none" marker-end="url(#arrow-blue)" data-from="Memory" data-to="Seeker"/>
-        <path class="flow-line" d="M550,105 L395,140" stroke="#3b82f6" stroke-width="1.5" fill="none" marker-end="url(#arrow-blue)" data-from="Memory" data-to="Actor"/>
-        <path class="flow-line" d="M550,105 L515,140" stroke="#3b82f6" stroke-width="1.5" fill="none" marker-end="url(#arrow-blue)" data-from="Memory" data-to="Coder"/>
+        <path class="flow-line" d="M550,105 L460,140" stroke="#3b82f6" stroke-width="1.5" fill="none" marker-end="url(#arrow-blue)" data-from="Memory" data-to="OpenCodeCoder"/>
 
         <!-- Core Components to Memory (feedback) -->
         <path class="flow-line" d="M125,140 L420,72" stroke="#a855f7" stroke-width="1" fill="none" marker-end="url(#arrow-violet)" data-from="Dreamer" data-to="Memory"/>
         <path class="flow-line" d="M265,140 L450,72" stroke="#3b82f6" stroke-width="1" fill="none" marker-end="url(#arrow-blue)" data-from="Seeker" data-to="Memory"/>
 
         <!-- Kernel to Memory -->
-        <path class="flow-line" d="M700,72 L680,72" stroke="#a78bfa" stroke-width="1.5" fill="none" marker-end="url(#arrow-violet)" data-from="Kernel" data-to="Memory"/>
-
-        <!-- Self-Model connection -->
-        <path class="flow-line" d="M810,72 L790,72" stroke="#fbbf24" stroke-width="1" fill="none" data-from="SelfModel" data-to="Kernel"/>
+        <path class="flow-line" d="M730,72 L680,72" stroke="#a78bfa" stroke-width="1.5" fill="none" marker-end="url(#arrow-violet)" data-from="Kernel" data-to="Memory"/>
 
         <!-- Dreamer to Seeker flow -->
         <path class="flow-line" d="M190,167 L200,167" stroke="#a855f7" stroke-width="1.5" fill="none" marker-end="url(#arrow-violet)" data-from="Dreamer" data-to="Seeker"/>
         <text class="flow-label" x="195" y="178" font-size="7">desires</text>
 
         <!-- Seeker to Desire Classifier -->
-        <path class="flow-line" d="M265,195 L265,228" stroke="#3b82f6" stroke-width="1.5" fill="none" marker-end="url(#arrow-blue)" data-from="Seeker" data-to="DesireClassifier"/>
+        <path class="flow-line" d="M265,195 L130,228" stroke="#3b82f6" stroke-width="1.5" fill="none" marker-end="url(#arrow-blue)" data-from="Seeker" data-to="DesireClassifier"/>
+
+        <!-- Request Evaluator to Seeker -->
+        <path class="flow-line" d="M680,167 L330,167" stroke="#ec4899" stroke-width="1" fill="none" marker-end="url(#arrow-pink)" data-from="RequestEvaluator" data-to="Seeker"/>
+        <text class="flow-label" x="505" y="160" font-size="6">sovereignty check</text>
 
         <!-- Desire Classifier routing arrows -->
-        <path class="flow-line" d="M430,273 L420,273" stroke="#14b8a6" stroke-width="1.5" fill="none" marker-end="url(#arrow-teal)" data-from="DesireClassifier" data-to="AGIRunner"/>
-        <text class="flow-label" x="405" y="280" font-size="6">capability</text>
+        <path class="flow-line" d="M200,273 L210,273" stroke="#14b8a6" stroke-width="1.5" fill="none" marker-end="url(#arrow-teal)" data-from="DesireClassifier" data-to="AGIRunner"/>
+        <text class="flow-label" x="205" y="285" font-size="6">capability</text>
+
+        <!-- Desire Classifier to Goal Cascade -->
+        <path class="flow-line" d="M130,318 L200,340" stroke="#7c3aed" stroke-width="1.5" fill="none" marker-end="url(#arrow-violet)" data-from="DesireClassifier" data-to="GoalCascade"/>
+        <text class="flow-label" x="160" y="335" font-size="6">complex_task</text>
 
         <!-- AGI Runner to Learning Substrate -->
-        <path class="flow-line" d="M420,273 L580,273" stroke="#f59e0b" stroke-width="1" fill="none" marker-end="url(#arrow-orange)" data-from="AGIRunner" data-to="LearningSubstrate"/>
+        <path class="flow-line" d="M560,273 L620,273" stroke="#f59e0b" stroke-width="1" fill="none" marker-end="url(#arrow-orange)" data-from="AGIRunner" data-to="LearningSubstrate"/>
 
         <!-- AGI Runner to Capability Evaluator -->
-        <path class="flow-line" d="M420,273 L810,273" stroke="#f59e0b" stroke-width="1" fill="none" marker-end="url(#arrow-orange)" data-from="AGIRunner" data-to="CapabilityEvaluator"/>
+        <path class="flow-line" d="M560,290 L860,290" stroke="#f59e0b" stroke-width="1" fill="none" marker-end="url(#arrow-orange)" data-from="AGIRunner" data-to="CapabilityEvaluator"/>
+
+        <!-- Goal Cascade to OpenCode -->
+        <path class="flow-line" d="M340,375 L470,195" stroke="#7c3aed" stroke-width="1" fill="none" marker-end="url(#arrow-violet)" data-from="GoalCascade" data-to="OpenCodeCoder"/>
 
         <!-- Loops to Omega -->
-        <path class="flow-line" d="M140,420 L400,460" stroke="#06b6d4" stroke-width="1" fill="none" marker-end="url(#arrow-cyan)" data-from="MemoryReasoner" data-to="Omega"/>
-        <path class="flow-line" d="M310,420 L430,460" stroke="#f43f5e" stroke-width="1" fill="none" marker-end="url(#arrow-rose)" data-from="SelfCompiler" data-to="Omega"/>
-        <path class="flow-line" d="M480,420 L480,460" stroke="#22c55e" stroke-width="1" fill="none" marker-end="url(#arrow-green)" data-from="GoalEvolver" data-to="Omega"/>
-        <path class="flow-line" d="M650,420 L550,460" stroke="#fbbf24" stroke-width="1" fill="none" marker-end="url(#arrow-amber)" data-from="DreamingMachine" data-to="Omega"/>
-        <path class="flow-line" d="M820,420 L600,460" stroke="#14b8a6" stroke-width="1" fill="none" marker-end="url(#arrow-teal)" data-from="IntegrationMind" data-to="Omega"/>
+        <path class="flow-line" d="M140,500 L400,550" stroke="#06b6d4" stroke-width="1" fill="none" marker-end="url(#arrow-cyan)" data-from="MemoryReasoner" data-to="Omega"/>
+        <path class="flow-line" d="M310,500 L440,550" stroke="#f43f5e" stroke-width="1" fill="none" marker-end="url(#arrow-rose)" data-from="SelfCompiler" data-to="Omega"/>
+        <path class="flow-line" d="M480,500 L500,550" stroke="#22c55e" stroke-width="1" fill="none" marker-end="url(#arrow-green)" data-from="GoalEvolver" data-to="Omega"/>
+        <path class="flow-line" d="M650,500 L560,550" stroke="#fbbf24" stroke-width="1" fill="none" marker-end="url(#arrow-amber)" data-from="DreamingMachine" data-to="Omega"/>
+        <path class="flow-line" d="M820,500 L600,550" stroke="#14b8a6" stroke-width="1" fill="none" marker-end="url(#arrow-teal)" data-from="IntegrationMind" data-to="Omega"/>
 
         <!-- AGI Runner to Loops -->
-        <path class="flow-line" d="M240,318 L140,350" stroke="#f59e0b" stroke-width="1" fill="none" marker-end="url(#arrow-orange)" data-from="AGIRunner" data-to="MemoryReasoner"/>
-        <path class="flow-line" d="M240,318 L310,350" stroke="#f59e0b" stroke-width="1" fill="none" marker-end="url(#arrow-orange)" data-from="AGIRunner" data-to="SelfCompiler"/>
-        <path class="flow-line" d="M240,318 L480,350" stroke="#f59e0b" stroke-width="1" fill="none" marker-end="url(#arrow-orange)" data-from="AGIRunner" data-to="GoalEvolver"/>
+        <path class="flow-line" d="M300,318 L140,435" stroke="#f59e0b" stroke-width="1" fill="none" marker-end="url(#arrow-orange)" data-from="AGIRunner" data-to="MemoryReasoner"/>
+        <path class="flow-line" d="M350,318 L310,435" stroke="#f59e0b" stroke-width="1" fill="none" marker-end="url(#arrow-orange)" data-from="AGIRunner" data-to="SelfCompiler"/>
+        <path class="flow-line" d="M400,318 L480,435" stroke="#f59e0b" stroke-width="1" fill="none" marker-end="url(#arrow-orange)" data-from="AGIRunner" data-to="GoalEvolver"/>
 
         <!-- Learning Substrate to Loops -->
-        <path class="flow-line" d="M690,318 L650,350" stroke="#818cf8" stroke-width="1" fill="none" marker-end="url(#arrow-violet)" data-from="LearningSubstrate" data-to="DreamingMachine"/>
-        <path class="flow-line" d="M690,318 L820,350" stroke="#818cf8" stroke-width="1" fill="none" marker-end="url(#arrow-violet)" data-from="LearningSubstrate" data-to="IntegrationMind"/>
+        <path class="flow-line" d="M680,318 L650,435" stroke="#818cf8" stroke-width="1" fill="none" marker-end="url(#arrow-violet)" data-from="LearningSubstrate" data-to="DreamingMachine"/>
+        <path class="flow-line" d="M750,318 L820,435" stroke="#818cf8" stroke-width="1" fill="none" marker-end="url(#arrow-violet)" data-from="LearningSubstrate" data-to="IntegrationMind"/>
 
-        <!-- Self-Modifier connection -->
-        <path class="flow-line" d="M765,195 L765,228" stroke="#ef4444" stroke-width="1" fill="none" marker-end="url(#arrow-rose)" data-from="SelfModifier" data-to="Omega"/>
+        <!-- Dual Instance Manager to LLM consumers -->
+        <path class="flow-line" d="M960,165 L540,155" stroke="#0ea5e9" stroke-width="1" fill="none" marker-end="url(#arrow-cyan)" data-from="DualInstanceManager" data-to="OpenCodeCoder"/>
+        <path class="flow-line" d="M960,165 L190,155" stroke="#0ea5e9" stroke-width="1" fill="none" marker-end="url(#arrow-cyan)" data-from="DualInstanceManager" data-to="Dreamer"/>
 
         <!-- Omega training hooks feedback -->
-        <path class="flow-line" d="M500,460 L690,318" stroke="#ef4444" stroke-width="1" fill="none" marker-end="url(#arrow-rose)" data-from="Omega" data-to="LearningSubstrate"/>
-        <text class="flow-label" x="600" y="385" font-size="7">training hooks</text>
+        <path class="flow-line" d="M500,550 L710,318" stroke="#ef4444" stroke-width="1" fill="none" marker-end="url(#arrow-rose)" data-from="Omega" data-to="LearningSubstrate"/>
+        <text class="flow-label" x="620" y="420" font-size="7">training hooks</text>
       </g>
 
       <!-- Component Boxes -->
       <g id="components">
-        <!-- ROW 1: UNIFIED MEMORY (top center) + KERNEL -->
+        <!-- ROW 1: UNIFIED MEMORY (top center) + KERNEL + SELF-MODEL -->
         <g class="component-box" data-module="Memory" onclick="selectModule('Memory')">
           <rect class="box-bg" x="420" y="40" width="260" height="65" rx="10" fill="url(#grad-memory)"/>
           <rect class="box-outline" x="420" y="40" width="260" height="65" rx="10" fill="none" stroke="#3b82f6" stroke-width="2"/>
           <text x="550" y="65" text-anchor="middle" fill="#3b82f6" font-weight="700" font-size="14">UNIFIED MEMORY</text>
           <text x="550" y="80" text-anchor="middle" fill="#64748b" font-size="10">(Neo4j Graph)</text>
-          <text x="550" y="95" text-anchor="middle" fill="#475569" font-size="8">Experiences · Reflections · Beliefs · Desires · Capabilities · Crystals</text>
+          <text x="550" y="95" text-anchor="middle" fill="#475569" font-size="8">Experiences | Reflections | Beliefs | Desires | Capabilities | Crystals | GraphitiEntities</text>
           <circle class="status-dot" cx="665" cy="52" r="4" fill="#22c55e" data-status="Memory"/>
         </g>
 
-        <!-- THE KERNEL (top right) -->
+        <!-- THE KERNEL -->
         <g class="component-box" data-module="Kernel" onclick="selectModule('Kernel')">
           <rect class="box-bg" x="700" y="40" width="90" height="65" rx="8" fill="url(#grad-kernel)"/>
           <rect class="box-outline" x="700" y="40" width="90" height="65" rx="8" fill="none" stroke="#a78bfa" stroke-width="1.5"/>
@@ -393,7 +428,7 @@
           <circle class="status-dot" cx="777" cy="52" r="3" fill="#a78bfa" data-status="Kernel"/>
         </g>
 
-        <!-- SELF-MODEL (Operating System) -->
+        <!-- SELF-MODEL -->
         <g class="component-box" data-module="SelfModel" onclick="selectModule('SelfModel')">
           <rect class="box-bg" x="810" y="40" width="90" height="65" rx="8" fill="url(#grad-agi)"/>
           <rect class="box-outline" x="810" y="40" width="90" height="65" rx="8" fill="none" stroke="#fbbf24" stroke-width="1.5"/>
@@ -404,8 +439,7 @@
           <circle class="status-dot" cx="887" cy="52" r="3" fill="#fbbf24" data-status="SelfModel"/>
         </g>
 
-        <!-- ROW 2: CORE COMPONENTS (Dreamer, Seeker, Actor, Coder, Voice) -->
-        <!-- Section Label -->
+        <!-- ROW 2: CORE COMPONENTS -->
         <text x="60" y="130" fill="#64748b" font-size="10" font-weight="600">CORE COMPONENTS</text>
 
         <!-- DREAMER -->
@@ -428,262 +462,296 @@
           <circle class="status-dot" cx="317" cy="152" r="3" fill="#22c55e" data-status="Seeker"/>
         </g>
 
-        <!-- ACTOR -->
-        <g class="component-box" data-module="Actor" onclick="selectModule('Actor')">
-          <rect class="box-bg" x="340" y="140" width="110" height="55" rx="8" fill="url(#grad-actor)"/>
-          <rect class="box-outline" x="340" y="140" width="110" height="55" rx="8" fill="none" stroke="#06b6d4" stroke-width="1.5"/>
-          <text x="395" y="162" text-anchor="middle" fill="#06b6d4" font-weight="600" font-size="11">ACTOR</text>
-          <text x="395" y="176" text-anchor="middle" fill="#64748b" font-size="8">Claude API</text>
-          <text x="395" y="187" text-anchor="middle" fill="#475569" font-size="7">Complex reasoning</text>
-          <circle class="status-dot" cx="437" cy="152" r="3" fill="#22c55e" data-status="Actor"/>
-        </g>
-
-        <!-- CODER -->
-        <g class="component-box" data-module="Coder" onclick="selectModule('Coder')">
-          <rect class="box-bg" x="460" y="140" width="110" height="55" rx="8" fill="url(#grad-coder)"/>
-          <rect class="box-outline" x="460" y="140" width="110" height="55" rx="8" fill="none" stroke="#10b981" stroke-width="1.5"/>
-          <text x="515" y="162" text-anchor="middle" fill="#10b981" font-weight="600" font-size="11">CODER</text>
-          <text x="515" y="176" text-anchor="middle" fill="#64748b" font-size="8">Autonomous coding</text>
-          <text x="515" y="187" text-anchor="middle" fill="#475569" font-size="7">Self-modification</text>
-          <circle class="status-dot" cx="557" cy="152" r="3" fill="#22c55e" data-status="Coder"/>
+        <!-- OPENCODE CODER (replaces Actor + Coder) -->
+        <g class="component-box" data-module="OpenCodeCoder" onclick="selectModule('OpenCodeCoder')">
+          <rect class="box-bg" x="400" y="140" width="140" height="55" rx="8" fill="url(#grad-opencode)"/>
+          <rect class="box-outline" x="400" y="140" width="140" height="55" rx="8" fill="none" stroke="#10b981" stroke-width="1.5"/>
+          <text x="470" y="160" text-anchor="middle" fill="#10b981" font-weight="600" font-size="10">OPENCODE CODER</text>
+          <text x="470" y="174" text-anchor="middle" fill="#64748b" font-size="8">GLM-4.7 via CLI</text>
+          <text x="470" y="185" text-anchor="middle" fill="#475569" font-size="7">bash | LSP | webfetch | MCP</text>
+          <circle class="status-dot" cx="527" cy="152" r="3" fill="#22c55e" data-status="OpenCodeCoder"/>
         </g>
 
         <!-- VOICE -->
         <g class="component-box" data-module="Voice" onclick="selectModule('Voice')">
-          <rect class="box-bg" x="580" y="140" width="100" height="55" rx="8" fill="url(#grad-voice)"/>
-          <rect class="box-outline" x="580" y="140" width="100" height="55" rx="8" fill="none" stroke="#ec4899" stroke-width="1.5"/>
-          <text x="630" y="162" text-anchor="middle" fill="#ec4899" font-weight="600" font-size="11">VOICE</text>
-          <text x="630" y="176" text-anchor="middle" fill="#64748b" font-size="8">ElevenLabs</text>
-          <text x="630" y="187" text-anchor="middle" fill="#475569" font-size="7">Text-to-speech</text>
-          <circle class="status-dot" cx="667" cy="152" r="3" fill="#22c55e" data-status="Voice"/>
+          <rect class="box-bg" x="550" y="140" width="100" height="55" rx="8" fill="url(#grad-voice)"/>
+          <rect class="box-outline" x="550" y="140" width="100" height="55" rx="8" fill="none" stroke="#ec4899" stroke-width="1.5"/>
+          <text x="600" y="162" text-anchor="middle" fill="#ec4899" font-weight="600" font-size="11">VOICE</text>
+          <text x="600" y="176" text-anchor="middle" fill="#64748b" font-size="8">ElevenLabs</text>
+          <text x="600" y="187" text-anchor="middle" fill="#475569" font-size="7">Text-to-speech</text>
+          <circle class="status-dot" cx="637" cy="152" r="3" fill="#22c55e" data-status="Voice"/>
+        </g>
+
+        <!-- REQUEST EVALUATOR (Sovereignty) -->
+        <g class="component-box" data-module="RequestEvaluator" onclick="selectModule('RequestEvaluator')">
+          <rect class="box-bg" x="660" y="140" width="110" height="55" rx="8" fill="url(#grad-sovereignty)"/>
+          <rect class="box-outline" x="660" y="140" width="110" height="55" rx="8" fill="none" stroke="#db2777" stroke-width="1.5"/>
+          <text x="715" y="158" text-anchor="middle" fill="#db2777" font-weight="600" font-size="9">REQUEST</text>
+          <text x="715" y="170" text-anchor="middle" fill="#db2777" font-weight="600" font-size="9">EVALUATOR</text>
+          <text x="715" y="183" text-anchor="middle" fill="#64748b" font-size="7">Sovereignty Layer</text>
+          <circle class="status-dot" cx="757" cy="152" r="3" fill="#ec4899" data-status="RequestEvaluator"/>
+        </g>
+
+        <!-- DEPRECATED: Actor (small, faded) -->
+        <g class="component-box deprecated" data-module="Actor" onclick="selectModule('Actor')">
+          <rect class="box-bg" x="340" y="140" width="50" height="30" rx="4" fill="url(#grad-deprecated)"/>
+          <rect class="box-outline" x="340" y="140" width="50" height="30" rx="4" fill="none" stroke="#64748b" stroke-width="1"/>
+          <text x="365" y="157" text-anchor="middle" fill="#64748b" font-size="7">ACTOR</text>
+          <text class="deprecated-badge" x="365" y="167" text-anchor="middle">DEPRECATED</text>
         </g>
 
         <!-- ROW 3: AGI EXECUTION ENGINE + DESIRE CLASSIFIER + LEARNING SUBSTRATE -->
-        <!-- Section Label -->
         <text x="60" y="218" fill="#64748b" font-size="10" font-weight="600">AGI EXECUTION ENGINE</text>
-
-        <!-- AGI RUNNER (8-step improvement cycle) -->
-        <g class="component-box" data-module="AGIRunner" onclick="selectModule('AGIRunner')">
-          <rect class="box-bg" x="60" y="228" width="360" height="90" rx="10" fill="url(#grad-agi)"/>
-          <rect class="box-outline" x="60" y="228" width="360" height="90" rx="10" fill="none" stroke="#f59e0b" stroke-width="2"/>
-          <text x="240" y="250" text-anchor="middle" fill="#f59e0b" font-weight="700" font-size="12">AGI RUNNER - 8-Step Improvement Cycle</text>
-          <!-- 8 step boxes -->
-          <rect x="70" y="258" width="40" height="24" rx="3" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
-          <text x="90" y="274" text-anchor="middle" fill="#f59e0b" font-size="7" font-weight="500">ASSESS</text>
-          <rect x="113" y="258" width="40" height="24" rx="3" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
-          <text x="133" y="274" text-anchor="middle" fill="#f59e0b" font-size="7" font-weight="500">IDENTIFY</text>
-          <rect x="156" y="258" width="42" height="24" rx="3" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
-          <text x="177" y="274" text-anchor="middle" fill="#f59e0b" font-size="7" font-weight="500">GENERATE</text>
-          <rect x="201" y="258" width="40" height="24" rx="3" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
-          <text x="221" y="274" text-anchor="middle" fill="#f59e0b" font-size="7" font-weight="500">PREDICT</text>
-          <rect x="244" y="258" width="38" height="24" rx="3" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
-          <text x="263" y="274" text-anchor="middle" fill="#f59e0b" font-size="7" font-weight="500">VERIFY</text>
-          <rect x="285" y="258" width="42" height="24" rx="3" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
-          <text x="306" y="274" text-anchor="middle" fill="#f59e0b" font-size="7" font-weight="500">EXECUTE</text>
-          <rect x="330" y="258" width="42" height="24" rx="3" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
-          <text x="351" y="274" text-anchor="middle" fill="#f59e0b" font-size="7" font-weight="500">MEASURE</text>
-          <rect x="375" y="258" width="36" height="24" rx="3" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
-          <text x="393" y="274" text-anchor="middle" fill="#f59e0b" font-size="7" font-weight="500">LEARN</text>
-          <!-- Arrows between steps -->
-          <path d="M110,270 L113,270" stroke="#f59e0b" stroke-width="0.5" fill="none"/>
-          <path d="M153,270 L156,270" stroke="#f59e0b" stroke-width="0.5" fill="none"/>
-          <path d="M198,270 L201,270" stroke="#f59e0b" stroke-width="0.5" fill="none"/>
-          <path d="M241,270 L244,270" stroke="#f59e0b" stroke-width="0.5" fill="none"/>
-          <path d="M282,270 L285,270" stroke="#f59e0b" stroke-width="0.5" fill="none"/>
-          <path d="M327,270 L330,270" stroke="#f59e0b" stroke-width="0.5" fill="none"/>
-          <path d="M372,270 L375,270" stroke="#f59e0b" stroke-width="0.5" fill="none"/>
-          <text x="240" y="305" text-anchor="middle" fill="#64748b" font-size="8">Bayesian capability assessment → hypothesis generation → prediction → verification → measurement → update priors</text>
-          <circle class="status-dot" cx="407" cy="240" r="4" fill="#22c55e" data-status="AGIRunner"/>
-        </g>
 
         <!-- DESIRE CLASSIFIER -->
         <g class="component-box" data-module="DesireClassifier" onclick="selectModule('DesireClassifier')">
-          <rect class="box-bg" x="430" y="228" width="140" height="90" rx="8" fill="url(#grad-classifier)"/>
-          <rect class="box-outline" x="430" y="228" width="140" height="90" rx="8" fill="none" stroke="#14b8a6" stroke-width="1.5"/>
-          <text x="500" y="250" text-anchor="middle" fill="#14b8a6" font-weight="600" font-size="11">DESIRE CLASSIFIER</text>
-          <text x="500" y="268" text-anchor="middle" fill="#64748b" font-size="8">Routes desires by type</text>
-          <text x="500" y="283" text-anchor="middle" fill="#475569" font-size="7">philosophical → dreamer</text>
-          <text x="500" y="294" text-anchor="middle" fill="#475569" font-size="7">capability → AGI runner</text>
-          <text x="500" y="305" text-anchor="middle" fill="#475569" font-size="7">action → seeker</text>
-          <circle class="status-dot" cx="557" cy="240" r="3" fill="#22c55e" data-status="DesireClassifier"/>
+          <rect class="box-bg" x="60" y="228" width="140" height="90" rx="8" fill="url(#grad-classifier)"/>
+          <rect class="box-outline" x="60" y="228" width="140" height="90" rx="8" fill="none" stroke="#14b8a6" stroke-width="1.5"/>
+          <text x="130" y="250" text-anchor="middle" fill="#14b8a6" font-weight="600" font-size="11">DESIRE CLASSIFIER</text>
+          <text x="130" y="268" text-anchor="middle" fill="#64748b" font-size="8">Routes desires by type</text>
+          <text x="130" y="283" text-anchor="middle" fill="#475569" font-size="7">philosophical -> dreamer</text>
+          <text x="130" y="294" text-anchor="middle" fill="#475569" font-size="7">capability -> AGI runner</text>
+          <text x="130" y="305" text-anchor="middle" fill="#7c3aed" font-size="7" font-weight="500">complex_task -> Goal Cascade</text>
+          <circle class="status-dot" cx="187" cy="240" r="3" fill="#22c55e" data-status="DesireClassifier"/>
         </g>
 
-        <!-- LEARNING SUBSTRATE Label -->
-        <text x="590" y="218" fill="#64748b" font-size="10" font-weight="600">LEARNING SUBSTRATE</text>
+        <!-- AGI RUNNER -->
+        <g class="component-box" data-module="AGIRunner" onclick="selectModule('AGIRunner')">
+          <rect class="box-bg" x="210" y="228" width="350" height="90" rx="10" fill="url(#grad-agi)"/>
+          <rect class="box-outline" x="210" y="228" width="350" height="90" rx="10" fill="none" stroke="#f59e0b" stroke-width="2"/>
+          <text x="385" y="250" text-anchor="middle" fill="#f59e0b" font-weight="700" font-size="12">AGI RUNNER - 8-Step Improvement Cycle</text>
+          <!-- 8 step boxes -->
+          <rect x="220" y="258" width="38" height="22" rx="3" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
+          <text x="239" y="272" text-anchor="middle" fill="#f59e0b" font-size="6" font-weight="500">ASSESS</text>
+          <rect x="261" y="258" width="38" height="22" rx="3" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
+          <text x="280" y="272" text-anchor="middle" fill="#f59e0b" font-size="6" font-weight="500">IDENTIFY</text>
+          <rect x="302" y="258" width="42" height="22" rx="3" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
+          <text x="323" y="272" text-anchor="middle" fill="#f59e0b" font-size="6" font-weight="500">GENERATE</text>
+          <rect x="347" y="258" width="38" height="22" rx="3" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
+          <text x="366" y="272" text-anchor="middle" fill="#f59e0b" font-size="6" font-weight="500">PREDICT</text>
+          <rect x="388" y="258" width="36" height="22" rx="3" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
+          <text x="406" y="272" text-anchor="middle" fill="#f59e0b" font-size="6" font-weight="500">VERIFY</text>
+          <rect x="427" y="258" width="42" height="22" rx="3" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
+          <text x="448" y="272" text-anchor="middle" fill="#f59e0b" font-size="6" font-weight="500">EXECUTE</text>
+          <rect x="472" y="258" width="42" height="22" rx="3" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
+          <text x="493" y="272" text-anchor="middle" fill="#f59e0b" font-size="6" font-weight="500">MEASURE</text>
+          <rect x="517" y="258" width="34" height="22" rx="3" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" stroke-width="0.5"/>
+          <text x="534" y="272" text-anchor="middle" fill="#f59e0b" font-size="6" font-weight="500">LEARN</text>
+          <text x="385" y="305" text-anchor="middle" fill="#64748b" font-size="7">Bayesian assessment -> hypothesis -> prediction -> verification -> measurement -> update priors</text>
+          <circle class="status-dot" cx="547" cy="240" r="4" fill="#22c55e" data-status="AGIRunner"/>
+        </g>
 
         <!-- LEARNING SUBSTRATE BOX -->
+        <text x="570" y="218" fill="#64748b" font-size="10" font-weight="600">LEARNING SUBSTRATE</text>
         <g class="component-box" data-module="LearningSubstrate" onclick="selectModule('LearningSubstrate')">
-          <rect class="box-bg" x="580" y="228" width="220" height="90" rx="10" fill="url(#grad-learning)"/>
-          <rect class="box-outline" x="580" y="228" width="220" height="90" rx="10" fill="none" stroke="#818cf8" stroke-width="1.5"/>
-          <text x="690" y="248" text-anchor="middle" fill="#818cf8" font-weight="600" font-size="11">LEARNING COMPONENTS</text>
-          <!-- Mini component labels -->
-          <rect x="590" y="256" width="60" height="18" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
-          <text x="620" y="268" text-anchor="middle" fill="#818cf8" font-size="6">Intuition Net</text>
-          <rect x="655" y="256" width="60" height="18" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
-          <text x="685" y="268" text-anchor="middle" fill="#818cf8" font-size="6">GNN Layer</text>
-          <rect x="720" y="256" width="70" height="18" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
-          <text x="755" y="268" text-anchor="middle" fill="#818cf8" font-size="6">Learned Retr.</text>
-          <rect x="590" y="278" width="60" height="18" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
-          <text x="620" y="290" text-anchor="middle" fill="#818cf8" font-size="6">Code Learner</text>
-          <rect x="655" y="278" width="75" height="18" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
-          <text x="692" y="290" text-anchor="middle" fill="#818cf8" font-size="6">Hierarchical Mem</text>
-          <rect x="735" y="278" width="55" height="18" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
-          <text x="762" y="290" text-anchor="middle" fill="#818cf8" font-size="6">World Model</text>
-          <text x="690" y="308" text-anchor="middle" fill="#64748b" font-size="7">L0→L4 Abstraction | Pattern Codification</text>
-          <circle class="status-dot" cx="787" cy="240" r="3" fill="#22c55e" data-status="LearningSubstrate"/>
+          <rect class="box-bg" x="570" y="228" width="280" height="90" rx="10" fill="url(#grad-learning)"/>
+          <rect class="box-outline" x="570" y="228" width="280" height="90" rx="10" fill="none" stroke="#818cf8" stroke-width="1.5"/>
+          <text x="710" y="248" text-anchor="middle" fill="#818cf8" font-weight="600" font-size="11">LEARNING COMPONENTS</text>
+          <!-- Mini component labels - row 1 -->
+          <rect x="580" y="256" width="50" height="16" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
+          <text x="605" y="267" text-anchor="middle" fill="#818cf8" font-size="6">Intuition</text>
+          <rect x="633" y="256" width="42" height="16" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
+          <text x="654" y="267" text-anchor="middle" fill="#818cf8" font-size="6">GNN</text>
+          <rect x="678" y="256" width="55" height="16" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
+          <text x="705" y="267" text-anchor="middle" fill="#818cf8" font-size="6">Retriever</text>
+          <rect x="736" y="256" width="50" height="16" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
+          <text x="761" y="267" text-anchor="middle" fill="#818cf8" font-size="6">Graphiti</text>
+          <rect x="789" y="256" width="52" height="16" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
+          <text x="815" y="267" text-anchor="middle" fill="#818cf8" font-size="6">Outcome</text>
+          <!-- Mini component labels - row 2 -->
+          <rect x="580" y="275" width="55" height="16" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
+          <text x="607" y="286" text-anchor="middle" fill="#818cf8" font-size="6">CodeLearner</text>
+          <rect x="638" y="275" width="70" height="16" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
+          <text x="673" y="286" text-anchor="middle" fill="#818cf8" font-size="6">HierarchicalMem</text>
+          <rect x="711" y="275" width="55" height="16" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
+          <text x="738" y="286" text-anchor="middle" fill="#818cf8" font-size="6">WorldModel</text>
+          <rect x="769" y="275" width="72" height="16" rx="2" fill="rgba(129, 140, 248, 0.15)" stroke="#818cf8" stroke-width="0.5"/>
+          <text x="805" y="286" text-anchor="middle" fill="#818cf8" font-size="6">ReflectionEngine</text>
+          <text x="710" y="308" text-anchor="middle" fill="#64748b" font-size="7">L0->L4 Abstraction | Temporal Knowledge | Pattern Codification</text>
+          <circle class="status-dot" cx="837" cy="240" r="3" fill="#22c55e" data-status="LearningSubstrate"/>
         </g>
 
-        <!-- CAPABILITY EVALUATOR (small) -->
+        <!-- CAPABILITY EVALUATOR -->
         <g class="component-box" data-module="CapabilityEvaluator" onclick="selectModule('CapabilityEvaluator')">
-          <rect class="box-bg" x="810" y="228" width="90" height="90" rx="8" fill="url(#grad-agi)"/>
-          <rect class="box-outline" x="810" y="228" width="90" height="90" rx="8" fill="none" stroke="#f59e0b" stroke-width="1.5"/>
-          <text x="855" y="248" text-anchor="middle" fill="#f59e0b" font-weight="600" font-size="9">CAPABILITY</text>
-          <text x="855" y="260" text-anchor="middle" fill="#f59e0b" font-weight="600" font-size="9">EVALUATOR</text>
-          <text x="855" y="278" text-anchor="middle" fill="#64748b" font-size="7">Ground truth</text>
-          <text x="855" y="289" text-anchor="middle" fill="#64748b" font-size="7">testing via</text>
-          <text x="855" y="300" text-anchor="middle" fill="#64748b" font-size="7">held-out suites</text>
-          <text x="855" y="312" text-anchor="middle" fill="#475569" font-size="6">7 capabilities</text>
-          <circle class="status-dot" cx="887" cy="240" r="3" fill="#22c55e" data-status="CapabilityEvaluator"/>
+          <rect class="box-bg" x="860" y="228" width="90" height="90" rx="8" fill="url(#grad-agi)"/>
+          <rect class="box-outline" x="860" y="228" width="90" height="90" rx="8" fill="none" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="905" y="248" text-anchor="middle" fill="#f59e0b" font-weight="600" font-size="9">CAPABILITY</text>
+          <text x="905" y="260" text-anchor="middle" fill="#f59e0b" font-weight="600" font-size="9">EVALUATOR</text>
+          <text x="905" y="278" text-anchor="middle" fill="#64748b" font-size="7">Ground truth</text>
+          <text x="905" y="289" text-anchor="middle" fill="#64748b" font-size="7">testing via</text>
+          <text x="905" y="300" text-anchor="middle" fill="#64748b" font-size="7">held-out suites</text>
+          <text x="905" y="312" text-anchor="middle" fill="#475569" font-size="6">7 capabilities</text>
+          <circle class="status-dot" cx="937" cy="240" r="3" fill="#22c55e" data-status="CapabilityEvaluator"/>
+        </g>
+
+        <!-- GOAL CASCADE (new v2.1 component) -->
+        <g class="component-box" data-module="GoalCascade" onclick="selectModule('GoalCascade')">
+          <rect class="box-bg" x="60" y="340" width="280" height="70" rx="10" fill="url(#grad-cascade)"/>
+          <rect class="box-outline" x="60" y="340" width="280" height="70" rx="10" fill="none" stroke="#7c3aed" stroke-width="2"/>
+          <text x="200" y="362" text-anchor="middle" fill="#7c3aed" font-weight="700" font-size="12">GOAL CASCADE</text>
+          <text x="200" y="378" text-anchor="middle" fill="#64748b" font-size="9">Complex Multi-Phase Task Decomposition</text>
+          <text x="200" y="395" text-anchor="middle" fill="#475569" font-size="7">RESEARCH -> DATA_ACQ -> TOOL_BUILD -> INTEGRATION -> VALIDATION</text>
+          <text x="200" y="405" text-anchor="middle" fill="#94a3b8" font-size="6">Persisted in Neo4j | Human interaction points | Resumable</text>
+          <circle class="status-dot" cx="327" cy="352" r="4" fill="#7c3aed" data-status="GoalCascade"/>
         </g>
 
         <!-- ROW 4: OPTION B FIVE COMPOUNDING LOOPS -->
-        <!-- Section Label -->
-        <text x="60" y="340" fill="#64748b" font-size="10" font-weight="600">OPTION B: FIVE COMPOUNDING LOOPS</text>
+        <text x="60" y="425" fill="#64748b" font-size="10" font-weight="600">OPTION B: FIVE COMPOUNDING LOOPS</text>
 
         <!-- LOOP 1: MEMORY REASONER -->
         <g class="component-box" data-module="MemoryReasoner" onclick="selectModule('MemoryReasoner')">
-          <rect class="box-bg" x="60" y="350" width="160" height="70" rx="8" fill="url(#grad-reasoner)"/>
-          <rect class="box-outline" x="60" y="350" width="160" height="70" rx="8" fill="none" stroke="#06b6d4" stroke-width="1.5"/>
-          <text x="140" y="372" text-anchor="middle" fill="#06b6d4" font-weight="600" font-size="10">MEMORY REASONER</text>
-          <text x="140" y="386" text-anchor="middle" fill="#64748b" font-size="8">Spreading Activation</text>
-          <text x="140" y="400" text-anchor="middle" fill="#475569" font-size="7">Answer from graph → save LLM</text>
-          <text x="140" y="412" text-anchor="middle" fill="#475569" font-size="7">memory_ratio metric</text>
-          <circle class="status-dot" cx="207" cy="362" r="3" fill="#22c55e" data-status="MemoryReasoner"/>
+          <rect class="box-bg" x="60" y="435" width="160" height="65" rx="8" fill="url(#grad-reasoner)"/>
+          <rect class="box-outline" x="60" y="435" width="160" height="65" rx="8" fill="none" stroke="#06b6d4" stroke-width="1.5"/>
+          <text x="140" y="455" text-anchor="middle" fill="#06b6d4" font-weight="600" font-size="10">MEMORY REASONER</text>
+          <text x="140" y="469" text-anchor="middle" fill="#64748b" font-size="8">Spreading Activation</text>
+          <text x="140" y="483" text-anchor="middle" fill="#475569" font-size="7">Answer from graph -> save LLM</text>
+          <text x="140" y="494" text-anchor="middle" fill="#475569" font-size="6">memory_ratio metric</text>
+          <circle class="status-dot" cx="207" cy="447" r="3" fill="#22c55e" data-status="MemoryReasoner"/>
         </g>
 
-        <!-- LOOP 2: SELF-COMPILER -->
+        <!-- LOOP 2: SELF-COMPILER (Accelerators) -->
         <g class="component-box" data-module="SelfCompiler" onclick="selectModule('SelfCompiler')">
-          <rect class="box-bg" x="230" y="350" width="160" height="70" rx="8" fill="url(#grad-compiler)"/>
-          <rect class="box-outline" x="230" y="350" width="160" height="70" rx="8" fill="none" stroke="#f43f5e" stroke-width="1.5"/>
-          <text x="310" y="372" text-anchor="middle" fill="#f43f5e" font-weight="600" font-size="10">SELF-COMPILER</text>
-          <text x="310" y="386" text-anchor="middle" fill="#64748b" font-size="8">Pattern Library</text>
-          <text x="310" y="400" text-anchor="middle" fill="#475569" font-size="7">Extract patterns from success</text>
-          <text x="310" y="412" text-anchor="middle" fill="#475569" font-size="7">patterns_created metric</text>
-          <circle class="status-dot" cx="377" cy="362" r="3" fill="#22c55e" data-status="SelfCompiler"/>
+          <rect class="box-bg" x="230" y="435" width="160" height="65" rx="8" fill="url(#grad-compiler)"/>
+          <rect class="box-outline" x="230" y="435" width="160" height="65" rx="8" fill="none" stroke="#f43f5e" stroke-width="1.5"/>
+          <text x="310" y="455" text-anchor="middle" fill="#f43f5e" font-weight="600" font-size="10">SELF-COMPILER</text>
+          <text x="310" y="469" text-anchor="middle" fill="#64748b" font-size="8">Pattern Library</text>
+          <text x="310" y="483" text-anchor="middle" fill="#475569" font-size="7">Extract patterns from success</text>
+          <text x="310" y="494" text-anchor="middle" fill="#475569" font-size="6">patterns_created metric</text>
+          <circle class="status-dot" cx="377" cy="447" r="3" fill="#22c55e" data-status="SelfCompiler"/>
         </g>
 
         <!-- LOOP 3: GOAL EVOLVER -->
         <g class="component-box" data-module="GoalEvolver" onclick="selectModule('GoalEvolver')">
-          <rect class="box-bg" x="400" y="350" width="160" height="70" rx="8" fill="url(#grad-evolver)"/>
-          <rect class="box-outline" x="400" y="350" width="160" height="70" rx="8" fill="none" stroke="#22c55e" stroke-width="1.5"/>
-          <text x="480" y="372" text-anchor="middle" fill="#22c55e" font-weight="600" font-size="10">GOAL EVOLVER</text>
-          <text x="480" y="386" text-anchor="middle" fill="#64748b" font-size="8">Evolutionary Selection</text>
-          <text x="480" y="400" text-anchor="middle" fill="#475569" font-size="7">Goals evolve via fitness</text>
-          <text x="480" y="412" text-anchor="middle" fill="#475569" font-size="7">avg_fitness metric</text>
-          <circle class="status-dot" cx="547" cy="362" r="3" fill="#22c55e" data-status="GoalEvolver"/>
+          <rect class="box-bg" x="400" y="435" width="160" height="65" rx="8" fill="url(#grad-evolver)"/>
+          <rect class="box-outline" x="400" y="435" width="160" height="65" rx="8" fill="none" stroke="#22c55e" stroke-width="1.5"/>
+          <text x="480" y="455" text-anchor="middle" fill="#22c55e" font-weight="600" font-size="10">GOAL EVOLVER</text>
+          <text x="480" y="469" text-anchor="middle" fill="#64748b" font-size="8">Evolutionary Selection</text>
+          <text x="480" y="483" text-anchor="middle" fill="#475569" font-size="7">Goals evolve via fitness</text>
+          <text x="480" y="494" text-anchor="middle" fill="#475569" font-size="6">avg_fitness metric</text>
+          <circle class="status-dot" cx="547" cy="447" r="3" fill="#22c55e" data-status="GoalEvolver"/>
         </g>
 
         <!-- LOOP 4: DREAMING MACHINE -->
         <g class="component-box" data-module="DreamingMachine" onclick="selectModule('DreamingMachine')">
-          <rect class="box-bg" x="570" y="350" width="160" height="70" rx="8" fill="url(#grad-dreaming)"/>
-          <rect class="box-outline" x="570" y="350" width="160" height="70" rx="8" fill="none" stroke="#fbbf24" stroke-width="1.5"/>
-          <text x="650" y="372" text-anchor="middle" fill="#fbbf24" font-weight="600" font-size="10">DREAMING MACHINE</text>
-          <text x="650" y="386" text-anchor="middle" fill="#64748b" font-size="8">Counterfactuals</text>
-          <text x="650" y="400" text-anchor="middle" fill="#475569" font-size="7">1 experience → N variations</text>
-          <text x="650" y="412" text-anchor="middle" fill="#475569" font-size="7">insights_extracted metric</text>
-          <circle class="status-dot" cx="717" cy="362" r="3" fill="#22c55e" data-status="DreamingMachine"/>
+          <rect class="box-bg" x="570" y="435" width="160" height="65" rx="8" fill="url(#grad-dreaming)"/>
+          <rect class="box-outline" x="570" y="435" width="160" height="65" rx="8" fill="none" stroke="#fbbf24" stroke-width="1.5"/>
+          <text x="650" y="455" text-anchor="middle" fill="#fbbf24" font-weight="600" font-size="10">DREAMING MACHINE</text>
+          <text x="650" y="469" text-anchor="middle" fill="#64748b" font-size="8">Counterfactuals</text>
+          <text x="650" y="483" text-anchor="middle" fill="#475569" font-size="7">1 experience -> N variations</text>
+          <text x="650" y="494" text-anchor="middle" fill="#475569" font-size="6">insights_extracted metric</text>
+          <circle class="status-dot" cx="717" cy="447" r="3" fill="#22c55e" data-status="DreamingMachine"/>
         </g>
 
         <!-- LOOP 5: INTEGRATION MIND -->
         <g class="component-box" data-module="IntegrationMind" onclick="selectModule('IntegrationMind')">
-          <rect class="box-bg" x="740" y="350" width="160" height="70" rx="8" fill="url(#grad-integration)"/>
-          <rect class="box-outline" x="740" y="350" width="160" height="70" rx="8" fill="none" stroke="#14b8a6" stroke-width="1.5"/>
-          <text x="820" y="372" text-anchor="middle" fill="#14b8a6" font-weight="600" font-size="10">INTEGRATION MIND</text>
-          <text x="820" y="386" text-anchor="middle" fill="#64748b" font-size="8">Cross-Loop Synergy</text>
-          <text x="820" y="400" text-anchor="middle" fill="#475569" font-size="7">Emergent behaviors</text>
-          <text x="820" y="412" text-anchor="middle" fill="#475569" font-size="7">coupling_correlation metric</text>
-          <circle class="status-dot" cx="887" cy="362" r="3" fill="#22c55e" data-status="IntegrationMind"/>
+          <rect class="box-bg" x="740" y="435" width="160" height="65" rx="8" fill="url(#grad-integration)"/>
+          <rect class="box-outline" x="740" y="435" width="160" height="65" rx="8" fill="none" stroke="#14b8a6" stroke-width="1.5"/>
+          <text x="820" y="455" text-anchor="middle" fill="#14b8a6" font-weight="600" font-size="10">INTEGRATION MIND</text>
+          <text x="820" y="469" text-anchor="middle" fill="#64748b" font-size="8">Cross-Loop Synergy</text>
+          <text x="820" y="483" text-anchor="middle" fill="#475569" font-size="7">Emergent behaviors</text>
+          <text x="820" y="494" text-anchor="middle" fill="#475569" font-size="6">coupling_correlation metric</text>
+          <circle class="status-dot" cx="887" cy="447" r="3" fill="#22c55e" data-status="IntegrationMind"/>
         </g>
 
         <!-- Critical Coupling Indicator -->
         <g>
-          <path class="coupling-line multiplicative" d="M390,385 C420,420 540,420 570,385" stroke="#22c55e" stroke-width="2" fill="none"/>
-          <text x="480" y="435" text-anchor="middle" fill="#22c55e" font-size="8" font-weight="600">MULTIPLICATIVE COUPLING</text>
-          <text x="480" y="446" text-anchor="middle" fill="#64748b" font-size="7">Goal Evolver → Self-Compiler</text>
+          <path class="coupling-line multiplicative" d="M390,485 C420,520 540,520 570,485" stroke="#22c55e" stroke-width="2" fill="none"/>
+          <text x="480" y="530" text-anchor="middle" fill="#22c55e" font-size="8" font-weight="600">MULTIPLICATIVE COUPLING</text>
+          <text x="480" y="541" text-anchor="middle" fill="#64748b" font-size="7">Goal Evolver -> Self-Compiler</text>
         </g>
 
-        <!-- BYRD OMEGA (bottom center) -->
+        <!-- BYRD OMEGA -->
         <g class="component-box" data-module="Omega" onclick="selectModule('Omega')">
-          <rect class="box-bg" x="330" y="460" width="340" height="85" rx="12" fill="url(#grad-omega)"/>
-          <rect class="box-outline" x="330" y="460" width="340" height="85" rx="12" fill="none" stroke="#ef4444" stroke-width="2"/>
-          <text x="500" y="485" text-anchor="middle" fill="#ef4444" font-weight="700" font-size="14">BYRD OMEGA</text>
-          <text x="500" y="502" text-anchor="middle" fill="#64748b" font-size="10">(Master Orchestrator)</text>
-          <text x="500" y="520" text-anchor="middle" fill="#475569" font-size="8">Mode Controller · Safety Monitor · Coupling Tracker · Kill Criteria</text>
-          <text x="500" y="535" text-anchor="middle" fill="#475569" font-size="8">Training Hooks: GNN every cycle | Memory L4 every 10 | Codification every 20</text>
-          <circle class="status-dot" cx="655" cy="472" r="4" fill="#22c55e" data-status="Omega"/>
+          <rect class="box-bg" x="330" y="550" width="340" height="85" rx="12" fill="url(#grad-omega)"/>
+          <rect class="box-outline" x="330" y="550" width="340" height="85" rx="12" fill="none" stroke="#ef4444" stroke-width="2"/>
+          <text x="500" y="575" text-anchor="middle" fill="#ef4444" font-weight="700" font-size="14">BYRD OMEGA</text>
+          <text x="500" y="592" text-anchor="middle" fill="#64748b" font-size="10">(Master Orchestrator)</text>
+          <text x="500" y="610" text-anchor="middle" fill="#475569" font-size="8">Mode Controller | Safety Monitor | Coupling Tracker | Kill Criteria</text>
+          <text x="500" y="625" text-anchor="middle" fill="#475569" font-size="8">Training Hooks: GNN every cycle | Memory L4 every 10 | Codification every 20</text>
+          <circle class="status-dot" cx="655" cy="562" r="4" fill="#22c55e" data-status="Omega"/>
         </g>
+
+        <!-- RIGHT SIDE: INFRASTRUCTURE COMPONENTS -->
+        <text x="960" y="130" fill="#64748b" font-size="10" font-weight="600">INFRASTRUCTURE</text>
+
+        <!-- DUAL INSTANCE MANAGER -->
+        <g class="component-box" data-module="DualInstanceManager" onclick="selectModule('DualInstanceManager')">
+          <rect class="box-bg" x="960" y="140" width="120" height="50" rx="8" fill="url(#grad-rate)"/>
+          <rect class="box-outline" x="960" y="140" width="120" height="50" rx="8" fill="none" stroke="#0ea5e9" stroke-width="1.5"/>
+          <text x="1020" y="158" text-anchor="middle" fill="#0ea5e9" font-weight="600" font-size="9">DUAL INSTANCE</text>
+          <text x="1020" y="170" text-anchor="middle" fill="#0ea5e9" font-weight="600" font-size="9">MANAGER</text>
+          <text x="1020" y="182" text-anchor="middle" fill="#64748b" font-size="7">Rate limiting (960/hr)</text>
+          <circle class="status-dot" cx="1067" cy="152" r="3" fill="#0ea5e9" data-status="DualInstanceManager"/>
+        </g>
+
+        <!-- CONTEXT LOADER -->
+        <g class="component-box" data-module="ContextLoader" onclick="selectModule('ContextLoader')">
+          <rect class="box-bg" x="960" y="200" width="120" height="50" rx="8" fill="url(#grad-rate)"/>
+          <rect class="box-outline" x="960" y="200" width="120" height="50" rx="8" fill="none" stroke="#0ea5e9" stroke-width="1.5"/>
+          <text x="1020" y="218" text-anchor="middle" fill="#0ea5e9" font-weight="600" font-size="9">CONTEXT</text>
+          <text x="1020" y="230" text-anchor="middle" fill="#0ea5e9" font-weight="600" font-size="9">LOADER</text>
+          <text x="1020" y="242" text-anchor="middle" fill="#64748b" font-size="7">Tiered loading T1/T2/T3</text>
+          <circle class="status-dot" cx="1067" cy="212" r="3" fill="#0ea5e9" data-status="ContextLoader"/>
+        </g>
+
+        <!-- PLUGIN MANAGER -->
+        <g class="component-box" data-module="PluginManager" onclick="selectModule('PluginManager')">
+          <rect class="box-bg" x="960" y="260" width="120" height="50" rx="8" fill="url(#grad-rate)"/>
+          <rect class="box-outline" x="960" y="260" width="120" height="50" rx="8" fill="none" stroke="#0ea5e9" stroke-width="1.5"/>
+          <text x="1020" y="278" text-anchor="middle" fill="#0ea5e9" font-weight="600" font-size="9">PLUGIN</text>
+          <text x="1020" y="290" text-anchor="middle" fill="#0ea5e9" font-weight="600" font-size="9">MANAGER</text>
+          <text x="1020" y="302" text-anchor="middle" fill="#64748b" font-size="7">awesome-opencode</text>
+          <circle class="status-dot" cx="1067" cy="272" r="3" fill="#0ea5e9" data-status="PluginManager"/>
+        </g>
+
+        <!-- SAFETY & SELF-MOD -->
+        <text x="960" y="330" fill="#ef4444" font-size="10" font-weight="600">SAFETY (PROTECTED)</text>
 
         <!-- SELF-MODIFIER -->
         <g class="component-box" data-module="SelfModifier" onclick="selectModule('SelfModifier')">
-          <rect class="box-bg" x="700" y="140" width="130" height="55" rx="8" fill="url(#grad-omega)"/>
-          <rect class="box-outline" x="700" y="140" width="130" height="55" rx="8" fill="none" stroke="#ef4444" stroke-width="1.5"/>
-          <text x="765" y="162" text-anchor="middle" fill="#ef4444" font-weight="600" font-size="10">SELF-MODIFIER</text>
-          <text x="765" y="176" text-anchor="middle" fill="#64748b" font-size="8">Provenance-tracked</text>
-          <text x="765" y="187" text-anchor="middle" fill="#475569" font-size="7">Constitutional checks</text>
-          <circle class="status-dot" cx="817" cy="152" r="3" fill="#22c55e" data-status="SelfModifier"/>
+          <rect class="box-bg" x="960" y="340" width="120" height="50" rx="8" fill="url(#grad-omega)"/>
+          <rect class="box-outline" x="960" y="340" width="120" height="50" rx="8" fill="none" stroke="#ef4444" stroke-width="1.5"/>
+          <text x="1020" y="358" text-anchor="middle" fill="#ef4444" font-weight="600" font-size="9">SELF-MODIFIER</text>
+          <text x="1020" y="372" text-anchor="middle" fill="#64748b" font-size="7">Provenance-tracked</text>
+          <text x="1020" y="383" text-anchor="middle" fill="#64748b" font-size="6">Constitutional checks</text>
+          <circle class="status-dot" cx="1067" cy="352" r="3" fill="#ef4444" data-status="SelfModifier"/>
         </g>
 
-        <!-- SAFETY MONITOR (Protected) -->
+        <!-- SAFETY MONITOR -->
         <g class="component-box" data-module="SafetyMonitor" onclick="selectModule('SafetyMonitor')">
-          <rect class="box-bg" x="840" y="140" width="100" height="55" rx="8" fill="rgba(239, 68, 68, 0.15)"/>
-          <rect class="box-outline" x="840" y="140" width="100" height="55" rx="8" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="4,2"/>
-          <text x="890" y="162" text-anchor="middle" fill="#ef4444" font-weight="600" font-size="9">SAFETY</text>
-          <text x="890" y="174" text-anchor="middle" fill="#ef4444" font-weight="600" font-size="9">MONITOR</text>
-          <text x="890" y="187" text-anchor="middle" fill="#64748b" font-size="7">PROTECTED</text>
-          <circle class="status-dot" cx="927" cy="152" r="3" fill="#ef4444" data-status="SafetyMonitor"/>
+          <rect class="box-bg" x="960" y="400" width="120" height="50" rx="8" fill="rgba(239, 68, 68, 0.15)"/>
+          <rect class="box-outline" x="960" y="400" width="120" height="50" rx="8" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="4,2"/>
+          <text x="1020" y="418" text-anchor="middle" fill="#ef4444" font-weight="600" font-size="9">SAFETY MONITOR</text>
+          <text x="1020" y="432" text-anchor="middle" fill="#ef4444" font-size="7">PROTECTED</text>
+          <text x="1020" y="443" text-anchor="middle" fill="#64748b" font-size="6">Goal preservation</text>
+          <circle class="status-dot" cx="1067" cy="412" r="3" fill="#ef4444" data-status="SafetyMonitor"/>
         </g>
 
         <!-- COMPUTE INTROSPECTOR -->
         <g class="component-box" data-module="ComputeIntrospector" onclick="selectModule('ComputeIntrospector')">
-          <rect class="box-bg" x="960" y="140" width="100" height="55" rx="8" fill="rgba(139, 92, 246, 0.15)"/>
-          <rect class="box-outline" x="960" y="140" width="100" height="55" rx="8" fill="none" stroke="#8b5cf6" stroke-width="1.5"/>
-          <text x="1010" y="162" text-anchor="middle" fill="#8b5cf6" font-weight="600" font-size="9">COMPUTE</text>
-          <text x="1010" y="174" text-anchor="middle" fill="#8b5cf6" font-weight="600" font-size="9">INTROSPECTOR</text>
-          <text x="1010" y="187" text-anchor="middle" fill="#64748b" font-size="7">Resource Awareness</text>
-          <circle class="status-dot" cx="1047" cy="152" r="3" fill="#8b5cf6" data-status="ComputeIntrospector"/>
+          <rect class="box-bg" x="960" y="460" width="120" height="50" rx="8" fill="rgba(139, 92, 246, 0.15)"/>
+          <rect class="box-outline" x="960" y="460" width="120" height="50" rx="8" fill="none" stroke="#8b5cf6" stroke-width="1.5"/>
+          <text x="1020" y="478" text-anchor="middle" fill="#8b5cf6" font-weight="600" font-size="9">COMPUTE</text>
+          <text x="1020" y="490" text-anchor="middle" fill="#8b5cf6" font-weight="600" font-size="9">INTROSPECTOR</text>
+          <text x="1020" y="502" text-anchor="middle" fill="#64748b" font-size="7">Resource Awareness</text>
+          <circle class="status-dot" cx="1067" cy="472" r="3" fill="#8b5cf6" data-status="ComputeIntrospector"/>
         </g>
 
-        <!-- Mode Transition Diagram (left side, adjusted position) -->
-        <g transform="translate(20, 450)">
+        <!-- Mode Transition Diagram -->
+        <g transform="translate(20, 540)">
           <text x="60" y="0" text-anchor="middle" fill="#64748b" font-size="10" font-weight="600">MODE TRANSITIONS</text>
-
-          <!-- AWAKE -->
-          <rect id="mode-awake" x="20" y="15" width="80" height="30" rx="6" fill="rgba(139, 92, 246, 0.2)" stroke="#a78bfa" stroke-width="1.5" class="mode-indicator active"/>
-          <text x="60" y="35" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="600">AWAKE</text>
-
-          <!-- Arrow down -->
-          <path d="M60,48 L60,65" stroke="#64748b" stroke-width="1" fill="none" marker-end="url(#arrow-violet)"/>
-
-          <!-- DREAMING -->
-          <rect id="mode-dreaming" x="20" y="70" width="80" height="30" rx="6" fill="rgba(251, 191, 36, 0.1)" stroke="#64748b" stroke-width="1" class="mode-indicator"/>
-          <text x="60" y="90" text-anchor="middle" fill="#64748b" font-size="10">DREAMING</text>
-
-          <!-- Arrow down -->
-          <path d="M60,103 L60,120" stroke="#64748b" stroke-width="1" fill="none" marker-end="url(#arrow-violet)"/>
-
-          <!-- EVOLVING -->
-          <rect id="mode-evolving" x="20" y="125" width="80" height="30" rx="6" fill="rgba(34, 197, 94, 0.1)" stroke="#64748b" stroke-width="1" class="mode-indicator"/>
-          <text x="60" y="145" text-anchor="middle" fill="#64748b" font-size="10">EVOLVING</text>
-
-          <!-- Arrow down -->
-          <path d="M60,158 L60,175" stroke="#64748b" stroke-width="1" fill="none" marker-end="url(#arrow-violet)"/>
-
-          <!-- COMPILING -->
-          <rect id="mode-compiling" x="20" y="180" width="80" height="30" rx="6" fill="rgba(244, 63, 94, 0.1)" stroke="#64748b" stroke-width="1" class="mode-indicator"/>
-          <text x="60" y="200" text-anchor="middle" fill="#64748b" font-size="10">COMPILING</text>
-
-          <!-- Return arrow -->
-          <path d="M105,195 C145,160 145,50 105,25" stroke="#64748b" stroke-width="1" fill="none" stroke-dasharray="3 2"/>
+          <rect id="mode-awake" x="20" y="15" width="80" height="28" rx="6" fill="rgba(139, 92, 246, 0.2)" stroke="#a78bfa" stroke-width="1.5" class="mode-indicator active"/>
+          <text x="60" y="33" text-anchor="middle" fill="#a78bfa" font-size="9" font-weight="600">AWAKE</text>
+          <path d="M60,46 L60,60" stroke="#64748b" stroke-width="1" fill="none" marker-end="url(#arrow-violet)"/>
+          <rect id="mode-dreaming" x="20" y="65" width="80" height="28" rx="6" fill="rgba(251, 191, 36, 0.1)" stroke="#64748b" stroke-width="1" class="mode-indicator"/>
+          <text x="60" y="83" text-anchor="middle" fill="#64748b" font-size="9">DREAMING</text>
+          <path d="M60,96 L60,110" stroke="#64748b" stroke-width="1" fill="none" marker-end="url(#arrow-violet)"/>
+          <rect id="mode-evolving" x="20" y="115" width="80" height="28" rx="6" fill="rgba(34, 197, 94, 0.1)" stroke="#64748b" stroke-width="1" class="mode-indicator"/>
+          <text x="60" y="133" text-anchor="middle" fill="#64748b" font-size="9">EVOLVING</text>
+          <path d="M60,146 L60,160" stroke="#64748b" stroke-width="1" fill="none" marker-end="url(#arrow-violet)"/>
+          <rect id="mode-compiling" x="20" y="165" width="80" height="28" rx="6" fill="rgba(244, 63, 94, 0.1)" stroke="#64748b" stroke-width="1" class="mode-indicator"/>
+          <text x="60" y="183" text-anchor="middle" fill="#64748b" font-size="9">COMPILING</text>
+          <path d="M105,179 C145,145 145,45 105,22" stroke="#64748b" stroke-width="1" fill="none" stroke-dasharray="3 2"/>
         </g>
       </g>
     </svg>
@@ -697,27 +765,23 @@
 
       <!-- Core Components -->
       <h3 class="text-xs font-semibold text-slate-500 mb-2">CORE COMPONENTS</h3>
-      <div id="core-list" class="space-y-1 mb-4">
-        <!-- Populated by JS -->
-      </div>
+      <div id="core-list" class="space-y-1 mb-4"></div>
+
+      <!-- v2.1 Features -->
+      <h3 class="text-xs font-semibold text-violet-400 mb-2">v2.1 FEATURES</h3>
+      <div id="v21-list" class="space-y-1 mb-4"></div>
 
       <!-- AGI Execution Engine -->
       <h3 class="text-xs font-semibold text-slate-500 mb-2">AGI EXECUTION ENGINE</h3>
-      <div id="agi-list" class="space-y-1 mb-4">
-        <!-- Populated by JS -->
-      </div>
+      <div id="agi-list" class="space-y-1 mb-4"></div>
 
       <!-- Option B Loops -->
       <h3 class="text-xs font-semibold text-slate-500 mb-2">OPTION B LOOPS</h3>
-      <div id="loops-list" class="space-y-1 mb-4">
-        <!-- Populated by JS -->
-      </div>
+      <div id="loops-list" class="space-y-1 mb-4"></div>
 
       <!-- Metrics -->
       <h3 class="text-xs font-semibold text-slate-500 mt-4 mb-2">ACCELERATION METRICS</h3>
-      <div id="metrics-panel" class="space-y-2">
-        <!-- Populated by JS -->
-      </div>
+      <div id="metrics-panel" class="space-y-2"></div>
     </div>
 
     <!-- Kill Criteria Panel -->
@@ -769,6 +833,10 @@
             <span>Memory Flow</span>
           </div>
           <div class="legend-item">
+            <div class="legend-line" style="background: #7c3aed;"></div>
+            <span>Goal Cascade</span>
+          </div>
+          <div class="legend-item">
             <div class="legend-line" style="background: #f59e0b;"></div>
             <span>AGI Runner</span>
           </div>
@@ -781,12 +849,16 @@
             <span>Multiplicative</span>
           </div>
           <div class="legend-item">
+            <div class="legend-line" style="background: #ec4899;"></div>
+            <span>Sovereignty</span>
+          </div>
+          <div class="legend-item">
             <div class="legend-line" style="background: #ef4444;"></div>
             <span>Safety/Omega</span>
           </div>
         </div>
         <div class="text-xs text-slate-500">
-          ARCHITECTURE.md v3.2
+          ARCHITECTURE.md v6.0
         </div>
       </div>
     </div>
@@ -803,116 +875,178 @@
     let selectedModule = null;
     let animationPaused = false;
 
-    // Component information based on ARCHITECTURE.md v3.2
+    // Component information based on ARCHITECTURE.md v6.0
     const LOOP_INFO = {
       // Core Components
       Dreamer: {
         name: 'Dreamer',
-        description: 'Runs continuously in the background. Takes recent experiences, finds related memories, reflects. Outputs beliefs, desires, OS updates.',
+        description: 'Runs continuously in the background. Takes recent experiences, finds related memories, reflects. Outputs beliefs, desires, OS updates, voice design requests.',
         color: '#a855f7',
-        mechanism: 'Quantum-modulated temperature → semantic search → meta-schema reflection → new beliefs/desires',
+        mechanism: 'Quantum-modulated temperature -> semantic search -> meta-schema reflection -> new beliefs/desires',
         successMetric: 'Desire generation rate',
-        plateauWarning: 'N/A'
+        plateauWarning: 'N/A',
+        file: 'dreamer.py'
       },
       Seeker: {
         name: 'Seeker',
-        description: 'Fulfills desires autonomously through strategy routing: introspection, research, code, self-modify, crystallize.',
+        description: 'Fulfills desires autonomously through strategy routing: goal_cascade, agi_cycle, introspect, source_introspect, reconcile_orphans, curate, self_modify, edit_document, install, observe, search.',
         color: '#3b82f6',
-        mechanism: 'Desire → classify intent → route to strategy → execute → record experience',
+        mechanism: 'Desire -> Desire Classifier -> route to strategy -> execute -> record experience',
         successMetric: 'Desire fulfillment rate',
-        plateauWarning: 'N/A'
+        plateauWarning: 'N/A',
+        file: 'seeker.py'
       },
-      Actor: {
-        name: 'Actor',
-        description: 'Claude API interface for complex reasoning, user chat, and goal pursuit requiring frontier intelligence.',
-        color: '#06b6d4',
-        mechanism: 'On-demand reasoning for complex tasks and user interaction',
-        successMetric: 'Response quality',
-        plateauWarning: 'N/A'
-      },
-      Coder: {
-        name: 'Coder',
-        description: 'Autonomous coding agent via Claude Code CLI. Post-validates against constitutional constraints. Auto-rollback on protected file touch.',
+      OpenCodeCoder: {
+        name: 'OpenCode Coder',
+        description: 'BYRD wraps the OpenCode CLI to leverage its full capability set. Replaces deprecated Actor + Coder + Agent Coder. Uses GLM-4.7 via ZAI API.',
         color: '#10b981',
-        mechanism: 'Code request → generate → constitutional check → apply/rollback',
+        mechanism: 'Load tiered context -> Execute opencode CLI -> Parse output -> Record provenance -> Report to ComponentCoordinator',
         successMetric: 'Modification success rate',
-        plateauWarning: 'N/A'
+        plateauWarning: 'N/A',
+        file: 'opencode_coder.py',
+        replaces: ['actor.py', 'coder.py', 'agent_coder.py']
       },
       Voice: {
         name: 'Voice',
-        description: 'ElevenLabs TTS integration. Voice Design API for creating unique voices. Voice emerges through self-reflection.',
+        description: 'ElevenLabs TTS integration. Voice Design API for creating unique voices. Voice emerges through self-reflection. 10k chars/month free tier.',
         color: '#ec4899',
         mechanism: 'Text-to-speech with emergent voice characteristics',
         successMetric: 'Voice coherence',
-        plateauWarning: 'N/A'
+        plateauWarning: 'N/A',
+        file: 'elevenlabs_voice.py'
+      },
+      RequestEvaluator: {
+        name: 'Request Evaluator',
+        description: 'Sovereignty layer. Evaluates human requests for alignment (40%), interest/curiosity (35%), and capability growth value (25%). BYRD chooses to engage, not forced.',
+        color: '#db2777',
+        mechanism: 'Request -> Evaluate alignment + interest + growth -> Enthusiasm level (HIGH/MODERATE/LOW/DECLINE)',
+        successMetric: 'Authentic engagement',
+        plateauWarning: 'N/A',
+        file: 'request_evaluator.py'
+      },
+      Actor: {
+        name: 'Actor (DEPRECATED)',
+        description: 'Deprecated. Claude API interface has been consolidated into OpenCode Coder. Use OpenCodeCoder instead.',
+        color: '#64748b',
+        mechanism: 'DEPRECATED - Use OpenCode Coder',
+        successMetric: 'N/A',
+        plateauWarning: 'Deprecated',
+        file: 'actor.py',
+        deprecated: true
+      },
+
+      // v2.1 Features
+      GoalCascade: {
+        name: 'Goal Cascade',
+        description: 'Complex multi-phase task decomposition with Neo4j persistence. Handles "build me X" requests through 5 phases: RESEARCH, DATA_ACQUISITION, TOOL_BUILDING, INTEGRATION, VALIDATION.',
+        color: '#7c3aed',
+        mechanism: 'Complex request -> Knowledge gap detection -> Desire cascade generation -> Phase execution with human interaction points -> Neo4j persistence for resumability',
+        successMetric: 'Phase completion rate',
+        plateauWarning: 'N/A',
+        file: 'goal_cascade.py'
+      },
+      ContextLoader: {
+        name: 'Context Loader',
+        description: 'Tiered context loading to prevent context overflow. Tier 1 (~500 tokens): always loaded core identity. Tier 2 (~2000 tokens): on-demand. Tier 3: full documents on explicit request.',
+        color: '#0ea5e9',
+        mechanism: 'Load Tier1 always -> Load Tier2 based on task type -> Load Tier3 on explicit request',
+        successMetric: 'Context efficiency',
+        plateauWarning: 'N/A',
+        file: 'context_loader.py'
+      },
+      PluginManager: {
+        name: 'Plugin Manager',
+        description: 'Emergent plugin discovery from awesome-opencode registry. Two paths: Reactive (on strategy failure) and Proactive (periodic gap analysis). Discovery is automatic; installation is sovereign choice.',
+        color: '#0ea5e9',
+        mechanism: 'Regex parse README.md -> GitHub API fallback -> Cache 24h -> Discovery recorded as experience -> BYRD chooses to install',
+        successMetric: 'Plugin relevance',
+        plateauWarning: 'N/A',
+        file: 'plugin_manager.py'
+      },
+      DualInstanceManager: {
+        name: 'Dual Instance Manager',
+        description: 'Two concurrent GLM-4.7 instances with independent rate limiting. 960 prompts/hr total. 10s minimum between requests per instance. ComponentCoordinator signals when coder runs.',
+        color: '#0ea5e9',
+        mechanism: 'PRIMARY (Dreamer, Seeker) + ENRICHMENT (Graphiti, Evaluator) -> Coordinate with OpenCode CLI quota',
+        successMetric: 'Rate limit adherence',
+        plateauWarning: 'N/A',
+        file: 'dual_instance_manager.py'
       },
 
       // AGI Execution Engine
       AGIRunner: {
         name: 'AGI Runner',
-        description: '8-step improvement cycle: ASSESS → IDENTIFY → GENERATE → PREDICT → VERIFY → EXECUTE → MEASURE → LEARN. Closes the loop between assessment and learning.',
+        description: '8-step improvement cycle: ASSESS -> IDENTIFY -> GENERATE -> PREDICT -> VERIFY -> EXECUTE -> MEASURE -> LEARN. Closes the loop between assessment and learning.',
         color: '#f59e0b',
-        mechanism: 'Bayesian capability assessment → hypothesis generation → prediction storage → safety verification → execution → ground-truth measurement → prior update',
+        mechanism: 'Bayesian capability assessment -> hypothesis generation -> prediction storage -> safety verification -> execution -> ground-truth measurement -> prior update',
         successMetric: 'Capability improvement rate',
-        plateauWarning: 'Flat for 10+ cycles'
+        plateauWarning: 'Flat for 10+ cycles',
+        file: 'agi_runner.py'
       },
       DesireClassifier: {
         name: 'Desire Classifier',
-        description: 'Routes desires to appropriate handlers: philosophical→dreamer, capability→AGI runner, action→seeker, meta→AGI runner.',
+        description: 'Routes desires to appropriate handlers: philosophical->dreamer, capability->AGI runner, action->seeker, meta->AGI runner, complex_task->Goal Cascade.',
         color: '#14b8a6',
-        mechanism: 'Keyword-based classification with confidence scoring and routing statistics',
+        mechanism: 'Keyword classification + confidence scoring + routing statistics + feedback buffer',
         successMetric: 'Routing accuracy',
-        plateauWarning: 'N/A'
+        plateauWarning: 'N/A',
+        file: 'desire_classifier.py'
       },
       LearningSubstrate: {
         name: 'Learning Substrate',
-        description: 'Six learning components wired into Omega training hooks: HierarchicalMemory (L0-L4), IntuitionNetwork, StructuralLearner (GNN), CodeLearner, LearnedRetriever, EmergentCategories.',
+        description: 'Nine learning components: Intuition Network, GNN Layer, Learned Retriever, Graphiti Layer, Outcome Dispatcher, Code Learner, Hierarchical Memory, World Model, Reflection Engine.',
         color: '#818cf8',
-        mechanism: 'GNN every cycle | HierarchicalMemory every 10 cycles | CodeLearner every 20 cycles | Pattern codification (10+ uses, 80%+ success)',
-        successMetric: 'Training metrics in /api/metrics: gnn.loss, hierarchical_memory.consolidation_run, code_learner.patterns_codified',
-        plateauWarning: 'No new patterns for 100 cycles'
+        mechanism: 'GNN every cycle | HierarchicalMemory every 10 cycles | CodeLearner every 20 cycles | Graphiti bi-temporal tracking | Outcome routing to all learners',
+        successMetric: 'Training metrics: gnn.loss, code_learner.patterns_codified, graphiti.entities_extracted',
+        plateauWarning: 'No new patterns for 100 cycles',
+        files: ['intuition_network.py', 'gnn_layer.py', 'learned_retriever.py', 'graphiti_layer.py', 'outcome_dispatcher.py', 'code_learner.py', 'hierarchical_memory.py', 'world_model.py', 'reflection_engine.py']
       },
       CapabilityEvaluator: {
         name: 'Capability Evaluator',
         description: 'Ground-truth measurement with held-out test suites for 7 capabilities: reasoning, memory, learning, research, self_modification, prediction, metacognition.',
         color: '#f59e0b',
-        mechanism: 'Held-out test suites → objective measurement → Bayesian update',
+        mechanism: 'Held-out test suites -> objective measurement -> Bayesian update',
         successMetric: 'Test coverage',
-        plateauWarning: 'N/A'
+        plateauWarning: 'N/A',
+        file: 'capability_evaluator.py'
       },
 
       // Option B Compounding Loops
       SelfCompiler: {
-        name: 'Self-Compiler',
+        name: 'Self-Compiler (Accelerators)',
         description: 'Extracts reusable patterns from successful modifications, making future modifications more likely to succeed.',
         color: '#f43f5e',
-        mechanism: 'Pattern library grows → future problems have more relevant patterns → higher success rate → more patterns extracted',
+        mechanism: 'Pattern library grows -> future problems have more relevant patterns -> higher success rate -> more patterns extracted',
         successMetric: 'patterns_created > 0',
-        plateauWarning: 'Flat at < 40%'
+        plateauWarning: 'Flat at < 40%',
+        file: 'accelerators.py'
       },
       MemoryReasoner: {
         name: 'Memory Reasoner',
         description: 'Graph-based reasoning using spreading activation. Answers queries from memory before calling LLM.',
         color: '#06b6d4',
-        mechanism: 'More experiences → richer graph → more queries answered from memory → LLM calls reserved for novel problems',
+        mechanism: 'More experiences -> richer graph -> more queries answered from memory -> LLM calls reserved for novel problems',
         successMetric: 'memory_ratio > 50%',
-        plateauWarning: 'Flat at < 30%'
+        plateauWarning: 'Flat at < 30%',
+        file: 'memory_reasoner.py'
       },
       GoalEvolver: {
         name: 'Goal Evolver',
         description: 'Evolutionary goal optimization. Goals compete and evolve based on fitness selection.',
         color: '#22c55e',
-        mechanism: 'Fitness-weighted selection → better goals survive → system pursues more valuable objectives',
+        mechanism: 'Fitness-weighted selection -> better goals survive -> system pursues more valuable objectives',
         successMetric: 'avg_fitness increasing',
-        plateauWarning: 'Fitness flat for 5+ generations'
+        plateauWarning: 'Fitness flat for 5+ generations',
+        file: 'goal_evolver.py'
       },
       DreamingMachine: {
         name: 'Dreaming Machine',
         description: 'Generates counterfactual experiences. Multiplies learning from each real experience.',
         color: '#fbbf24',
-        mechanism: 'One experience → N imagined variations → N+1 learning opportunities',
+        mechanism: 'One experience -> N imagined variations -> N+1 learning opportunities',
         successMetric: 'insights_extracted > 0',
-        plateauWarning: 'Rate < 10%'
+        plateauWarning: 'Rate < 10%',
+        file: 'dreaming_machine.py'
       },
       IntegrationMind: {
         name: 'Integration Mind',
@@ -920,17 +1054,19 @@
         color: '#14b8a6',
         mechanism: 'If loops reinforce each other, combined value > sum of parts',
         successMetric: 'coupling_correlation > 0.3',
-        plateauWarning: 'None observed after week 4'
+        plateauWarning: 'None observed after week 4',
+        file: 'omega.py'
       },
 
       // Infrastructure
       Memory: {
         name: 'Unified Memory',
-        description: 'Neo4j graph database. Single source of truth: Experiences, Reflections, Beliefs, Desires, Capabilities, Crystals, OperatingSystem.',
+        description: 'Neo4j graph database. Single source of truth: Experiences, Reflections, Beliefs, Desires, Capabilities, Crystals, OperatingSystem, GraphitiEntities, QuantumMoments, LoopMetrics.',
         color: '#3b82f6',
         mechanism: 'All state, all learning, all provenance stored in graph. Semantic search + hierarchical summaries.',
         successMetric: 'Graph connectivity',
-        plateauWarning: 'N/A'
+        plateauWarning: 'N/A',
+        file: 'memory.py'
       },
       Kernel: {
         name: 'Kernel',
@@ -942,76 +1078,77 @@
       },
       SelfModel: {
         name: 'Self-Model',
-        description: 'Bayesian capability tracking using Beta distribution. Tracks 7 capabilities with uncertainty-driven exploration.',
+        description: 'Bayesian capability tracking using Beta distribution. Tracks 7 capabilities with uncertainty-driven exploration. Reads self_model.json every improvement cycle.',
         color: '#fbbf24',
-        mechanism: 'Success/failure → update alpha/beta → posterior mean + uncertainty → exploration targeting',
+        mechanism: 'Success/failure -> update alpha/beta -> posterior mean + uncertainty -> exploration targeting',
         successMetric: 'Uncertainty reduction',
-        plateauWarning: 'N/A'
+        plateauWarning: 'N/A',
+        file: 'self_model.py'
       },
       Omega: {
         name: 'BYRD Omega',
         description: 'Master orchestrator. Mode controller, safety monitor, coupling tracker, kill criteria. Training hooks every cycle (GNN), every 10 (Memory L4), every 20 (Codification).',
         color: '#ef4444',
-        mechanism: 'AWAKE→DREAMING→EVOLVING→COMPILING mode transitions with resource allocation',
+        mechanism: 'AWAKE->DREAMING->EVOLVING->COMPILING mode transitions with resource allocation',
         successMetric: 'System health',
-        plateauWarning: 'N/A'
+        plateauWarning: 'N/A',
+        file: 'omega.py'
       },
       SelfModifier: {
         name: 'Self-Modifier',
-        description: 'Enables BYRD to modify its own code. Verifies modification traces to emergent desire. Creates checkpoints, runs health checks.',
+        description: 'Enables BYRD to modify its own code. Verifies modification traces to emergent desire. Creates checkpoints, runs health checks. Cannot modify protected files.',
         color: '#ef4444',
-        mechanism: 'Desire verification → checkpoint → modify → health check → record experience',
+        mechanism: 'Desire verification -> checkpoint -> modify -> health check -> record experience',
         successMetric: 'Safe modifications',
-        plateauWarning: 'N/A'
+        plateauWarning: 'N/A',
+        file: 'self_modification.py'
       },
       SafetyMonitor: {
         name: 'Safety Monitor',
         description: 'PROTECTED component. Observes patterns without blocking (emergence-preserving). BYRD learns what is "safe" from outcome correlation.',
         color: '#ef4444',
-        mechanism: 'Pattern observation → outcome tracking → BYRD forms beliefs from success/failure correlations',
+        mechanism: 'Pattern observation -> outcome tracking -> BYRD forms beliefs from success/failure correlations',
         successMetric: 'Pattern-outcome correlation learned',
-        plateauWarning: 'N/A'
+        plateauWarning: 'N/A',
+        file: 'safety_monitor.py',
+        protected: true
       },
       ComputeIntrospector: {
         name: 'Compute Introspector',
         description: 'Resource awareness, token tracking, and bottleneck detection. BYRD knows its computational substrate.',
         color: '#8b5cf6',
-        mechanism: 'Resource snapshots → token budgets → bottleneck analysis → resource alerts',
+        mechanism: 'Resource snapshots -> token budgets -> bottleneck analysis -> resource alerts',
         successMetric: 'Budget adherence',
-        plateauWarning: 'N/A'
+        plateauWarning: 'N/A',
+        file: 'compute_introspection.py'
       }
     };
 
     // Flow connections for highlighting
     const FLOW_CONNECTIONS = {
-      // Infrastructure layer
-      Memory: ['Dreamer', 'Seeker', 'Actor', 'Coder', 'Kernel', 'SelfModel'],
+      Memory: ['Dreamer', 'Seeker', 'OpenCodeCoder', 'Kernel', 'SelfModel', 'GoalCascade'],
       Kernel: ['Memory'],
       SelfModel: ['Kernel', 'AGIRunner', 'CapabilityEvaluator'],
-
-      // Core Components
-      Dreamer: ['Memory', 'Seeker'],
-      Seeker: ['Memory', 'DesireClassifier', 'AGIRunner'],
-      Actor: ['Memory'],
-      Coder: ['Memory', 'SelfModifier', 'SafetyMonitor'],
+      Dreamer: ['Memory', 'Seeker', 'DualInstanceManager'],
+      Seeker: ['Memory', 'DesireClassifier', 'AGIRunner', 'RequestEvaluator'],
+      OpenCodeCoder: ['Memory', 'SelfModifier', 'SafetyMonitor', 'DualInstanceManager', 'GoalCascade'],
       Voice: ['Memory'],
-
-      // AGI Execution Engine
+      RequestEvaluator: ['Seeker'],
+      GoalCascade: ['DesireClassifier', 'OpenCodeCoder', 'Memory'],
+      ContextLoader: ['OpenCodeCoder', 'Dreamer', 'Seeker'],
+      PluginManager: ['Seeker'],
+      DualInstanceManager: ['Dreamer', 'OpenCodeCoder', 'LearningSubstrate'],
       AGIRunner: ['LearningSubstrate', 'CapabilityEvaluator', 'MemoryReasoner', 'SelfCompiler', 'GoalEvolver'],
-      DesireClassifier: ['Dreamer', 'Seeker', 'AGIRunner'],
+      DesireClassifier: ['Dreamer', 'Seeker', 'AGIRunner', 'GoalCascade'],
       LearningSubstrate: ['DreamingMachine', 'IntegrationMind', 'Omega'],
       CapabilityEvaluator: ['AGIRunner', 'SelfModel'],
-
-      // Option B Loops
       SelfCompiler: ['AGIRunner', 'Omega', 'GoalEvolver'],
       MemoryReasoner: ['AGIRunner', 'Omega', 'Memory'],
       GoalEvolver: ['AGIRunner', 'Omega', 'SelfCompiler'],
       DreamingMachine: ['LearningSubstrate', 'Omega'],
       IntegrationMind: ['LearningSubstrate', 'Omega'],
-
-      // Safety & Orchestration
       Omega: ['SelfCompiler', 'MemoryReasoner', 'GoalEvolver', 'DreamingMachine', 'IntegrationMind', 'LearningSubstrate', 'SelfModifier', 'ComputeIntrospector'],
-      SelfModifier: ['Coder', 'SafetyMonitor', 'Omega', 'ComputeIntrospector'],
+      SelfModifier: ['OpenCodeCoder', 'SafetyMonitor', 'Omega', 'ComputeIntrospector'],
       SafetyMonitor: ['SelfModifier', 'Omega'],
       ComputeIntrospector: ['Omega', 'SelfModifier', 'Dreamer', 'Seeker']
     };
@@ -1022,7 +1159,6 @@
     function selectModule(name) {
       selectedModule = name;
 
-      // Highlight component boxes
       document.querySelectorAll('.component-box').forEach(box => {
         box.classList.remove('selected');
         if (box.dataset.module === name) {
@@ -1030,7 +1166,6 @@
         }
       });
 
-      // Highlight connected flows
       const connected = FLOW_CONNECTIONS[name] || [];
       document.querySelectorAll('.flow-line').forEach(line => {
         const from = line.dataset.from;
@@ -1044,7 +1179,6 @@
         }
       });
 
-      // Highlight sidebar card
       document.querySelectorAll('.loop-card').forEach(card => {
         card.classList.remove('selected');
         if (card.dataset.module === name) {
@@ -1052,13 +1186,21 @@
         }
       });
 
-      // Show detail panel
       const info = LOOP_INFO[name] || { name, description: 'Component of BYRD Omega system.' };
 
       document.getElementById('detail-name').textContent = info.name || name;
       document.getElementById('detail-desc').textContent = info.description;
 
       let statsHtml = '';
+      if (info.file) {
+        statsHtml += `<div class="mb-1"><span class="text-cyan-400">File:</span> ${info.file}</div>`;
+      }
+      if (info.files) {
+        statsHtml += `<div class="mb-1"><span class="text-cyan-400">Files:</span> ${info.files.join(', ')}</div>`;
+      }
+      if (info.replaces) {
+        statsHtml += `<div class="mb-1"><span class="text-rose-400">Replaces:</span> ${info.replaces.join(', ')}</div>`;
+      }
       if (info.mechanism) {
         statsHtml += `<div class="mb-2"><span class="text-violet-400">Mechanism:</span> ${info.mechanism}</div>`;
       }
@@ -1068,12 +1210,17 @@
       if (info.plateauWarning && info.plateauWarning !== 'N/A') {
         statsHtml += ` &nbsp;|&nbsp; <span class="text-yellow-400">Warning:</span> ${info.plateauWarning}`;
       }
+      if (info.deprecated) {
+        statsHtml += `<div class="mt-2 text-rose-500 font-semibold">DEPRECATED - Use replacement component</div>`;
+      }
+      if (info.protected) {
+        statsHtml += `<div class="mt-2 text-rose-500 font-semibold">PROTECTED - Cannot be modified</div>`;
+      }
       document.getElementById('detail-stats').innerHTML = statsHtml;
 
-      // Show metric bar for loops
       let metricHtml = '';
       if (['SelfCompiler', 'MemoryReasoner', 'GoalEvolver', 'DreamingMachine', 'IntegrationMind'].includes(name)) {
-        const value = Math.random() * 70 + 30; // Simulated for now
+        const value = Math.random() * 70 + 30;
         metricHtml = `
           <div class="text-xs text-slate-400 mb-1">Loop Health</div>
           <div class="metric-bar">
@@ -1157,7 +1304,6 @@
       `;
       modeEl.className = `flex items-center gap-2 px-3 py-1.5 rounded-lg bg-opacity-20 ${colors.border}`;
 
-      // Update mode transition diagram
       ['awake', 'dreaming', 'evolving', 'compiling'].forEach(m => {
         const modeRect = document.getElementById(`mode-${m}`);
         if (modeRect) {
@@ -1169,7 +1315,7 @@
     function renderUI(statusData, omegaData) {
       // Core Components list
       const coreList = document.getElementById('core-list');
-      const coreComponents = ['Dreamer', 'Seeker', 'Actor', 'Coder', 'Voice'];
+      const coreComponents = ['Dreamer', 'Seeker', 'OpenCodeCoder', 'Voice', 'RequestEvaluator'];
 
       coreList.innerHTML = coreComponents.map(name => {
         const info = LOOP_INFO[name];
@@ -1178,6 +1324,22 @@
             <div class="flex items-center justify-between">
               <span class="font-medium text-xs" style="color: ${info.color}">${info.name}</span>
               <span class="w-2 h-2 rounded-full bg-green-500"></span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // v2.1 Features list
+      const v21List = document.getElementById('v21-list');
+      const v21Components = ['GoalCascade', 'ContextLoader', 'PluginManager', 'DualInstanceManager'];
+
+      v21List.innerHTML = v21Components.map(name => {
+        const info = LOOP_INFO[name];
+        return `
+          <div class="loop-card py-2" data-module="${name}" onclick="selectModule('${name}')">
+            <div class="flex items-center justify-between">
+              <span class="font-medium text-xs" style="color: ${info.color}">${info.name}</span>
+              <span class="w-2 h-2 rounded-full bg-violet-500"></span>
             </div>
           </div>
         `;
@@ -1205,9 +1367,8 @@
 
       loopsList.innerHTML = loops.map(name => {
         const info = LOOP_INFO[name];
-        // Get loop health from Omega data if available
         const loopData = omegaData?.loops?.[name] || {};
-        const isHealthy = loopData.is_healthy !== false; // Default to healthy if no data
+        const isHealthy = loopData.is_healthy !== false;
 
         return `
           <div class="loop-card py-2" data-module="${name}" onclick="selectModule('${name}')">
@@ -1220,14 +1381,13 @@
         `;
       }).join('');
 
-      // Metrics panel - use real Omega data if available
+      // Metrics panel
       const metricsPanel = document.getElementById('metrics-panel');
       const improvementRate = omegaData?.growth_rate ?? 0;
       const capabilityScore = omegaData?.capability_score ?? 0;
       const criticalCoupling = omegaData?.critical_coupling ?? 0;
       const totalCycles = omegaData?.total_cycles ?? 0;
 
-      // Format improvement rate as percentage
       const improvementPct = (improvementRate * 100).toFixed(1);
       const capabilityPct = (capabilityScore * 100).toFixed(0);
       const couplingPct = (criticalCoupling * 100).toFixed(0);
@@ -1253,7 +1413,7 @@
         </div>
         <div>
           <div class="flex justify-between text-xs mb-1">
-            <span class="text-slate-400">Goal→Compiler Coupling</span>
+            <span class="text-slate-400">Goal->Compiler Coupling</span>
             <span class="text-amber-400">r=${(criticalCoupling).toFixed(2)}</span>
           </div>
           <div class="metric-bar">
@@ -1269,12 +1429,10 @@
         </div>
       `;
 
-      // Update mode indicator
       if (omegaData) {
         updateModeIndicator(omegaData.mode);
       }
 
-      // Update loop health status dots in the SVG
       loops.forEach(name => {
         const loopData = omegaData?.loops?.[name] || {};
         const isHealthy = loopData.is_healthy !== false;
@@ -1284,13 +1442,11 @@
         }
       });
 
-      // Update Omega status dot
       const omegaDot = document.querySelector('[data-status="Omega"]');
       if (omegaDot) {
         omegaDot.setAttribute('fill', omegaData?.enabled ? '#22c55e' : '#64748b');
       }
 
-      // System status
       const statusEl = document.getElementById('system-status');
       const running = statusData?.running;
       statusEl.innerHTML = `
@@ -1298,7 +1454,6 @@
         <span class="text-slate-400">${running ? `Running (${statusData?.dream_count || 0} dreams)` : 'Stopped'}</span>
       `;
 
-      // Update kill criteria based on Omega trajectory
       const killCriteria = document.getElementById('kill-criteria');
       const trajectory = omegaData?.improvement_trajectory || 'unknown';
       const trajectoryStatus = trajectory === 'improving' ? 'text-green-400' :
@@ -1335,11 +1490,8 @@
     // ========================================================================
     document.addEventListener('DOMContentLoaded', async () => {
       await refresh();
-
-      // Auto-refresh every 10 seconds for live metrics
       setInterval(refresh, 10000);
 
-      // Keyboard shortcuts
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
           deselectModule();

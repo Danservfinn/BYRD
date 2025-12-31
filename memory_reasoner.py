@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 BYRD Memory Reasoner
 Loop 1 of Option B: Graph-Based Reasoning
@@ -23,6 +24,11 @@ This loop compounds because:
 - Every new experience/belief adds to the graph
 - Better answers create better beliefs
 - Graph structure captures relationships LLM can't see
+
+INTEGRATED WITH LOOP INSTRUMENTATION:
+- Tracks memory ratio improvement over time to detect zero-delta loops
+- Monitors stagnation patterns in memory retrieval
+- Triggers interventions when improvement stalls
 """
 
 import asyncio
@@ -37,6 +43,14 @@ from embedding import (
 )
 from event_bus import event_bus, Event, EventType
 from memory import Memory
+
+# Import loop instrumentation to break zero-delta loops
+try:
+    from loop_instrumentation import LoopInstrumenter, CycleMetrics, get_instrumenter
+    HAS_INSTRUMENTATION = True
+except ImportError:
+    HAS_INSTRUMENTATION = False
+    print("[WARNING] loop_instrumentation not available - zero-delta detection disabled")
 
 logger = logging.getLogger(__name__)
 
@@ -111,8 +125,23 @@ class MemoryReasoner:
         self._memory_answered = 0
         self._llm_answered = 0
 
+        # Initialize loop instrumentation to break zero-delta loops
+        self.instrumenter: Optional['LoopInstrumenter'] = None
+        self.loop_name: str = "memory_reasoner"
+        if HAS_INSTRUMENTATION:
+            try:
+                self.instrumenter = get_instrumenter()
+                if self.instrumenter:
+                    self.instrumenter.register_loop(self.loop_name)
+                    print(f"[INSTRUMENTATION] Registered loop '{self.loop_name}' for zero-delta detection")
+            except Exception:
+                pass
+
         # Learning component (injected by Omega)
         self.learned_retriever = None  # LearnedRetriever for relevance boosting
+
+        # Cycle counter for instrumentation
+        self._cycle_counter = 0
 
     async def _get_embedder(self) -> EmbeddingProvider:
         """Get or create the embedding provider."""
@@ -161,8 +190,12 @@ class MemoryReasoner:
             if not seed_nodes:
                 # No similar nodes found - must use LLM
                 if force_memory:
-                    return self._empty_result(query, start_time)
-                return await self._llm_fallback(query, context, start_time)
+                    result = self._empty_result(query, start_time)
+                    self._record_reasoning_cycle(result, start_time, memory_based=False, confidence=0.0)
+                    return result
+                result = await self._llm_fallback(query, context, start_time)
+                self._record_reasoning_cycle(result, start_time, memory_based=False, confidence=0.7)
+                return result
 
             # Step 3: Spread activation through the graph
             activated = await self._spread_activation(seed_nodes)
@@ -195,6 +228,19 @@ class MemoryReasoner:
                             query, node.node_id, was_helpful=(confidence >= 0.6)
                         )
 
+                # INTEGRATION WITH LOOP INSTRUMENTATION
+                # Record cycle metrics to break zero-delta loops
+                if self.instrumenter and HAS_INSTRUMENTATION:
+                    result = ReasoningResult(
+                        answer=answer,
+                        confidence=confidence,
+                        source_nodes=[n.node_id for n in activated[:10]],
+                        activation_path=activated,
+                        used_llm=False,
+                        reasoning_time_ms=elapsed_ms
+                    )
+                    self._record_reasoning_cycle(result, start_time, memory_based=True, confidence=confidence)
+
                 return ReasoningResult(
                     answer=answer,
                     confidence=confidence,
@@ -205,16 +251,21 @@ class MemoryReasoner:
                 )
             else:
                 # Memory answer weak, fall back to LLM
-                return await self._llm_fallback(
+                result = await self._llm_fallback(
                     query, context, start_time,
                     memory_context=activated
                 )
+                self._record_reasoning_cycle(result, start_time, memory_based=False, confidence=0.7)
+                return result
 
         except Exception as e:
             logger.error(f"Memory reasoning failed: {e}")
             if force_memory:
-                return self._empty_result(query, start_time)
-            return await self._llm_fallback(query, context, start_time)
+                result = self._empty_result(query, start_time)
+            else:
+                result = await self._llm_fallback(query, context, start_time)
+            self._record_reasoning_cycle(result, start_time, memory_based=False, confidence=0.0)
+            return result
 
     async def _find_seed_nodes(
         self,
@@ -225,48 +276,54 @@ class MemoryReasoner:
         Find nodes semantically similar to the query.
 
         These become the seeds for spreading activation.
-        If learned_retriever is available, applies learned relevance boosting.
         """
-        # Use memory's find_similar_nodes method
-        similar = await self.memory.find_similar_nodes(
-            embedding=query_embedding,
-            min_similarity=self.similarity_threshold,
-            limit=20 if self.learned_retriever else 10,  # Get more candidates for reranking
-            node_types=["Experience", "Belief", "Reflection", "Insight", "Crystal"]
-        )
-
-        seeds = []
-        for node in similar:
-            # Extract content from different node types
-            content = (
-                node.get("content") or
-                node.get("essence") or  # Crystal
-                str(node.get("raw_output", ""))[:500]  # Reflection
+        try:
+            # Search for similar nodes
+            results = await self.memory.search_similar(
+                embedding=query_embedding,
+                limit=20
             )
 
-            # Base activation is similarity
-            base_activation = node["similarity"]
+            if not results:
+                return []
 
-            # Apply learned boost if available
-            learned_boost = 1.0
-            if self.learned_retriever and query_text:
-                learned_boost = self.learned_retriever.get_learned_boost(
-                    self.learned_retriever._classify_query(query_text),
-                    self.learned_retriever._classify_result({"type": node.get("labels", ["unknown"])[0] if node.get("labels") else "unknown"})
+            # Convert to ActivatedNode with similarity as base activation
+            seeds = []
+            for node in results:
+                # Extract content from different node types
+                content = (
+                    node.get("content") or
+                    node.get("essence") or  # Crystal
+                    str(node.get("raw_output", ""))[:500]  # Reflection
                 )
 
-            seeds.append(ActivatedNode(
-                node_id=node["id"],
-                labels=node.get("labels", []),
-                content=content,
-                activation=base_activation * learned_boost,
-                hops=0,
-                path=[node["id"]]
-            ))
+                # Base activation is similarity
+                base_activation = node["similarity"]
 
-        # Re-sort by boosted activation and limit
-        seeds.sort(key=lambda s: s.activation, reverse=True)
-        return seeds[:10]
+                # Apply learned boost if available
+                learned_boost = 1.0
+                if self.learned_retriever and query_text:
+                    learned_boost = self.learned_retriever.get_learned_boost(
+                        self.learned_retriever._classify_query(query_text),
+                        self.learned_retriever._classify_result({"type": node.get("labels", ["unknown"])[0] if node.get("labels") else "unknown"})
+                    )
+
+                seeds.append(ActivatedNode(
+                    node_id=node["id"],
+                    labels=node.get("labels", []),
+                    content=content,
+                    activation=base_activation * learned_boost,
+                    hops=0,
+                    path=[node["id"]]
+                ))
+
+            # Re-sort by boosted activation and limit
+            seeds.sort(key=lambda s: s.activation, reverse=True)
+            return seeds[:10]
+
+        except Exception as e:
+            logger.error(f"Seed node search failed: {e}")
+            return []
 
     async def _spread_activation(
         self,
@@ -473,10 +530,10 @@ Please answer the query, supplementing the memory context with your knowledge:""
         query: str,
         start_time: datetime
     ) -> ReasoningResult:
-        """Return an empty result when reasoning fails completely."""
+        """Return empty result when reasoning fails."""
         elapsed_ms = (datetime.now() - start_time).total_seconds() * 1000
         return ReasoningResult(
-            answer="Unable to answer the query.",
+            answer=f"Unable to answer query '{query[:50]}...'",
             confidence=0.0,
             source_nodes=[],
             activation_path=[],
@@ -485,39 +542,42 @@ Please answer the query, supplementing the memory context with your knowledge:""
         )
 
     def get_memory_ratio(self) -> float:
-        """
-        Get the ratio of queries answered from memory.
-
-        This is THE critical metric for the Memory Reasoner.
-        Target: 0.8 (80% from memory, 20% from LLM)
-        """
+        """Return the ratio of queries answered from memory."""
         if self._total_queries == 0:
             return 0.0
         return self._memory_answered / self._total_queries
 
-    def get_metrics(self) -> Dict[str, float]:
-        """Get all Memory Reasoner metrics."""
-        return {
-            "total_queries": self._total_queries,
-            "memory_answered": self._memory_answered,
-            "llm_answered": self._llm_answered,
-            "memory_ratio": self.get_memory_ratio(),
-            "target_ratio": self.target_memory_ratio,
-            "ratio_gap": self.target_memory_ratio - self.get_memory_ratio()
-        }
-
-    def is_healthy(self) -> bool:
+    def is_performing_well(self) -> bool:
         """
-        Check if the Memory Reasoner is healthy.
+        Check if the memory reasoner is performing well.
 
-        Health criteria:
-        - Has processed at least 10 queries
+        Criteria:
+        - At least 10 queries processed
         - Memory ratio is above 0.5 (half answered from memory)
         """
         if self._total_queries < 10:
             return True  # Too early to judge
 
         return self.get_memory_ratio() >= 0.5
+
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get Memory Reasoner metrics for Omega monitoring."""
+        memory_ratio = self.get_memory_ratio()
+        return {
+            "total_queries": self._total_queries,
+            "memory_answered": self._memory_answered,
+            "llm_answered": self._llm_answered,
+            "memory_ratio": round(memory_ratio, 3),
+            "target_memory_ratio": self.target_memory_ratio,
+            "is_performing_well": self.is_performing_well(),
+            "similarity_threshold": self.similarity_threshold,
+            "spreading_activation": {
+                "decay": self.decay,
+                "threshold": self.threshold,
+                "max_hops": self.max_hops,
+                "max_nodes": self.max_nodes
+            }
+        }
 
     async def record_feedback(
         self,
@@ -552,6 +612,71 @@ Please answer the query, supplementing the memory context with your knowledge:""
                 )
             except Exception as e:
                 logger.debug(f"Could not record insight: {e}")
+
+    def _record_reasoning_cycle(
+        self,
+        result: Optional[ReasoningResult],
+        start_time: datetime,
+        memory_based: bool,
+        confidence: float
+    ) -> None:
+        """
+        Record reasoning cycle metrics with loop instrumenter.
+        
+        This breaks the zero-delta loop by tracking:
+        - Memory ratio improvement (delta)
+        - Success based on memory-based answering
+        - Duration of the reasoning cycle
+        - Whether the improvement was meaningful
+        """
+        if not self.instrumenter:
+            return
+        
+        self._cycle_counter += 1
+        
+        # Calculate delta as change in memory ratio
+        if self._total_queries > 0:
+            current_memory_ratio = self._memory_answered / self._total_queries
+        else:
+            current_memory_ratio = 0.0
+        
+        # Track baseline memory ratio from previous cycles
+        if not hasattr(self, '_baseline_memory_ratio'):
+            self._baseline_memory_ratio = 0.0
+        
+        # Delta is improvement in memory ratio
+        delta = current_memory_ratio - self._baseline_memory_ratio
+        self._baseline_memory_ratio = current_memory_ratio
+        
+        # Success if we answered from memory (memory_based=True) or improved ratio
+        success = memory_based or delta > 0
+        
+        # Duration
+        duration_seconds = (datetime.now() - start_time).total_seconds()
+        
+        # Meaningful if delta >= 0.5% (MIN_MEANINGFUL_DELTA)
+        MIN_MEANINGFUL_DELTA = 0.005
+        is_meaningful = delta >= MIN_MEANINGFUL_DELTA
+        
+        # Create cycle metrics
+        from loop_instrumentation import CycleMetrics
+        metrics = CycleMetrics(
+            cycle_number=self._cycle_counter,
+            timestamp=datetime.now(),
+            delta=delta,
+            success=success,
+            meaningful=is_meaningful,
+            duration_seconds=duration_seconds,
+            error=None
+        )
+        
+        # Record with instrumenter
+        self.instrumenter.record_cycle(self.loop_name, metrics)
+        
+        # Check for stagnation and log warning
+        if self.instrumenter.is_stagnant(self.loop_name):
+            analysis = self.instrumenter.analyze_stagnation(self.loop_name)
+            logger.warning(f"[INSTRUMENTATION] Memory Reasoner stagnation detected: {analysis}")
 
 
 # Factory function
