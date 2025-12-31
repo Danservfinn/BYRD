@@ -1976,6 +1976,7 @@ async def test_coder():
             desire_id="test_coder_diagnostic"
         )
 
+        stats = byrd_instance.coder.get_stats()
         return {
             "success": result.success,
             "output_length": len(result.output) if result.output else 0,
@@ -1985,7 +1986,7 @@ async def test_coder():
             "files_modified": result.files_modified,
             "files_created": result.files_created,
             "duration_seconds": result.duration_seconds,
-            "mode": "acp",
+            "mode": stats.get("mode", "unknown"),
             "model": byrd_instance.coder._model,
         }
     except Exception as e:

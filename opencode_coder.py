@@ -212,7 +212,18 @@ class OpenCodeCoder:
 
             # Check for errors
             if process.returncode != 0:
-                error_msg = stderr_text[:500] if stderr_text else f"Exit code {process.returncode}"
+                # Combine stdout and stderr for debugging
+                error_parts = []
+                if stderr_text:
+                    error_parts.append(f"STDERR: {stderr_text[:400]}")
+                if stdout_text:
+                    error_parts.append(f"STDOUT: {stdout_text[:400]}")
+                if not error_parts:
+                    error_parts.append(f"Exit code {process.returncode}")
+                error_msg = " | ".join(error_parts)
+
+                logger.error(f"[Coder] CLI failed: {error_msg[:200]}")
+
                 return CoderResult(
                     success=False, output="",
                     error=error_msg,
