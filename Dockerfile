@@ -26,16 +26,19 @@ COPY --chown=user requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
 # Cache bust (updated on each deploy) - increment to force rebuild
-ARG CACHEBUST=18
+ARG CACHEBUST=19
 
 # Copy application code (rebuilt when CACHEBUST changes)
 COPY --chown=user . .
 
 # Verify Python syntax of key files (fail early on syntax errors)
-RUN python -m py_compile request_evaluator.py server.py byrd.py
+RUN python -m py_compile request_evaluator.py server.py byrd.py opencode_coder.py
 
-# Verify OpenCode is available
-RUN which opencode || echo "OpenCode CLI installed"
+# Verify OpenCode is available and show version
+RUN which opencode && opencode --version
+
+# Create OpenCode config directories for ACP mode
+RUN mkdir -p /home/user/.local/share/opencode /home/user/.config/opencode
 
 # HuggingFace uses port 7860
 ENV PORT=7860

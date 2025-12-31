@@ -1901,37 +1901,24 @@ async def get_capabilities():
 
 @app.get("/api/coder-status")
 async def get_coder_status():
-    """Get OpenCode CLI status for diagnostics."""
+    """Get OpenCode coder status for diagnostics - ACP mode only."""
     global byrd_instance
     import shutil
     import os
 
-    # Check for OpenCode CLI (primary) and Claude CLI (fallback)
-    cli_checks = {
-        "opencode": {
-            "found": shutil.which("opencode") is not None,
-            "which": shutil.which("opencode"),
-            "locations": [
-                "/usr/local/bin/opencode",
-                "/usr/bin/opencode",
-                "/home/user/.local/bin/opencode",
-                "/usr/local/lib/node_modules/opencode-ai/bin/opencode",
-            ]
-        },
-        "claude": {
-            "found": shutil.which("claude") is not None,
-            "which": shutil.which("claude"),
-            "locations": [
-                "/usr/local/bin/claude",
-                "/usr/bin/claude",
-                "/home/user/.local/bin/claude",
-            ]
-        }
+    # Check for OpenCode CLI
+    opencode_path = shutil.which("opencode")
+    opencode_info = {
+        "found": opencode_path is not None,
+        "which": opencode_path,
+        "locations": [
+            "/usr/local/bin/opencode",
+            "/usr/bin/opencode",
+            "/home/user/.local/bin/opencode",
+            "/usr/local/lib/node_modules/opencode-ai/bin/opencode",
+        ]
     }
-
-    # Find which locations exist
-    for cli_name, cli_info in cli_checks.items():
-        cli_info["found_locations"] = [loc for loc in cli_info["locations"] if os.path.exists(loc)]
+    opencode_info["found_locations"] = [loc for loc in opencode_info["locations"] if os.path.exists(loc)]
 
     # Check OpenCode auth file
     from pathlib import Path
@@ -1952,25 +1939,19 @@ async def get_coder_status():
             auth_info["error"] = str(e)
 
     result = {
-        "opencode_cli": cli_checks["opencode"],
-        "claude_cli": cli_checks["claude"],
+        "mode": "acp",
+        "opencode_cli": opencode_info,
+        "opencode_available": opencode_path is not None,
         "opencode_auth": auth_info,
         "coder_enabled": False,
-        "coder_cli_command": None,
-        "coder_limited_mode": None,
+        "coder_stats": None,
         "zai_api_key_set": "ZAI_API_KEY" in os.environ,
-        "anthropic_api_key_set": "ANTHROPIC_API_KEY" in os.environ,
         "current_user": os.getenv("USER", "unknown"),
-        "env_vars": {
-            "HOME": os.environ.get("HOME", ""),
-            "PATH": os.environ.get("PATH", ""),
-        }
     }
 
     if byrd_instance and hasattr(byrd_instance, 'coder') and byrd_instance.coder:
         result["coder_enabled"] = byrd_instance.coder.enabled
-        result["coder_cli_command"] = byrd_instance.coder._cli_command
-        result["coder_limited_mode"] = getattr(byrd_instance.coder, '_limited_mode', None)
+        result["coder_stats"] = byrd_instance.coder.get_stats()
 
     return result
 

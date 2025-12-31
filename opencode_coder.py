@@ -1,29 +1,21 @@
 """
-opencode_coder.py - CLI Wrapper for BYRD's Coding Engine
+OpenCode Coder - ACP Mode Only
 
-Wraps an external coding CLI to gain bash, LSP, webfetch, and MCP capabilities.
+Uses OpenCode's Agent Client Protocol (JSON-RPC over stdin/stdout).
+Designed for headless operation in Docker/HuggingFace.
 
-Replaces: coder.py, actor.py, agent_coder.py
-
-Why CLI wrapper instead of custom agent:
-- CLI provides bash, LSP, webfetch, MCP servers
-- Duplicating this in agent_coder.py was wasteful
-- CLI wrapper is simpler, more maintainable, more capable
-
-Integrates with:
-- ComponentCoordinator for rate limiting
-- ContextLoader for tiered context
-- Memory for provenance tracking
+Replaces the previous CLI wrapper implementation.
+ACP = Agent Client Protocol - no TTY required, perfect for containers.
 """
 
 import asyncio
+import json
 import logging
 import os
-import shutil
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Optional, List, Dict, Any
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -59,43 +51,19 @@ class CoderResult:
         }
 
 
-@dataclass
-class ModificationRecord:
-    """Record of a code modification."""
-    desire_id: str
-    task: str
-    files: List[str]
-    timestamp: datetime = field(default_factory=datetime.now)
-    success: bool = True
-    rollback_available: bool = False
-
-
 class OpenCodeCoder:
     """
-    BYRD's coding and self-modification engine.
+    BYRD's coding capability via OpenCode ACP.
 
-    Wraps an external CLI to leverage its full capability set.
-    Falls back to subprocess execution if CLI not available.
+    ACP = Agent Client Protocol (JSON-RPC over stdin/stdout)
+    No fallbacks - if ACP fails, the operation fails.
 
-    Capabilities gained by wrapping:
-    - bash: Full shell access for builds, tests, git
-    - LSP: Language server protocol for code intelligence
-    - webfetch: Web research without separate implementation
-    - MCP: Model Context Protocol for external tools
+    Why ACP mode:
+    - Designed for headless operation (no TTY required)
+    - JSON-RPC over stdin/stdout for structured communication
+    - Perfect for Docker containers and HuggingFace Spaces
+    - Same capabilities as CLI (bash, LSP, webfetch, MCP tools)
     """
-
-    # CLI options to try in order of preference
-    # OpenCode uses: opencode run -m provider/model "message"
-    CLI_OPTIONS = [
-        ("opencode", ["-m", "zai/glm-4.7"]),  # Primary: OpenCode CLI with Z.AI
-        ("claude", []),  # Fallback: Claude Code CLI
-    ]
-
-    # Modification keywords that trigger component context loading
-    MODIFICATION_KEYWORDS = [
-        "modify", "edit", "change", "add to", "remove from",
-        "refactor", "fix", "implement", "update", "improve",
-    ]
 
     def __init__(
         self,
@@ -118,16 +86,15 @@ class OpenCodeCoder:
         self.context_loader = context_loader
         self.memory = memory
 
-        # Find available CLI
-        self._cli_command, self._cli_args = self._find_cli()
+        # ACP process state
+        self._process: Optional[asyncio.subprocess.Process] = None
+        self._request_id = 0
+        self._lock = asyncio.Lock()
+        self._model = "zai/glm-4.7"
 
-        # Ensure OpenCode auth is configured
-        if self._cli_command == "opencode":
-            self._ensure_opencode_auth()
-
-        # Modification tracking
-        self._modifications: List[ModificationRecord] = []
+        # Execution tracking
         self._execution_count = 0
+        self._enabled = self.config.get("enabled", True)
 
         # Protected paths (never modify)
         self._protected_paths = self.config.get("protected_paths", [
@@ -138,18 +105,12 @@ class OpenCodeCoder:
             "safety_monitor.py",
         ])
 
-        # Enabled status (for compatibility with coder.py interface)
-        # Enable even without CLI - we have subprocess fallback for shell commands
-        config_enabled = self.config.get("enabled", True)
-        self._enabled = config_enabled  # Enable regardless of CLI availability
-        self._limited_mode = self._cli_command is None  # Track if we're in limited mode
-
-        if self._limited_mode and config_enabled:
-            logger.info("Coder running in limited mode (subprocess only, no full coding CLI)")
+        # Ensure OpenCode auth is configured
+        self._ensure_opencode_auth()
 
     @property
     def enabled(self) -> bool:
-        """Check if coder is enabled (property for compatibility)."""
+        """Check if coder is enabled."""
         return self._enabled
 
     @enabled.setter
@@ -157,201 +118,44 @@ class OpenCodeCoder:
         """Set enabled state."""
         self._enabled = value
 
-    def _find_cli(self) -> Tuple[Optional[str], List[str]]:
-        """Find available CLI command."""
-        for cmd, args in self.CLI_OPTIONS:
-            if shutil.which(cmd):
-                logger.info(f"Found CLI: {cmd}")
-                return cmd, args
-
-        logger.warning("No coding CLI found - will use subprocess fallback")
-        return None, []
-
     def _ensure_opencode_auth(self):
-        """Ensure OpenCode has auth configured for Z.AI.
-
-        OpenCode stores credentials in ~/.local/share/opencode/auth.json.
-        If ZAI_API_KEY is set but auth.json doesn't have Z.AI credentials,
-        create them automatically.
-        """
-        import json
-
+        """Ensure OpenCode has auth configured for Z.AI."""
         zai_key = os.environ.get("ZAI_API_KEY")
         if not zai_key:
-            logger.info("ZAI_API_KEY not set - OpenCode may not work with Z.AI")
+            logger.warning("ZAI_API_KEY not set - OpenCode may not authenticate")
             return
 
-        # Path to OpenCode auth file
         auth_dir = Path.home() / ".local" / "share" / "opencode"
         auth_file = auth_dir / "auth.json"
 
-        # Check if auth already configured
-        if auth_file.exists():
-            try:
-                with open(auth_file) as f:
-                    auth_data = json.load(f)
-                if "zai" in auth_data:
-                    logger.info("OpenCode Z.AI auth already configured")
-                    return
-            except (json.JSONDecodeError, IOError):
-                pass
-
-        # Create auth directory and file
         try:
             auth_dir.mkdir(parents=True, exist_ok=True)
-
-            # Load existing or create new
-            auth_data = {}
-            if auth_file.exists():
-                try:
-                    with open(auth_file) as f:
-                        auth_data = json.load(f)
-                except (json.JSONDecodeError, IOError):
-                    pass
-
-            # Add Z.AI credentials
-            auth_data["zai"] = {
-                "type": "api",
-                "key": zai_key
-            }
-
-            # Write auth file
-            with open(auth_file, 'w') as f:
-                json.dump(auth_data, f, indent=2)
-
-            logger.info(f"Created OpenCode Z.AI auth at {auth_file}")
+            auth_data = {"zai": {"type": "api", "key": zai_key}}
+            auth_file.write_text(json.dumps(auth_data))
+            logger.info(f"OpenCode auth configured at {auth_file}")
         except Exception as e:
-            logger.error(f"Failed to create OpenCode auth: {e}")
+            logger.error(f"Failed to configure OpenCode auth: {e}")
 
-    async def execute(
-        self,
-        prompt: str,
-        context: Optional[Dict] = None,
-        working_dir: Optional[str] = None,
-        desire_id: str = None
-    ) -> CoderResult:
-        """
-        Execute a coding/modification task.
-
-        This method is a drop-in replacement for coder.py and agent_coder.py.
-
-        1. Check if enabled
-        2. Signal ComponentCoordinator (pause other LLM calls)
-        3. Check constitutional constraints
-        4. Load tiered context
-        5. Execute CLI or subprocess
-        6. Record provenance
-        7. Signal completion
-
-        Args:
-            prompt: The coding task prompt (for compatibility with coder.py)
-            context: Optional context dict (for compatibility with coder.py)
-            working_dir: Optional working directory override
-            desire_id: ID of the originating desire (optional)
-
-        Returns:
-            CoderResult with success status and output
-        """
-        # Use prompt as task for internal processing
-        task = prompt
-
-        # Generate desire_id if not provided
-        if not desire_id:
-            desire_id = datetime.now().strftime("%Y%m%d%H%M%S%f")
-
-        start_time = datetime.now()
-        self._execution_count += 1
-
-        # Check if enabled
-        if not self._enabled:
-            return CoderResult(
-                success=False,
-                output="",
-                error="Coder is disabled or no CLI available",
-                session_id=desire_id,
-            )
-
-        # Check constitutional constraints
-        constraint_check = self._check_constitutional(task)
-        if not constraint_check["allowed"]:
-            return CoderResult(
-                success=False,
-                output="",
-                error=f"Constitutional constraint violation: {constraint_check['reason']}",
-                session_id=desire_id,
-            )
-
-        # Signal coordinator - other components pause LLM calls
-        if self.coordinator:
-            self.coordinator.coder_started(task[:50])
+    async def _start_acp(self) -> bool:
+        """Start the ACP subprocess."""
+        if self._process and self._process.returncode is None:
+            return True  # Already running
 
         try:
-            # Load tiered context (merge with provided context)
-            loaded_context = await self._build_context(task)
-            if context:
-                # Append provided context to loaded context
-                context_str = "\n".join(f"# {k}\n{v}" for k, v in context.items() if v)
-                loaded_context = f"{loaded_context}\n\n{context_str}"
-
-            # Build full prompt
-            full_prompt = f"{loaded_context}\n\n# TASK\n{task}"
-
-            # Execute (pass working_dir to CLI runner)
-            if self._cli_command:
-                result = await self._run_cli(full_prompt, task, working_dir)
-                # If CLI failed or produced no output, try Z.AI API fallback
-                if not result.success or (result.success and not result.output):
-                    logger.info("CLI produced no output - trying Z.AI API fallback")
-                    api_result = await self._run_zai_api(task)
-                    if api_result.success and api_result.output:
-                        result = api_result
-            else:
-                result = await self._run_subprocess(full_prompt, task, working_dir)
-
-            # Record provenance
-            if result.success:
-                await self._record_provenance(task, desire_id, result)
-
-            # Track modification
-            self._modifications.append(ModificationRecord(
-                desire_id=desire_id,
-                task=task,
-                files=result.files_modified + result.files_created,
-                success=result.success,
-            ))
-
-            end_time = datetime.now()
-            duration = (end_time - start_time).total_seconds()
-            result.duration_seconds = duration
-            result.duration_ms = int(duration * 1000)
-            result.session_id = desire_id
-
-            return result
-
-        finally:
-            if self.coordinator:
-                self.coordinator.coder_finished()
-
-    async def _build_context(self, task: str) -> str:
-        """Build context based on task type."""
-        context_parts = []
-
-        # Always load tier 1
-        if self.context_loader:
-            tier1 = await self.context_loader.load_tier1()
-            context_parts.append(tier1)
-
-            # Load tier 2 if modification task
-            if self._needs_component_context(task):
-                tier2 = await self.context_loader.load_tier2("component")
-                context_parts.append(tier2)
-
-        return "\n\n".join(context_parts)
-
-    def _needs_component_context(self, task: str) -> bool:
-        """Determine if task needs component-level context."""
-        task_lower = task.lower()
-        return any(kw in task_lower for kw in self.MODIFICATION_KEYWORDS)
+            self._process = await asyncio.create_subprocess_exec(
+                "opencode", "acp",
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            logger.info("OpenCode ACP process started")
+            return True
+        except FileNotFoundError:
+            logger.error("OpenCode CLI not found - install with: npm install -g opencode-ai")
+            return False
+        except Exception as e:
+            logger.error(f"Failed to start ACP: {e}")
+            return False
 
     def _check_constitutional(self, task: str) -> Dict[str, Any]:
         """Check if task violates constitutional constraints."""
@@ -382,299 +186,202 @@ class OpenCodeCoder:
 
         return {"allowed": True, "reason": None}
 
-    async def _run_cli(self, prompt: str, task: str, working_dir: Optional[str] = None) -> CoderResult:
-        """Execute task via CLI."""
+    async def execute(
+        self,
+        prompt: str,
+        context: Optional[Dict] = None,
+        working_dir: Optional[str] = None,
+        desire_id: str = None,
+    ) -> CoderResult:
+        """
+        Execute a coding task via OpenCode ACP.
+
+        Args:
+            prompt: The coding task prompt
+            context: Optional context dict
+            working_dir: Optional working directory (ignored in ACP mode)
+            desire_id: ID of the originating desire
+
+        Returns:
+            CoderResult with success status and output
+        """
+        start_time = datetime.now()
+        self._execution_count += 1
+
+        # Generate desire_id if not provided
+        if not desire_id:
+            desire_id = datetime.now().strftime("%Y%m%d%H%M%S%f")
+
+        # Check if enabled
+        if not self._enabled:
+            return CoderResult(
+                success=False,
+                output="",
+                error="Coder is disabled",
+                session_id=desire_id,
+            )
+
+        # Check constitutional constraints
+        constraint_check = self._check_constitutional(prompt)
+        if not constraint_check["allowed"]:
+            return CoderResult(
+                success=False,
+                output="",
+                error=f"Constitutional constraint violation: {constraint_check['reason']}",
+                session_id=desire_id,
+            )
+
+        # Build task with context
+        task = prompt
+        if context:
+            context_str = "\n".join(f"# {k}\n{v}" for k, v in context.items() if v)
+            task = f"Context:\n{context_str}\n\nTask:\n{prompt}"
+
+        logger.info(f"[Coder] Executing via ACP: {task[:100]}...")
+
+        # Signal coordinator - other components pause LLM calls
+        if self.coordinator:
+            self.coordinator.coder_started(task[:50])
+
         try:
-            # Build command
-            cmd = [self._cli_command] + self._cli_args
+            # Start ACP if needed
+            if not await self._start_acp():
+                return CoderResult(
+                    success=False,
+                    output="",
+                    error="Failed to start OpenCode ACP process",
+                    session_id=desire_id,
+                    duration_seconds=(datetime.now() - start_time).total_seconds(),
+                )
 
-            # Add task argument based on CLI type
-            if self._cli_command == "opencode":
-                # OpenCode syntax: opencode run -m model --format json --print-logs "message"
-                cmd.insert(1, "run")  # Add 'run' subcommand after 'opencode'
-                cmd.extend(["--format", "json", "--print-logs"])  # JSON format + logs to stderr
-                cmd.append(task)  # Add task as the final argument
-            elif self._cli_command == "claude":
-                cmd.extend(["--print", task])
+            # Send request via JSON-RPC
+            async with self._lock:
+                self._request_id += 1
+                request = {
+                    "jsonrpc": "2.0",
+                    "method": "message.send",
+                    "params": {
+                        "content": task,
+                        "model": self._model
+                    },
+                    "id": self._request_id
+                }
 
-            logger.info(f"Executing CLI command: {' '.join(cmd[:5])}... [task truncated]")
+                try:
+                    # Send request
+                    request_line = json.dumps(request) + "\n"
+                    self._process.stdin.write(request_line.encode())
+                    await self._process.stdin.drain()
 
-            # Set environment
-            env = os.environ.copy()
+                    # Read response with timeout (60 seconds)
+                    response_line = await asyncio.wait_for(
+                        self._process.stdout.readline(),
+                        timeout=60.0
+                    )
 
-            # Determine working directory
-            cwd = working_dir or self.config.get("project_root", ".")
+                    duration = (datetime.now() - start_time).total_seconds()
 
-            # Execute - provide stdin pipe and close it to signal EOF
-            proc = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                env=env,
-                cwd=cwd,
-            )
+                    if not response_line:
+                        return CoderResult(
+                            success=False,
+                            output="",
+                            error="Empty response from ACP",
+                            session_id=desire_id,
+                            duration_seconds=duration,
+                            duration_ms=int(duration * 1000),
+                        )
 
-            # Close stdin to signal no interactive input
-            proc.stdin.close()
-            await proc.stdin.wait_closed()
+                    response = json.loads(response_line.decode())
 
-            # Use shorter timeout for initial CLI test - OpenCode should respond quickly if working
-            cli_timeout = self.config.get("timeout_seconds", 60)
-            if cli_timeout > 120:
-                cli_timeout = 120  # Cap at 2 minutes for CLI calls
+                    if "error" in response:
+                        error_msg = response["error"].get("message", "Unknown ACP error")
+                        return CoderResult(
+                            success=False,
+                            output="",
+                            error=error_msg,
+                            session_id=desire_id,
+                            duration_seconds=duration,
+                            duration_ms=int(duration * 1000),
+                        )
 
-            stdout, stderr = await asyncio.wait_for(
-                proc.communicate(),
-                timeout=cli_timeout,
-            )
+                    result = response.get("result", {})
+                    content = result.get("content", "")
 
-            output = stdout.decode() if stdout else ""
-            error = stderr.decode() if stderr else None
+                    logger.info(f"[Coder] ACP success, {len(content)} chars in {duration:.1f}s")
 
-            # Log result for debugging
-            logger.info(f"CLI result: returncode={proc.returncode}, output_len={len(output)}, error_len={len(error) if error else 0}")
-            if proc.returncode != 0:
-                logger.warning(f"CLI error: {error[:500] if error else 'No error output'}")
+                    # Record provenance if memory available
+                    if self.memory:
+                        await self._record_provenance(prompt, desire_id, content)
 
-            # Parse modified files from output
-            files_modified, files_created = self._parse_file_changes(output)
+                    return CoderResult(
+                        success=True,
+                        output=content,
+                        session_id=desire_id,
+                        duration_seconds=duration,
+                        duration_ms=int(duration * 1000),
+                    )
 
-            # Include stderr in output if stdout is empty (logs might be there)
-            combined_output = output
-            if not output and error:
-                combined_output = f"[STDERR]\n{error}"
-            elif output and error:
-                combined_output = f"{output}\n[STDERR]\n{error}"
-
-            return CoderResult(
-                success=proc.returncode == 0,
-                output=combined_output,
-                error=error if proc.returncode != 0 else None,
-                files_modified=files_modified,
-                files_created=files_created,
-            )
-
-        except asyncio.TimeoutError:
-            return CoderResult(
-                success=False,
-                output="",
-                error="Execution timed out",
-            )
-        except Exception as e:
-            logger.error(f"CLI execution error: {e}")
-            return CoderResult(
-                success=False,
-                output="",
-                error=str(e),
-            )
-
-    async def _run_subprocess(self, prompt: str, task: str, working_dir: Optional[str] = None) -> CoderResult:
-        """Fallback: Execute task via subprocess without external CLI."""
-        # This is a minimal fallback for when no CLI is available
-        # It can only execute simple shell commands
-
-        # Determine working directory
-        cwd = working_dir or self.config.get("project_root", ".")
-
-        # Extract any shell commands from the task
-        if "```bash" in task or "```shell" in task:
-            # Extract command from code block
-            import re
-            match = re.search(r'```(?:bash|shell)\n(.*?)\n```', task, re.DOTALL)
-            if match:
-                command = match.group(1).strip()
-
-                # Safety check
-                if any(dangerous in command.lower() for dangerous in ["rm -rf", "sudo", "format"]):
+                except asyncio.TimeoutError:
+                    duration = (datetime.now() - start_time).total_seconds()
                     return CoderResult(
                         success=False,
                         output="",
-                        error="Dangerous command blocked",
+                        error="ACP request timed out after 60 seconds",
+                        session_id=desire_id,
+                        duration_seconds=duration,
+                        duration_ms=int(duration * 1000),
                     )
-
-                try:
-                    proc = await asyncio.create_subprocess_shell(
-                        command,
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE,
-                        cwd=cwd,
-                    )
-
-                    stdout, stderr = await asyncio.wait_for(
-                        proc.communicate(),
-                        timeout=60,
-                    )
-
-                    return CoderResult(
-                        success=proc.returncode == 0,
-                        output=stdout.decode() if stdout else "",
-                        error=stderr.decode() if stderr and proc.returncode != 0 else None,
-                    )
-
                 except Exception as e:
+                    duration = (datetime.now() - start_time).total_seconds()
                     return CoderResult(
                         success=False,
                         output="",
                         error=str(e),
+                        session_id=desire_id,
+                        duration_seconds=duration,
+                        duration_ms=int(duration * 1000),
                     )
 
-        # For non-shell tasks in limited mode, provide helpful error
-        # Try to execute as a simple task that might not need full coding
-        if self._limited_mode:
-            # In limited mode, we can still record the task as attempted
-            logger.info(f"Limited mode: Cannot execute full coding task: {task[:100]}")
-            return CoderResult(
-                success=True,  # Mark as success to not block the flow
-                output=f"[LIMITED MODE] Task acknowledged but requires full coding CLI for execution: {task[:200]}",
-                error=None,
-            )
+        finally:
+            if self.coordinator:
+                self.coordinator.coder_finished()
 
-        return CoderResult(
-            success=False,
-            output="",
-            error="No coding CLI available. Install 'opencode' or 'claude' CLI for full coding support.",
-        )
-
-    async def _run_zai_api(self, task: str) -> CoderResult:
-        """Fallback: Execute task via Z.AI API directly."""
-        import httpx
-
-        api_key = os.environ.get("ZAI_API_KEY")
-        if not api_key:
-            return CoderResult(
-                success=False,
-                output="",
-                error="ZAI_API_KEY not set for API fallback",
-            )
-
-        try:
-            endpoint = "https://api.z.ai/api/coding/paas/v4/chat/completions"
-
-            # Build coding prompt
-            system_prompt = """You are an expert Python programmer. Generate clean, working code based on the task.
-Output ONLY the code with no explanation, wrapped in ```python code blocks."""
-
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.post(
-                    endpoint,
-                    headers={
-                        "Authorization": f"Bearer {api_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "model": "glm-4.7",
-                        "messages": [
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": task},
-                        ],
-                        "temperature": 0.1,
-                        "max_tokens": 2000,
-                    },
-                )
-
-                if response.status_code != 200:
-                    return CoderResult(
-                        success=False,
-                        output="",
-                        error=f"Z.AI API error: {response.status_code} - {response.text[:200]}",
-                    )
-
-                result = response.json()
-                content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
-
-                logger.info(f"Z.AI API fallback produced {len(content)} chars")
-
-                return CoderResult(
-                    success=True,
-                    output=f"[Z.AI API FALLBACK]\n{content}",
-                    error=None,
-                )
-
-        except Exception as e:
-            logger.error(f"Z.AI API fallback error: {e}")
-            return CoderResult(
-                success=False,
-                output="",
-                error=f"Z.AI API fallback failed: {str(e)}",
-            )
-
-    def _parse_file_changes(self, output: str) -> Tuple[List[str], List[str]]:
-        """Parse file changes from CLI output."""
-        modified = []
-        created = []
-
-        # Common patterns in CLI output
-        import re
-
-        # Modified files
-        for pattern in [
-            r"Modified: (.+\.py)",
-            r"Updated: (.+\.py)",
-            r"Edited: (.+)",
-        ]:
-            modified.extend(re.findall(pattern, output))
-
-        # Created files
-        for pattern in [
-            r"Created: (.+\.py)",
-            r"New file: (.+)",
-        ]:
-            created.extend(re.findall(pattern, output))
-
-        return list(set(modified)), list(set(created))
-
-    async def _record_provenance(self, task: str, desire_id: str, result: CoderResult):
+    async def _record_provenance(self, task: str, desire_id: str, output: str):
         """Record modification provenance to memory."""
         if not self.memory:
             return
 
         try:
-            # Record as experience
             content = (
-                f"[CODE_MODIFICATION] Task: {task[:100]}\n"
-                f"Files modified: {', '.join(result.files_modified)}\n"
-                f"Files created: {', '.join(result.files_created)}\n"
-                f"Success: {result.success}"
+                f"[CODE_GENERATION] Task: {task[:100]}\n"
+                f"Output length: {len(output)} chars\n"
+                f"Desire ID: {desire_id}"
             )
 
             await self.memory.record_experience(
                 content=content,
-                type="self_modification",
+                type="code_generation",
             )
-
-            # Record provenance relationship if we have desire_id
-            if desire_id and desire_id != "unknown":
-                await self.memory.query("""
-                    MATCH (d:Desire {id: $desire_id})
-                    MATCH (e:Experience)
-                    WHERE e.content CONTAINS $task_snippet
-                    CREATE (e)-[:MOTIVATED_BY]->(d)
-                """, {
-                    "desire_id": desire_id,
-                    "task_snippet": task[:50],
-                })
 
         except Exception as e:
             logger.error(f"Error recording provenance: {e}")
 
-    async def can_execute(self, task: str) -> Dict[str, Any]:
-        """Check if a task can be executed."""
-        constitutional = self._check_constitutional(task)
-        cli_available = self._cli_command is not None
-
-        return {
-            "can_execute": constitutional["allowed"] and cli_available,
-            "constitutional_ok": constitutional["allowed"],
-            "cli_available": cli_available,
-            "reason": constitutional.get("reason") or ("No CLI available" if not cli_available else None),
-        }
+    async def stop(self):
+        """Stop the ACP subprocess."""
+        if self._process:
+            self._process.terminate()
+            try:
+                await asyncio.wait_for(self._process.wait(), timeout=5.0)
+            except asyncio.TimeoutError:
+                self._process.kill()
+            self._process = None
+            logger.info("OpenCode ACP process stopped")
 
     async def generate_code(self, prompt: str) -> str:
         """
         Generate code from a prompt.
 
-        This is a convenience method for code generation that returns
+        Convenience method for code generation that returns
         just the output string. Used by seeker.py for capability creation.
 
         Args:
@@ -693,12 +400,11 @@ Output ONLY the code with no explanation, wrapped in ```python code blocks."""
         turn_number: int = 1,
         session_id: str = None,
         working_dir: Optional[str] = None,
-    ) -> "CoderResult":
+    ) -> CoderResult:
         """
         Execute a single turn within an interactive session.
 
         This method is used by RalphLoop for multi-turn interactions.
-        It tracks turn number and session ID for transcript logging.
 
         Args:
             prompt: The coding task prompt
@@ -717,28 +423,34 @@ Output ONLY the code with no explanation, wrapped in ```python code blocks."""
             desire_id=session_id,
         )
 
-        # Add session metadata
         result.turns_used = turn_number
         result.session_id = session_id
 
         return result
 
-    def get_modification_history(self, limit: int = 20) -> List[ModificationRecord]:
-        """Get recent modification history."""
-        return self._modifications[-limit:]
+    async def can_execute(self, task: str) -> Dict[str, Any]:
+        """Check if a task can be executed."""
+        constitutional = self._check_constitutional(task)
+
+        return {
+            "can_execute": constitutional["allowed"],
+            "constitutional_ok": constitutional["allowed"],
+            "mode": "acp",
+            "reason": constitutional.get("reason"),
+        }
 
     def get_stats(self) -> Dict[str, Any]:
         """Get coder statistics."""
         return {
             "execution_count": self._execution_count,
-            "modifications_count": len(self._modifications),
-            "cli_command": self._cli_command,
+            "mode": "acp",
+            "model": self._model,
+            "process_running": self._process is not None and self._process.returncode is None,
             "protected_paths": self._protected_paths,
         }
 
     def reset(self):
-        """Reset the coder state."""
-        self._modifications = []
+        """Reset coder state."""
         self._execution_count = 0
 
 
