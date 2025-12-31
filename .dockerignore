@@ -22,3 +22,20 @@ build/
 !docs/
 docker-compose.yml
 searxng/
+
+# Test/development scripts with syntax issues
+test_*.py
+*_demo.py
+*_test.py
+validate_*.py
+break_*.py
+run_loops_activation.py
+orphan_diagnostic_and_fix.py
+execute_goal_*.py
+bootstrap_*.py
+check_syntax.py
+final_verification.py
+quick_filter_test.py
+goal_6_deadlock_integration.py
+verify_*.py
+coding_sessions/

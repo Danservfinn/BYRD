@@ -209,16 +209,16 @@ class DeadlockBreaker:
         # Actual detection logic
         async with self.memory.driver.session() as session:
             # Count orphans
-            result = await session.run(""
+            result = await session.run("""
                 MATCH (orphan)
                 WHERE NOT (orphan)-[]-()
                 RETURN count(orphan) as orphan_count
             """)
             record = await result.single()
             orphan_count = record["orphan_count"] if record else 0
-            
+
             # Check connection rate
-            result = await session.run(""
+            result = await session.run("""
                 MATCH ()-[r:RELATED_TO]->()
                 WHERE r.timestamp >= datetime() - duration('P1D')
                 RETURN count(r) as connections
@@ -322,7 +322,7 @@ class DeadlockBreaker:
             return [{"id": f"orphan_{i}", "content": f"orphan content {i}"} for i in range(count)]
         
         async with self.memory.driver.session() as session:
-            result = await session.run(""
+            result = await session.run("""
                 MATCH (orphan)
                 WHERE NOT (orphan)-[]-()
                 RETURN orphan.id as id, orphan.content as content, labels(orphan) as labels
@@ -437,7 +437,7 @@ class DeadlockBreaker:
                 # Process each orphan in the batch
                 for orphan in batch.orphans:
                     # Try to find semantic matches
-                    result = await session.run(""
+                    result = await session.run("""
                         MATCH (orphan)
                         WHERE orphan.id = $orphan_id
                         MATCH (potential:Concept)
@@ -486,7 +486,7 @@ class DeadlockBreaker:
         try:
             async with self.memory.driver.session() as session:
                 # Get a high-degree hub node to connect to
-                result = await session.run(""
+                result = await session.run("""
                     MATCH (hub)
                     WHERE (hub)-[:RELATED_TO]-()
                     WITH hub, size((hub)-[:RELATED_TO]-()) as degree
@@ -504,7 +504,7 @@ class DeadlockBreaker:
                 hub_label = record["hub_label"]
                 
                 # Force connect all orphans to hub
-                result = await session.run(""
+                result = await session.run("""
                     MATCH (orphan)
                     WHERE NOT (orphan)-[]-()
                     MATCH (hub)
@@ -542,7 +542,7 @@ class DeadlockBreaker:
         try:
             async with self.memory.driver.session() as session:
                 # Create emergency hub if not exists
-                result = await session.run(""
+                result = await session.run("""
                     MERGE (hub:EmergencyHub:Concept {name: 'ORPHAN_RESCUE'})
                     ON CREATE SET hub.created = datetime(), hub.purpose = 'Orphan consolidation during deadlock'
                     RETURN hub.id as hub_id
@@ -550,7 +550,7 @@ class DeadlockBreaker:
                 record = await result.single()
                 
                 # Connect remaining orphans to emergency hub
-                result = await session.run(""
+                result = await session.run("""
                     MATCH (orphan)
                     WHERE NOT (orphan)-[]-()
                     MATCH (hub:EmergencyHub {name: 'ORPHAN_RESCUE'})
@@ -584,7 +584,7 @@ class DeadlockBreaker:
         try:
             async with self.memory.driver.session() as session:
                 # Step 1: Create emergency hub
-                result = await session.run(""
+                result = await session.run("""
                     MERGE (hub:EmergencyHub:Concept {name: 'ORPHAN_RESCUE_SURGERY'})
                     ON CREATE SET 
                         hub.created = datetime(),
@@ -598,7 +598,7 @@ class DeadlockBreaker:
                     return
                 
                 # Step 2: Connect ALL orphans to emergency hub
-                result = await session.run(""
+                result = await session.run("""
                     MATCH (orphan)
                     WHERE NOT (orphan)-[]-()
                     MATCH (hub:EmergencyHub {name: 'ORPHAN_RESCUE_SURGERY'})
