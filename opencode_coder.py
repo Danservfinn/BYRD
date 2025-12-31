@@ -169,13 +169,11 @@ class OpenCodeCoder:
 
         try:
             # Build CLI command
-            # opencode run --model <model> --format json "prompt"
+            # opencode run --model <model> --format json
+            # Pass prompt via stdin using echo pipe
             cmd = [
-                "opencode",
-                "run",
-                "--model", self._model,
-                "--format", "json",
-                task,
+                "bash", "-c",
+                f'echo {json.dumps(task)} | opencode run --model {self._model} --format json'
             ]
 
             # Set environment for headless operation
@@ -184,7 +182,7 @@ class OpenCodeCoder:
             env["CI"] = "true"  # Common flag to disable interactive prompts
             env["NO_COLOR"] = "1"  # Disable color output
 
-            logger.info(f"[Coder] Running: opencode run --model {self._model} --format json '...'")
+            logger.info(f"[Coder] Running: echo '...' | opencode run --model {self._model} --format json")
 
             # Run with timeout
             process = await asyncio.create_subprocess_exec(
