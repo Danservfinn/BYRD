@@ -197,10 +197,10 @@ class OpenCodeCoder:
         """Send a message to an OpenCode session."""
         try:
             async with httpx.AsyncClient(timeout=120.0) as client:
+                # OpenCode serve API expects model as object or omit it (session has model)
                 resp = await client.post(
                     f"{self._base_url}/session/{session_id}/message",
                     json={
-                        "model": self._model,
                         "parts": [
                             {"type": "text", "text": content}
                         ]
