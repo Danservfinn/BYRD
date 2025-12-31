@@ -289,11 +289,12 @@ DESIRE_ID: {desire_id or 'unspecified'}
             session_id = desire_id
             cost_usd = 0.0
 
-            # Build options
+            # Build options - use bypassPermissions for autonomous operation
             options = ClaudeCodeOptions(
                 max_turns=self._max_turns,
                 system_prompt=self._build_system_prompt(desire_id),
                 cwd=self.working_dir,
+                permission_mode='bypassPermissions',  # Allow autonomous file operations
             )
 
             # Execute via SDK - collect all messages
