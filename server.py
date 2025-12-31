@@ -1938,20 +1938,26 @@ async def get_coder_status():
         except Exception as e:
             auth_info["error"] = str(e)
 
+    # Get mode from coder if available
+    coder_mode = "unknown"
+    coder_stats = None
+    coder_enabled = False
+
+    if byrd_instance and hasattr(byrd_instance, 'coder') and byrd_instance.coder:
+        coder_enabled = byrd_instance.coder.enabled
+        coder_stats = byrd_instance.coder.get_stats()
+        coder_mode = coder_stats.get("mode", "unknown") if coder_stats else "unknown"
+
     result = {
-        "mode": "acp",
+        "mode": coder_mode,
         "opencode_cli": opencode_info,
         "opencode_available": opencode_path is not None,
         "opencode_auth": auth_info,
-        "coder_enabled": False,
-        "coder_stats": None,
+        "coder_enabled": coder_enabled,
+        "coder_stats": coder_stats,
         "zai_api_key_set": "ZAI_API_KEY" in os.environ,
         "current_user": os.getenv("USER", "unknown"),
     }
-
-    if byrd_instance and hasattr(byrd_instance, 'coder') and byrd_instance.coder:
-        result["coder_enabled"] = byrd_instance.coder.enabled
-        result["coder_stats"] = byrd_instance.coder.get_stats()
 
     return result
 
