@@ -26,6 +26,7 @@ class DesireType(Enum):
     CAPABILITY = "capability"          # "Learn", "Improve", "Master" -> AGI Runner
     ACTION = "action"                  # "Search", "Find", "Investigate" -> Seeker
     META = "meta"                      # About self-improvement itself -> AGI Runner
+    COMPLEX_TASK = "complex_task"      # Multi-phase tasks -> Goal Cascade
 
 
 @dataclass
@@ -83,6 +84,14 @@ class DesireClassifier:
         'measure progress', 'assess growth', 'evaluate myself'
     }
 
+    COMPLEX_TASK_KEYWORDS = {
+        'tell me how to', 'build me', 'create a system',
+        'help me understand', 'value', 'analyze in depth',
+        'evaluate thoroughly', 'develop a', 'implement a',
+        'design a', 'architect', 'comprehensive', 'multi-step',
+        'end to end', 'full solution', 'complete system'
+    }
+
     def __init__(self, config: Dict = None):
         """Initialize the classifier with optional configuration."""
         self.config = config or {}
@@ -123,7 +132,8 @@ class DesireClassifier:
             'capability': [],
             'philosophical': [],
             'action': [],
-            'meta': []
+            'meta': [],
+            'complex_task': []
         }
 
         # Count keyword matches for each type
@@ -143,8 +153,13 @@ class DesireClassifier:
             if kw in description_lower:
                 phrase_matches['meta'].append(kw)
 
-        # Calculate scores
+        for kw in self.COMPLEX_TASK_KEYWORDS:
+            if kw in description_lower:
+                phrase_matches['complex_task'].append(kw)
+
+        # Calculate scores - COMPLEX_TASK has highest priority when matched
         scores = [
+            (DesireType.COMPLEX_TASK, len(phrase_matches['complex_task']) * 2, phrase_matches['complex_task']),
             (DesireType.META, len(phrase_matches['meta']), phrase_matches['meta']),
             (DesireType.CAPABILITY, len(phrase_matches['capability']), phrase_matches['capability']),
             (DesireType.ACTION, len(phrase_matches['action']), phrase_matches['action']),
@@ -234,12 +249,26 @@ class DesireClassifier:
     def _get_handler(self, desire_type: DesireType) -> str:
         """Map desire type to handler name."""
         handlers = {
+            DesireType.COMPLEX_TASK: "goal_cascade",
             DesireType.CAPABILITY: "agi_runner",
             DesireType.ACTION: "seeker",
             DesireType.PHILOSOPHICAL: "dreamer",
             DesireType.META: "agi_runner",
         }
         return handlers.get(desire_type, "seeker")
+
+    def is_complex_task(self, description: str) -> bool:
+        """
+        Check if a desire describes a complex, multi-phase task.
+
+        Args:
+            description: The desire description
+
+        Returns:
+            True if this should route to Goal Cascade
+        """
+        result = self.classify(description)
+        return result.desire_type == DesireType.COMPLEX_TASK
 
     def route(self, desire: Dict) -> str:
         """

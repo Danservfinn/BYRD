@@ -31,6 +31,16 @@ These files define BYRD's identity and cannot be modified by self-modification:
 | `modification_log.py` | Immutable audit trail |
 | `constitutional.py` | Constitutional constraints definition |
 
+## v2.1 Modules (Goal Cascade & Sovereignty)
+
+| File | Purpose |
+|------|---------|
+| `goal_cascade.py` | Complex task decomposition with Neo4j persistence |
+| `context_loader.py` | Tiered context loading (~500/~2000/full tokens) |
+| `plugin_manager.py` | Emergent plugin discovery from registries |
+| `request_evaluator.py` | Sovereignty layer for request evaluation |
+| `opencode_coder.py` | CLI wrapper with ComponentCoordinator integration |
+
 ## Support Modules
 
 | File | Purpose |

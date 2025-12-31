@@ -25,3 +25,4 @@
 | Quantum Randomness System | metadata | ./.claude/metadata/quantum-randomness.md | quantum, anu-qrng, entropy, temperature, indeterminacy | — | 2025-12-24 |
 | Hierarchical Memory System | metadata | ./.claude/metadata/hierarchical-memory.md | memory, summarization, seeds, context, compression | — | 2025-12-24 |
 | AGI Runner System | metadata | ./.claude/metadata/agi-runner.md | agi, self-improvement, metrics, capability-evaluation, strategy-tracking | — | 2025-12-28 |
+| Goal Cascade System | metadata | ./.claude/metadata/goal-cascade-module.md | goal-cascade, complex-tasks, neo4j, phases, sovereignty, plugin-discovery | — | 2025-12-30 |

@@ -28,6 +28,10 @@ from actor import Actor
 from coder import Coder
 from agent_coder import AgentCoder, create_agent_coder
 from self_modification import SelfModificationSystem
+from context_loader import ContextLoader, create_context_loader
+from plugin_manager import PluginManager, create_plugin_manager
+from goal_cascade import GoalCascade, create_goal_cascade
+from request_evaluator import RequestEvaluator, create_request_evaluator
 from constitutional import ConstitutionalConstraints
 from event_bus import event_bus, Event, EventType
 from llm_client import create_llm_client, configure_rate_limiter, set_instance_manager, create_rate_limited_client
@@ -552,6 +556,55 @@ class BYRD:
         self._graphiti = None
         self._outcome_dispatcher = None
 
+        # v2.1: New components for Goal Cascade, plugin discovery, sovereignty
+        self.context_loader = None
+        self.plugin_manager = None
+        self.goal_cascade = None
+        self.request_evaluator = None
+
+        try:
+            # Context Loader - tiered context loading to prevent LLM overflow
+            self.context_loader = create_context_loader(
+                config=self.config.get("context_loader", {}),
+                memory=self.memory
+            )
+            print("📚 ContextLoader: initialized (tiered context)")
+
+            # Plugin Manager - emergent capability discovery
+            plugin_config = self.config.get("plugin_manager", {})
+            plugin_config["project_root"] = "."
+            self.plugin_manager = create_plugin_manager(
+                config=plugin_config,
+                memory=self.memory
+            )
+            print("🔌 PluginManager: initialized (emergent discovery)")
+
+            # Goal Cascade - complex task decomposition with Neo4j persistence
+            self.goal_cascade = create_goal_cascade(
+                memory=self.memory,
+                llm_client=self.llm_client,
+                config=self.config.get("goal_cascade", {})
+            )
+            print("🎯 GoalCascade: initialized (Neo4j persistence)")
+
+            # Request Evaluator - sovereignty layer
+            self.request_evaluator = create_request_evaluator(
+                memory=self.memory,
+                llm_client=self.llm_client,
+                config=self.config.get("request_evaluator", {})
+            )
+            print("⚖️ RequestEvaluator: initialized (sovereignty layer)")
+
+            # Inject new components into Seeker
+            self.seeker.goal_cascade = self.goal_cascade
+            self.seeker.plugin_manager = self.plugin_manager
+            self.seeker.context_loader = self.context_loader
+            self.seeker.request_evaluator = self.request_evaluator
+            print("   → Injected into Seeker")
+
+        except Exception as e:
+            print(f"⚠️ v2.1 components: partial initialization - {e}")
+
         # State
         self._running = False
         self._started_at: Optional[datetime] = None
@@ -656,6 +709,15 @@ class BYRD:
             # Always ensure architecture documents are loaded (even if already awakened)
             # This implements the AGI Seed directive's "FIRST ACTIONS: Read ARCHITECTURE.md"
             await self._ensure_architecture_loaded()
+
+            # v2.1: Resume any in-progress Goal Cascades from Neo4j
+            if self.goal_cascade:
+                try:
+                    resumed_count = await self.goal_cascade.resume_pending_cascades()
+                    if resumed_count > 0:
+                        print(f"🎯 GoalCascade: resumed {resumed_count} pending cascade(s)")
+                except Exception as e:
+                    print(f"⚠️ GoalCascade resume failed: {e}")
 
             # Show self-modification status
             self_mod_status = "enabled" if self.self_mod.enabled else "disabled"

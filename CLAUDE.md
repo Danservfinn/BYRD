@@ -159,6 +159,35 @@ Key methods:
 | **Code Learner** | `code_learner.py` | Converts stable patterns (10+ uses, 80%+ success) to Python code |
 | **Compute Introspector** | `compute_introspection.py` | Resource monitoring, token tracking, bottleneck detection |
 
+**v2.1 Components (Goal Cascade & Sovereignty):**
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| **Goal Cascade** | `goal_cascade.py` | Complex task decomposition into phased desire trees with Neo4j persistence |
+| **Context Loader** | `context_loader.py` | Tiered context loading (~500 Tier1, ~2000 Tier2, full Tier3) |
+| **Plugin Manager** | `plugin_manager.py` | Emergent plugin discovery from awesome-opencode registry |
+| **Request Evaluator** | `request_evaluator.py` | Sovereignty layer - evaluates alignment, interest, growth potential |
+| **OpenCode Coder** | `opencode_coder.py` | CLI wrapper for external coding tools with ComponentCoordinator integration |
+
+**Goal Cascade Phases:**
+
+| Phase | Purpose | Human Interaction |
+|-------|---------|-------------------|
+| RESEARCH | Understand the domain | Optional expertise |
+| DATA_ACQUISITION | Obtain necessary data/APIs | May need credentials |
+| TOOL_BUILDING | Create required capabilities | - |
+| INTEGRATION | Combine into solution | - |
+| VALIDATION | Verify with human feedback | Required approval |
+
+**Plugin Discovery Paths:**
+
+| Path | Trigger | Action |
+|------|---------|--------|
+| **Reactive** | Strategy failure ("No tool for X") | `discover_for_gap()` → suggest plugin |
+| **Proactive** | Periodic analysis of failures | `analyze_capability_gaps()` → recommend plugins |
+
+**Sovereignty Principle:** Discovery is automatic, installation is BYRD's sovereign choice.
+
 **OpenCode Agent (`opencode_agent.py`):**
 
 The OpenCode Agent is BYRD's unified coding and self-modification engine, powered by GLM-4.7 via the ZAI API. It replaces the deprecated Actor, Coder, and Agent Coder components.
@@ -228,11 +257,13 @@ The Seeker routes desires through the DesireClassifier first, then to strategies
 | `capability` | AGI Runner | improve, learn, enhance, capability |
 | `action` | Seeker | do, make, create, build |
 | `meta` | AGI Runner | think about thinking, meta, optimize myself |
+| `complex_task` | Goal Cascade | tell me how to, build me, create a system, help me understand, value, analyze |
 
 **Seeker Strategies (Second Pass):**
 
 | Strategy | Keywords | Action |
 |----------|----------|--------|
+| `goal_cascade` | tell me how to, build me, create a system, value | Multi-phase task decomposition via GoalCascade |
 | `agi_cycle` | improve, capability, learn new | AGI Runner improvement cycle |
 | `reconcile_orphans` | orphan, integrate, fragmentation, unify | Connect orphaned nodes |
 | `curate` | optimize, clean, consolidate, graph health | Curate memory graph |
@@ -243,7 +274,7 @@ The Seeker routes desires through the DesireClassifier first, then to strategies
 | `install` | install, add capability, tool | Install capabilities |
 | `search` | (default fallback) | Web research |
 
-**Order matters**: DesireClassifier routes first, then internal strategies are checked.
+**Order matters**: DesireClassifier routes first (COMPLEX_TASK → goal_cascade), then internal strategies are checked.
 
 ### Document Editing
 
@@ -987,6 +1018,13 @@ byrd/
 │   ├── dual_instance_manager.py  # Two GLM-4.7 instances with independent rate limiting
 │   ├── graphiti_layer.py         # Temporal knowledge graph with entity extraction
 │   └── outcome_dispatcher.py     # Routes outcomes to learning components
+│
+├── v2.1 Goal Cascade & Sovereignty
+│   ├── goal_cascade.py           # Complex task decomposition with Neo4j persistence
+│   ├── context_loader.py         # Tiered context loading (Tier1/2/3)
+│   ├── plugin_manager.py         # Emergent plugin discovery from registries
+│   ├── request_evaluator.py      # Sovereignty layer for request evaluation
+│   └── opencode_coder.py         # CLI wrapper with ComponentCoordinator integration
 │
 ├── AGI Seed Components
 │   ├── self_model.py           # Capability tracking + Bayesian

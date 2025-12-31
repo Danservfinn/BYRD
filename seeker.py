@@ -127,6 +127,12 @@ class Seeker:
         # AGI Runner (injected later by BYRD for capability improvement cycles)
         self.agi_runner = None
 
+        # Goal Cascade (injected later by BYRD for complex task decomposition)
+        self.goal_cascade = None
+
+        # Plugin Manager (injected later by BYRD for plugin discovery)
+        self.plugin_manager = None
+
         # Desire Classifier for routing desires to appropriate handlers
         self.desire_classifier = None
         if HAS_DESIRE_CLASSIFIER:
@@ -888,6 +894,21 @@ Reply with ONLY one word: introspect, reconcile_orphans, curate, self_modify, in
             print(f"🔧 Install desire (classified as creation) → install strategy: {description[:50]}")
             return "install"
 
+        # COMPLEX TASK DETECTION (check before creation → code routing)
+        # Multi-phase tasks requiring research, data acquisition, tool building, integration
+        complex_task_keywords = [
+            "tell me how to", "build me", "create a system",
+            "help me understand", "design a", "architect",
+            "develop a complete", "implement a full", "end to end",
+            "comprehensive", "multi-step", "full solution"
+        ]
+        if intent == "creation" and any(kw in desc_lower for kw in complex_task_keywords):
+            # Check if this is genuinely complex (long enough to need decomposition)
+            word_count = len(description.split())
+            if word_count > 8 or any(kw in desc_lower for kw in ["build me", "tell me how to", "create a system"]):
+                print(f"🎯 Complex task detected → goal_cascade: {description[:50]}")
+                return "goal_cascade"
+
         # Creation → code generation
         if intent == "creation":
             return "code"
@@ -1470,6 +1491,42 @@ REASON: [brief explanation]"""
                     return ("success" if success else "failed",
                             None if success else "Fallback search returned no results")
 
+            elif strategy == "goal_cascade":
+                # Goal Cascade for complex multi-phase tasks
+                if self.goal_cascade:
+                    try:
+                        tree = await self.goal_cascade.resume_or_create(description, "human")
+                        if tree:
+                            # Execute current phase
+                            current_phase = tree.current_phase_obj
+                            if current_phase:
+                                result = await self.goal_cascade.execute_phase(current_phase, tree)
+                                if result.status == "blocked":
+                                    return ("in_progress",
+                                            f"Goal cascade blocked at phase {tree.current_phase + 1}/{tree.total_phases}: {result.summary}")
+                                elif result.status == "completed":
+                                    if tree.current_phase >= tree.total_phases:
+                                        return ("success", f"Goal cascade completed all {tree.total_phases} phases")
+                                    else:
+                                        return ("in_progress",
+                                                f"Goal cascade phase {tree.current_phase}/{tree.total_phases} completed")
+                                else:
+                                    return ("failed", f"Phase failed: {result.summary}")
+                            else:
+                                return ("success", "Goal cascade decomposed into phases")
+                        else:
+                            return ("failed", "Could not decompose goal into phases")
+                    except Exception as e:
+                        return ("failed", f"Goal cascade error: {str(e)[:50]}")
+                else:
+                    # Fallback to code strategy if goal_cascade not available
+                    if self.coder and self.coder.enabled:
+                        success = await self._execute_code_strategy(description)
+                        return ("success" if success else "failed",
+                                None if success else "Fallback code execution failed")
+                    else:
+                        return ("skipped", "Goal Cascade not available")
+
             else:
                 # No recognized strategy - record for BYRD to reflect on
                 return ("skipped", f"No strategy for: {description[:50]}")
@@ -1486,6 +1543,10 @@ REASON: [brief explanation]"""
             content = f"[ACTION_SUCCESS] Pursued: {description}\nStrategy: {strategy}\nOutcome: Succeeded"
         elif outcome == "failed":
             content = f"[ACTION_FAILED] Pursued: {description}\nStrategy: {strategy}\nReason: {reason or 'Unknown'}"
+
+            # REACTIVE PLUGIN DISCOVERY: Search for plugins when strategy fails
+            # due to capability-related issues
+            await self._reactive_plugin_discovery(description, reason)
         else:
             content = f"[ACTION_SKIPPED] Pursued: {description}\nStrategy: {strategy}\nReason: {reason or 'No strategy'}"
 
@@ -1496,6 +1557,40 @@ REASON: [brief explanation]"""
 
         # Check if this outcome validates or falsifies any pending predictions
         await self._check_predictions_against_outcome(exp_id, content)
+
+    async def _reactive_plugin_discovery(self, description: str, reason: Optional[str]):
+        """
+        Reactive plugin discovery: Search for plugins when a strategy fails.
+
+        This is Path 1 of the simplified plugin discovery system.
+        Discovery is automatic, installation is sovereign (BYRD chooses).
+        """
+        if not self.plugin_manager:
+            return
+
+        # Check if failure is capability-related
+        reason_lower = (reason or "").lower()
+        capability_failure_keywords = [
+            "capability", "not available", "not installed", "missing",
+            "no tool", "can't", "cannot", "unable", "no handler",
+            "not supported", "not implemented"
+        ]
+
+        if not any(kw in reason_lower for kw in capability_failure_keywords):
+            return
+
+        # Extract capability gap from the description/reason
+        gap = description[:50]  # Simplified - use first 50 chars as query
+
+        try:
+            # Search for matching plugins (automatic discovery)
+            result = await self.plugin_manager.discover_for_gap(gap)
+            if result.plugins_found:
+                print(f"🔌 Reactive discovery: Found {len(result.plugins_found)} plugins for '{gap[:30]}...'")
+                # The discovery is recorded as an experience by plugin_manager
+                # Dreamer will see it during reflection and may form install desires
+        except Exception as e:
+            print(f"⚠️ Reactive plugin discovery error: {e}")
 
     async def _check_predictions_against_outcome(self, outcome_exp_id: str, outcome_content: str):
         """
