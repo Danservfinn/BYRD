@@ -178,6 +178,12 @@ class OpenCodeCoder:
                 task,
             ]
 
+            # Set environment for headless operation
+            env = os.environ.copy()
+            env["TERM"] = "dumb"
+            env["CI"] = "true"  # Common flag to disable interactive prompts
+            env["NO_COLOR"] = "1"  # Disable color output
+
             logger.info(f"[Coder] Running: opencode run --model {self._model} --format json '...'")
 
             # Run with timeout
@@ -186,6 +192,7 @@ class OpenCodeCoder:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 cwd=working_dir,
+                env=env,
             )
 
             try:
