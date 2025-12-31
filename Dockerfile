@@ -15,11 +15,14 @@ WORKDIR $HOME/app
 COPY --chown=user requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
-# Cache bust (updated on each deploy)
-ARG CACHEBUST=8
+# Cache bust (updated on each deploy) - increment to force rebuild
+ARG CACHEBUST=9
 
 # Copy application code (rebuilt when CACHEBUST changes)
 COPY --chown=user . .
+
+# Verify Python syntax of key files (fail early on syntax errors)
+RUN python -m py_compile request_evaluator.py server.py byrd.py
 
 # HuggingFace uses port 7860
 ENV PORT=7860
