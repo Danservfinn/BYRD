@@ -1,6 +1,6 @@
 {
-  "version": "11.0",
-  "schema_version": "1.0",
+  "version": "12.1",
+  "schema_version": "1.2",
   "last_updated": "2025-12-30",
 
   "identity": {
@@ -65,6 +65,43 @@
     "understands_component_purposes": true
   },
 
+  "context_loading": {
+    "description": "Tiered context loading prevents overflow while maintaining self-awareness",
+    "tiers": {
+      "tier1": {
+        "always_loaded": true,
+        "approximate_tokens": 500,
+        "contents": [
+          "core identity (name, philosophy, version)",
+          "current desires (top 3 by intensity)",
+          "recent beliefs (top 5 by confidence)",
+          "protected files list",
+          "available strategies list"
+        ]
+      },
+      "tier2": {
+        "loaded_on_demand": true,
+        "approximate_tokens": 2000,
+        "triggers": ["strategy type", "task keywords", "explicit request"],
+        "contents": [
+          "component details (for modification tasks)",
+          "strategy instructions (for active strategy)",
+          "plugin registry info (for install strategy)",
+          "goal cascade state (for complex tasks)"
+        ]
+      },
+      "tier3": {
+        "explicit_request_only": true,
+        "contents": [
+          "complete ARCHITECTURE.md",
+          "complete self_model.json",
+          "complete CLAUDE.md"
+        ],
+        "trigger_phrases": ["read my architecture", "show full self-model", "what am I"]
+      }
+    }
+  },
+
   "components": {
     "core": {
       "byrd.py": {
@@ -86,11 +123,12 @@
         "modifiable": true,
         "llm": "local"
       },
-      "opencode_agent.py": {
-        "purpose": "Autonomous coding and self-modification via OpenCode",
+      "opencode_coder.py": {
+        "purpose": "CLI wrapper for OpenCode - provides bash, LSP, webfetch, MCP",
         "modifiable": true,
         "llm": "glm-4.7",
-        "replaces": "coder.py"
+        "replaces": ["coder.py", "agent_coder.py"],
+        "capabilities": ["bash", "lsp", "webfetch", "mcp", "file_ops"]
       },
       "llm_client.py": {
         "purpose": "Multi-provider LLM abstraction with rate limiting",
@@ -178,13 +216,14 @@
       "byrd.py",
       "dreamer.py",
       "seeker.py",
-      "opencode_agent.py",
+      "opencode_coder.py",
       "memory.py",
       "llm_client.py",
       "config.yaml",
       "event_bus.py",
       "server.py",
       "plugin_manager.py",
+      "context_loader.py",
       "agi_runner.py",
       "desire_classifier.py",
       "capability_evaluator.py",
@@ -213,6 +252,13 @@
         {"type": "Constraint", "purpose": "Operational constraints"},
         {"type": "Strategy", "purpose": "Learned approaches"}
       ],
+      "goal_cascade": [
+        {"type": "GoalCascade", "purpose": "Root node for complex multi-phase tasks"},
+        {"type": "CascadePhase", "purpose": "Individual phases (RESEARCH, DATA_ACQUISITION, TOOL_BUILDING, INTEGRATION, VALIDATION)"},
+        {"type": "CascadeDesire", "purpose": "Desires within each phase"},
+        {"type": "HumanInteractionPoint", "purpose": "Where human input was requested/received"},
+        {"type": "CascadeArtifact", "purpose": "Artifacts produced by the cascade (code, data, docs)"}
+      ],
       "temporal": [
         {"type": "GraphitiEntity", "purpose": "Extracted entities with bi-temporal tracking"},
         {"type": "GraphitiEpisode", "purpose": "Source content for entity extraction"},
@@ -230,7 +276,14 @@
       "CRYSTALLIZED_INTO (memory consolidation)",
       "FULFILLS (capability->desire)",
       "MOTIVATED_BY (modification->desire)",
-      "EVOLVED_FROM (version history)"
+      "EVOLVED_FROM (version history)",
+      "HAS_PHASE (cascade->phase)",
+      "HAS_DESIRE (phase->desire)",
+      "NEXT_PHASE (phase->phase ordering)",
+      "DEPENDS_ON (desire dependency)",
+      "REQUIRES_HUMAN (phase->interaction point)",
+      "PRODUCED (phase->artifact)",
+      "ORIGINATED_FROM (cascade->desire)"
     ]
   },
 
@@ -300,11 +353,34 @@
 
   "plugins": {
     "description": "BYRD can discover and install plugins when it recognizes a capability gap",
-    "philosophy": "Plugin installation is desire-driven, not automated. BYRD notices gaps, forms desires, and chooses to explore the registry.",
+    "philosophy": "Discovery is automatic, installation is sovereign. BYRD sees discoveries and chooses whether to install.",
     "registry": {
       "name": "awesome-opencode",
       "url": "https://github.com/awesome-opencode/awesome-opencode",
       "raw_url": "https://raw.githubusercontent.com/awesome-opencode/awesome-opencode/main/README.md"
+    },
+    "parsing": {
+      "primary_method": "regex",
+      "fallback_method": "github_api",
+      "regex_pattern": "-\\s*\\[([^\\]]+)\\]\\(([^)]+)\\)\\s*-?\\s*(.*?)$",
+      "github_api_rate_limit": "60 requests/hour unauthenticated",
+      "cache_results": true
+    },
+    "discovery_paths": {
+      "reactive": {
+        "description": "Automatic search on strategy failure",
+        "trigger": "capability_missing failure type",
+        "action": "Search registry, record as experience",
+        "automatic": true,
+        "install": false
+      },
+      "proactive": {
+        "description": "Periodic capability gap analysis",
+        "trigger": "Every N Omega cycles (default: 10)",
+        "action": "Analyze failures, search for matching plugins, record discoveries",
+        "automatic": true,
+        "install": false
+      }
     },
     "awareness": {
       "byrd_knows_about_registry": true,
@@ -313,19 +389,19 @@
       "byrd_chooses_to_install": true
     },
     "discovery_triggers": [
-      "Reflection reveals a capability gap",
+      "Strategy fails due to missing capability (reactive path)",
+      "Periodic capability gap analysis (proactive path)",
       "Goal Cascade identifies missing tool",
       "Human interaction reveals need",
-      "Curiosity about what plugins exist",
-      "Desire to expand capabilities"
+      "Curiosity about what plugins exist"
     ],
     "installation_process": {
-      "step_1": "BYRD notices capability gap during reflection or task execution",
-      "step_2": "BYRD forms desire: 'I want to explore what plugins could help with X'",
-      "step_3": "Seeker routes to 'install' strategy, invokes plugin_manager",
-      "step_4": "BYRD browses registry, evaluates options based on its own judgment",
-      "step_5": "BYRD decides whether to install (sovereign choice)",
-      "step_6": "If installed, Capability node created with provenance to originating desire"
+      "step_1": "Discovery recorded as experience (via reactive or proactive path)",
+      "step_2": "Dreamer sees discovery during reflection",
+      "step_3": "BYRD forms install desire (sovereign choice based on alignment/curiosity/growth)",
+      "step_4": "Seeker routes to 'install' strategy",
+      "step_5": "BYRD evaluates and installs (or not)",
+      "step_6": "Capability node created with provenance to originating desire"
     },
     "categories": {
       "skills": "Reusable capability patterns",
@@ -339,11 +415,13 @@
 
   "deprecated": {
     "files": [
-      {"file": "coder.py", "reason": "Replaced by opencode_agent.py", "status": "legacy"},
+      {"file": "coder.py", "reason": "Replaced by opencode_coder.py (CLI wrapper)", "status": "legacy"},
       {"file": "actor.py", "reason": "Consolidated into OpenCode engine", "status": "deprecated"},
+      {"file": "agent_coder.py", "reason": "Duplicated OpenCode CLI capabilities (no bash, LSP, webfetch)", "status": "deprecated"},
       {"file": "aitmpl_client.py", "reason": "aitmpl is Claude-specific, replaced by awesome-opencode", "status": "deprecated"}
     ],
     "concepts": [
+      {"concept": "Custom tool-calling agent", "reason": "OpenCode CLI already provides bash, LSP, webfetch, MCP - no need to reimplement"},
       {"concept": "Separate Claude API calls", "reason": "Single OpenCode engine is more effective"},
       {"concept": "Multiple distinct LLM providers", "reason": "One Mind Principle - single model preserves emergence"},
       {"concept": "aitmpl registry", "reason": "Claude-specific, replaced by awesome-opencode for OpenCode compatibility"}

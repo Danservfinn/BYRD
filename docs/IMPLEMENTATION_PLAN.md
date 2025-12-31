@@ -1,4 +1,20 @@
-# BYRD v11.0 Implementation Plan
+# BYRD v12.0 Implementation Plan
+
+## Revision Notes
+
+**Revision Date**: December 30, 2025
+
+This plan has been revised to address critical issues identified during deep analysis:
+
+1. **OpenCode CLI Wrapper** - Instead of building `opencode_agent.py` that duplicates OpenCode CLI capabilities, we wrap the CLI to gain bash, LSP, webfetch, and MCP support.
+
+2. **Tiered Context Loading** - Solves context overflow by loading context progressively (Tier 1 always, Tier 2 on-demand, Tier 3 on explicit request).
+
+3. **Plugin Parsing** - Regex + GitHub API fallback for parsing awesome-opencode README.md.
+
+4. **Rate Coordination** - ComponentCoordinator signals when OpenCode CLI is running so other components pause LLM calls.
+
+---
 
 ## Critical Review: Integration Analysis
 
@@ -29,25 +45,48 @@ class ComponentCoordinator:
 ```
 
 **Impact on Plan**:
-- `OpenCodeAgent` must use `coordinator.llm_operation()` for all LLM calls
-- Must call `coordinator.coder_started()`/`coder_finished()` around tasks
-- Cannot just replace Coder - must preserve coordination semantics
+- OpenCode CLI is an external process that makes its own LLM calls
+- Must call `coordinator.coder_started()`/`coder_finished()` around CLI execution
+- Cannot control CLI's internal LLM calls, but can pause other BYRD components
 
-**Fix**:
+**Fix (Revised - CLI Wrapper)**:
 ```python
-# opencode_agent.py
-class OpenCodeAgent:
-    def __init__(self, ..., coordinator: ComponentCoordinator):
+# opencode_coder.py - CLI wrapper approach
+class OpenCodeCoder:
+    def __init__(self, config: Dict, coordinator: ComponentCoordinator):
         self.coordinator = coordinator
+        self.context_loader = ContextLoader()
 
-    async def execute(self, task: str, context: Dict) -> AgentResult:
-        # Notify coordinator
+    async def execute(self, task: str, desire_id: str) -> CoderResult:
+        # Signal coordinator - other components pause LLM calls
         self.coordinator.coder_started(task[:50])
         try:
-            async with self.coordinator.llm_operation("opencode_execute"):
-                return await self._tool_loop(task, context)
+            # Load tiered context
+            tier1 = await self.context_loader.load_tier1()
+            tier2 = await self.context_loader.load_tier2("component") if self._needs_tier2(task) else ""
+
+            # Build prompt with context
+            prompt = f"{tier1}\n{tier2}\n\nTask: {task}"
+
+            # Execute OpenCode CLI (external process)
+            result = await self._run_opencode_cli(prompt)
+
+            # Record provenance
+            await self._record_changes(result, desire_id)
+
+            return result
         finally:
             self.coordinator.coder_finished()
+
+    async def _run_opencode_cli(self, task: str) -> str:
+        """Execute OpenCode CLI and capture output."""
+        proc = await asyncio.create_subprocess_exec(
+            "opencode", "--model", "glm-4.7", "--task", task,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await proc.communicate()
+        return stdout.decode()
 ```
 
 ---
@@ -119,18 +158,60 @@ self.aitmpl_base_trust = aitmpl_config.get("base_trust", 0.5)
 - `PluginManager` must implement same interface as `AitmplClient`
 - Or: Inject `PluginManager` alongside, migrate gradually
 
-**Fix**: Interface-compatible replacement:
+**Fix (Revised - Regex + GitHub API)**:
 ```python
-# plugin_manager.py must implement:
+# plugin_manager.py - with robust parsing
 class PluginManager:
+    """Interface-compatible replacement for AitmplClient."""
+
+    async def browse_registry(self) -> List[Plugin]:
+        """Fetch and parse awesome-opencode registry."""
+        # Try regex first (fast, no API limits)
+        try:
+            readme = await self._fetch_readme()
+            plugins = self._parse_readme_regex(readme)
+            if plugins:
+                return plugins
+        except Exception as e:
+            logger.warning(f"Regex parsing failed: {e}")
+
+        # Fallback to GitHub API (slower, rate limited)
+        return await self._parse_github_api()
+
+    def _parse_readme_regex(self, content: str) -> List[Plugin]:
+        """Extract plugins from markdown using regex."""
+        plugins = []
+        # Match: - [Name](url) - Description
+        pattern = r'-\s*\[([^\]]+)\]\(([^)]+)\)\s*-?\s*(.*?)$'
+        for match in re.finditer(pattern, content, re.MULTILINE):
+            name, url, description = match.groups()
+            plugins.append(Plugin(name=name, url=url, description=description))
+        return plugins
+
+    async def _parse_github_api(self) -> List[Plugin]:
+        """Fallback: Use GitHub API to list repository contents."""
+        # Rate limited: 60 requests/hour unauthenticated
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                "https://api.github.com/repos/awesome-opencode/awesome-opencode/contents"
+            )
+            # Parse directory structure for plugin folders
+            ...
+
+    # AitmplClient-compatible interface
     async def search(self, query: str) -> List[Plugin]:
         """Match AitmplClient.search() signature."""
+        plugins = await self.browse_registry()
+        return [p for p in plugins if query.lower() in p.name.lower() or query.lower() in p.description.lower()]
 
     async def get_template(self, name: str) -> Optional[Plugin]:
         """Match AitmplClient.get_template() signature."""
+        plugins = await self.browse_registry()
+        return next((p for p in plugins if p.name == name), None)
 
     def get_trust_score(self, plugin: Plugin) -> float:
         """Match trust scoring pattern."""
+        return 0.7  # awesome-opencode is curated, default high trust
 
 # In seeker.py - gradual migration:
 if self.plugin_manager and self.config.get("use_awesome_opencode", False):
@@ -193,27 +274,81 @@ async def _reflect(self):
 
 ---
 
-### Issue #5: self_model.json Reading Location
+### Issue #5: Context Overflow (RESOLVED - Tiered Loading)
 
-**Question**: Where should BYRD read self_model.json?
+**Problem**: Full context (ARCHITECTURE.md + self_model.json + memory) can exceed LLM context limits.
 
-**Options**:
-1. **byrd.py:start()** - Once at startup
-2. **dreamer.py:_reflect()** - Every dream cycle
-3. **agi_runner.py:assess()** - Every improvement cycle
-4. **All of the above** - Different consumers, different purposes
+**Solution**: Tiered context loading - load progressively based on need.
 
-**Recommendation**: Layered reading:
 ```python
-# byrd.py:start() - Load once, store reference
-self.self_model = await self._load_self_model()
+# context_loader.py - Tiered context loading
+class ContextLoader:
+    """Load context progressively to prevent overflow."""
 
-# dreamer.py:_build_reflection_context() - Include in context
-context["self_model_summary"] = self._summarize_self_model(self.byrd.self_model)
+    async def load_tier1(self) -> str:
+        """
+        Always loaded (~500 tokens):
+        - Core identity (name, philosophy, version)
+        - Current desires (top 3 by intensity)
+        - Recent beliefs (top 5 by confidence)
+        - Protected files list
+        - Available strategies list
+        """
+        self_model = await self._load_self_model()
+        return f"""
+        Identity: {self_model['identity']['name']} - {self_model['identity']['core_philosophy']}
+        Protected: {self_model['protected_paths']['files']}
+        Strategies: {[s['name'] for s in self_model['strategies']['desire_fulfillment']]}
+        """
 
-# agi_runner.py:assess() - Read for architectural decisions
-architecture = await self._read_self_model()  # May have changed
+    async def load_tier2(self, context_type: str) -> str:
+        """
+        Loaded on demand (~2000 tokens):
+        Triggered by strategy type, task keywords, explicit request.
+        """
+        loaders = {
+            "component": self._load_component_details,
+            "strategy": self._load_strategy_instructions,
+            "plugin": self._load_plugin_registry,
+            "goal_cascade": self._load_goal_state,
+        }
+        return await loaders.get(context_type, lambda: "")()
+
+    async def load_tier3(self, doc: str) -> str:
+        """
+        Full documents on explicit request only:
+        Triggered by "read my architecture", "show full self-model"
+        """
+        docs = {
+            "architecture": "ARCHITECTURE.md",
+            "self_model": "self_model.json",
+            "claude": "CLAUDE.md",
+        }
+        return await self._read_full_doc(docs.get(doc))
+
+# Usage in components:
+# byrd.py:start() - Initialize loader
+self.context_loader = ContextLoader()
+
+# dreamer.py:_reflect() - Load tier1 always, tier2 if needed
+tier1 = await self.context_loader.load_tier1()
+tier2 = await self.context_loader.load_tier2("strategy") if self._complex_reflection() else ""
+
+# opencode_coder.py:execute() - Load appropriate context
+context = await self.context_loader.load_tier1()
+if self._needs_architecture_details(task):
+    context += await self.context_loader.load_tier2("component")
 ```
+
+**When Each Tier Loads**:
+| Situation | Tier 1 | Tier 2 | Tier 3 |
+|-----------|--------|--------|--------|
+| Normal reflection | ✓ | - | - |
+| Self-modification task | ✓ | component | - |
+| Plugin installation | ✓ | plugin | - |
+| Complex task | ✓ | goal_cascade | - |
+| "Read my architecture" | ✓ | - | architecture |
+| "What am I?" | ✓ | - | self_model |
 
 ---
 
@@ -257,7 +392,7 @@ elif strategy == "goal_cascade":
 
 ---
 
-### Issue #7: Coder Selection Logic (byrd.py:265-296)
+### Issue #7: Coder Selection Logic (RESOLVED - CLI Wrapper)
 
 **Current Pattern**:
 ```python
@@ -271,51 +406,131 @@ else:
     # Auto-detect: prefer CLI if available, fall back to Agent
 ```
 
-**Impact on Plan**:
-- OpenCodeAgent is a 4th option, not a replacement
-- Need to add "opencode" type
-- Should it be default or opt-in?
+**Resolution**: OpenCode CLI wrapper replaces both `coder.py` and `agent_coder.py`. Only one coder option needed.
 
-**Fix**:
+**Fix (Revised)**:
 ```python
-# byrd.py - Add OpenCode option
-if coder_type == "opencode":
-    self.coder = OpenCodeAgent(
-        config=coder_config,
-        memory=self.memory,
-        llm_client=self.llm_client,
-        coordinator=self.coordinator
-    )
-    print(f"💻 Coder: OpenCode (GLM-4.7)")
-elif coder_type == "agent":
-    # Existing agent coder
-elif coder_type == "cli":
-    # Existing CLI coder
-else:
-    # Auto-detect: OpenCode > CLI > Agent
+# byrd.py - Simplified coder initialization
+# OpenCode CLI wrapper is the only coder
+
+from opencode_coder import OpenCodeCoder
+
+# In __init__:
+self.coder = OpenCodeCoder(
+    config=coder_config,
+    coordinator=self.coordinator,
+    context_loader=self.context_loader,
+    memory=self.memory
+)
+print(f"💻 Coder: OpenCode CLI Wrapper (GLM-4.7)")
+
+# Legacy coders are deprecated:
+# - coder.py (Claude Code CLI) -> deprecated
+# - agent_coder.py (custom tool loop) -> deprecated
+# Both replaced by opencode_coder.py
 ```
+
+**Why CLI Wrapper is Better**:
+| Feature | agent_coder.py | opencode_coder.py |
+|---------|---------------|-------------------|
+| Bash access | ❌ | ✓ |
+| LSP support | ❌ | ✓ |
+| Web fetch | ❌ | ✓ |
+| MCP servers | ❌ | ✓ |
+| Code complexity | High (reimplements tools) | Low (wraps CLI) |
+| Maintenance | Requires updating | Inherits CLI updates |
 
 ---
 
 ## Revised Implementation Approach
 
-Based on the critical review, the implementation should follow this order:
+Based on the critical review and solutions identified above, the implementation follows this revised order:
 
-### Phase 0: Interface Compatibility Layer (Sprint 0)
-1. Create abstract `CoderInterface` that all coders implement
-2. Create abstract `CapabilitySourceInterface` for aitmpl/plugin_manager
-3. Add `goal_cascade` to strategy routing (placeholder)
-4. Add OpenCode option to coder selection
+### Phase 0: Foundation (Sprint 0)
+1. Create `context_loader.py` - Tiered context loading
+2. Create `opencode_coder.py` - CLI wrapper with tiered context
+3. Update `plugin_manager.py` - Regex + GitHub API parsing
+4. **NEW**: Implement simplified plugin discovery (reactive + proactive paths)
+5. **NEW**: Implement Goal Cascade Neo4j persistence schema
 
-### Phase 1: OpenCode Agent (Sprint 1)
-- Implement with ComponentCoordinator integration
-- Add as 4th coder option (opt-in first)
-- Preserve all existing coder interfaces
+### Simplified Plugin Discovery Design
+
+The original 7-step passive discovery path was too complex. The new approach uses two complementary paths:
+
+**Path 1: Reactive (Automatic on Strategy Failure)**
+```python
+# In seeker.py - triggered when strategy fails due to missing capability
+async def _execute_strategy(self, strategy: str, desire: Dict) -> Tuple[str, str]:
+    result = await self._try_strategy(strategy, desire)
+
+    if result.failed and result.failure_type == "capability_missing":
+        # AUTOMATIC plugin search (not install)
+        plugins = await self.plugin_manager.search(result.missing_capability)
+        if plugins:
+            await self.memory.record_experience(
+                content=f"[PLUGIN_DISCOVERY] Found plugin for '{result.missing_capability}': "
+                        f"{plugins[0].name} - {plugins[0].description}",
+                type="plugin_discovery"
+            )
+    return result
+```
+
+**Path 2: Proactive (Periodic Capability Gap Analysis)**
+```python
+# In omega.py - runs every N cycles (default: 10)
+async def _analyze_capability_gaps(self):
+    """Periodic scan for capability gaps based on recent failures."""
+    failures = await self.memory.get_failures(limit=20, days=7)
+    gaps = self._extract_capability_gaps(failures)
+
+    for gap in gaps:
+        plugins = await self.plugin_manager.search(gap)
+        if plugins:
+            await self.memory.record_experience(
+                content=f"[PLUGIN_DISCOVERY] Gap '{gap}' could be addressed by: {plugins[0].name}",
+                type="plugin_discovery"
+            )
+```
+
+**Key Principle**: Discovery is automatic, installation is sovereign. BYRD sees discoveries during reflection and chooses whether to form install desires.
+
+### Goal Cascade Neo4j Persistence Design
+
+Goal Cascades persist state across restarts using these Neo4j nodes:
+
+| Node Type | Purpose |
+|-----------|---------|
+| `GoalCascade` | Root node with status, current phase, requester |
+| `CascadePhase` | Individual phases (RESEARCH, DATA_ACQUISITION, etc.) |
+| `CascadeDesire` | Desires within each phase |
+| `HumanInteractionPoint` | Where human input was requested/received |
+| `CascadeArtifact` | Artifacts produced (code, data, docs) |
+
+**Resume Logic:**
+```python
+async def resume_or_create(self, goal: str, requester: str) -> DesireTree:
+    existing = await self._find_resumable(goal)
+    if existing:
+        return await self._reconstruct_tree(existing)
+    return await self.decompose(goal, requester)
+```
+
+**Startup Recovery:**
+- On startup, BYRD checks for resumable cascades
+- Records them as experiences for Dreamer to see
+- Dreamer can form desires to resume interrupted work
+
+### Phase 1: OpenCode CLI Wrapper (Sprint 1)
+- Implement `OpenCodeCoder` class wrapping OpenCode CLI
+- Integrate with `ComponentCoordinator` (coder_started/finished)
+- Integrate with `ContextLoader` for tiered context
+- Remove deprecated coders from coder selection
 
 ### Phase 2: Plugin Manager (Sprint 2)
-- Implement with AitmplClient-compatible interface
+- Implement regex parsing for awesome-opencode README.md
+- Implement GitHub API fallback
+- Implement AitmplClient-compatible interface
 - Add feature flag for gradual migration
-- Keep aitmpl as fallback
 
 ### Phase 3: Goal Cascade (Sprint 3)
 - Implement with strategy routing integration
@@ -327,119 +542,186 @@ Based on the critical review, the implementation should follow this order:
 - Add evaluation metadata to desires
 - Optional: Add to handle_message for explicit requests
 
-### Phase 5: Self-Model Integration (Sprint 5)
-- Load in byrd.py:start()
-- Pass to components that need it
-- Add to reflection context
+### Phase 5: Context Loader Integration (Sprint 5)
+- Integrate ContextLoader into Dreamer
+- Integrate ContextLoader into Seeker
+- Integrate ContextLoader into AGI Runner
+- Test tiered loading across components
 
 ---
 
 ## Overview
 
 This plan implements the ZEUS philosophy merge into BYRD, including:
-- **OpenCode Agent**: Unified coding/self-modification engine (replaces coder.py, actor.py, agent_coder.py)
-- **Plugin Manager**: Emergent plugin discovery from awesome-opencode
+- **OpenCode CLI Wrapper**: Wraps OpenCode CLI for bash, LSP, webfetch, MCP (replaces coder.py, actor.py, agent_coder.py)
+- **Tiered Context Loading**: Prevents context overflow with progressive loading (Tier 1/2/3)
+- **Plugin Manager**: Emergent plugin discovery from awesome-opencode with regex + GitHub API parsing
 - **Goal Cascade**: Complex task decomposition
 - **Request Evaluator**: Autonomous sovereignty layer
-- **Self-Model Integration**: BYRD reads self_model.json every cycle
+- **Self-Model Integration**: BYRD reads self_model.json via tiered context loading
 
 ---
 
 ## Phase 1: Core Infrastructure (Sprint 1-2)
 
-### 1.1 OpenCode Agent (`opencode_agent.py`)
+### 1.0 Context Loader (`context_loader.py`)
 
-**Purpose**: Unified coding and self-modification engine powered by GLM-4.7
+**Purpose**: Tiered context loading to prevent overflow
 
-**Dependencies**: `llm_client.py`, `self_modification.py`, `memory.py`
+**Dependencies**: `memory.py`
 
 **Implementation**:
 
 ```python
-# opencode_agent.py - Core structure
+# context_loader.py - Tiered context loading
 
-class OpenCodeAgent:
+class ContextLoader:
     """
-    BYRD's unified coding and self-modification engine.
-    Powered by GLM-4.7 via ZAI API.
+    Loads context progressively to prevent LLM context overflow.
 
-    Replaces: coder.py, actor.py, agent_coder.py
+    Tier 1: Always loaded (~500 tokens) - identity, desires, protected files
+    Tier 2: On demand (~2000 tokens) - component details, strategy instructions
+    Tier 3: Explicit request only - full ARCHITECTURE.md, self_model.json
     """
 
-    def __init__(self, config: Dict, memory: Memory, llm_client: LLMClient):
-        self.config = config
+    def __init__(self, memory: Memory, config: Dict = None):
         self.memory = memory
-        self.llm = llm_client
-        self.tools = self._initialize_tools()
-        self.max_iterations = 100
-        self.files_modified = []
+        self.config = config or {}
+        self._self_model_cache = None
 
-    async def execute(self, task: str, context: Dict = None) -> AgentResult:
-        """
-        Execute a coding/modification task.
+    async def load_tier1(self) -> str:
+        """Always loaded - core identity and current state."""
+        self_model = await self._get_self_model()
+        desires = await self.memory.get_desires(limit=3, order_by="intensity")
+        beliefs = await self.memory.get_beliefs(limit=5, order_by="confidence")
 
-        1. Load self-awareness context (ARCHITECTURE.md, self_model.json)
-        2. Run tool-calling loop until completion or loop detection
-        3. Return result with provenance
-        """
+        return f"""
+IDENTITY: {self_model['identity']['name']} - {self_model['identity']['core_philosophy']}
+PROTECTED FILES: {', '.join(self_model['protected_paths']['files'])}
+STRATEGIES: {', '.join([s['name'] for s in self_model['strategies']['desire_fulfillment']])}
+CURRENT DESIRES: {[d['description'][:50] for d in desires]}
+RECENT BELIEFS: {[b['content'][:50] for b in beliefs]}
+"""
 
-    async def _load_self_awareness(self) -> Dict:
-        """Read BYRD's own architecture for context."""
-        return {
-            "architecture": await self._read_file("ARCHITECTURE.md"),
-            "self_model": await self._read_file("self_model.json"),
-            "instructions": await self._read_file("CLAUDE.md"),
+    async def load_tier2(self, context_type: str) -> str:
+        """Loaded on demand based on task type."""
+        loaders = {
+            "component": self._load_component_details,
+            "strategy": self._load_strategy_instructions,
+            "plugin": self._load_plugin_registry,
+            "goal_cascade": self._load_goal_state,
         }
+        loader = loaders.get(context_type)
+        return await loader() if loader else ""
 
-    async def _tool_loop(self, task: str, context: Dict) -> AgentResult:
-        """
-        Tool-calling loop with:
-        - Loop detection (repeated actions, ping-pong)
-        - Constitutional constraints (protected files)
-        - Provenance tracking
-        """
-
-    def _detect_loop(self, history: List[ToolCall]) -> bool:
-        """Detect repeated tool+args (3x) or ping-pong patterns."""
-
-    def _check_constitutional(self, tool: str, args: Dict) -> bool:
-        """Verify action doesn't violate protected files."""
+    async def load_tier3(self, doc: str) -> str:
+        """Full document on explicit request."""
+        docs = {"architecture": "ARCHITECTURE.md", "self_model": "self_model.json", "claude": "CLAUDE.md"}
+        if doc in docs:
+            with open(docs[doc]) as f:
+                return f.read()
+        return ""
 ```
 
-**Tools to Implement**:
-| Tool | Purpose |
-|------|---------|
-| `read_file` | Read file contents |
-| `write_file` | Create/overwrite file |
-| `edit_file` | Surgical edit with old/new string |
-| `list_files` | List directory contents |
-| `search_code` | Grep/ripgrep for patterns |
-| `run_python` | Execute Python in sandbox |
-| `finish` | Signal completion |
+### 1.1 OpenCode CLI Wrapper (`opencode_coder.py`)
 
-**Tests** (`tests/test_opencode_agent.py`):
+**Purpose**: Wrap OpenCode CLI to gain bash, LSP, webfetch, MCP capabilities
+
+**Dependencies**: `context_loader.py`, `memory.py`, `byrd.py` (ComponentCoordinator)
+
+**Implementation**:
+
 ```python
-class TestOpenCodeAgent:
-    async def test_simple_file_read(self):
-        """Agent can read a file."""
+# opencode_coder.py - CLI wrapper
 
-    async def test_file_edit_with_provenance(self):
-        """Edits are tracked with originating desire."""
+class OpenCodeCoder:
+    """
+    BYRD's coding and self-modification engine.
+    Wraps OpenCode CLI to leverage its full capability set.
 
-    async def test_constitutional_protection(self):
-        """Cannot modify protected files."""
+    Replaces: coder.py, actor.py, agent_coder.py
 
-    async def test_loop_detection_repeated(self):
-        """Stops on 3x repeated tool+args."""
+    Capabilities gained by wrapping:
+    - bash: Full shell access for builds, tests, git
+    - LSP: Language server protocol for code intelligence
+    - webfetch: Web research without separate implementation
+    - MCP: Model Context Protocol for external tools
+    """
 
-    async def test_loop_detection_pingpong(self):
-        """Stops on A-B-A-B pattern."""
+    def __init__(self, config: Dict, coordinator, context_loader: ContextLoader, memory: Memory):
+        self.config = config
+        self.coordinator = coordinator
+        self.context_loader = context_loader
+        self.memory = memory
 
-    async def test_self_awareness_loading(self):
-        """Loads ARCHITECTURE.md and self_model.json."""
+    async def execute(self, task: str, desire_id: str) -> CoderResult:
+        """
+        Execute a coding/modification task via OpenCode CLI.
 
-    async def test_sandbox_execution(self):
-        """run_python executes in isolated subprocess."""
+        1. Signal ComponentCoordinator (pause other LLM calls)
+        2. Load tiered context
+        3. Execute OpenCode CLI
+        4. Record provenance
+        5. Signal completion
+        """
+        self.coordinator.coder_started(task[:50])
+        try:
+            # Load context based on task type
+            tier1 = await self.context_loader.load_tier1()
+            tier2 = ""
+            if self._needs_component_context(task):
+                tier2 = await self.context_loader.load_tier2("component")
+
+            # Build task prompt with context
+            prompt = f"{tier1}\n{tier2}\n\n# TASK\n{task}"
+
+            # Execute OpenCode CLI
+            result = await self._run_opencode_cli(prompt)
+
+            # Record provenance
+            await self._record_changes(result, desire_id)
+
+            return result
+        finally:
+            self.coordinator.coder_finished()
+
+    async def _run_opencode_cli(self, task: str) -> CoderResult:
+        """Execute OpenCode CLI and capture output."""
+        proc = await asyncio.create_subprocess_exec(
+            "opencode", "--model", "glm-4.7", "--task", task,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env={**os.environ, "OPENCODE_RATE_LIMIT": "10"}
+        )
+        stdout, stderr = await proc.communicate()
+        return CoderResult(
+            success=proc.returncode == 0,
+            output=stdout.decode(),
+            error=stderr.decode() if stderr else None
+        )
+
+    def _needs_component_context(self, task: str) -> bool:
+        """Determine if task needs component-level context."""
+        return any(kw in task.lower() for kw in ["modify", "edit", "change", "add to", "remove from"])
+```
+
+**Tests** (`tests/test_opencode_coder.py`):
+```python
+class TestOpenCodeCoder:
+    async def test_coordinator_signaling(self):
+        """Calls coder_started/finished around execution."""
+
+    async def test_tiered_context_loading(self):
+        """Loads tier1 always, tier2 when needed."""
+
+    async def test_provenance_recording(self):
+        """Records changes with desire_id."""
+
+    async def test_cli_execution(self):
+        """Actually executes OpenCode CLI."""
+
+    async def test_rate_limit_env_var(self):
+        """Sets OPENCODE_RATE_LIMIT environment variable."""
 ```
 
 ---
@@ -1308,6 +1590,18 @@ All new modules must include:
 
 ---
 
-*Plan version: 1.0*
+*Plan version: 2.1*
 *Created: December 30, 2025*
-*For: BYRD v11.0 (ZEUS Philosophy Merge)*
+*Revised: December 30, 2025*
+*For: BYRD v12.1 (ZEUS Philosophy Merge)*
+
+**Key Changes in v2.1:**
+- Simplified plugin discovery (reactive + proactive paths)
+- Goal Cascade Neo4j persistence schema
+- Added implementation phases for new designs
+
+**Key Changes in v2.0:**
+- OpenCode CLI wrapper instead of custom agent (fixes code duplication)
+- Tiered context loading (solves context overflow)
+- Regex + GitHub API plugin parsing (robust parsing)
+- ComponentCoordinator integration for rate coordination
