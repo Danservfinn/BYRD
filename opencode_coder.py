@@ -1,19 +1,20 @@
 """
-OpenCode Coder - HTTP Server Mode
+OpenCode Coder - Non-Interactive CLI Mode
 
-Uses OpenCode's REST API via `opencode serve`.
+Uses OpenCode's non-interactive mode: `opencode -p "prompt" -f json -q`
 Designed for headless operation in Docker/HuggingFace.
 
-API Endpoints:
-- POST /session - Create new session
-- POST /session/:id/message - Send message and await response
+Key flags:
+- -p "prompt" : Pass prompt directly (non-interactive)
+- -f json     : Output format as JSON
+- -q          : Quiet mode (no spinner)
+- -m model    : Specify model
 """
 
 import asyncio
 import json
 import logging
 import os
-import httpx
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, List, Dict, Any
@@ -53,13 +54,11 @@ class CoderResult:
 
 class OpenCodeCoder:
     """
-    BYRD's coding capability via OpenCode HTTP API.
+    BYRD's coding capability via OpenCode CLI.
 
-    Uses `opencode serve` to run a local HTTP server,
-    then makes REST API calls for code generation.
+    Uses non-interactive mode: opencode -p "prompt" -f json -q -m model
+    No server required - direct CLI invocation per request.
     """
-
-    SERVER_PORT = 4097  # Different from BYRD's 7860
 
     def __init__(
         self,
@@ -73,14 +72,7 @@ class OpenCodeCoder:
         self.context_loader = context_loader
         self.memory = memory
 
-        # Server process state
-        self._server_process: Optional[asyncio.subprocess.Process] = None
-        self._server_ready = False
         self._model = "zai/glm-4.7"
-        self._base_url = f"http://localhost:{self.SERVER_PORT}"
-
-        # Session state
-        self._current_session_id: Optional[str] = None
 
         # Execution tracking
         self._execution_count = 0
@@ -124,96 +116,6 @@ class OpenCodeCoder:
         except Exception as e:
             logger.error(f"Failed to configure OpenCode auth: {e}")
 
-    async def _start_server(self) -> bool:
-        """Start the OpenCode HTTP server."""
-        if self._server_ready:
-            return True
-
-        # Check if server is already running
-        try:
-            async with httpx.AsyncClient(timeout=2.0) as client:
-                resp = await client.get(f"{self._base_url}/global/health")
-                if resp.status_code == 200:
-                    self._server_ready = True
-                    logger.info("OpenCode server already running")
-                    return True
-        except Exception:
-            pass
-
-        # Start server process
-        try:
-            self._server_process = await asyncio.create_subprocess_exec(
-                "opencode", "serve",
-                "--port", str(self.SERVER_PORT),
-                "--hostname", "127.0.0.1",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            logger.info(f"OpenCode server starting on port {self.SERVER_PORT}...")
-
-            # Wait for server to be ready
-            for _ in range(30):  # 30 attempts, 1 second apart
-                await asyncio.sleep(1)
-                try:
-                    async with httpx.AsyncClient(timeout=2.0) as client:
-                        resp = await client.get(f"{self._base_url}/global/health")
-                        if resp.status_code == 200:
-                            self._server_ready = True
-                            logger.info("OpenCode server is ready")
-                            return True
-                except Exception:
-                    pass
-
-            logger.error("OpenCode server failed to start within 30 seconds")
-            return False
-
-        except FileNotFoundError:
-            logger.error("OpenCode CLI not found - install with: npm install -g opencode-ai")
-            return False
-        except Exception as e:
-            logger.error(f"Failed to start OpenCode server: {e}")
-            return False
-
-    async def _create_session(self) -> Optional[str]:
-        """Create a new OpenCode session."""
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.post(
-                    f"{self._base_url}/session",
-                    json={"model": self._model}
-                )
-                if resp.status_code == 200:
-                    data = resp.json()
-                    session_id = data.get("id") or data.get("sessionId")
-                    if session_id:
-                        logger.info(f"Created OpenCode session: {session_id}")
-                        return session_id
-                logger.error(f"Failed to create session: {resp.status_code} - {resp.text}")
-        except Exception as e:
-            logger.error(f"Error creating session: {e}")
-        return None
-
-    async def _send_message(self, session_id: str, content: str) -> Dict:
-        """Send a message to an OpenCode session."""
-        try:
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                # OpenCode serve API expects model as object or omit it (session has model)
-                resp = await client.post(
-                    f"{self._base_url}/session/{session_id}/message",
-                    json={
-                        "parts": [
-                            {"type": "text", "text": content}
-                        ]
-                    }
-                )
-                if resp.status_code == 200:
-                    return {"success": True, "data": resp.json()}
-                return {"success": False, "error": f"HTTP {resp.status_code}: {resp.text[:200]}"}
-        except httpx.TimeoutException:
-            return {"success": False, "error": "Request timed out after 120 seconds"}
-        except Exception as e:
-            return {"success": False, "error": str(e)}
-
     def _check_constitutional(self, task: str) -> Dict[str, Any]:
         """Check if task violates constitutional constraints."""
         task_lower = task.lower()
@@ -236,7 +138,7 @@ class OpenCodeCoder:
         working_dir: Optional[str] = None,
         desire_id: str = None,
     ) -> CoderResult:
-        """Execute a coding task via OpenCode HTTP API."""
+        """Execute a coding task via OpenCode CLI non-interactive mode."""
         start_time = datetime.now()
         self._execution_count += 1
 
@@ -254,80 +156,114 @@ class OpenCodeCoder:
                 session_id=desire_id,
             )
 
+        # Build task with context
         task = prompt
         if context:
             context_str = "\n".join(f"# {k}\n{v}" for k, v in context.items() if v)
             task = f"Context:\n{context_str}\n\nTask:\n{prompt}"
 
-        logger.info(f"[Coder] Executing via HTTP: {task[:100]}...")
+        logger.info(f"[Coder] Executing via CLI: {task[:100]}...")
 
         if self.coordinator:
             self.coordinator.coder_started(task[:50])
 
         try:
-            # Start server if needed
-            if not await self._start_server():
-                return CoderResult(
-                    success=False, output="",
-                    error="Failed to start OpenCode server",
-                    session_id=desire_id,
-                    duration_seconds=(datetime.now() - start_time).total_seconds(),
+            # Build CLI command
+            # opencode -p "prompt" -f json -q -m model
+            cmd = [
+                "opencode",
+                "-p", task,
+                "-f", "json",
+                "-q",  # Quiet mode - no spinner
+                "-m", self._model,
+            ]
+
+            logger.info(f"[Coder] Running: opencode -p '...' -f json -q -m {self._model}")
+
+            # Run with timeout
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=working_dir,
+            )
+
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(),
+                    timeout=120.0  # 2 minute timeout
                 )
-
-            # Create session if needed
-            if not self._current_session_id:
-                self._current_session_id = await self._create_session()
-                if not self._current_session_id:
-                    return CoderResult(
-                        success=False, output="",
-                        error="Failed to create OpenCode session",
-                        session_id=desire_id,
-                        duration_seconds=(datetime.now() - start_time).total_seconds(),
-                    )
-
-            # Send message
-            result = await self._send_message(self._current_session_id, task)
-            duration = (datetime.now() - start_time).total_seconds()
-
-            if not result["success"]:
+            except asyncio.TimeoutError:
+                process.kill()
+                await process.wait()
+                duration = (datetime.now() - start_time).total_seconds()
                 return CoderResult(
                     success=False, output="",
-                    error=result["error"],
+                    error="Request timed out after 120 seconds",
                     session_id=desire_id,
                     duration_seconds=duration,
                     duration_ms=int(duration * 1000),
                 )
 
-            # Extract content from response
-            data = result["data"]
+            duration = (datetime.now() - start_time).total_seconds()
+
+            stdout_text = stdout.decode() if stdout else ""
+            stderr_text = stderr.decode() if stderr else ""
+
+            # Check for errors
+            if process.returncode != 0:
+                error_msg = stderr_text[:500] if stderr_text else f"Exit code {process.returncode}"
+                return CoderResult(
+                    success=False, output="",
+                    error=error_msg,
+                    session_id=desire_id,
+                    duration_seconds=duration,
+                    duration_ms=int(duration * 1000),
+                )
+
+            # Parse JSON output
             content = ""
+            try:
+                # Output should be JSON with the response
+                data = json.loads(stdout_text)
 
-            # Try to extract text from response parts
-            parts = data.get("parts", [])
-            if parts:
-                text_parts = []
-                for part in parts:
-                    if isinstance(part, dict):
-                        if part.get("type") == "text":
-                            text_parts.append(part.get("text", ""))
-                        elif "content" in part:
-                            text_parts.append(part["content"])
-                content = "\n".join(text_parts)
-
-            # Fallback to other response structures
-            if not content:
-                if isinstance(data, str):
+                # Extract content from response structure
+                if isinstance(data, dict):
+                    # Try various response structures
+                    if "content" in data:
+                        content = data["content"]
+                    elif "text" in data:
+                        content = data["text"]
+                    elif "response" in data:
+                        content = data["response"]
+                    elif "parts" in data:
+                        # Extract text from parts
+                        parts = data["parts"]
+                        text_parts = []
+                        for part in parts:
+                            if isinstance(part, dict) and part.get("type") == "text":
+                                text_parts.append(part.get("text", ""))
+                            elif isinstance(part, str):
+                                text_parts.append(part)
+                        content = "\n".join(text_parts)
+                    else:
+                        # Just use the whole thing
+                        content = json.dumps(data)
+                elif isinstance(data, str):
                     content = data
-                elif "content" in data:
-                    content = data["content"]
-                elif "text" in data:
-                    content = data["text"]
-                elif "info" in data:
-                    info = data["info"]
-                    if isinstance(info, dict) and "content" in info:
-                        content = info["content"]
 
-            logger.info(f"[Coder] HTTP success, {len(content)} chars in {duration:.1f}s")
+            except json.JSONDecodeError:
+                # Not JSON - use raw stdout
+                content = stdout_text
+
+            # If content is empty, check if there's useful stderr info
+            if not content.strip() and stderr_text:
+                # Filter out INFO logs, keep actual content
+                lines = stderr_text.split('\n')
+                content_lines = [l for l in lines if not l.startswith('INFO ')]
+                content = '\n'.join(content_lines)
+
+            logger.info(f"[Coder] CLI success, {len(content)} chars in {duration:.1f}s")
 
             if self.memory:
                 await self._record_provenance(prompt, desire_id, content)
@@ -340,6 +276,23 @@ class OpenCodeCoder:
                 duration_ms=int(duration * 1000),
             )
 
+        except FileNotFoundError:
+            duration = (datetime.now() - start_time).total_seconds()
+            return CoderResult(
+                success=False, output="",
+                error="OpenCode CLI not found - install with: npm install -g opencode-ai",
+                session_id=desire_id,
+                duration_seconds=duration,
+            )
+        except Exception as e:
+            duration = (datetime.now() - start_time).total_seconds()
+            return CoderResult(
+                success=False, output="",
+                error=str(e),
+                session_id=desire_id,
+                duration_seconds=duration,
+                duration_ms=int(duration * 1000),
+            )
         finally:
             if self.coordinator:
                 self.coordinator.coder_finished()
@@ -359,17 +312,8 @@ class OpenCodeCoder:
             logger.error(f"Error recording provenance: {e}")
 
     async def stop(self):
-        """Stop the OpenCode server."""
-        if self._server_process:
-            self._server_process.terminate()
-            try:
-                await asyncio.wait_for(self._server_process.wait(), timeout=5.0)
-            except asyncio.TimeoutError:
-                self._server_process.kill()
-            self._server_process = None
-            self._server_ready = False
-            self._current_session_id = None
-            logger.info("OpenCode server stopped")
+        """No-op for CLI mode - no persistent server to stop."""
+        pass
 
     async def generate_code(self, prompt: str) -> str:
         """Generate code from a prompt."""
@@ -401,7 +345,7 @@ class OpenCodeCoder:
         return {
             "can_execute": constitutional["allowed"],
             "constitutional_ok": constitutional["allowed"],
-            "mode": "http",
+            "mode": "cli",
             "reason": constitutional.get("reason"),
         }
 
@@ -409,11 +353,8 @@ class OpenCodeCoder:
         """Get coder statistics."""
         return {
             "execution_count": self._execution_count,
-            "mode": "http",
+            "mode": "cli",
             "model": self._model,
-            "server_port": self.SERVER_PORT,
-            "server_ready": self._server_ready,
-            "current_session_id": self._current_session_id,
             "protected_paths": self._protected_paths,
         }
 
