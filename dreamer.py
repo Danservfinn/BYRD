@@ -3594,17 +3594,7 @@ Format your response as a numbered list matching the input:
             intent_str = f" [{intent}]" if intent else " [unclassified]"
             target_str = f" → {target}" if target else ""
             logger.info("Self-identified drive%s: %s...%s (strength: %.2f)", intent_str, description[:50], target_str, strength)
-
-            # Emit event for UI with persistent logging
-            await _emit_with_parallel_path(EventType.DESIRE_CREATED, {
-                "id": desire_id,
-                "description": description,
-                "type": "self_identified",
-                "intent": intent,
-                "target": target,
-                "intensity": strength,
-                "source": "dreamer_expressed_drives"
-            })
+            # Note: Event already emitted by memory.create_desire()
 
     async def _apply_os_updates(self, reflection_output: ReflectionOutput) -> None:
         """

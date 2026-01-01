@@ -504,19 +504,38 @@ List 1-3 key insights, each as a single clear statement."""
         insights = []
         lines = response.strip().split("\n")
 
+        # Patterns that indicate LLM thinking/meta-commentary (not actual insights)
+        skip_patterns = [
+            "look for", "analyze", "request", "**", "input data",
+            "the log", "the reason", "observation:", "note:", "step"
+        ]
+
         for line in lines:
             line = line.strip()
-            # Skip empty lines and headers
-            if not line or line.startswith("Look for") or len(line) < 20:
+            # Skip empty lines and short lines
+            if not line or len(line) < 30:
                 continue
 
-            # Remove numbering like "1. " or "- "
-            if line[0].isdigit() and len(line) > 3:
+            # Skip LLM thinking patterns
+            line_lower = line.lower()
+            if any(pattern in line_lower for pattern in skip_patterns):
+                continue
+
+            # Only process numbered items (1. 2. 3.) or bulleted items (- *)
+            is_numbered = line[0].isdigit() and len(line) > 3 and line[1] in '.)'
+            is_bulleted = line.startswith("- ") or line.startswith("* ")
+
+            if not (is_numbered or is_bulleted):
+                continue
+
+            # Remove numbering/bullets
+            if is_numbered:
                 line = line[2:].strip()
-            elif line.startswith("- "):
+            elif is_bulleted:
                 line = line[2:].strip()
 
-            if len(line) > 20:
+            # Must be substantial insight (not just a fragment)
+            if len(line) > 30:
                 insights.append(GeneratedInsight(
                     content=line,
                     source_type=InsightSource.REPLAY,

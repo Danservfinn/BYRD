@@ -3237,16 +3237,22 @@ class Memory:
                 created = record["created"] if record else 0
 
                 if created > 0:
-                    # Only emit event if connection was actually created
-                    await event_bus.emit(Event(
-                        type=EventType.CONNECTION_CREATED,
-                        data={
-                            "from_id": from_id,
-                            "to_id": to_id,
-                            "relationship": relationship,
-                            "properties": props
-                        }
-                    ))
+                    # Only emit event for significant connections (reduce console spam)
+                    # Low similarity auto-generated connections are too noisy
+                    similarity = props.get("similarity_score", 1.0)
+                    auto_generated = props.get("auto_generated", False)
+                    should_emit = not auto_generated or similarity >= 0.5
+
+                    if should_emit:
+                        await event_bus.emit(Event(
+                            type=EventType.CONNECTION_CREATED,
+                            data={
+                                "from_id": from_id,
+                                "to_id": to_id,
+                                "relationship": relationship,
+                                "properties": props
+                            }
+                        ))
                     return True
                 else:
                     print(f"⚠️  Connection failed: nodes not found (from={from_id[:16]}, to={to_id[:16]})")

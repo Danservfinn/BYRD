@@ -693,20 +693,7 @@ If no clear drives emerge, return {{"drives": []}}"""
             )
 
             print(f"🔮 Emergent drive → Desire: {description[:50]}... (strength: {strength:.2f})")
-
-            # Emit event for UI
-            if HAS_EVENT_BUS:
-                await event_bus.emit(Event(
-                    type=EventType.DESIRE_CREATED,
-                    data={
-                        "id": desire_id,
-                        "description": description,
-                        "type": "emergent",
-                        "intensity": strength,
-                        "source": "semantic_pattern_analysis",
-                        "evidence": evidence[:2] if evidence else []
-                    }
-                ))
+            # Note: Event already emitted by memory.create_desire()
 
     async def _detect_action_ready_patterns(self, reflections: List[Dict]) -> List[Dict]:
         """
