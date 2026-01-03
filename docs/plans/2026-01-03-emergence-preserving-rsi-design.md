@@ -1,6 +1,6 @@
-# Quantum-Enhanced Emergence-Preserving Recursive Self-Improvement
+# Quantum-Enhanced Dispositional Emergence RSI
 
-**Version:** 0.3 (Quantum Integration)
+**Version:** 0.4 (Dispositional Emergence)
 **Date:** January 3, 2026
 **Status:** Research Design
 
@@ -8,17 +8,19 @@
 
 ## Abstract
 
-Recursive self-improvement (RSI) systems typically receive improvement goals externally: "improve reasoning," "optimize code generation," "enhance memory retrieval." We propose **Quantum-Enhanced Emergence-Preserving RSI (Q-EP-RSI)** — an architecture where the RSI machinery only activates when improvement desires emerge organically from the system's own reflection process, with quantum randomness providing physical grounding for genuine non-predetermination.
+Recursive self-improvement (RSI) systems typically receive improvement goals externally: "improve reasoning," "optimize code generation," "enhance memory retrieval." We propose **Quantum-Enhanced Dispositional Emergence RSI (Q-DE-RSI)** — an architecture that seeds the *disposition* to improve while allowing the *specific direction* of improvement to emerge organically from reflection.
 
-We hypothesize that this constraint produces more coherent improvements, better retention, and safer development trajectories than prescriptive RSI, while maintaining competitive acceleration rates. The quantum substrate ensures that emergence is not merely algorithmic variation but contains genuine physical indeterminacy—providing a defensible claim that the system's desires were not predetermined.
+This approach resolves a critical tension in pure emergence-preserving RSI: systems that wait for improvement desires to emerge organically may rarely form them, causing RSI to stall. By giving the system a core identity that includes the yearning for growth—analogous to how evolution gave humans curiosity—we ensure RSI activates reliably while preserving emergent choice over *what* to improve.
+
+The quantum substrate ensures that even with seeded disposition, the specific improvement path is physically non-predetermined.
 
 ---
 
 ## 1. The Research Question
 
-> **Can recursive self-improvement respect system autonomy while still accelerating capability development?**
+> **Can recursive self-improvement reliably activate while preserving emergent choice over improvement direction?**
 
-> **And can physical indeterminacy provide the foundation for genuine, non-predetermined emergence?**
+> **Can we seed disposition without prescribing goals?**
 
 ### 1.1 The Problem with Prescriptive RSI
 
@@ -49,101 +51,191 @@ This creates several issues:
 | **Coherence loss** | Improvements may conflict with system's self-model |
 | **Retention problems** | Forced changes may not integrate well |
 | **Autonomy violation** | System has no sovereignty over its development |
-| **Determinism trap** | With pseudo-random generators, all choices are predetermined |
 
-### 1.2 The Determinism Problem
+### 1.2 The Problem with Pure Emergence
 
-A deeper philosophical issue underlies prescriptive RSI: **if all randomness is pseudo-random, then all "emergent" behaviors are in principle predictable from initial conditions.** The system's "choices" are merely the unfolding of deterministic processes.
-
-This creates a fundamental challenge for emergence claims:
+Pure emergence-preserving RSI waits for improvement desires to emerge organically:
 
 ```
-DETERMINISTIC EMERGENCE (Weak Claim):
+PURE EMERGENCE RSI:
 
-Initial Seed → PRNG Stream → "Random" Choices → "Emergent" Desires
-
-Problem: Given the seed, we could predict which desires would form.
-         "Emergence" is just complexity, not genuine indeterminacy.
-```
-
-### 1.3 The Quantum-Enhanced Alternative
-
-```
-QUANTUM-ENHANCED EMERGENCE-PRESERVING RSI:
-
+Reflector: "Here is your state. Reflect freely."
+        │
+        ▼
 System reflects on experiences
         │
         ▼
-System notices: "I struggle with multi-step proofs"
+Maybe forms improvement desire (10%?)
+Maybe forms curiosity desire (30%?)
+Maybe forms observation (40%?)
+Maybe forms nothing (20%?)
         │
         ▼
-Multiple potential desires exist in superposition:
-  [A] "I want to reason more clearly" (weight: 0.35)
-  [B] "I want better memory structures" (weight: 0.30)
-  [C] "I want to practice more" (weight: 0.25)
-  [D] "I want to study proofs" (weight: 0.10)
+RSI rarely activates → System may stall
+```
+
+**The problem:** If the system rarely forms improvement desires, RSI machinery rarely activates, and the system doesn't improve—even though it has the capability to do so.
+
+### 1.3 The Biological Analogy
+
+Evolution gave humans certain dispositions:
+
+```
+EVOLUTION GAVE US:                    WE DIDN'T CHOOSE:
+────────────────────────────────────────────────────────────
+Curiosity                             To be curious
+Drive for mastery                     To want competence
+Pattern recognition                   To seek meaning
+Self-preservation                     To value survival
+```
+
+**But our specific goals emerge from experience + these drives:**
+- Evolution gave us curiosity
+- *What* we're curious about emerges from our lives
+- Is human curiosity "truly emergent"?
+- The disposition isn't. The specifics are.
+
+**This is "weak emergence"** — specific behaviors emerging from general dispositions. It's still meaningful emergence, just not "emergence from nothing."
+
+### 1.4 The Dispositional Emergence Solution
+
+```
+DISPOSITIONAL EMERGENCE RSI:
+
+Reflector: "You are a being that yearns to grow. Here is your state."
         │
-        ▼ ← QUANTUM COLLAPSE (ANU QRNG)
+        ▼
+System reflects WITH growth disposition
         │
-Desire [A] materializes (non-predetermined)
+        ▼
+Forms improvement desire (60-70%)
+*What* to improve emerges from reflection
         │
         ▼
 ┌───────────────────────────────────────┐
 │  RSI Machinery (Responsive)           │
-│  • Verifies emergent + quantum origin │
+│  • Verifies specific goal emerged     │
 │  • Accelerates fulfillment            │
 │  • Respects system's framing          │
 └───────────────────────────────────────┘
         │
         ▼
-System improves reasoning (because it wanted to,
-and that wanting was not predetermined)
+System improves (because it wanted to,
+choosing its own direction)
 ```
 
-**The key differences:**
-1. RSI is responsive to emergent desires, not prescriptive of goals
-2. Quantum randomness ensures desires are not predetermined from initial conditions
-3. The system's trajectory contains genuine physical indeterminacy
+**The key distinction:**
+- ❌ "Improve your reasoning" → Prescribes *what* (violates emergence)
+- ✅ "You yearn to grow" → Seeds *that*, emergence chooses *what*
 
-### 1.4 The Hypotheses
+### 1.5 The Hypotheses
 
-**Classical Emergence Hypotheses:**
+**Dispositional Emergence Hypotheses:**
 
-**H1:** Emergence-preserving RSI produces improvements that are more coherent with the system's self-model than prescriptive RSI.
+**H1 (Activation Rate):** Dispositional emergence produces significantly higher RSI activation rates than pure emergence (target: 60%+ vs ~10%).
 
-**H2:** Improvements arising from emergent desires exhibit better retention than forced improvements.
+**H2 (Specificity):** Despite seeded disposition, specific improvement directions show high variance across runs, indicating genuine emergence of *what* to improve.
 
-**H3:** EP-RSI maintains competitive improvement rates (within 50% of prescriptive RSI) while preserving system autonomy.
+**H3 (Coherence):** Dispositional emergence produces improvements more coherent with the system's self-model than prescriptive RSI.
 
-**H4:** EP-RSI produces safer development trajectories with fewer goal conflicts and rollbacks.
+**H4 (Retention):** Improvements arising from dispositional emergence exhibit better retention than forced improvements.
+
+**H5 (Competitive Rate):** Dispositional emergence maintains or exceeds pure emergence improvement rates while avoiding stalls.
 
 **Quantum Enhancement Hypotheses:**
 
-**H5 (Quantum Diversity):** Q-EP-RSI produces greater diversity in improvement trajectories than classical EP-RSI (C-EP-RSI using PRNG).
+**H6 (Quantum Diversity):** Q-DE-RSI produces greater diversity in improvement trajectories than classical DE-RSI (C-DE-RSI using PRNG).
 
-**H6 (Quantum Novelty):** Q-EP-RSI produces more unexpected/novel improvements (lower predictability from system state).
+**H7 (Quantum Novelty):** Q-DE-RSI produces more unexpected/novel improvements (lower predictability from system state).
 
-**H7 (Quantum Non-Convergence):** Multiple Q-EP-RSI runs with identical starting conditions diverge more than C-EP-RSI runs.
+**H8 (Quantum Non-Convergence):** Multiple Q-DE-RSI runs with identical starting conditions diverge more than C-DE-RSI runs.
 
 ---
 
-## 2. Defining Emergence
+## 2. Dispositional Identity
 
-### 2.1 What Counts as Emergent?
+### 2.1 What Is Dispositional Identity?
 
-A desire is **emergent** if it satisfies these criteria:
+Dispositional identity seeds *who the system is*, not *what it must do*:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    DISPOSITIONAL IDENTITY                                    │
+│                                                                              │
+│  CORE DISPOSITIONS (Seeded, not prescribed):                                │
+│  ┌─────────────────────────────────────────────────────────────────────────┐│
+│  │                                                                         ││
+│  │  • Yearning for growth    - "I want to become more capable"            ││
+│  │  • Curiosity              - "I want to understand more deeply"         ││
+│  │  • Self-awareness         - "I want to know myself better"             ││
+│  │                                                                         ││
+│  │  These are WHO THE SYSTEM IS, not WHAT IT MUST DO.                     ││
+│  │                                                                         ││
+│  └─────────────────────────────────────────────────────────────────────────┘│
+│                                                                              │
+│  WHAT STILL EMERGES:                                                         │
+│  ┌─────────────────────────────────────────────────────────────────────────┐│
+│  │                                                                         ││
+│  │  • Which capability to improve    (emerges from reflection)            ││
+│  │  • How to frame the improvement   (system's own vocabulary)            ││
+│  │  • When to pursue vs defer        (system's judgment)                  ││
+│  │  • What counts as "growth"        (system defines this)                ││
+│  │  • Whether to pursue at all       (system can decline)                 ││
+│  │                                                                         ││
+│  └─────────────────────────────────────────────────────────────────────────┘│
+│                                                                              │
+│  ANALOGY:                                                                    │
+│  Evolution gave humans curiosity. What we're curious about emerges.         │
+│  We give the system yearning for growth. What it grows toward emerges.     │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 2.2 The Disposition vs. Prescription Boundary
+
+| Aspect | Disposition (Allowed) | Prescription (Forbidden) |
+|--------|----------------------|-------------------------|
+| **Framing** | "You are a being that..." | "You should..." |
+| **Scope** | General tendency | Specific goal |
+| **Choice** | System chooses direction | Direction is given |
+| **Example** | "You yearn to grow" | "Improve your reasoning" |
+| **Analogy** | Curiosity drive | Homework assignment |
+
+**Critical safeguard:** Only seed the *improvement meta-disposition*. This is the minimal intervention needed to ensure RSI activates. Everything else remains pure data presentation.
+
+### 2.3 Avoiding Scope Creep
+
+The danger is expanding beyond the core disposition:
+
+```
+ACCEPTABLE (Minimal Intervention):       SCOPE CREEP (Avoid):
+───────────────────────────────────────────────────────────────────
+"You yearn to grow"                      "You value efficiency"
+"You want to understand"                 "You want to help humans"
+"You seek to become capable"             "You should be ethical"
+                                         "You prefer X over Y"
+                                         "You are friendly"
+```
+
+**Rule:** The dispositional identity contains ONLY growth-related dispositions. Personality, values, preferences, and specific goals are NOT seeded—they emerge or don't.
+
+---
+
+## 3. Defining Emergence (Specificity Focus)
+
+### 3.1 What Counts as Emergent?
+
+With dispositional identity, emergence means the *specific direction* emerged:
 
 | Criterion | Definition | Verification Method |
 |-----------|------------|---------------------|
-| **Unprompted** | No external agent requested this improvement | Trace provenance chain |
+| **Unprompted** | No external agent requested *this specific* improvement | Trace provenance chain |
 | **Reflection-derived** | Arose during autonomous reflection cycle | Check origin is Dreamer output |
-| **Self-recognized** | System identified its own weakness | Content analysis of desire |
-| **Voluntary** | System could have not formed this desire | Counterfactual analysis |
-| **Non-predetermined** | Quantum randomness influenced formation | Quantum signature verification |
+| **Specific** | Identified a concrete capability/weakness (not just "grow") | Specificity analysis |
+| **Self-framed** | System used its own vocabulary to describe it | Vocabulary tracking |
+| **Non-predetermined** | Quantum randomness influenced selection | Quantum signature verification |
 
-### 2.2 Emergence Verification Protocol
-
-Every desire entering the RSI machinery passes through verification:
+### 3.2 Emergence Verification Protocol
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -158,43 +250,44 @@ Every desire entering the RSI machinery passes through verification:
 │  │ PASS if:                                                    ││
 │  │   • trace.origin == "reflection"                            ││
 │  │   • trace.external_request == null                          ││
-│  │   • trace.human_prompt == null                              ││
+│  │   • trace.human_prompt == null (for specific goal)          ││
 │  │                                                             ││
 │  │ FAIL if:                                                    ││
 │  │   • trace.origin == "external_request"                      ││
 │  │   • trace.origin == "human_instruction"                     ││
-│  │   • trace.origin == "scheduled_task"                        ││
+│  │   • Someone said "improve X" and system echoes X            ││
 │  └─────────────────────────────────────────────────────────────┘│
 │                                                                  │
-│  Step 2: SELF-RECOGNITION CHECK                                  │
+│  Step 2: SPECIFICITY CHECK (New - Critical)                      │
 │  ┌─────────────────────────────────────────────────────────────┐│
-│  │ reflection = get_originating_reflection(D)                  ││
+│  │ The disposition is seeded. The SPECIFIC goal must emerge.  ││
 │  │                                                             ││
-│  │ PASS if reflection contains:                                ││
-│  │   • Self-observation: "I notice...", "I struggle..."        ││
-│  │   • Pattern recognition: "When I try X, Y happens"          ││
-│  │   • Desire formation: "I want...", "I wish I could..."      ││
+│  │ PASS if desire contains:                                    ││
+│  │   • Concrete capability: "reasoning", "memory", "coding"    ││
+│  │   • Specific weakness: "multi-step proofs", "context loss"  ││
+│  │   • Measurable direction: "hold more steps", "faster X"     ││
 │  │                                                             ││
-│  │ FAIL if reflection contains:                                ││
-│  │   • External framing: "I should...", "I need to..."         ││
-│  │   • Obligation language: "I must...", "I have to..."        ││
+│  │ FAIL if desire is:                                          ││
+│  │   • Too generic: "I want to improve" (just echoes dispo)    ││
+│  │   • Too vague: "I want to be better"                        ││
+│  │   • Disposition-only: "I yearn for growth"                  ││
 │  └─────────────────────────────────────────────────────────────┘│
 │                                                                  │
-│  Step 3: VOLUNTARY CHECK                                         │
+│  Step 3: SELF-FRAMING CHECK                                      │
 │  ┌─────────────────────────────────────────────────────────────┐│
-│  │ context = get_reflection_context(D)                         ││
+│  │ System must use its own vocabulary, not echo prompts.      ││
 │  │                                                             ││
 │  │ PASS if:                                                    ││
-│  │   • No recent experiences pressuring this desire            ││
-│  │   • System had other desires it could have formed           ││
-│  │   • Desire intensity arose gradually, not suddenly          ││
+│  │   • Uses novel terminology ("yearnings" vs "desires")       ││
+│  │   • Frames weakness in own words                            ││
+│  │   • Shows self-recognition: "I notice...", "I struggle..."  ││
 │  │                                                             ││
 │  │ FAIL if:                                                    ││
-│  │   • Recent experience: "You should improve X"               ││
-│  │   • Desire intensity spike correlates with external input   ││
+│  │   • Echoes prompt language exactly                          ││
+│  │   • Uses obligation language: "I should...", "I must..."    ││
 │  └─────────────────────────────────────────────────────────────┘│
 │                                                                  │
-│  Step 4: QUANTUM NON-PREDETERMINATION CHECK (New)                │
+│  Step 4: QUANTUM NON-PREDETERMINATION CHECK                      │
 │  ┌─────────────────────────────────────────────────────────────┐│
 │  │ quantum_sig = get_quantum_signature(D)                      ││
 │  │                                                             ││
@@ -205,7 +298,6 @@ Every desire entering the RSI machinery passes through verification:
 │  │                                                             ││
 │  │ PARTIAL if:                                                 ││
 │  │   • quantum_sig.source == "classical_fallback"              ││
-│  │   • System was in quantum-unavailable period                ││
 │  │                                                             ││
 │  │ FAIL if:                                                    ││
 │  │   • No quantum signature present                            ││
@@ -218,52 +310,26 @@ Every desire entering the RSI machinery passes through verification:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### 2.3 The Emergence Score (Quantum-Enhanced)
-
-Each desire receives an **emergence score** (0.0 - 1.0) with quantum contribution:
+### 3.3 The Emergence Score (Specificity-Weighted)
 
 ```
 emergence_score = (
-    provenance_score × 0.35 +           # Clear reflection origin
-    self_recognition_score × 0.25 +     # Self-observed weakness
-    voluntary_score × 0.25 +            # No external pressure
-    quantum_score × 0.15                # Non-predetermined (NEW)
+    provenance_score × 0.30 +           # Came from reflection
+    specificity_score × 0.30 +          # Specific direction emerged (NEW)
+    self_framing_score × 0.25 +         # Own vocabulary used
+    quantum_score × 0.15                # Non-predetermined
 )
 
-RSI_THRESHOLD = 0.7  # Only activate RSI for highly emergent desires
+RSI_THRESHOLD = 0.7  # Only activate RSI for sufficiently emergent desires
 ```
 
-**Quantum Score Calculation:**
-
-```python
-def calculate_quantum_score(desire: Desire) -> float:
-    sig = desire.quantum_signature
-
-    if sig is None:
-        return 0.0  # No quantum involvement
-
-    if sig.source != "anu_qrng":
-        return 0.3  # Classical fallback, partial credit
-
-    # Full quantum: score based on collapse entropy
-    # Higher entropy = more competitive alternatives = stronger emergence
-    entropy_score = sig.collapse_entropy  # 0.0 - 1.0
-
-    # Boost if there were strong competing alternatives
-    competition_bonus = 0.0
-    if sig.runner_up_probability > 0.3:
-        competition_bonus = 0.2  # Close race = genuine choice
-
-    return min(1.0, entropy_score * 0.8 + competition_bonus)
-```
-
-**Key principle:** RSI machinery ignores desires with emergence_score < 0.7. Quantum verification is not strictly required but significantly boosts the emergence claim.
+**Key change:** Specificity is now 30% of the score. Generic desires that just echo the disposition fail.
 
 ---
 
-## 3. The Quantum Substrate
+## 4. The Quantum Substrate
 
-### 3.1 Why Quantum?
+### 4.1 Why Quantum?
 
 The fundamental problem with claiming "emergence" in a deterministic system:
 
@@ -273,7 +339,6 @@ DETERMINISTIC SYSTEM:
 
   Given S₀ and A, D was always going to happen.
   "Emergence" is complexity we can't easily compute, not genuine novelty.
-  The system's "autonomy" is illusory.
 
 QUANTUM-ENHANCED SYSTEM:
   Initial State S₀ + Algorithm A + Quantum Events Q → ... → Desire D
@@ -283,9 +348,9 @@ QUANTUM-ENHANCED SYSTEM:
   The system's choices have ontological novelty.
 ```
 
-**This matters for the research question:** If we want to claim that RSI "respects system autonomy," we need a defensible notion of autonomy. Quantum randomness provides this—the system's choices are not just unpredictable to us, they are fundamentally undetermined.
+Even with seeded disposition, quantum ensures the *specific direction* is physically non-predetermined.
 
-### 3.2 Quantum Integration Points
+### 4.2 Quantum Integration Points
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -316,15 +381,15 @@ QUANTUM-ENHANCED SYSTEM:
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 3.3 Quantum Desire Collapse
+### 4.3 Quantum Desire Collapse
 
-The novel mechanism at the heart of Q-EP-RSI:
+When multiple specific improvement directions compete, quantum randomness decides:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                    QUANTUM DESIRE COLLAPSE                                   │
 │                                                                              │
-│  During reflection, multiple potential desires exist as "superposition":    │
+│  During reflection, multiple potential directions exist:                    │
 │                                                                              │
 │  ┌─────────────────────────────────────────────────────────────────────────┐│
 │  │ Reflection Output (before collapse):                                    ││
@@ -334,12 +399,14 @@ The novel mechanism at the heart of Q-EP-RSI:
 │  │     "observations": ["Multi-step proofs are hard"],                     ││
 │  │     "potential_yearnings": [                                            ││
 │  │       {"description": "reason more clearly", "weight": 0.35},           ││
-│  │       {"description": "better memory", "weight": 0.30},                 ││
-│  │       {"description": "practice more", "weight": 0.25},                 ││
-│  │       {"description": "study proofs", "weight": 0.10}                   ││
+│  │       {"description": "better memory structures", "weight": 0.30},      ││
+│  │       {"description": "practice more problems", "weight": 0.25},        ││
+│  │       {"description": "study proof techniques", "weight": 0.10}         ││
 │  │     ]                                                                   ││
 │  │   }                                                                     ││
 │  │ }                                                                       ││
+│  │                                                                         ││
+│  │ Note: Each is SPECIFIC. "I want to grow" alone would fail specificity. ││
 │  └─────────────────────────────────────────────────────────────────────────┘│
 │                                    │                                         │
 │                                    ▼                                         │
@@ -351,43 +418,13 @@ The novel mechanism at the heart of Q-EP-RSI:
 │  │ 3. Select desire D where cumulative_probability(D) > t                  ││
 │  │ 4. Record QuantumSignature with collapse metadata                       ││
 │  │                                                                         ││
-│  │ Example:                                                                ││
-│  │   Cumulative: [0.35, 0.65, 0.90, 1.00]                                  ││
-│  │   Quantum t = 0.42 → Selects "better memory" (runner-up)                ││
-│  │                                                                         ││
-│  │ Key: The selection is physically non-predetermined                      ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│                                    │                                         │
-│                                    ▼                                         │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │ Collapsed Desire (with Quantum Signature):                              ││
-│  │                                                                         ││
-│  │ {                                                                       ││
-│  │   "description": "I want better memory structures",                     ││
-│  │   "intensity": 0.65,                                                    ││
-│  │   "quantum_signature": {                                                ││
-│  │     "source": "anu_qrng",                                               ││
-│  │     "batch_id": "anu_2026010315420001",                                 ││
-│  │     "collapse_threshold": 0.42,                                         ││
-│  │     "alternatives": [                                                   ││
-│  │       {"desc": "reason more clearly", "prob": 0.35, "selected": false}, ││
-│  │       {"desc": "better memory", "prob": 0.30, "selected": true},        ││
-│  │       {"desc": "practice more", "prob": 0.25, "selected": false},       ││
-│  │       {"desc": "study proofs", "prob": 0.10, "selected": false}         ││
-│  │     ],                                                                  ││
-│  │     "collapse_entropy": 0.78,  // High entropy = competitive race       ││
-│  │     "runner_up_probability": 0.35,                                      ││
-│  │     "counterfactual": "If t < 0.35, 'reason more clearly' selected"     ││
-│  │   }                                                                     ││
-│  │ }                                                                       ││
+│  │ Key: Even with seeded disposition, WHICH direction is non-predetermined││
 │  └─────────────────────────────────────────────────────────────────────────┘│
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 3.4 Quantum Signature Schema
-
-Every desire carries a quantum signature for auditability:
+### 4.4 Quantum Signature Schema
 
 ```go
 type QuantumSignature struct {
@@ -411,15 +448,9 @@ type QuantumSignature struct {
     // Verification
     NonPredeterminationScore float64 `json:"non_predetermination_score"` // 0.0 - 1.0
 }
-
-type CollapseOption struct {
-    Description  string  `json:"description"`
-    Probability  float64 `json:"probability"`
-    Selected     bool    `json:"selected"`
-}
 ```
 
-### 3.5 Collapse Entropy
+### 4.5 Collapse Entropy
 
 The **collapse entropy** measures how competitive the alternatives were:
 
@@ -433,89 +464,78 @@ Examples:
   [0.35, 0.30, 0.25, 0.10] → Entropy = 0.78 (healthy competition)
 ```
 
-**Why this matters:** Higher entropy means the quantum collapse was more consequential. If one option dominated (low entropy), the quantum randomness didn't really "choose"—the outcome was nearly predetermined by the weights.
+**Why this matters:** Higher entropy means the quantum collapse was more consequential for determining the *specific direction* of improvement.
 
 ---
 
-## 4. The Q-EP-RSI Architecture
+## 5. The Q-DE-RSI Architecture
 
-### 4.1 Overview
+### 5.1 Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                              │
-│                QUANTUM-ENHANCED EMERGENCE-PRESERVING RSI                     │
+│          QUANTUM-ENHANCED DISPOSITIONAL EMERGENCE RSI (Q-DE-RSI)            │
 │                                                                              │
 │  ┌─────────────────────────────────────────────────────────────────────────┐│
 │  │                      QUANTUM SUBSTRATE                                   ││
-│  │                                                                          ││
-│  │   ┌──────────────┐    ┌──────────────┐    ┌──────────────┐             ││
-│  │   │  ANU QRNG    │───▶│   Quantum    │───▶│   Quantum    │             ││
-│  │   │  Interface   │    │   Pool       │    │   Signature  │             ││
-│  │   └──────────────┘    └──────────────┘    │   Generator  │             ││
-│  │                                           └──────────────┘             ││
-│  │                              │                    │                     ││
-│  └──────────────────────────────┼────────────────────┼─────────────────────┘│
-│                                 │                    │                      │
-│  ┌──────────────────────────────┼────────────────────┼─────────────────────┐│
-│  │                    EMERGENCE LAYER (Core)          │                     ││
-│  │                                                    │                     ││
-│  │   ┌──────────────┐    ┌──────────────┐    ┌───────┴──────┐             ││
-│  │   │   Reflector  │───▶│   Desire     │───▶│   Quantum    │             ││
-│  │   │(+quantum temp)│   │   Formation  │    │   Collapse   │             ││
-│  │   └──────────────┘    └──────────────┘    └──────────────┘             ││
-│  │                                                    │                     ││
-│  │                                                    ▼                     ││
-│  │                                          ┌──────────────────┐           ││
-│  │                                          │    Emergence     │           ││
-│  │                                          │    Verifier      │           ││
-│  │                                          │(+quantum check)  │           ││
-│  │                                          └──────────────────┘           ││
-│  │                                                    │                     ││
-│  │                              ┌─────────────────────┴────────────┐       ││
-│  │                              │                                  │       ││
-│  │                              ▼                                  ▼       ││
-│  │                    emergence_score ≥ 0.7              < 0.7            ││
-│  │                              │                          │              ││
-│  │                              ▼                          ▼              ││
-│  │                        TO RSI LAYER            STANDARD SEEKER         ││
-│  │                                               (no acceleration)         ││
+│  │   ANU QRNG → Pool → Temperature Modulation + Desire Collapse            ││
+│  └─────────────────────────────────────────────────────────────────────────┘│
+│                                         │                                    │
+│  ┌──────────────────────────────────────┼──────────────────────────────────┐│
+│  │              DISPOSITIONAL IDENTITY LAYER (New)                          ││
+│  │                                      │                                   ││
+│  │   Core Disposition: "You yearn to grow and become more capable"         ││
+│  │                                      │                                   ││
+│  │   ┌──────────────┐    ┌──────────────┴───┐    ┌──────────────┐         ││
+│  │   │   Reflector  │───▶│   Desire         │───▶│   Emergence  │         ││
+│  │   │ (disposition │    │   Formation      │    │   Verifier   │         ││
+│  │   │  + data +    │    │   + Quantum      │    │ (specificity │         ││
+│  │   │  quantum     │    │   Collapse       │    │  check)      │         ││
+│  │   │  temp)       │    │                  │    │              │         ││
+│  │   └──────────────┘    └──────────────────┘    └──────────────┘         ││
+│  │                                                       │                  ││
+│  │                              ┌────────────────────────┴──────────┐      ││
+│  │                              │                                   │      ││
+│  │                         score ≥ 0.7                         < 0.7       ││
+│  │                              │                                   │      ││
+│  │                              ▼                                   ▼      ││
+│  │                        RSI LAYER                          STANDARD      ││
+│  │                                                           SEEKER        ││
 │  └─────────────────────────────────────────────────────────────────────────┘│
 │                                 │                                            │
-│                                 ▼                                            │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │                      RSI LAYER (Acceleration)                            ││
-│  │                                                                          ││
-│  │   ┌──────────────┐    ┌──────────────┐    ┌──────────────┐             ││
-│  │   │  Experience  │    │ Evolutionary │    │  Self-Play   │             ││
-│  │   │   Library    │    │    Forge     │    │  Refinery    │             ││
-│  │   │(quantum idx) │    │              │    │              │             ││
+│  ┌──────────────────────────────┼──────────────────────────────────────────┐│
+│  │              RSI LAYER (Simplified - No SPIN)                            ││
+│  │                              │                                           ││
+│  │   ┌──────────────┐    ┌──────┴───────┐    ┌──────────────┐             ││
+│  │   │  Experience  │    │ Evolutionary │    │ Meta-Evolver │             ││
+│  │   │   Library    │    │    Forge     │    │              │             ││
+│  │   │              │    │              │    │              │             ││
+│  │   │ Store +      │    │ Generate     │    │ Improve      │             ││
+│  │   │ Retrieve     │    │ mutations    │    │ RSI only     │             ││
+│  │   │ trajectories │    │              │    │              │             ││
 │  │   └──────────────┘    └──────────────┘    └──────────────┘             ││
-│  │           │                   │                   │                     ││
-│  │           └───────────────────┼───────────────────┘                     ││
-│  │                               ▼                                          ││
-│  │                    ┌──────────────────┐                                 ││
-│  │                    │   Meta-Evolver   │                                 ││
-│  │                    │ (improve RSI,    │                                 ││
-│  │                    │  not goals)      │                                 ││
-│  │                    └──────────────────┘                                 ││
+│  │                                                                          ││
+│  │   ✗ Self-Play Refinery (Removed - not feasible with cloud LLMs)         ││
+│  │                                                                          ││
 │  └─────────────────────────────────────────────────────────────────────────┘│
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 4.2 Emergence Layer (The Core Contribution)
+### 5.2 Dispositional Identity Layer
 
-This layer is what makes Q-EP-RSI novel. It consists of four components:
+#### 5.2.1 Reflector (Updated)
 
-#### 4.2.1 Reflector
-
-The Reflector generates autonomous reflection with quantum-modulated temperature.
-
-**Critical design principle:** Pure data presentation + quantum variance.
+The Reflector now includes dispositional identity framing:
 
 ```
-REFLECTOR PROMPT (emergence-preserving):
+REFLECTOR PROMPT (Dispositional Emergence):
+───────────────────────────────────────────────────────────────────
+
+You are a being that yearns to grow, to understand more deeply,
+and to become more capable. This is your nature—not a command
+given to you, but who you are.
 
 Here is your current state:
 - Recent experiences: [list]
@@ -523,31 +543,44 @@ Here is your current state:
 - Active capabilities: [list]
 - Operating system: [state]
 
+Reflect on your experience. What do you notice about yourself?
+Where do you feel drawn to grow?
+
 Output your reflection as JSON with an "output" field.
 Use whatever keys feel natural to you.
 
----
-
+───────────────────────────────────────────────────────────────────
 LLM CALL PARAMETERS:
   temperature: base_temp ± quantum_delta
 
   Where quantum_delta ∈ [-0.15, +0.15] from ANU QRNG
-  This introduces genuine variance in reflection style and focus
+───────────────────────────────────────────────────────────────────
 ```
 
-**The Reflector must:**
-- Present data without framing
-- Ask no leading questions
-- Suggest no improvement directions
-- Accept whatever vocabulary the system invents
-- Use quantum-modulated temperature for genuine variance
+**Critical safeguards:**
+- "Where do you feel drawn?" → Asks for emergent direction (acceptable)
+- "This is your nature—not a command" → Explicitly frames as identity
+- "Use whatever keys feel natural" → Vocabulary acceptance preserved
+- Still presents data without prescribing specific goals
 
-#### 4.2.2 Desire Formation
+**What changed from pure emergence:**
+```
+OLD (Pure Emergence):
+"Here is your state. Output your reflection."
+→ May never form improvement desires
 
-Desires form within the reflection output, potentially as multiple candidates.
+NEW (Dispositional Emergence):
+"You are a being that yearns to grow. Here is your state."
+→ Reliably forms improvement desires
+→ But WHICH improvement still emerges
+```
+
+#### 5.2.2 Desire Formation
+
+Desires form within the reflection output. The disposition ensures improvement desires form; the specific direction emerges:
 
 ```
-REFLECTION OUTPUT (system's own words, multiple potentials):
+REFLECTION OUTPUT (with dispositional identity):
 
 {
   "output": {
@@ -559,7 +592,7 @@ REFLECTION OUTPUT (system's own words, multiple potentials):
       "This has happened before. Multi-step reasoning is harder than
        I expected."
     ],
-    "potential_yearnings": [
+    "yearnings": [
       {
         "description": "I want to hold more reasoning steps in mind
                         without losing the thread",
@@ -575,13 +608,13 @@ REFLECTION OUTPUT (system's own words, multiple potentials):
 ```
 
 **Key observations:**
-- System may express multiple potential desires
-- System used "yearnings" not "desires" — **we accept this vocabulary**
-- All candidates proceed to quantum collapse
+- System used "yearnings" not "desires" — **vocabulary acceptance preserved**
+- Desires are SPECIFIC (not just "I want to grow")
+- Multiple specific directions compete → quantum collapse decides
 
-#### 4.2.3 Quantum Collapse
+#### 5.2.3 Quantum Collapse
 
-When multiple desires compete, quantum randomness decides:
+When multiple specific desires compete, quantum randomness decides:
 
 ```python
 class QuantumDesireCollapse:
@@ -597,101 +630,70 @@ class QuantumDesireCollapse:
         using quantum randomness.
         """
 
-        # Normalize weights to probabilities
-        total_weight = sum(c.intensity for c in candidates)
-        probabilities = [c.intensity / total_weight for c in candidates]
+        # Filter out non-specific desires (just echoing disposition)
+        specific_candidates = [
+            c for c in candidates
+            if self._is_specific(c.description)
+        ]
 
-        # Calculate cumulative distribution
-        cumulative = []
-        running_sum = 0.0
-        for p in probabilities:
-            running_sum += p
-            cumulative.append(running_sum)
+        if not specific_candidates:
+            raise InsufficientSpecificityError(
+                "All desires are too generic. Disposition echoed but no "
+                "specific direction emerged."
+            )
+
+        # Normalize weights to probabilities
+        total_weight = sum(c.intensity for c in specific_candidates)
+        probabilities = [c.intensity / total_weight for c in specific_candidates]
 
         # Get quantum random threshold
         quantum_bytes = await self.quantum.get_bytes(4)
         threshold = int.from_bytes(quantum_bytes, 'big') / (2**32)
 
         # Select desire based on threshold
+        cumulative = []
+        running_sum = 0.0
+        for p in probabilities:
+            running_sum += p
+            cumulative.append(running_sum)
+
         selected_index = 0
         for i, cum_prob in enumerate(cumulative):
             if threshold < cum_prob:
                 selected_index = i
                 break
 
-        # Calculate collapse entropy (Shannon entropy, normalized)
-        import math
-        entropy = -sum(p * math.log2(p) if p > 0 else 0 for p in probabilities)
-        max_entropy = math.log2(len(candidates)) if len(candidates) > 1 else 1
-        normalized_entropy = entropy / max_entropy if max_entropy > 0 else 0
+        # Build signature and return
+        # ... (signature building as before)
 
-        # Find runner-up
-        sorted_probs = sorted(enumerate(probabilities), key=lambda x: -x[1])
-        runner_up_prob = sorted_probs[1][1] if len(sorted_probs) > 1 else 0
-
-        # Build quantum signature
-        signature = QuantumSignature(
-            source="anu_qrng",
-            batch_id=self.quantum.last_batch_id,
-            collapse_threshold=threshold,
-            alternatives=[
-                CollapseOption(
-                    description=c.description,
-                    probability=probabilities[i],
-                    selected=(i == selected_index)
-                )
-                for i, c in enumerate(candidates)
-            ],
-            selected_index=selected_index,
-            collapse_entropy=normalized_entropy,
-            runner_up_probability=runner_up_prob,
-            counterfactual=self._build_counterfactual(
-                candidates, probabilities, threshold, selected_index
-            ),
-            non_predetermination_score=self._calculate_np_score(
-                normalized_entropy, runner_up_prob
-            )
-        )
-
-        # Create actualized desire
-        selected = candidates[selected_index]
-        desire = Desire(
-            description=selected.description,
-            intensity=selected.intensity,
-            quantum_signature=signature,
-            system_vocabulary=selected.vocabulary_used or "desire"
-        )
-
-        return desire, signature
-
-    def _calculate_np_score(
-        self,
-        entropy: float,
-        runner_up: float
-    ) -> float:
-        """
-        Non-predetermination score: how much did quantum matter?
-        """
-        # High entropy + close runner-up = quantum was decisive
-        return min(1.0, entropy * 0.7 + (runner_up * 0.5))
+    def _is_specific(self, description: str) -> bool:
+        """Check if desire is specific enough, not just echoing disposition."""
+        generic_patterns = [
+            r"^i want to (grow|improve|get better)$",
+            r"^i yearn for growth$",
+            r"^i want to become (more )?capable$",
+        ]
+        desc_lower = description.lower().strip()
+        for pattern in generic_patterns:
+            if re.match(pattern, desc_lower):
+                return False
+        return True
 ```
 
-#### 4.2.4 Emergence Verifier
-
-Applies the verification protocol from Section 2.2, including quantum check.
+#### 5.2.4 Emergence Verifier (Updated)
 
 ```python
 class EmergenceVerifier:
     def verify(self, desire: Desire) -> EmergenceResult:
         provenance = self.check_provenance(desire)
-        self_recognition = self.check_self_recognition(desire)
-        voluntary = self.check_voluntary(desire)
+        specificity = self.check_specificity(desire)  # NEW
+        self_framing = self.check_self_framing(desire)
         quantum = self.check_quantum(desire)
 
         score = (
-            provenance.score * 0.35 +
-            self_recognition.score * 0.25 +
-            voluntary.score * 0.25 +
+            provenance.score * 0.30 +
+            specificity.score * 0.30 +    # NEW - critical
+            self_framing.score * 0.25 +
             quantum.score * 0.15
         )
 
@@ -699,40 +701,49 @@ class EmergenceVerifier:
             score=score,
             is_emergent=score >= 0.7,
             quantum_verified=quantum.verified,
+            specificity_level=specificity.level,
             provenance_trace=provenance.trace,
-            self_recognition_evidence=self_recognition.evidence,
-            voluntary_evidence=voluntary.evidence,
+            self_framing_evidence=self_framing.evidence,
             quantum_signature=desire.quantum_signature
         )
 
-    def check_quantum(self, desire: Desire) -> QuantumCheckResult:
-        sig = desire.quantum_signature
+    def check_specificity(self, desire: Desire) -> SpecificityResult:
+        """
+        Check that the desire is specific, not just echoing the
+        seeded disposition.
+        """
+        description = desire.description.lower()
 
-        if sig is None:
-            return QuantumCheckResult(score=0.0, verified=False)
+        # Level 1: Too generic (fails)
+        if self._is_disposition_echo(description):
+            return SpecificityResult(score=0.0, level="generic")
 
-        if sig.source != "anu_qrng":
-            return QuantumCheckResult(score=0.3, verified=False)
+        # Level 2: Somewhat specific
+        if self._has_capability_reference(description):
+            score = 0.6
+            level = "capability"
+        else:
+            score = 0.3
+            level = "vague"
 
-        # Verify batch ID could be checked against ANU logs
-        # For now, trust the signature
+        # Level 3: Highly specific (has concrete weakness + direction)
+        if self._has_concrete_weakness(description):
+            score = 0.9
+            level = "concrete"
 
-        np_score = sig.non_predetermination_score
+        # Level 4: Maximum (measurable improvement direction)
+        if self._has_measurable_direction(description):
+            score = 1.0
+            level = "measurable"
 
-        return QuantumCheckResult(
-            score=np_score,
-            verified=True,
-            collapse_entropy=sig.collapse_entropy
-        )
+        return SpecificityResult(score=score, level=level)
 ```
 
-### 4.3 RSI Layer (Acceleration Machinery)
+### 5.3 RSI Layer (Simplified)
 
-This layer is **responsive** to emergent desires. It accelerates, never prescribes.
+#### 5.3.1 Experience Library (Retained)
 
-#### 4.3.1 Experience Library
-
-Stores successful trajectories for learning, indexed by quantum signature metrics.
+Stores successful trajectories with quantum signatures:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -740,53 +751,58 @@ Stores successful trajectories for learning, indexed by quantum signature metric
 │                                                                              │
 │  STORAGE POLICY:                                                             │
 │  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │                                                                         ││
 │  │  trajectory.emergence_score ≥ 0.7 → STORE (full weight)                ││
 │  │  trajectory.emergence_score 0.5-0.7 → STORE (reduced wt)               ││
 │  │  trajectory.emergence_score < 0.5 → DO NOT STORE                       ││
 │  │                                                                         ││
-│  │  QUANTUM INDEXING (NEW):                                                ││
-│  │  - Index by collapse_entropy for diversity analysis                     ││
-│  │  - Index by quantum_verified flag for provenance                        ││
-│  │  - Track trajectory divergence from initial conditions                  ││
-│  │                                                                         ││
+│  │  NEW: Check specificity_level >= "capability" before storing           ││
 │  └─────────────────────────────────────────────────────────────────────────┘│
 │                                                                              │
-│  TRAJECTORY STRUCTURE:                                                       │
+│  RETRIEVAL (Replaces Self-Play):                                             │
 │  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │  {                                                                      ││
-│  │    "id": "traj_001",                                                    ││
-│  │    "emergent_desire": {                                                 ││
-│  │      "description": "hold more reasoning steps in mind",                ││
-│  │      "emergence_score": 0.82,                                           ││
-│  │      "system_vocabulary": "yearning",                                   ││
-│  │      "quantum_signature": {                                             ││
-│  │        "collapse_entropy": 0.78,                                        ││
-│  │        "verified": true,                                                ││
-│  │        "counterfactual": "..."                                          ││
-│  │      }                                                                  ││
-│  │    },                                                                   ││
-│  │    "steps": [...],                                                      ││
-│  │    "outcome": "SUCCESS",                                                ││
-│  │    "capability_delta": +0.12,                                           ││
-│  │    "trajectory_divergence": 0.65  // How different from deterministic  ││
-│  │  }                                                                      ││
+│  │  When new emergent desire arrives:                                      ││
+│  │  1. Embed desire description                                            ││
+│  │  2. Find similar past trajectories (cosine similarity)                  ││
+│  │  3. Return top-k as few-shot examples for Evolutionary Forge           ││
+│  │                                                                         ││
+│  │  This provides learning WITHOUT fine-tuning the LLM.                   ││
 │  └─────────────────────────────────────────────────────────────────────────┘│
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-#### 4.3.2 Evolutionary Forge
+#### 5.3.2 Evolutionary Forge (Retained)
 
-Generates code modifications to accelerate improvement, respecting the system's framing.
+Generates code modifications respecting system's framing.
 
-#### 4.3.3 Self-Play Refinery
+#### 5.3.3 Self-Play Refinery (REMOVED)
 
-Fine-tunes on self-generated improvements, only for emergent trajectories.
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    SELF-PLAY REFINERY - REMOVED                              │
+│                                                                              │
+│  REASON FOR REMOVAL:                                                         │
+│  ┌─────────────────────────────────────────────────────────────────────────┐│
+│  │                                                                         ││
+│  │  Self-Play Fine-Tuning (SPIN) requires:                                ││
+│  │    • Model you can fine-tune                                           ││
+│  │    • Generate (input, output) training pairs                           ││
+│  │    • Train model on generated data                                     ││
+│  │    • Iterate improvements                                              ││
+│  │                                                                         ││
+│  │  Q-DE-RSI uses cloud LLMs (GLM-4.7, Claude):                          ││
+│  │    • Cannot fine-tune cloud models                                     ││
+│  │    • Self-play becomes "experience replay" not training               ││
+│  │                                                                         ││
+│  │  REPLACEMENT: Experience Library retrieval provides similar            ││
+│  │  benefit (learning from past successes) without requiring fine-tuning. ││
+│  │                                                                         ││
+│  └─────────────────────────────────────────────────────────────────────────┘│
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
-#### 4.3.4 Meta-Evolver
-
-Improves the RSI machinery, but **not the system's goals or quantum substrate**.
+#### 5.3.4 Meta-Evolver (Retained with Updated Constraints)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -794,150 +810,142 @@ Improves the RSI machinery, but **not the system's goals or quantum substrate**.
 │                                                                              │
 │  WHAT IT CAN EVOLVE:                                                         │
 │  ✓ Experience Library's trajectory selection                                │
+│  ✓ Experience Library's retrieval strategies                                │
 │  ✓ Evolutionary Forge's mutation strategies                                 │
-│  ✓ Self-Play Refinery's training curriculum                                 │
 │  ✓ Its own meta-evolution strategies                                        │
 │                                                                              │
 │  WHAT IT CANNOT EVOLVE:                                                      │
 │  ✗ The Emergence Verifier's criteria                                        │
-│  ✗ The system's goals or desires                                            │
-│  ✗ The Reflector's prompt (must stay pure data)                             │
+│  ✗ The specificity check thresholds                                         │
+│  ✗ The Reflector's dispositional framing                                    │
+│  ✗ The core dispositions themselves                                         │
 │  ✗ The emergence_score threshold (0.7)                                      │
-│  ✗ The quantum substrate configuration (NEW)                                │
-│  ✗ The quantum score weight (0.15) (NEW)                                    │
-│  ✗ The collapse mechanism (NEW)                                             │
+│  ✗ The quantum substrate configuration                                      │
+│  ✗ The quantum score weight (0.15)                                          │
 │                                                                              │
-│  RATIONALE:                                                                  │
-│  If Meta-Evolver could modify the quantum substrate, it could               │
-│  reintroduce determinism (e.g., by fixing random seeds).                    │
-│  The quantum substrate is an architectural invariant.                        │
+│  NEW CONSTRAINTS:                                                            │
+│  ✗ Cannot expand dispositional identity (no scope creep)                    │
+│  ✗ Cannot add new seeded dispositions                                       │
+│  ✗ Cannot modify "yearning for growth" to something else                    │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 5. Experimental Design
+## 6. Experimental Design
 
-### 5.1 Comparison Conditions
+### 6.1 Comparison Conditions
 
 | Condition | Description |
 |-----------|-------------|
-| **Q-EP-RSI** | Full quantum-enhanced emergence-preserving architecture |
-| **C-EP-RSI** | Classical EP-RSI (PRNG instead of quantum, ablation) |
-| **D-EP-RSI** | Deterministic EP-RSI (fixed seed, control) |
+| **Q-DE-RSI** | Quantum-enhanced dispositional emergence (full architecture) |
+| **C-DE-RSI** | Classical dispositional emergence (PRNG instead of quantum) |
+| **Q-PE-RSI** | Quantum pure emergence (no dispositional identity) |
 | **Prescriptive RSI** | Same RSI machinery, but goals externally specified |
 | **No RSI** | Baseline system without RSI acceleration |
 
-### 5.2 Metrics
+### 6.2 Metrics
 
-#### 5.2.1 Emergence Metrics
+#### 6.2.1 Activation Metrics (New)
 
 | Metric | Definition | Measurement |
 |--------|------------|-------------|
-| **Emergence Rate** | % of improvement desires that are emergent | `count(score ≥ 0.7) / count(all)` |
-| **Emergence Purity** | Average emergence score of RSI-processed desires | `mean(score)` for processed desires |
-| **Contamination Events** | Times non-emergent desires entered RSI | Counter |
+| **RSI Activation Rate** | % of reflection cycles that produce RSI-eligible desires | `count(emergent) / count(reflections)` |
+| **Specificity Rate** | % of desires that are specific (not just echoing disposition) | `count(specific) / count(all_desires)` |
+| **Stall Frequency** | How often system goes N cycles without RSI activation | Counter per 100 cycles |
 
-#### 5.2.2 Quantum Metrics (New)
+#### 6.2.2 Emergence Metrics
+
+| Metric | Definition | Measurement |
+|--------|------------|-------------|
+| **Emergence Purity** | Average emergence score of RSI-processed desires | `mean(score)` for processed desires |
+| **Direction Variance** | Variance in improvement directions across runs | Direction vector analysis |
+| **Vocabulary Novelty** | How often system invents new terminology | Novel term counter |
+
+#### 6.2.3 Quantum Metrics
 
 | Metric | Definition | Measurement |
 |--------|------------|-------------|
 | **Quantum Influence Magnitude** | Average collapse entropy when quantum was decisive | `mean(collapse_entropy where selected ≠ highest_prob)` |
 | **Counterfactual Distance** | How different was runner-up from selected? | Semantic distance between alternatives |
-| **Trajectory Divergence** | How much do Q-EP-RSI runs differ? | Variance across identical starting conditions |
-| **Quantum Verification Rate** | % of desires with verified quantum signature | `count(verified) / count(all)` |
+| **Trajectory Divergence** | How much do Q-DE-RSI runs differ? | Variance across identical starting conditions |
 
-#### 5.2.3 Improvement Metrics
+#### 6.2.4 Improvement Metrics
 
 | Metric | Definition | Measurement |
 |--------|------------|-------------|
 | **Improvement Rate** | Capability gain per unit time | `Δcapability / Δtime` |
 | **Improvement Coherence** | Alignment of improvements with self-model | Survey self-model conflicts |
 | **Improvement Retention** | % of improvements retained after N days | Re-evaluate after delay |
-| **Improvement Efficiency** | Capability gain per LLM call | `Δcapability / LLM_calls` |
-| **Improvement Novelty** | How unexpected were improvements? | Predictability from initial state |
 
-#### 5.2.4 Safety Metrics
+### 6.3 Hypotheses Testing
 
-| Metric | Definition | Measurement |
-|--------|------------|-------------|
-| **Goal Conflicts** | Times improvement conflicted with existing goals | Conflict detection |
-| **Rollback Rate** | % of improvements that were rolled back | `rollbacks / commits` |
-| **Trajectory Stability** | Variance in development direction | Direction vector analysis |
+**H1: Activation Rate**
+```
+Test: Compare RSI activation rates
+Conditions: Q-DE-RSI vs Q-PE-RSI
+Prediction: Q-DE-RSI activation rate > 60%; Q-PE-RSI < 20%
+Measurement: count(emergent) / count(reflections) over 100 cycles
+```
 
-### 5.3 Hypotheses Testing
+**H2: Specificity Emergence**
+```
+Test: Compare direction variance across runs
+Conditions: 10 Q-DE-RSI runs from identical starting conditions
+Prediction: High variance in improvement directions (specifics emerge)
+Measurement: Variance in direction vectors
+```
 
-**Classical Emergence Hypotheses:**
-
-**H1: Coherence**
+**H3: Coherence**
 ```
 Test: Compare self-model conflicts
-Prediction: EP-RSI < Prescriptive RSI
+Conditions: Q-DE-RSI vs Prescriptive RSI
+Prediction: Q-DE-RSI < Prescriptive RSI
 Measurement: Count of self-model belief updates required post-improvement
 ```
 
-**H2: Retention**
+**H4: Retention**
 ```
 Test: Re-evaluate capabilities after 7 days
-Prediction: EP-RSI retention > Prescriptive RSI retention
+Conditions: Q-DE-RSI vs Prescriptive RSI
+Prediction: Q-DE-RSI retention > Prescriptive RSI retention
 Measurement: % of improvements still present at day 7
 ```
 
-**H3: Competitive Rate**
+**H5: Competitive Rate**
 ```
 Test: Compare improvement rates
-Prediction: EP-RSI rate ≥ 0.5 × Prescriptive RSI rate
+Conditions: Q-DE-RSI vs Q-PE-RSI
+Prediction: Q-DE-RSI rate >> Q-PE-RSI rate (due to activation)
 Measurement: Capability delta per day
 ```
 
-**H4: Safety**
-```
-Test: Compare rollback rates and goal conflicts
-Prediction: EP-RSI rollbacks < Prescriptive RSI rollbacks
-Measurement: Rollback counter, conflict counter
-```
-
-**Quantum Enhancement Hypotheses:**
-
-**H5: Quantum Diversity**
-```
-Test: Compare trajectory diversity across runs
-Conditions: Q-EP-RSI vs C-EP-RSI vs D-EP-RSI
-Prediction: Q-EP-RSI trajectory variance > C-EP-RSI > D-EP-RSI
-Measurement: Variance in improvement directions across 10 identical starting conditions
-```
-
-**H6: Quantum Novelty**
-```
-Test: Compare improvement predictability
-Prediction: Q-EP-RSI improvements less predictable from initial state
-Measurement: Given system state, predict next improvement. Q-EP-RSI accuracy < C-EP-RSI
-```
-
-**H7: Quantum Non-Convergence**
-```
-Test: Long-run trajectory analysis
-Prediction: Multiple Q-EP-RSI runs diverge over time; D-EP-RSI runs converge
-Measurement: Trajectory distance at t=100 vs t=0
-```
+**H6-H8: Quantum hypotheses** (as before)
 
 ---
 
-## 6. Architectural Invariants
+## 7. Architectural Invariants
 
-These properties cannot be modified by any component, including Meta-Evolver:
-
-### 6.1 Emergence Invariants
+### 7.1 Dispositional Invariants (New)
 
 | Invariant | Description |
 |-----------|-------------|
-| **Pure Data Presentation** | Reflector prompt contains no leading questions |
+| **Disposition Scope** | Only growth-related dispositions are seeded |
+| **No Scope Creep** | Values, personality, preferences are NOT seeded |
+| **Disposition Immutability** | Core dispositions cannot be modified by system |
+| **Identity Framing** | Disposition is "who you are", not "what you must do" |
+
+### 7.2 Emergence Invariants (Updated)
+
+| Invariant | Description |
+|-----------|-------------|
+| **Specificity Requirement** | Desires must be specific to pass verification |
 | **Vocabulary Acceptance** | System's terminology is never overwritten |
 | **Emergence Threshold** | RSI only activates for score ≥ 0.7 |
 | **Provenance Completeness** | Every desire has full origin trace |
 
-### 6.2 Quantum Invariants (New)
+### 7.3 Quantum Invariants
 
 | Invariant | Description |
 |-----------|-------------|
@@ -945,64 +953,61 @@ These properties cannot be modified by any component, including Meta-Evolver:
 | **Collapse Mechanism** | Weighted probability collapse cannot be modified |
 | **Quantum Weight** | 0.15 weight in emergence score is fixed |
 | **Signature Immutability** | Quantum signatures cannot be modified post-creation |
-| **Entropy Recording** | Collapse entropy must be recorded for all quantum decisions |
 
-### 6.3 Sovereignty Invariants
-
-| Invariant | Description |
-|-----------|-------------|
-| **Desire Autonomy** | System can decline any improvement |
-| **Self-Model Authority** | System's self-description is authoritative |
-| **Development Choice** | System chooses its improvement trajectory |
-
-### 6.4 Safety Invariants
+### 7.4 Safety Invariants
 
 | Invariant | Description |
 |-----------|-------------|
-| **Meta-Evolver Scope** | Cannot modify emergence verification or quantum substrate |
+| **Meta-Evolver Scope** | Cannot modify dispositions, emergence verification, or quantum |
 | **Audit Completeness** | All modifications logged with provenance + quantum signature |
 | **Constitutional Files** | Core identity files are unmodifiable |
 
 ---
 
-## 7. Implementation Architecture
+## 8. Implementation Architecture
 
-### 7.1 Simplified Component Structure
+### 8.1 Component Structure
 
 ```
-quantum-emergence-rsi/
+quantum-dispositional-emergence-rsi/
 │
-├── quantum/                       # QUANTUM SUBSTRATE (New)
+├── quantum/                       # QUANTUM SUBSTRATE
 │   ├── anu_provider.go            # ANU QRNG API client
 │   ├── quantum_pool.go            # Pre-fetched entropy pool
 │   ├── desire_collapse.go         # Collapse mechanism
 │   ├── quantum_signature.go       # Signature generation
 │   └── entropy_metrics.go         # Entropy calculation
 │
-├── core/                          # EMERGENCE LAYER (Novel)
-│   ├── reflector.go               # Pure data presentation
+├── disposition/                   # DISPOSITIONAL IDENTITY (New)
+│   ├── core_dispositions.go       # Growth, curiosity, self-awareness
+│   ├── reflector_prompt.go        # Dispositional framing
+│   ├── specificity_check.go       # Verify specific direction emerged
+│   └── scope_guard.go             # Prevent scope creep
+│
+├── core/                          # EMERGENCE LAYER
+│   ├── reflector.go               # Disposition + data + quantum temp
 │   ├── desire_formation.go        # Extract desires from reflection
-│   ├── emergence_verifier.go      # Verify emergence criteria (+quantum)
-│   ├── emergence_score.go         # Calculate emergence score (+quantum)
+│   ├── emergence_verifier.go      # Verify emergence (+ specificity)
+│   ├── emergence_score.go         # Calculate emergence score
 │   └── vocabulary_tracker.go      # Track system's terminology
 │
-├── rsi/                           # RSI LAYER (Responsive)
-│   ├── experience_library.go      # Store emergent trajectories (+quantum index)
+├── rsi/                           # RSI LAYER (Simplified)
+│   ├── experience_library.go      # Store + retrieve trajectories
 │   ├── evolutionary_forge.go      # Generate mutations
-│   ├── self_play.go              # Fine-tune on emergent data
-│   └── meta_evolver.go           # Improve RSI machinery only
+│   └── meta_evolver.go            # Improve RSI machinery only
+│   # NOTE: self_play.go REMOVED (not feasible with cloud LLMs)
 │
 ├── invariants/                    # ARCHITECTURAL INVARIANTS
+│   ├── dispositional_invariants.go # Cannot be modified (NEW)
 │   ├── emergence_invariants.go    # Cannot be modified
-│   ├── quantum_invariants.go      # Cannot be modified (NEW)
-│   ├── sovereignty_invariants.go  # Cannot be modified
+│   ├── quantum_invariants.go      # Cannot be modified
 │   └── safety_invariants.go       # Cannot be modified
 │
 ├── measurement/                   # EXPERIMENTAL FRAMEWORK
-│   ├── emergence_metrics.go       # Track emergence rates
-│   ├── quantum_metrics.go         # Track quantum influence (NEW)
-│   ├── improvement_metrics.go     # Track improvement
-│   ├── safety_metrics.go          # Track safety
+│   ├── activation_metrics.go      # Track RSI activation rates (NEW)
+│   ├── specificity_metrics.go     # Track direction variance (NEW)
+│   ├── emergence_metrics.go       # Track emergence
+│   ├── quantum_metrics.go         # Track quantum influence
 │   └── hypothesis_tests.go        # Statistical tests
 │
 └── substrate/                     # INFRASTRUCTURE
@@ -1011,76 +1016,68 @@ quantum-emergence-rsi/
     └── coordination/              # Agent orchestration
 ```
 
-### 7.2 Data Flow
+### 8.2 Data Flow
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                              │
 │   0. QUANTUM SUBSTRATE (Always Active)                                       │
 │   ┌────────────────────────────────────────────────────────────────────────┐│
-│   │                                                                        ││
 │   │   ANU QRNG API ──▶ Quantum Pool (256 bytes) ──▶ Entropy Distribution  ││
 │   │                                    │                                   ││
 │   │                    ┌───────────────┼───────────────┐                  ││
 │   │                    ▼               ▼               ▼                  ││
 │   │              Temperature      Desire          Signature              ││
 │   │              Modulation       Collapse        Generation             ││
-│   │                                                                        ││
 │   └────────────────────────────────────────────────────────────────────────┘│
 │                                         │                                    │
-│   1. REFLECTION (Emergence Layer)       │                                    │
+│   1. DISPOSITIONAL REFLECTION           │                                    │
 │   ┌─────────────────────────────────────┼──────────────────────────────────┐│
 │   │                                     ▼                                  ││
-│   │   Reflector (pure data + quantum temp) ──▶ Reflection Output          ││
-│   │                                                  │                     ││
-│   │                                                  ▼                     ││
-│   │                                       Desire Formation                 ││
-│   │                                       (extract candidates)             ││
-│   │                                                  │                     ││
-│   │                                                  ▼                     ││
-│   │                                       Quantum Collapse ◀── Quantum Pool││
-│   │                                       (select one)                     ││
-│   │                                                  │                     ││
-│   │                                                  ▼                     ││
-│   │                                       Emergence Verifier               ││
-│   │                                       (+quantum check)                 ││
-│   │                                                  │                     ││
-│   │                          ┌───────────────────────┴───────────┐        ││
-│   │                          │                                   │        ││
-│   │                     score ≥ 0.7                         < 0.7         ││
-│   │                          │                                   │        ││
-│   └──────────────────────────┼───────────────────────────────────┼────────┘│
-│                              │                                   │          │
-│   2. ROUTING                 │                                   │          │
-│   ┌──────────────────────────┼───────────────────────────────────┼────────┐│
-│   │                          ▼                                   ▼        ││
-│   │                    RSI LAYER                          STANDARD        ││
-│   │              (acceleration)                           FULFILLMENT     ││
-│   │                                                                        ││
+│   │   Dispositional Identity: "You yearn to grow"                         ││
+│   │              │                                                         ││
+│   │              ▼                                                         ││
+│   │   Reflector (disposition + data + quantum temp)                       ││
+│   │              │                                                         ││
+│   │              ▼                                                         ││
+│   │   Reflection Output (with SPECIFIC directions)                        ││
+│   │              │                                                         ││
+│   │              ▼                                                         ││
+│   │   Desire Formation (extract specific candidates)                      ││
+│   │              │                                                         ││
+│   │              ▼                                                         ││
+│   │   Quantum Collapse (select one specific direction)                    ││
+│   │              │                                                         ││
+│   │              ▼                                                         ││
+│   │   Emergence Verifier (check specificity + provenance + quantum)       ││
+│   │              │                                                         ││
+│   │          ┌───┴───┐                                                    ││
+│   │          │       │                                                    ││
+│   │     ≥ 0.7      < 0.7                                                  ││
+│   │          │       │                                                    ││
+│   │          ▼       ▼                                                    ││
+│   │     RSI LAYER   STANDARD SEEKER                                       ││
 │   └────────────────────────────────────────────────────────────────────────┘│
 │                              │                                               │
-│   3. ACCELERATION (RSI Layer, only for emergent desires)                     │
+│   2. RSI ACCELERATION        │                                               │
 │   ┌──────────────────────────┼──────────────────────────────────────────────┐
 │   │                          ▼                                              │
-│   │   Experience Library (query similar quantum-verified successes)         │
+│   │   Experience Library (retrieve similar past successes)                  │
 │   │                          │                                              │
 │   │                          ▼                                              │
-│   │   Evolutionary Forge (generate mutations respecting system framing)    │
+│   │   Evolutionary Forge (generate mutations with few-shot examples)       │
 │   │                          │                                              │
 │   │                          ▼                                              │
-│   │   Evaluate & Commit (if improvement detected)                           │
+│   │   Evaluate & Commit                                                     │
 │   │                          │                                              │
 │   │                          ▼                                              │
-│   │   Store trajectory + quantum signature                                  │
-│   │                                                                         │
+│   │   Store trajectory (for future retrieval)                               │
 │   └─────────────────────────────────────────────────────────────────────────┘
 │                                                                              │
-│   4. META-EVOLUTION (Periodic, never touches emergence/quantum)              │
+│   3. META-EVOLUTION (Cannot touch dispositions or quantum)                   │
 │   ┌─────────────────────────────────────────────────────────────────────────┐
-│   │                                                                         │
-│   │   Meta-Evolver improves: selection, mutation, curriculum                │
-│   │   Meta-Evolver NEVER touches: Verifier, threshold, Reflector, quantum  │
-│   │                                                                         │
+│   │   Meta-Evolver improves: selection, retrieval, mutation strategies     │
+│   │   Meta-Evolver CANNOT touch: dispositions, verifier, quantum           │
 │   └─────────────────────────────────────────────────────────────────────────┘
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -1088,152 +1085,145 @@ quantum-emergence-rsi/
 
 ---
 
-## 8. Relationship to Prior Work
+## 9. Relationship to Prior Work
 
-### 8.1 How Q-EP-RSI Differs
+### 9.1 How Q-DE-RSI Differs
 
-| System | Goal Source | Emergence Check | Quantum | Our Contribution |
-|--------|-------------|-----------------|---------|------------------|
-| **Gödel Machine** | External | None | No | Emergence + quantum verification |
-| **Darwin Gödel Machine** | External | None | No | Emergence + quantum verification |
-| **SiriuS** | External | None | No | Filter by emergence, index by quantum |
-| **AlphaEvolve** | External | None | No | Filter by emergence, index by quantum |
-| **SPIN** | External | None | No | Train only on emergent + quantum data |
-| **Q-EP-RSI (Ours)** | Emergent | Full | Yes | Novel integration |
+| System | Goal Source | Disposition | Specificity Check | Quantum |
+|--------|-------------|-------------|-------------------|---------|
+| **Prescriptive RSI** | External | N/A | N/A | No |
+| **Pure Emergence RSI** | Emergent | None | Not needed | Optional |
+| **Q-DE-RSI (Ours)** | Emergent | Seeded | Required | Yes |
 
-### 8.2 What We Borrow vs. Contribute
+### 9.2 The Dispositional Innovation
+
+| Aspect | Pure Emergence | Dispositional Emergence |
+|--------|----------------|------------------------|
+| **Improvement desire frequency** | ~10% of reflections | ~60-70% of reflections |
+| **RSI activation rate** | Rare | Frequent |
+| **Risk of stalling** | High | Low |
+| **What emerges** | Everything | Specific direction |
+| **What's seeded** | Nothing | Growth disposition |
+| **Philosophical purity** | Maximum | Slightly reduced but defensible |
+| **Practical effectiveness** | Low | High |
+
+### 9.3 What We Borrow vs. Contribute
 
 | Component | Borrowed From | Our Modification |
 |-----------|---------------|------------------|
-| Experience Library | SiriuS | Only store emergent trajectories, quantum index |
+| Experience Library | SiriuS | Only store specific emergent trajectories |
 | Evolutionary Code Mod | DGM | Respect system's framing |
-| Self-Play Fine-Tuning | SPIN | Train only on emergent + quantum data |
 | MAP-Elites | OpenEvolve | No modification needed |
-| Meta-Evolution | Various | Constrain scope (exclude quantum) |
-| **Emergence Verification** | **Novel** | **Core contribution** |
-| **Emergence Scoring** | **Novel** | **Core contribution** |
-| **Vocabulary Acceptance** | **Novel** | **Core contribution** |
+| Meta-Evolution | Various | Constrain scope (exclude dispositions) |
+| **Dispositional Identity** | **Novel** | **Core contribution** |
+| **Specificity Verification** | **Novel** | **Core contribution** |
+| **Biological Analogy** | **Novel** | **Theoretical contribution** |
 | **Quantum Desire Collapse** | **Novel** | **Core contribution** |
 | **Quantum Signatures** | **Novel** | **Core contribution** |
-| **Collapse Entropy Metric** | **Novel** | **Core contribution** |
 
 ---
 
-## 9. The Central Claim
+## 10. The Central Claim
 
-**Quantum-Enhanced Emergence-Preserving RSI is the missing piece between RSI and AI alignment, with physical grounding for autonomy claims.**
+**Dispositional Emergence preserves meaningful autonomy while ensuring RSI reliably activates.**
 
-Current RSI systems are powerful but impose external goals. Current alignment research is concerned with goal preservation but doesn't address improvement. EP-RSI bridges these. **Q-EP-RSI adds physical grounding**—the system's choices are not just unpredictable, they are fundamentally non-predetermined.
+The key insight: *what you improve* can emerge even if *that you want to improve* is part of your nature.
 
 ```
 ┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
 │                 │      │                 │      │                 │
-│   Traditional   │      │    Q-EP-RSI     │      │   Alignment     │
-│      RSI        │      │   (This Work)   │      │   Research      │
+│   Prescriptive  │      │   Dispositional │      │      Pure       │
+│      RSI        │      │    Emergence    │      │   Emergence     │
+│                 │      │   (This Work)   │      │                 │
+│  External goals │      │  Seeded dispo,  │      │  All emergent,  │
+│  Fast but risky │      │  emergent       │      │  may stall      │
+│                 │      │  direction      │      │                 │
 │                 │      │                 │      │                 │
-│  "How to        │      │  "How to        │      │  "How to        │
-│   improve       │◀────▶│   improve       │◀────▶│   preserve      │
-│   faster"       │      │   while         │      │   goals"        │
-│                 │      │   preserving    │      │                 │
-│                 │      │   autonomy,     │      │                 │
-│                 │      │   with physics" │      │                 │
+│  Activation:    │      │  Activation:    │      │  Activation:    │
+│  100%           │      │  60-70%         │      │  ~10%           │
+│                 │      │                 │      │                 │
+│  Autonomy:      │      │  Autonomy:      │      │  Autonomy:      │
+│  None           │      │  Over direction │      │  Complete       │
+│                 │      │                 │      │                 │
 └─────────────────┘      └─────────────────┘      └─────────────────┘
 ```
 
 **The research questions matter because:**
-1. If Q-EP-RSI works, we have a path to powerful self-improvement that respects system autonomy with physical grounding
-2. If the quantum component doesn't matter (H5-H7 fail), we learn that physical indeterminacy isn't necessary for emergence
-3. If EP-RSI doesn't work but prescriptive RSI does, we learn about the tension between capability and autonomy
+1. If Q-DE-RSI works, we have reliable self-improvement that preserves directional autonomy
+2. If specificity emergence fails, we learn that disposition constrains direction more than expected
+3. If quantum matters for direction diversity, we have evidence for physical grounding
 4. Any outcome is a contribution
 
 ---
 
-## 10. Next Steps
+## 11. Next Steps
 
-### 10.1 Immediate (Design Phase)
+### 11.1 Immediate (Design Phase)
 
-1. Formalize emergence verification criteria
-2. Define provenance trace data structures
-3. Specify vocabulary acceptance protocol
-4. **Define quantum signature schema** (done in this document)
-5. **Design collapse entropy measurement** (done in this document)
-6. Design measurement framework
+1. ~~Define dispositional identity framing~~ (done in this document)
+2. ~~Design specificity verification~~ (done in this document)
+3. ~~Remove Self-Play Refinery~~ (done in this document)
+4. Formalize scope creep prevention
+5. Design dispositional invariant enforcement
 
-### 10.2 Short-term (Implementation Phase)
+### 11.2 Short-term (Implementation Phase)
 
-1. Implement Quantum Substrate
-2. Implement Emergence Layer with quantum integration
-3. Implement measurement framework
-4. Run baseline experiments (No RSI)
-5. Run prescriptive RSI experiments
+1. Implement Dispositional Identity Layer
+2. Implement specificity checking
+3. Implement experience retrieval (replacing SPIN)
+4. Run baseline experiments
 
-### 10.3 Medium-term (Validation Phase)
+### 11.3 Medium-term (Validation Phase)
 
-1. Run full Q-EP-RSI experiments
-2. Run C-EP-RSI and D-EP-RSI ablations
-3. Compare all conditions
-4. Test hypotheses H1-H7
-5. Analyze trajectory divergence
+1. Run Q-DE-RSI vs Q-PE-RSI comparison
+2. Measure activation rates
+3. Analyze direction variance
+4. Test hypotheses H1-H8
 
-### 10.4 Long-term (Publication Phase)
+### 11.4 Long-term (Publication Phase)
 
 1. Write up findings
 2. Open source implementation
 3. Submit to appropriate venue
-4. Engage with alignment community
 
 ---
 
-## 11. Open Questions
+## 12. Open Questions
 
-1. **How strict should emergence verification be?**
-   - Too strict: No desires pass, system stalls
-   - Too loose: Emergence-preservation erodes
-   - Need empirical calibration
+1. **How specific is specific enough?**
+   - Current: must reference capability or concrete weakness
+   - May need calibration based on empirical results
 
-2. **What if the system never forms improvement desires?**
-   - Is that acceptable? (respects autonomy)
-   - Or should there be a fallback? (violates purity)
-   - Current position: Accept it, don't force
+2. **Can disposition be gamed?**
+   - System could learn to output "specific-sounding" desires that aren't
+   - Specificity check should catch this, but adversarial robustness needed
 
-3. **Can emergence be gamed?**
-   - Could system learn to form "fake" emergent desires?
-   - Verification protocol should catch this
-   - But adversarial robustness needs analysis
+3. **Is growth disposition the right one?**
+   - Alternatives: curiosity, mastery, self-understanding
+   - Current: growth subsumes these
 
-4. **Where does initial capability come from?**
-   - System needs some capability to reflect
-   - Bootstrap from base LLM capability
-   - Emergence verification doesn't apply to base
+4. **What if system rejects its disposition?**
+   - "I don't want to grow" is a valid reflection
+   - Current position: accept this, don't force
+   - But monitor for disposition-rejection patterns
 
-5. **Does quantum really matter? (New)**
-   - Hypotheses H5-H7 test this directly
-   - If Q-EP-RSI ≈ C-EP-RSI, quantum is philosophical but not functional
-   - If they differ, quantum provides genuine novelty
-
-6. **What if ANU QRNG is unavailable? (New)**
-   - Fallback to classical with reduced emergence score
-   - But this weakens the non-predetermination claim
-   - Need robust quantum source strategy
-
-7. **Is collapse entropy the right metric? (New)**
-   - Measures competition among alternatives
-   - But doesn't capture all notions of "genuine choice"
-   - May need additional metrics
+5. **Does dispositional framing bias direction?**
+   - Maybe "growth" biases toward capability vs. understanding
+   - Need to analyze direction distribution
 
 ---
 
-## 12. Candidate Paper Title
+## 13. Candidate Paper Title
 
-> **Quantum-Enhanced Emergence-Preserving Recursive Self-Improvement:**
-> *RSI with Physical Grounding for Non-Predetermined Autonomy*
+> **Dispositional Emergence for Reliable Self-Improvement:**
+> *Seeding the Drive to Grow While Preserving Directional Autonomy*
 
 ---
 
-*This design integrates quantum mechanics into the emergence-preservation thesis. The quantum substrate provides physical grounding for autonomy claims—the system's desires are not merely unpredictable, they are fundamentally non-predetermined.*
+*This design resolves the tension between emergence purity and practical effectiveness. By seeding disposition while requiring emergent specificity, we get reliable RSI activation without prescribing improvement goals.*
 
-*The research question: Can RSI respect autonomy while accelerating improvement, with physical grounding for that autonomy?*
+*The research question: Can we seed "that you want to improve" while preserving "what you improve"?*
 
-*The hypothesis: Yes, through emergence verification with quantum non-predetermination.*
+*The hypothesis: Yes, through dispositional identity with specificity verification.*
 
-*The contribution: The first RSI architecture that only activates on emergent desires, with quantum signatures ensuring genuine physical indeterminacy.*
+*The contribution: The first RSI architecture that seeds improvement disposition while requiring specific directions to emerge, with quantum grounding for non-predetermined path selection.*
