@@ -43,3 +43,6 @@ Thumbs.db
 .cache/
 *.cache
 venv-voice/
+
+# Coding session logs
+coding_sessions/*.jsonl
