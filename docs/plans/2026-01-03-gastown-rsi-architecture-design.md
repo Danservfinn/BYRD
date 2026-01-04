@@ -1,8 +1,23 @@
 # Gastown-BYRD: Recursive Self-Improvement Architecture
 
-**Version:** 0.1 (Draft)
+**Version:** 0.2 (Phase 2 Deployment)
 **Date:** January 3, 2026
-**Status:** Brainstorming - requires review and revision
+**Status:** Phase 2 — Deploy after Q-DE-RSI v0.6 validation
+
+---
+
+> **⚠️ IMPORTANT: This is a Phase 2 document.**
+>
+> This document describes how to SCALE the RSI mechanisms using Gastown.
+> The RSI mechanisms themselves are defined in `emergence-preserving-rsi-design.md` (v0.6).
+>
+> **Sequence:**
+> 1. Phase 1: Validate Q-DE-RSI v0.6 in Python (4-6 weeks)
+> 2. Phase 2: Scale with Gastown (this document) — only if Phase 1 validates
+>
+> **Do not implement this document until Phase 1 gate criteria are met.**
+
+---
 
 ---
 
@@ -272,42 +287,34 @@ Evolve agent code, not just prompts. Use empirical validation instead of formal 
 
 ### Component 3: Self-Play Refinery
 
-**Inspiration:** [SPIN](https://github.com/uclaml/SPIN) (UCLA, ICML 2024)
+> **⚠️ REMOVED IN v0.6:** This component is infeasible with cloud LLMs.
+> Cloud providers (Z.AI, OpenRouter, Anthropic) do not allow fine-tuning.
+> The Q-DE-RSI v0.6 design replaces this with **Prompt Evolution** —
+> crystallized heuristics are added to a mutable prompt section, achieving
+> "permanent learning" without weight updates.
 
-Train the model on its own improved outputs vs. previous iterations.
+~~**Inspiration:** [SPIN](https://github.com/uclaml/SPIN) (UCLA, ICML 2024)~~
+
+~~Train the model on its own improved outputs vs. previous iterations.~~
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    SELF-PLAY REFINERY                        │
 │                                                              │
-│  ITERATION N                                                 │
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │                                                         │ │
-│  │  Current Model (iteration N)                            │ │
-│  │         │                                               │ │
-│  │         ├──► Generate responses to prompts              │ │
-│  │         │                                               │ │
-│  │  Previous Model (iteration N-1)                         │ │
-│  │         │                                               │ │
-│  │         ├──► Generate responses to same prompts         │ │
-│  │         │                                               │ │
-│  │  Create preference pairs:                               │ │
-│  │         current_response > previous_response            │ │
-│  │         │                                               │ │
-│  │         ▼                                               │ │
-│  │  Fine-tune via DPO to prefer current over previous     │ │
-│  │         │                                               │ │
-│  │         ▼                                               │ │
-│  │  Current becomes Previous for iteration N+1             │ │
-│  │                                                         │ │
-│  └────────────────────────────────────────────────────────┘ │
+│  ⚠️ INFEASIBLE WITH CLOUD LLMs — REMOVED IN v0.6            │
 │                                                              │
-│  RESULT: Model iteratively improves without human labels    │
+│  Reason: Requires fine-tuning (DPO), which cloud providers  │
+│  do not support.                                             │
+│                                                              │
+│  Replacement: Prompt Evolution (see v0.6 Section 8)         │
+│  - Constitution (immutable) + Strategies (mutable)          │
+│  - Crystallized heuristics added to Strategies section      │
+│  - Achieves "permanent learning" without weight updates     │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Key insight:** The model becomes its own teacher.
+**v0.6 Alternative:** See `emergence-preserving-rsi-design.md` Section 8 (Prompt Evolution).
 
 ### Component 4: Meta-Evolver (True RSI)
 

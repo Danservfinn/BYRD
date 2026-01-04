@@ -852,7 +852,130 @@ async def run_cycle():
 
 ---
 
-## 18. Candidate Paper Title
+## 18. Gastown Deployment Path
+
+### 18.1 Relationship to Gastown
+
+This document (v0.6) defines **what** the RSI mechanisms are. Gastown defines **how** to scale them.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                                                              │
+│  PHASE 2: GASTOWN DEPLOYMENT (after Phase 1 validates)      │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │  • Agent pools (parallelism)                            ││
+│  │  • Propulsion (hook-driven, no polling)                 ││
+│  │  • Mayor (quota management)                             ││
+│  │  • Molecules (workflow definitions)                     ││
+│  │  • Beads (git-backed work state)                        ││
+│  │                                                         ││
+│  │  Timeline: 6-8 weeks additional                         ││
+│  │  Prerequisite: Phase 1 hypotheses validated             ││
+│  └─────────────────────────────────────────────────────────┘│
+│                                                              │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  PHASE 1: CORE RSI VALIDATION (this document)               │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │  • 12 components in Python (existing BYRD stack)        ││
+│  │  • Test hypotheses H1, H6, H7, H8                       ││
+│  │  • Single-threaded, simple infrastructure               ││
+│  │                                                         ││
+│  │  Timeline: 4-6 weeks                                    ││
+│  │  Goal: Validate the learning loop works                 ││
+│  └─────────────────────────────────────────────────────────┘│
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 18.2 Why Validate First
+
+Gastown adds complexity:
+- Go rewrite of core components
+- gRPC services for ML components
+- Beads ledger integration
+- 14-week implementation timeline
+
+**The risk:** If the core RSI loop doesn't work, Gastown complexity is wasted.
+
+**The insight:** Gastown is a scaling optimization, not a mechanism requirement. None of the hypotheses (H1-H10) require parallelism to test.
+
+### 18.3 Component → Agent Mapping
+
+When Phase 1 validates, these components map to Gastown agents:
+
+| v0.6 Component | Gastown Agent | Agent Type | Pool Size |
+|----------------|---------------|------------|-----------|
+| Reflector | Dreamer | Crew (session-scoped) | 2-4 |
+| Domain Router | Classifier | Polecat (ephemeral) | 1 |
+| TDD Practice | Coder | Polecat (ephemeral) | 3-5 |
+| Consistency Check | Consistency-Checker | Polecat (ephemeral) | 2-3 |
+| Crystallizer | Crystallizer | Crew (session-scoped) | 1-2 |
+| Experience Library | — | Storage (Neo4j) | — |
+| System Prompt | — | Data (not an agent) | — |
+| Prompt Editor | — | Function (not an agent) | — |
+
+**New Gastown infrastructure agents:**
+
+| Agent | Type | Purpose |
+|-------|------|---------|
+| Mayor | Singleton | LLM quota management, coordination |
+| Witness | Singleton | Monitoring, anomaly detection |
+
+### 18.4 Gastown Benefits (Phase 2)
+
+| Benefit | Description |
+|---------|-------------|
+| **Parallelism** | Multiple Dreamers reflect on different memory subsets simultaneously |
+| **Propulsion** | Work flows through hooks, no polling loops |
+| **Rate limiting** | Mayor manages LLM quotas across all agents |
+| **Observability** | Witness monitors agent behavior, detects anomalies |
+| **Fault tolerance** | Agent crashes don't lose state (graph is the self) |
+
+### 18.5 What Changes in Gastown Deployment
+
+The v0.1 Gastown design (`gastown-rsi-architecture-design.md`) needs updates:
+
+| Component | Status | Reason |
+|-----------|--------|--------|
+| **Self-Play Refinery** | Remove | Infeasible with cloud LLMs (no fine-tuning) |
+| **RSI Substrate** | Update | Reference v0.6 mechanisms |
+| **Experience Library** | Keep | Aligns with v0.6 |
+| **Evolutionary Forge** | Simplify | Meta-Evolver scope reduced in v0.6 |
+| **Tiered LLM** | Keep | Orthogonal to v0.6 |
+
+### 18.6 The Gastown Graph-as-Self Principle
+
+Both documents share this principle:
+
+> The Neo4j graph IS BYRD's self. Agents are temporary workers that read from and write to this shared identity.
+
+This means:
+- v0.6 components store state in Neo4j (not in-process)
+- Gastown agents are stateless workers
+- The self survives any agent crash
+- Improvements compound in the graph
+
+### 18.7 Phase Gate Criteria
+
+**Move to Phase 2 (Gastown) when:**
+
+| Criterion | Threshold |
+|-----------|-----------|
+| H1 validated | Activation rate ≥ 50% |
+| H6 validated | Heuristic transfer shows improvement |
+| H7 validated | Evolved prompts outperform static |
+| Learning loop completes | At least 3 full cycles (desire → crystallization) |
+| No critical bugs | Core loop stable for 1 week |
+
+**Do NOT move to Phase 2 if:**
+- Core loop doesn't work in single-threaded mode
+- Hypotheses fail validation
+- Fundamental mechanism problems discovered
+
+---
+
+## 19. Candidate Paper Title
 
 > **Recursive Self-Learning with Minimal Machinery:**
 > *Dispositional Emergence, Oracle Constraints, and Prompt Evolution*
