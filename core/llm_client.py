@@ -15,7 +15,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
 import httpx
-from semantic_cache import SemanticCache
+from .semantic_cache import SemanticCache
 
 
 # =============================================================================
@@ -729,7 +729,7 @@ def create_llm_client(config: Dict) -> LLMClient:
 # =============================================================================
 # Provides rate-limited client wrappers that route through DualInstanceManager
 
-from dual_instance_manager import DualInstanceManager
+from .dual_instance_manager import DualInstanceManager
 
 # Global instance manager (set during initialization)
 _instance_manager: Optional[DualInstanceManager] = None

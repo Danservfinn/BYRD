@@ -1,4 +1,5 @@
 """RSI Crystallization Components - Heuristic extraction."""
-# TODO: Implement in Phase 1
-# from .crystallizer import Crystallizer
-# from .bootstrap_manager import BootstrapManager
+from .crystallizer import Crystallizer, Heuristic
+from .bootstrap_manager import BootstrapManager
+
+__all__ = ["Crystallizer", "Heuristic", "BootstrapManager"]

@@ -1,0 +1,84 @@
+# Gastown Configuration
+# Phase 2: Parallel RSI Agent Execution Layer
+
+# Neo4j Connection
+neo4j:
+  uri: "${NEO4J_URI:-bolt://localhost:7687}"
+  user: "${NEO4J_USER:-neo4j}"
+  password: "${NEO4J_PASSWORD:-prometheus}"
+  pool_size: 20
+  database: "neo4j"
+
+# Agent Configuration
+agents:
+  # Number of parallel agents per type
+  dreamers: 2         # Reflection cycles
+  coders: 4           # TDD practice
+  crystallizers: 1    # Heuristic extraction
+
+  # Cycle intervals
+  cycle_interval: 30s  # Base interval for dreamer/coder
+  # Note: crystallizer runs at 5x interval (150s)
+
+# gRPC Server
+grpc:
+  port: 50051
+  max_recv_msg_size: 16777216  # 16MB
+  max_send_msg_size: 16777216
+
+# Monitoring
+monitoring:
+  metrics_port: 9090
+  enable_pprof: true
+  health_check_interval: 10s
+
+# LLM Configuration
+llm:
+  provider: "zai"
+  model: "glm-4.7"
+  endpoint: "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+  api_key: "${ZAI_API_KEY}"
+  timeout: 60s
+  rate_limit_interval: 8s  # Min seconds between requests
+
+# Quantum Randomness
+quantum:
+  enabled: true
+  pool_size: 256
+  low_watermark: 64
+  min_fetch_interval: 5s
+
+# Crystallization Settings
+crystallization:
+  bootstrap_threshold: 10     # Min trajectories for first crystallization
+  mature_threshold: 20        # Min trajectories after first crystallization
+  min_success_rate: 0.8       # Minimum pattern success rate
+  max_heuristics: 50          # Max heuristics per domain
+
+# TDD Practice Settings
+tdd:
+  max_attempts: 5
+  test_timeout: 30s
+  python_path: "python"
+  work_dir: "/tmp/gastown_tdd"
+
+# Domain Configuration
+domains:
+  code:
+    enabled: true
+    weight: 1.0
+    oracle: "tdd"
+  math:
+    enabled: true
+    weight: 0.8
+    oracle: "symbolic"
+  logic:
+    enabled: true
+    weight: 0.6
+    oracle: "consistency"
+
+# Logging
+logging:
+  level: "info"  # debug, info, warn, error
+  format: "json"
+  output: "stdout"

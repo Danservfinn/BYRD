@@ -333,6 +333,161 @@ actor:
   # api_key: "sk-ant-..."
 
 # =============================================================================
+# RSI (Recursive Self-Improvement)
+# =============================================================================
+# Q-DE-RSI: Quantum-Enhanced Dispositional Emergence for RSI
+# Implements the 8-phase cycle: Reflect → Verify → Collapse → Route → Practice → Record → Crystallize → Measure
+rsi:
+  # Master enable/disable switch
+  enabled: true
+
+  # ---------------------------------------------------------------------------
+  # EMERGENCE (Desire Detection)
+  # ---------------------------------------------------------------------------
+  emergence:
+    # Minimum confidence threshold for a desire to be considered "emergent"
+    # Lower values allow more desires through, higher values are more selective
+    threshold: 0.6
+
+    # Maximum desires to process per cycle
+    max_desires_per_cycle: 5
+
+    # Verifier passes through desires that appear actionable and specific
+    require_actionability: true
+
+  # ---------------------------------------------------------------------------
+  # QUANTUM COLLAPSE (Multi-Desire Selection)
+  # ---------------------------------------------------------------------------
+  quantum_collapse:
+    # Enable quantum-based desire selection when multiple pass verification
+    enabled: true
+
+    # Fallback to intensity-weighted random selection if quantum unavailable
+    fallback_to_intensity: true
+
+    # Maximum desires to collapse from (top N by intensity)
+    max_candidates: 10
+
+  # ---------------------------------------------------------------------------
+  # DOMAIN ROUTING (Oracle Constraint)
+  # ---------------------------------------------------------------------------
+  # Only route to domains where we can verify correctness (oracle constraint)
+  domain_routing:
+    # Enabled domains (must have verification oracle)
+    domains:
+      code:
+        enabled: true
+        weight: 1.0
+        oracle: "tdd"  # Test-Driven Development verification
+      math:
+        enabled: true
+        weight: 0.8
+        oracle: "symbolic"  # Symbolic verification
+      logic:
+        enabled: true
+        weight: 0.6
+        oracle: "consistency"  # N-run consistency check
+
+    # Default weight for unmatched domains
+    default_weight: 0.1
+
+  # ---------------------------------------------------------------------------
+  # TDD PRACTICE (Code Domain)
+  # ---------------------------------------------------------------------------
+  tdd_practice:
+    # Maximum attempts to solve a problem before giving up
+    max_attempts: 5
+
+    # Test execution timeout in seconds
+    test_timeout: 30
+
+    # Python executable for test execution
+    python_path: "python"
+
+    # Working directory for test files
+    work_dir: "/tmp/byrd_tdd"
+
+  # ---------------------------------------------------------------------------
+  # CONSISTENCY CHECK (Logic Domain)
+  # ---------------------------------------------------------------------------
+  consistency_check:
+    # Number of independent LLM runs to check consistency
+    n_runs: 5
+
+    # Agreement threshold (fraction of runs that must agree)
+    agreement_threshold: 0.8
+
+    # Temperature for consistency runs (higher = more variation)
+    temperature: 0.7
+
+  # ---------------------------------------------------------------------------
+  # EXPERIENCE LIBRARY (Trajectory Storage)
+  # ---------------------------------------------------------------------------
+  experience_library:
+    # Maximum trajectories to store per domain
+    max_per_domain: 1000
+
+    # Enable success-only storage (oracle constraint)
+    success_only: true
+
+    # Include bootstrap trajectories in queries
+    include_bootstrap: true
+
+  # ---------------------------------------------------------------------------
+  # CRYSTALLIZATION (Heuristic Extraction)
+  # ---------------------------------------------------------------------------
+  crystallization:
+    # Minimum successful trajectories before crystallization
+    bootstrap_threshold: 10      # Initial cold-start threshold
+    mature_threshold: 20         # Threshold after first crystallization
+
+    # Minimum success rate for trajectory pattern
+    min_success_rate: 0.8
+
+    # Maximum heuristics per domain
+    max_heuristics: 50
+
+    # Heuristic pruning when approaching prompt token limit
+    token_budget: 4096           # Maximum tokens for heuristics in prompt
+    prune_strategy: "lowest_success"  # "lowest_success", "oldest", "random"
+
+  # ---------------------------------------------------------------------------
+  # METRICS & VALIDATION
+  # ---------------------------------------------------------------------------
+  metrics:
+    # Enable continuous metrics collection
+    enabled: true
+
+    # Metrics collection interval (seconds)
+    interval: 60
+
+    # Hypothesis thresholds for Phase Gate
+    thresholds:
+      H1_activation: 0.50        # ≥50% activation rate
+      H6_transfer: 0.15          # ≥15% heuristic transfer improvement
+      H7_evolution: 0.0          # Evolved > static (any positive delta)
+      H8_quality: 0.80           # ≥80% test pass rate
+
+    # Minimum complete cycles for Phase Gate
+    min_complete_cycles: 3
+
+  # ---------------------------------------------------------------------------
+  # BOOTSTRAP (Cold Start)
+  # ---------------------------------------------------------------------------
+  bootstrap:
+    # Enable bootstrap mode for cold-start systems
+    enabled: true
+
+    # Create synthetic seed trajectories if none exist
+    seed_if_empty: true
+
+    # Number of synthetic seed trajectories per domain
+    seed_count: 5
+
+    # Transition to mature mode after first crystallization
+    auto_transition: true
+
+# =============================================================================
 # SELF-MODIFICATION
 # =============================================================================
 # Enables BYRD to modify its own code based on emergent desires.

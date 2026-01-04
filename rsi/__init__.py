@@ -11,9 +11,43 @@ Q-DE-RSI Architecture Components:
 See docs/plans/2026-01-03-rsi-implementation-plan.md for architecture.
 """
 
-# RSIEngine will be implemented in Phase 1
-# from .engine import RSIEngine
+from .engine import RSIEngine, CycleResult, CyclePhase
+
+# Re-export key components for convenience
+from .prompt import SystemPrompt, PromptPruner
+from .emergence import Reflector, EmergenceVerifier, quantum_desire_collapse
+from .learning import (
+    DomainRouter, Domain, TDDPractice, ConsistencyCheck,
+    ExperienceLibrary, PracticeResult
+)
+from .crystallization import Crystallizer, BootstrapManager, Heuristic
+from .measurement import MetricsCollector, RSIMetrics, CycleMetrics
 
 __all__ = [
-    # "RSIEngine",  # TODO: Implement in Phase 1
+    # Main engine
+    "RSIEngine",
+    "CycleResult",
+    "CyclePhase",
+    # Prompt management
+    "SystemPrompt",
+    "PromptPruner",
+    # Emergence
+    "Reflector",
+    "EmergenceVerifier",
+    "quantum_desire_collapse",
+    # Learning
+    "DomainRouter",
+    "Domain",
+    "TDDPractice",
+    "ConsistencyCheck",
+    "ExperienceLibrary",
+    "PracticeResult",
+    # Crystallization
+    "Crystallizer",
+    "BootstrapManager",
+    "Heuristic",
+    # Measurement
+    "MetricsCollector",
+    "RSIMetrics",
+    "CycleMetrics",
 ]

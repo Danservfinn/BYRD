@@ -21,8 +21,8 @@ import time
 from neo4j import GraphDatabase, AsyncGraphDatabase
 import hashlib
 
-from event_bus import event_bus, Event, EventType
-from quantum_randomness import get_quantum_float
+from .event_bus import event_bus, Event, EventType
+from .quantum_randomness import get_quantum_float
 
 logger = logging.getLogger(__name__)
 
@@ -10080,3 +10080,304 @@ class Memory:
                     }
                 }
             return {"total": 0, "unread": 0, "vocalized": 0}
+
+    # =========================================================================
+    # RSI (RECURSIVE SELF-IMPROVEMENT) METHODS
+    # =========================================================================
+    # These methods support the RSI engine's learning and crystallization cycle.
+
+    async def store_trajectory(
+        self,
+        id: str,
+        desire_id: str,
+        domain: str,
+        problem: str,
+        solution: str,
+        approach: str,
+        success: bool,
+        metadata: Optional[Dict] = None
+    ) -> Optional[str]:
+        """
+        Store a learning trajectory from RSI practice.
+
+        A trajectory records a complete learning attempt:
+        problem → approach → solution → outcome
+
+        Args:
+            id: Unique trajectory ID
+            desire_id: ID of the originating desire
+            domain: Domain (code, math, logic)
+            problem: The problem description
+            solution: The attempted solution
+            approach: The approach taken
+            success: Whether the attempt succeeded
+            metadata: Optional additional metadata
+
+        Returns:
+            Trajectory ID if stored successfully
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    CREATE (t:Trajectory {
+                        id: $id,
+                        desire_id: $desire_id,
+                        domain: $domain,
+                        problem: $problem,
+                        solution: $solution,
+                        approach: $approach,
+                        success: $success,
+                        bootstrap: $bootstrap,
+                        active: true,
+                        created_at: datetime(),
+                        metadata: $metadata_json
+                    })
+                    RETURN t.id as id
+                """, {
+                    "id": id,
+                    "desire_id": desire_id,
+                    "domain": domain,
+                    "problem": problem,
+                    "solution": solution,
+                    "approach": approach,
+                    "success": success,
+                    "bootstrap": metadata.get("bootstrap", False) if metadata else False,
+                    "metadata_json": json.dumps(metadata) if metadata else "{}"
+                })
+                record = await result.single()
+                if record:
+                    logger.debug(f"Stored trajectory: {id}")
+                    return record["id"]
+                return None
+        except Exception as e:
+            logger.error(f"Failed to store trajectory: {e}")
+            return None
+
+    async def get_successful_trajectories(
+        self,
+        domain: str,
+        limit: int = 100,
+        include_bootstrap: bool = True
+    ) -> List[Dict]:
+        """
+        Get successful trajectories for a domain.
+
+        Used by Crystallizer to find patterns for heuristic extraction.
+
+        Args:
+            domain: The domain to query
+            limit: Maximum trajectories to return
+            include_bootstrap: Whether to include bootstrap seed trajectories
+
+        Returns:
+            List of trajectory dicts
+        """
+        try:
+            async with self.driver.session() as session:
+                if include_bootstrap:
+                    query = """
+                        MATCH (t:Trajectory {domain: $domain, success: true, active: true})
+                        RETURN t
+                        ORDER BY t.created_at DESC
+                        LIMIT $limit
+                    """
+                else:
+                    query = """
+                        MATCH (t:Trajectory {domain: $domain, success: true, active: true})
+                        WHERE t.bootstrap = false OR t.bootstrap IS NULL
+                        RETURN t
+                        ORDER BY t.created_at DESC
+                        LIMIT $limit
+                    """
+
+                result = await session.run(query, {"domain": domain, "limit": limit})
+                trajectories = []
+                async for record in result:
+                    t = dict(record["t"])
+                    if "metadata_json" in t:
+                        try:
+                            t["metadata"] = json.loads(t["metadata_json"])
+                        except:
+                            t["metadata"] = {}
+                    trajectories.append(t)
+                return trajectories
+        except Exception as e:
+            logger.error(f"Failed to get trajectories: {e}")
+            return []
+
+    async def store_heuristic(
+        self,
+        id: str,
+        domain: str,
+        content: str,
+        trajectory_count: int,
+        metadata: Optional[Dict] = None
+    ) -> Optional[str]:
+        """
+        Store a crystallized heuristic.
+
+        Heuristics are extracted from successful trajectories and
+        represent generalizable principles.
+
+        Args:
+            id: Unique heuristic ID
+            domain: Domain (code, math, logic)
+            content: The heuristic content
+            trajectory_count: Number of trajectories that led to this
+            metadata: Optional additional metadata
+
+        Returns:
+            Heuristic ID if stored successfully
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    CREATE (h:Heuristic {
+                        id: $id,
+                        domain: $domain,
+                        content: $content,
+                        trajectory_count: $trajectory_count,
+                        usage_count: 0,
+                        active: true,
+                        created_at: datetime(),
+                        metadata: $metadata_json
+                    })
+                    RETURN h.id as id
+                """, {
+                    "id": id,
+                    "domain": domain,
+                    "content": content,
+                    "trajectory_count": trajectory_count,
+                    "metadata_json": json.dumps(metadata) if metadata else "{}"
+                })
+                record = await result.single()
+                if record:
+                    logger.info(f"Stored heuristic: {id} for domain {domain}")
+                    return record["id"]
+                return None
+        except Exception as e:
+            logger.error(f"Failed to store heuristic: {e}")
+            return None
+
+    async def mark_bootstrap_trajectories_inactive(self, domain: str) -> int:
+        """
+        Mark bootstrap trajectories as inactive after first crystallization.
+
+        This prevents bootstrap seeds from influencing future crystallizations
+        once real learning has begun.
+
+        Args:
+            domain: The domain to process
+
+        Returns:
+            Number of trajectories marked inactive
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (t:Trajectory {domain: $domain, bootstrap: true, active: true})
+                    SET t.active = false, t.deactivated_at = datetime()
+                    RETURN count(t) as count
+                """, {"domain": domain})
+                record = await result.single()
+                count = record["count"] if record else 0
+                if count > 0:
+                    logger.info(f"Marked {count} bootstrap trajectories inactive for {domain}")
+                return count
+        except Exception as e:
+            logger.error(f"Failed to mark bootstrap inactive: {e}")
+            return 0
+
+    async def count(self, node_type: str) -> int:
+        """
+        Count nodes of a given type.
+
+        Args:
+            node_type: The node label to count (e.g., "Trajectory", "Heuristic")
+
+        Returns:
+            Count of nodes
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run(
+                    f"MATCH (n:{node_type}) RETURN count(n) as count"
+                )
+                record = await result.single()
+                return record["count"] if record else 0
+        except Exception as e:
+            logger.error(f"Failed to count {node_type}: {e}")
+            return 0
+
+    async def get_heuristics_by_domain(self, domain: str) -> List[Dict]:
+        """
+        Get all active heuristics for a domain.
+
+        Args:
+            domain: The domain to query
+
+        Returns:
+            List of heuristic dicts
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (h:Heuristic {domain: $domain, active: true})
+                    RETURN h
+                    ORDER BY h.created_at DESC
+                """, {"domain": domain})
+                heuristics = []
+                async for record in result:
+                    heuristics.append(dict(record["h"]))
+                return heuristics
+        except Exception as e:
+            logger.error(f"Failed to get heuristics: {e}")
+            return []
+
+    async def increment_heuristic_usage(self, heuristic_id: str) -> bool:
+        """
+        Increment the usage count for a heuristic.
+
+        Called when a heuristic is used to guide practice.
+
+        Args:
+            heuristic_id: The heuristic ID
+
+        Returns:
+            True if updated successfully
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (h:Heuristic {id: $id})
+                    SET h.usage_count = h.usage_count + 1,
+                        h.last_used_at = datetime()
+                    RETURN h.usage_count as count
+                """, {"id": heuristic_id})
+                record = await result.single()
+                return record is not None
+        except Exception as e:
+            logger.error(f"Failed to increment heuristic usage: {e}")
+            return False
+
+    async def get_trajectory_count(self, domain: str) -> int:
+        """
+        Get count of active trajectories for a domain.
+
+        Args:
+            domain: The domain to count
+
+        Returns:
+            Count of active trajectories
+        """
+        try:
+            async with self.driver.session() as session:
+                result = await session.run("""
+                    MATCH (t:Trajectory {domain: $domain, active: true})
+                    RETURN count(t) as count
+                """, {"domain": domain})
+                record = await result.single()
+                return record["count"] if record else 0
+        except Exception as e:
+            logger.error(f"Failed to count trajectories: {e}")
+            return 0

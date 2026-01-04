@@ -1,0 +1,315 @@
+// RSI Agent Communication Protocol
+//
+// Defines the gRPC contracts for inter-agent communication in Gastown.
+// Agents communicate via these RPCs to coordinate RSI cycles.
+
+syntax = "proto3";
+
+package rsi;
+
+option go_package = "github.com/byrd-ai/gastown/internal/grpc/rsi";
+
+// ===================================================================
+// DESIRE SERVICE - Manages emergent desires
+// ===================================================================
+
+service DesireService {
+  // Submit a newly verified desire for processing
+  rpc SubmitDesire(Desire) returns (DesireResponse);
+
+  // Get pending desires for a specific domain
+  rpc GetPendingDesires(DomainRequest) returns (DesireList);
+
+  // Mark a desire as fulfilled
+  rpc FulfillDesire(FulfillRequest) returns (FulfillResponse);
+
+  // Stream new desires as they emerge (for real-time coordination)
+  rpc StreamDesires(DomainRequest) returns (stream Desire);
+}
+
+message Desire {
+  string id = 1;
+  string description = 2;
+  double intensity = 3;
+  string domain = 4;
+  bool verified = 5;
+  int64 created_at = 6;  // Unix timestamp
+  map<string, string> metadata = 7;
+}
+
+message DesireResponse {
+  bool success = 1;
+  string desire_id = 2;
+  string error = 3;
+}
+
+message DomainRequest {
+  string domain = 1;  // "code", "math", "logic", or empty for all
+  int32 limit = 2;
+}
+
+message DesireList {
+  repeated Desire desires = 1;
+}
+
+message FulfillRequest {
+  string desire_id = 1;
+  bool success = 2;
+  string trajectory_id = 3;
+}
+
+message FulfillResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+// ===================================================================
+// TRAJECTORY SERVICE - Manages learning trajectories
+// ===================================================================
+
+service TrajectoryService {
+  // Store a new trajectory
+  rpc StoreTrajectory(Trajectory) returns (TrajectoryResponse);
+
+  // Get trajectories for crystallization
+  rpc GetTrajectories(TrajectoryRequest) returns (TrajectoryList);
+
+  // Get trajectory count for a domain
+  rpc GetTrajectoryCount(DomainRequest) returns (CountResponse);
+}
+
+message Trajectory {
+  string id = 1;
+  string desire_id = 2;
+  string domain = 3;
+  string problem = 4;
+  string solution = 5;
+  string approach = 6;
+  bool success = 7;
+  bool is_bootstrap = 8;
+  int64 created_at = 9;
+  map<string, string> metadata = 10;
+}
+
+message TrajectoryResponse {
+  bool success = 1;
+  string trajectory_id = 2;
+  string error = 3;
+}
+
+message TrajectoryRequest {
+  string domain = 1;
+  int32 limit = 2;
+  bool success_only = 3;
+  bool include_bootstrap = 4;
+}
+
+message TrajectoryList {
+  repeated Trajectory trajectories = 1;
+}
+
+message CountResponse {
+  int32 count = 1;
+}
+
+// ===================================================================
+// HEURISTIC SERVICE - Manages crystallized heuristics
+// ===================================================================
+
+service HeuristicService {
+  // Store a newly crystallized heuristic
+  rpc StoreHeuristic(Heuristic) returns (HeuristicResponse);
+
+  // Get heuristics for a domain
+  rpc GetHeuristics(DomainRequest) returns (HeuristicList);
+
+  // Increment usage count when a heuristic is applied
+  rpc IncrementUsage(HeuristicUsageRequest) returns (HeuristicResponse);
+}
+
+message Heuristic {
+  string id = 1;
+  string domain = 2;
+  string principle = 3;
+  int32 source_count = 4;
+  double success_rate = 5;
+  int32 usage_count = 6;
+  int64 created_at = 7;
+}
+
+message HeuristicResponse {
+  bool success = 1;
+  string heuristic_id = 2;
+  string error = 3;
+}
+
+message HeuristicList {
+  repeated Heuristic heuristics = 1;
+}
+
+message HeuristicUsageRequest {
+  string heuristic_id = 1;
+}
+
+// ===================================================================
+// METRICS SERVICE - RSI metrics and validation
+// ===================================================================
+
+service MetricsService {
+  // Get current RSI metrics
+  rpc GetMetrics(MetricsRequest) returns (RSIMetrics);
+
+  // Validate Phase Gate criteria
+  rpc ValidatePhaseGate(PhaseGateRequest) returns (PhaseGateResponse);
+
+  // Record a completed RSI cycle
+  rpc RecordCycle(CycleResult) returns (CycleResponse);
+}
+
+message MetricsRequest {
+  // Empty for now, can add filters later
+}
+
+message RSIMetrics {
+  int32 total_reflections = 1;
+  int32 emergent_desires = 2;
+  double activation_rate = 3;
+  int32 total_trajectories = 4;
+  int32 successful_trajectories = 5;
+  double trajectory_success_rate = 6;
+  int32 heuristics_extracted = 7;
+  int32 complete_cycles = 8;
+  double direction_variance = 9;
+  double test_pass_rate = 10;
+}
+
+message PhaseGateRequest {
+  // Empty for now
+}
+
+message PhaseGateResponse {
+  bool passed = 1;
+  map<string, bool> criteria = 2;
+  string message = 3;
+}
+
+message CycleResult {
+  string cycle_id = 1;
+  string phase_reached = 2;
+  int32 desires_generated = 3;
+  int32 desires_verified = 4;
+  bool practice_succeeded = 5;
+  bool trajectory_stored = 6;
+  bool heuristic_crystallized = 7;
+  double duration_seconds = 8;
+  string error = 9;
+}
+
+message CycleResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+// ===================================================================
+// QUANTUM SERVICE - Quantum randomness access
+// ===================================================================
+
+service QuantumService {
+  // Get a quantum random float
+  rpc GetFloat(QuantumRequest) returns (QuantumFloat);
+
+  // Get quantum temperature modulation
+  rpc GetTemperatureDelta(TemperatureRequest) returns (TemperatureResponse);
+}
+
+message QuantumRequest {
+  // Empty for now
+}
+
+message QuantumFloat {
+  double value = 1;
+  string source = 2;  // "quantum" or "classical"
+}
+
+message TemperatureRequest {
+  double base_temperature = 1;
+  double max_delta = 2;
+}
+
+message TemperatureResponse {
+  double temperature = 1;
+  double delta = 2;
+  string source = 3;
+}
+
+// ===================================================================
+// COORDINATION SERVICE - Agent coordination
+// ===================================================================
+
+service CoordinationService {
+  // Register an agent with the coordinator
+  rpc Register(AgentRegistration) returns (RegistrationResponse);
+
+  // Send heartbeat to indicate agent is alive
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+
+  // Get status of all agents
+  rpc GetAgentStatus(StatusRequest) returns (AgentStatusList);
+
+  // Request work (for load balancing)
+  rpc RequestWork(WorkRequest) returns (WorkAssignment);
+}
+
+message AgentRegistration {
+  string agent_id = 1;
+  string agent_type = 2;  // "dreamer", "coder", "crystallizer"
+  string host = 3;
+  int32 port = 4;
+}
+
+message RegistrationResponse {
+  bool success = 1;
+  string assigned_id = 2;
+  string error = 3;
+}
+
+message HeartbeatRequest {
+  string agent_id = 1;
+  string status = 2;
+  int32 cycles_completed = 3;
+  string current_phase = 4;
+}
+
+message HeartbeatResponse {
+  bool acknowledged = 1;
+  string command = 2;  // Optional command: "pause", "resume", "shutdown"
+}
+
+message StatusRequest {
+  string agent_type = 1;  // Filter by type, or empty for all
+}
+
+message AgentStatus {
+  string agent_id = 1;
+  string agent_type = 2;
+  bool running = 3;
+  int32 cycles_run = 4;
+  int64 last_cycle_at = 5;
+  string current_phase = 6;
+  string error = 7;
+}
+
+message AgentStatusList {
+  repeated AgentStatus agents = 1;
+}
+
+message WorkRequest {
+  string agent_id = 1;
+  string agent_type = 2;
+}
+
+message WorkAssignment {
+  string work_id = 1;
+  string work_type = 2;
+  bytes payload = 3;  // Serialized work data
+}

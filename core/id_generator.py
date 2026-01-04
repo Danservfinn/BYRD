@@ -9,7 +9,7 @@ import hashlib
 import time
 import uuid
 from typing import Optional
-from quantum_randomness import get_quantum_float
+from .quantum_randomness import get_quantum_float
 
 
 def generate_id(prefix: str = "", use_quantum: bool = True) -> str:
