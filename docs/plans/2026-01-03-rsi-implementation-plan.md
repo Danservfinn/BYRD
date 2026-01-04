@@ -26,6 +26,14 @@ A system that:
 
 **Critical Rule:** Phase 2 only begins after Phase 1 validates. Gastown is a scaling optimization, not a mechanism requirement.
 
+### Three-Phase Approach (Updated)
+
+| Phase | Focus | Timeline |
+|-------|-------|----------|
+| **Phase 0** | Archive existing codebase, start fresh | 1 day |
+| **Phase 1** | Validate core RSI loop | 4-6 weeks |
+| **Phase 2** | Scale with Gastown | 6-8 weeks |
+
 ---
 
 ## 1. Core Concepts
@@ -227,9 +235,336 @@ All hypotheses can be tested in Phase 1 (Python). Phase 2 tests scaling, not mec
 
 ---
 
-## 4. Phase 1: Core Validation (Python)
+## 4. Phase 0: Clean Slate
 
-### 4.1 Component Structure
+### 4.1 The Problem
+
+The current BYRD codebase has accumulated **282 Python files**, including:
+- Debugging scripts (`debug_*.py`, `test_*.py`)
+- One-off fixes (`fix_*.py`, `break_*.py`)
+- Orphan-related debugging (`orphan_*.py`)
+- Multiple versions of the same component (`activate_loops.py`, `activate_loops_v2.py`)
+- Experimental code that never got cleaned up
+
+Starting fresh with only essential components enables:
+1. Clear architectural boundaries
+2. No legacy code confusion
+3. Focused implementation of RSI mechanisms
+4. Clean dependency graph
+
+### 4.2 Archive Strategy
+
+```
+BEFORE:                              AFTER:
+─────────────────────────────────────────────────────────────────
+byrd/                                byrd/
+├── 282 Python files                 ├── archive/
+├── docs/                            │   └── v1/           ← All old code
+├── ...                              │       ├── *.py
+                                     │       └── README.md  ← "What this was"
+                                     │
+                                     ├── core/             ← Preserved essentials
+                                     │   ├── memory.py
+                                     │   ├── llm_client.py
+                                     │   ├── quantum_randomness.py
+                                     │   └── event_bus.py
+                                     │
+                                     ├── constitutional/   ← Protected (unchanged)
+                                     │   ├── provenance.py
+                                     │   ├── modification_log.py
+                                     │   ├── self_modification.py
+                                     │   └── constitutional.py
+                                     │
+                                     ├── rsi/              ← NEW: RSI mechanisms
+                                     │   ├── prompt/
+                                     │   ├── emergence/
+                                     │   ├── learning/
+                                     │   └── crystallization/
+                                     │
+                                     ├── server.py         ← Keep for visualization
+                                     ├── config.yaml       ← Keep configuration
+                                     └── docs/             ← Keep documentation
+```
+
+### 4.3 What to Preserve
+
+| Category | Files | Reason |
+|----------|-------|--------|
+| **Constitutional** | `provenance.py`, `modification_log.py`, `self_modification.py`, `constitutional.py` | Protected, defines identity |
+| **Infrastructure** | `memory.py`, `llm_client.py`, `quantum_randomness.py`, `event_bus.py` | Reusable, well-tested |
+| **Server** | `server.py` | Visualization support |
+| **Configuration** | `config.yaml` | Environment settings |
+| **Documentation** | `docs/`, `ARCHITECTURE.md`, `CLAUDE.md` | Context and guidance |
+
+### 4.4 What to Archive
+
+**Everything else goes to `archive/v1/`:**
+
+```bash
+# Categories being archived:
+- Debugging scripts (check_*.py, debug_*.py, test_*.py)
+- One-off fixes (fix_*.py, break_*.py, bypass_*.py)
+- Orphan debugging (orphan_*.py, dump_*.py)
+- Experimental code (demo_*.py, bold_experiments.py)
+- Superseded components (actor.py, coder.py, agi_runner.py)
+- Voice experiments (voice_*.py, my_voice*.py)
+- Activation scripts (activate_*.py, run_*.py, execute_*.py)
+- Verification scripts (verify_*.py, validate_*.py)
+```
+
+### 4.5 Execution Script
+
+```bash
+#!/bin/bash
+# phase0_clean_slate.sh
+
+set -e
+
+echo "=== Phase 0: Clean Slate ==="
+
+# Create archive directory
+mkdir -p archive/v1
+
+# Create README for archive
+cat > archive/v1/README.md << 'EOF'
+# BYRD v1 Archive
+
+This directory contains the original BYRD codebase before the Q-DE-RSI
+implementation. Archived on $(date).
+
+## Why Archived
+
+The v1 codebase accumulated 282 Python files over development, including
+debugging scripts, one-off fixes, and experimental code. The Q-DE-RSI
+architecture requires a clean implementation focused on:
+
+1. Dispositional Emergence
+2. Oracle-Constrained Practice
+3. Heuristic Crystallization
+4. Prompt Evolution
+
+## What's Here
+
+All Python files from the root directory that weren't preserved for v2.
+See the implementation plan for details on what was preserved vs archived.
+
+## Can I Use This Code?
+
+Yes, for reference. Some patterns may be useful:
+- `memory.py` patterns (preserved in core/)
+- `llm_client.py` patterns (preserved in core/)
+- `dreamer.py` reflection logic (reference for rsi/emergence/)
+- `seeker.py` routing logic (reference for rsi/learning/)
+
+Do NOT copy-paste. Understand and reimplement cleanly.
+EOF
+
+# Files to PRESERVE (don't archive)
+PRESERVE=(
+    "memory.py"
+    "llm_client.py"
+    "quantum_randomness.py"
+    "event_bus.py"
+    "server.py"
+    "config.yaml"
+    "provenance.py"
+    "modification_log.py"
+    "self_modification.py"
+    "constitutional.py"
+    "byrd_types.py"
+    "id_generator.py"
+)
+
+# Move all .py files to archive EXCEPT preserved ones
+for file in *.py; do
+    preserve=false
+    for keep in "${PRESERVE[@]}"; do
+        if [[ "$file" == "$keep" ]]; then
+            preserve=true
+            break
+        fi
+    done
+
+    if [[ "$preserve" == false ]]; then
+        mv "$file" archive/v1/
+        echo "Archived: $file"
+    else
+        echo "Preserved: $file"
+    fi
+done
+
+# Create new directory structure
+mkdir -p core
+mkdir -p constitutional
+mkdir -p rsi/{prompt,emergence,learning,crystallization,measurement}
+
+# Move preserved files to proper locations
+mv memory.py llm_client.py quantum_randomness.py event_bus.py byrd_types.py id_generator.py core/
+mv provenance.py modification_log.py self_modification.py constitutional.py constitutional/
+
+# Create __init__.py files
+touch core/__init__.py
+touch constitutional/__init__.py
+touch rsi/__init__.py
+touch rsi/prompt/__init__.py
+touch rsi/emergence/__init__.py
+touch rsi/learning/__init__.py
+touch rsi/crystallization/__init__.py
+touch rsi/measurement/__init__.py
+
+# Create minimal byrd.py entry point
+cat > byrd.py << 'EOF'
+"""
+BYRD v2: Recursive Self-Learning
+
+Entry point for the Q-DE-RSI implementation.
+See docs/plans/2026-01-03-rsi-implementation-plan.md for architecture.
+"""
+
+import asyncio
+from core.memory import Memory
+from core.llm_client import create_llm_client
+from rsi import RSIEngine
+
+class BYRD:
+    def __init__(self, config: dict):
+        self.config = config
+        self.memory = Memory(config)
+        self.llm = create_llm_client(config)
+        self.rsi = None  # Initialized after memory connects
+
+    async def start(self):
+        """Initialize and start BYRD."""
+        await self.memory.connect()
+
+        # Import here to avoid circular imports
+        from rsi import RSIEngine
+        self.rsi = RSIEngine(self.memory, self.llm, self.config)
+
+        print("BYRD v2 initialized. RSI engine ready.")
+
+    async def run_cycle(self):
+        """Run one RSI cycle."""
+        if self.rsi is None:
+            raise RuntimeError("BYRD not started. Call start() first.")
+
+        return await self.rsi.run_cycle()
+
+if __name__ == "__main__":
+    import yaml
+
+    with open("config.yaml") as f:
+        config = yaml.safe_load(f)
+
+    byrd = BYRD(config)
+    asyncio.run(byrd.start())
+EOF
+
+echo ""
+echo "=== Clean Slate Complete ==="
+echo "Archived: $(ls archive/v1/*.py 2>/dev/null | wc -l) files"
+echo "Preserved: $(ls core/*.py constitutional/*.py 2>/dev/null | wc -l) files"
+echo ""
+echo "Next: Implement RSI components in rsi/"
+```
+
+### 4.6 Post-Archive Structure
+
+```
+byrd/
+├── archive/
+│   └── v1/
+│       ├── README.md
+│       └── [270+ archived .py files]
+│
+├── core/
+│   ├── __init__.py
+│   ├── memory.py           # Neo4j interface
+│   ├── llm_client.py       # LLM abstraction
+│   ├── quantum_randomness.py # ANU QRNG
+│   ├── event_bus.py        # Event streaming
+│   ├── byrd_types.py       # Type definitions
+│   └── id_generator.py     # ID generation
+│
+├── constitutional/
+│   ├── __init__.py
+│   ├── provenance.py       # PROTECTED
+│   ├── modification_log.py # PROTECTED
+│   ├── self_modification.py # PROTECTED
+│   └── constitutional.py   # PROTECTED
+│
+├── rsi/
+│   ├── __init__.py
+│   ├── prompt/
+│   │   └── __init__.py     # TO IMPLEMENT
+│   ├── emergence/
+│   │   └── __init__.py     # TO IMPLEMENT
+│   ├── learning/
+│   │   └── __init__.py     # TO IMPLEMENT
+│   ├── crystallization/
+│   │   └── __init__.py     # TO IMPLEMENT
+│   └── measurement/
+│       └── __init__.py     # TO IMPLEMENT
+│
+├── byrd.py                 # New entry point
+├── server.py               # Visualization server
+├── config.yaml             # Configuration
+│
+└── docs/
+    ├── plans/
+    │   └── 2026-01-03-rsi-implementation-plan.md
+    ├── ARCHITECTURE.md
+    └── ...
+```
+
+### 4.7 Neo4j: Fresh Graph
+
+The Neo4j database should also be reset:
+
+```bash
+# Option A: Clear existing database
+# In Neo4j Browser:
+MATCH (n) DETACH DELETE n;
+
+# Option B: Create new database (recommended for clean slate)
+# In neo4j.conf or via Neo4j Desktop, create database "byrd_v2"
+```
+
+**Why fresh graph:**
+- Old nodes (Experiences, Beliefs, Desires) from v1 experiments
+- Orphan nodes from debugging sessions
+- Schema may have drifted from design
+- Clean slate = clean measurements
+
+### 4.8 Git Strategy
+
+```bash
+# Option A: Archive in same repo (recommended)
+git add archive/
+git commit -m "archive: move v1 codebase to archive/v1 for Q-DE-RSI clean slate"
+
+# Option B: Tag and branch
+git tag v1-archive
+git checkout -b v2-rsi-implementation
+```
+
+### 4.9 Phase 0 Checklist
+
+| Step | Action | Status |
+|------|--------|--------|
+| 1 | Run `phase0_clean_slate.sh` | ⬜ |
+| 2 | Verify preserved files in `core/` and `constitutional/` | ⬜ |
+| 3 | Verify archive contains old files | ⬜ |
+| 4 | Clear or create fresh Neo4j database | ⬜ |
+| 5 | Commit archive to git | ⬜ |
+| 6 | Verify `python byrd.py` runs (skeleton) | ⬜ |
+| 7 | Update imports in preserved files if needed | ⬜ |
+
+---
+
+## 5. Phase 1: Core Validation (Python)
+
+### 5.1 Component Structure
 
 ```
 byrd/
@@ -267,9 +602,9 @@ byrd/
 └── ...
 ```
 
-### 4.2 Key Implementations
+### 5.2 Key Implementations
 
-#### 4.2.1 System Prompt
+#### 5.2.1 System Prompt
 
 ```python
 # rsi/prompt/system_prompt.py
@@ -306,7 +641,7 @@ class SystemPrompt:
         self.strategies += f"\n## {domain}\n- {heuristic}\n"
 ```
 
-#### 4.2.2 Emergence Verifier
+#### 5.2.2 Emergence Verifier
 
 ```python
 # rsi/emergence/emergence_verifier.py
@@ -382,7 +717,7 @@ class EmergenceVerifier:
         return "Combined score below threshold"
 ```
 
-#### 4.2.3 Domain Router
+#### 5.2.3 Domain Router
 
 ```python
 # rsi/learning/domain_router.py
@@ -441,7 +776,7 @@ class DomainRouter:
         }[domain]
 ```
 
-#### 4.2.4 TDD Practice
+#### 5.2.4 TDD Practice
 
 ```python
 # rsi/learning/tdd_practice.py
@@ -544,7 +879,7 @@ class OracleGenerationError(Exception):
     pass
 ```
 
-#### 4.2.5 Crystallizer
+#### 5.2.5 Crystallizer
 
 ```python
 # rsi/crystallization/crystallizer.py
@@ -631,7 +966,7 @@ class Crystallizer:
         return has_action and len(heuristic.split()) >= 5
 ```
 
-### 4.3 Integration with Existing BYRD
+### 5.3 Integration with Existing BYRD
 
 The RSI components integrate with BYRD's existing architecture:
 
@@ -662,7 +997,7 @@ class BYRD:
                 await self.seeker.fulfill(desire)
 ```
 
-### 4.4 Phase 1 Milestones
+### 5.4 Phase 1 Milestones
 
 | Week | Milestone | Deliverable |
 |------|-----------|-------------|
@@ -675,9 +1010,9 @@ class BYRD:
 
 ---
 
-## 5. Phase 2: Gastown Scale
+## 6. Phase 2: Gastown Scale
 
-### 5.1 Prerequisites (Phase Gate)
+### 6.1 Prerequisites (Phase Gate)
 
 **Move to Phase 2 when:**
 
@@ -689,7 +1024,7 @@ class BYRD:
 | Complete cycles | ≥3 full loops | ⬜ |
 | Stability | No critical bugs for 1 week | ⬜ |
 
-### 5.2 Component → Agent Mapping
+### 6.2 Component → Agent Mapping
 
 | Phase 1 Component | Gastown Agent | Type | Pool |
 |-------------------|---------------|------|------|
@@ -709,7 +1044,7 @@ class BYRD:
 | Mayor | Singleton | LLM quota, coordination |
 | Witness | Singleton | Monitoring, anomalies |
 
-### 5.3 Tiered LLM Architecture
+### 6.3 Tiered LLM Architecture
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
@@ -735,7 +1070,7 @@ class BYRD:
 └────────────────────────────────────────────────────────────────┘
 ```
 
-### 5.4 Project Structure (Go)
+### 6.4 Project Structure (Go)
 
 ```
 gastown-byrd/
@@ -780,7 +1115,7 @@ gastown-byrd/
     └── constitutional.py
 ```
 
-### 5.5 Molecule Definitions
+### 6.5 Molecule Definitions
 
 #### reflection-cycle.toml
 
@@ -866,7 +1201,7 @@ tier = 4
 inputs = ["desire", "solution", "test_result"]
 ```
 
-### 5.6 Phase 2 Milestones
+### 6.6 Phase 2 Milestones
 
 | Week | Milestone | Deliverable |
 |------|-----------|-------------|
@@ -877,9 +1212,9 @@ inputs = ["desire", "solution", "test_result"]
 
 ---
 
-## 6. Shared Infrastructure
+## 7. Shared Infrastructure
 
-### 6.1 Neo4j Schema Extensions
+### 7.1 Neo4j Schema Extensions
 
 ```cypher
 // New node types for RSI
@@ -912,7 +1247,7 @@ MATCH (t:Trajectory {id: $trajectory_id})
 CREATE (h)-[:DERIVED_FROM]->(t)
 ```
 
-### 6.2 Invariants
+### 7.2 Invariants
 
 | Invariant | Enforcement | Phase |
 |-----------|-------------|-------|
@@ -925,7 +1260,7 @@ CREATE (h)-[:DERIVED_FROM]->(t)
 | Audit trail | All modifications logged | Both |
 | Bounded growth | Strategies pruned at capacity | Both |
 
-### 6.3 Quantum Substrate
+### 7.3 Quantum Substrate
 
 Single integration point: desire collapse.
 
@@ -959,9 +1294,9 @@ async def quantum_desire_collapse(desires: list) -> dict:
 
 ---
 
-## 7. Validation
+## 8. Validation
 
-### 7.1 Metrics Collection
+### 8.1 Metrics Collection
 
 ```python
 # rsi/measurement/metrics.py
@@ -1004,7 +1339,7 @@ class MetricsCollector:
         )
 ```
 
-### 7.2 Hypothesis Tests
+### 8.2 Hypothesis Tests
 
 ```python
 # rsi/measurement/hypothesis_tests.py
@@ -1031,7 +1366,7 @@ async def test_h6_heuristic_transfer(before: float, after: float) -> TestResult:
 
 ---
 
-## 8. Timeline
+## 9. Timeline
 
 ### Unified Implementation Timeline
 
@@ -1085,7 +1420,7 @@ Week 17-18: Phase 2 Validation
 
 ---
 
-## 9. Appendix: Cold Start Solution
+## 10. Appendix: Cold Start Solution
 
 ### The Problem
 
@@ -1128,7 +1463,7 @@ class BootstrapManager:
 
 ---
 
-## 10. Summary
+## 11. Summary
 
 ### What We're Building
 
