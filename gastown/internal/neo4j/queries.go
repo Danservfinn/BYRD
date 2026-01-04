@@ -3,7 +3,6 @@ package neo4j
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/byrd-ai/gastown/pkg/types"
@@ -455,5 +454,3 @@ func (q *Queries) GetPendingDesires(ctx context.Context, limit int) ([]types.Des
 	return result.([]types.Desire), nil
 }
 
-// Ensure Queries satisfies any needed interfaces
-var _ fmt.Stringer = types.Domain("")

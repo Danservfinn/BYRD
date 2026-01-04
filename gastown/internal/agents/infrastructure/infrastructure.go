@@ -2,6 +2,7 @@
 package infrastructure
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -234,7 +235,7 @@ func (c *LLMClient) Generate(ctx context.Context, prompt string, opts types.Gene
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "POST", c.endpoint,
-		io.NopCloser(json.RawMessage(bodyBytes).Reader()))
+		bytes.NewReader(bodyBytes))
 	if err != nil {
 		return "", err
 	}
