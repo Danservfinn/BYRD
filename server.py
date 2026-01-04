@@ -4357,6 +4357,52 @@ async def get_architecture():
 
 
 # =============================================================================
+# RSI METRICS ENDPOINT
+# =============================================================================
+
+@app.get("/api/rsi/metrics")
+async def get_rsi_metrics():
+    """Get RSI (Recursive Self-Improvement) engine metrics."""
+    global byrd_instance
+
+    if not byrd_instance:
+        return {"error": "BYRD not initialized", "rsi_metrics": {}}
+
+    # Check if RSI engine is available
+    if hasattr(byrd_instance, 'rsi_engine') and byrd_instance.rsi_engine:
+        try:
+            metrics = await byrd_instance.rsi_engine.get_metrics()
+            return metrics
+        except Exception as e:
+            logger.warning(f"Failed to get RSI metrics: {e}")
+            return {"error": str(e), "rsi_metrics": {}}
+
+    # Fallback: Try to get metrics from individual components
+    rsi_metrics = {
+        "total_reflections": 0,
+        "emergent_desires": 0,
+        "activation_rate": 0.0,
+        "trajectories_stored": 0,
+        "trajectory_success_rate": 0.0,
+        "heuristics_crystallized": 0,
+        "complete_cycles": 0,
+        "direction_variance": 0.0,
+        "domain_distribution": {"code": 0, "math": 0, "logic": 0}
+    }
+
+    # Try to get from memory if available
+    if hasattr(byrd_instance, 'memory') and byrd_instance.memory:
+        try:
+            # Get trajectory count
+            trajectories = await byrd_instance.memory.get_successful_trajectories(limit=100)
+            rsi_metrics["trajectories_stored"] = len(trajectories) if trajectories else 0
+        except:
+            pass
+
+    return {"rsi_metrics": rsi_metrics}
+
+
+# =============================================================================
 # V10 HEALTH ENDPOINTS - Dual Instance & Graphiti Monitoring
 # =============================================================================
 

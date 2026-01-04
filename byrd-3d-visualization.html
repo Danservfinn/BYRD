@@ -59,6 +59,20 @@
       --status-new: rgba(16, 185, 129, 0.4);
       --status-active: rgba(147, 197, 253, 0.6);
       --status-forgotten: rgba(220, 38, 38, 0.15);
+
+      /* RSI Phase Colors */
+      --rsi-reflect: #8b5cf6;
+      --rsi-verify: #6366f1;
+      --rsi-collapse: #ec4899;
+      --rsi-route: #f59e0b;
+      --rsi-practice: #10b981;
+      --rsi-record: #3b82f6;
+      --rsi-crystallize: #06b6d4;
+      --rsi-measure: #84cc16;
+
+      /* RSI Node Colors */
+      --node-trajectory: #14b8a6;
+      --node-heuristic: #f97316;
     }
 
     body {
@@ -1421,6 +1435,98 @@
   <!-- Canvas Container -->
   <div id="canvas-container"></div>
 
+  <!-- RSI Phase Ring (SVG overlay) -->
+  <div id="rsi-ring-container" style="
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 100;
+    pointer-events: none;
+  ">
+    <svg width="200" height="200" viewBox="0 0 200 200" id="rsi-ring">
+      <g transform="translate(100, 100)">
+        <!-- 8 phase segments arranged in a ring -->
+        <path id="rsi-seg-reflect" d="M0,-80 A80,80 0 0,1 56.57,-56.57 L0,0 Z"
+              fill="var(--rsi-reflect)" opacity="0.3" stroke="white" stroke-width="1"/>
+        <path id="rsi-seg-verify" d="M56.57,-56.57 A80,80 0 0,1 80,0 L0,0 Z"
+              fill="var(--rsi-verify)" opacity="0.3" stroke="white" stroke-width="1"/>
+        <path id="rsi-seg-collapse" d="M80,0 A80,80 0 0,1 56.57,56.57 L0,0 Z"
+              fill="var(--rsi-collapse)" opacity="0.3" stroke="white" stroke-width="1"/>
+        <path id="rsi-seg-route" d="M56.57,56.57 A80,80 0 0,1 0,80 L0,0 Z"
+              fill="var(--rsi-route)" opacity="0.3" stroke="white" stroke-width="1"/>
+        <path id="rsi-seg-practice" d="M0,80 A80,80 0 0,1 -56.57,56.57 L0,0 Z"
+              fill="var(--rsi-practice)" opacity="0.3" stroke="white" stroke-width="1"/>
+        <path id="rsi-seg-record" d="M-56.57,56.57 A80,80 0 0,1 -80,0 L0,0 Z"
+              fill="var(--rsi-record)" opacity="0.3" stroke="white" stroke-width="1"/>
+        <path id="rsi-seg-crystallize" d="M-80,0 A80,80 0 0,1 -56.57,-56.57 L0,0 Z"
+              fill="var(--rsi-crystallize)" opacity="0.3" stroke="white" stroke-width="1"/>
+        <path id="rsi-seg-measure" d="M-56.57,-56.57 A80,80 0 0,1 0,-80 L0,0 Z"
+              fill="var(--rsi-measure)" opacity="0.3" stroke="white" stroke-width="1"/>
+        <!-- Center label -->
+        <circle cx="0" cy="0" r="35" fill="rgba(255,255,255,0.9)" stroke="var(--glass-border)" stroke-width="1"/>
+        <text id="rsi-phase-label" x="0" y="5" text-anchor="middle" font-size="12" fill="var(--text-primary)" font-weight="600">RSI</text>
+      </g>
+    </svg>
+    <!-- Phase labels around ring -->
+    <div id="rsi-phase-labels" style="position: absolute; top: 0; left: 0; width: 200px; height: 200px; font-size: 9px; color: var(--text-muted);">
+      <span style="position: absolute; top: 5px; left: 85px;">REFLECT</span>
+      <span style="position: absolute; top: 30px; right: 5px;">VERIFY</span>
+      <span style="position: absolute; top: 90px; right: 0;">COLLAPSE</span>
+      <span style="position: absolute; bottom: 30px; right: 5px;">ROUTE</span>
+      <span style="position: absolute; bottom: 5px; left: 75px;">PRACTICE</span>
+      <span style="position: absolute; bottom: 30px; left: 5px;">RECORD</span>
+      <span style="position: absolute; top: 90px; left: 0;">CRYSTAL</span>
+      <span style="position: absolute; top: 30px; left: 10px;">MEASURE</span>
+    </div>
+  </div>
+
+  <!-- RSI Metrics Panel -->
+  <div id="rsi-metrics-panel" class="glass-panel" style="
+    position: fixed;
+    bottom: 20px;
+    left: 240px;
+    z-index: 100;
+    padding: 16px;
+    min-width: 280px;
+    font-size: 12px;
+  ">
+    <h4 style="margin: 0 0 12px 0; color: var(--text-primary); font-size: 14px;">RSI Metrics</h4>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+      <div style="background: rgba(139, 92, 246, 0.1); padding: 8px; border-radius: 8px;">
+        <div style="color: var(--text-muted); font-size: 10px;">Activation Rate</div>
+        <div id="rsi-activation-rate" style="color: var(--rsi-reflect); font-size: 16px; font-weight: 600;">0.0</div>
+      </div>
+      <div style="background: rgba(6, 182, 212, 0.1); padding: 8px; border-radius: 8px;">
+        <div style="color: var(--text-muted); font-size: 10px;">Complete Cycles</div>
+        <div id="rsi-complete-cycles" style="color: var(--rsi-crystallize); font-size: 16px; font-weight: 600;">0</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 12px;">
+      <div style="color: var(--text-muted); font-size: 10px; margin-bottom: 4px;">Domain Distribution</div>
+      <div id="rsi-domain-bars" style="display: flex; height: 20px; border-radius: 4px; overflow: hidden; background: rgba(0,0,0,0.05);">
+        <div id="domain-code" style="background: var(--node-capability); width: 33%;" title="Code"></div>
+        <div id="domain-math" style="background: var(--node-crystal); width: 33%;" title="Math"></div>
+        <div id="domain-logic" style="background: var(--node-reflection); width: 34%;" title="Logic"></div>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 9px; color: var(--text-muted); margin-top: 2px;">
+        <span>Code</span><span>Math</span><span>Logic</span>
+      </div>
+    </div>
+
+    <div>
+      <div style="color: var(--text-muted); font-size: 10px; margin-bottom: 4px;">Crystallization Progress</div>
+      <div id="rsi-crystallization-progress" style="height: 8px; background: rgba(0,0,0,0.05); border-radius: 4px; overflow: hidden;">
+        <div id="crystallization-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, var(--rsi-crystallize), var(--node-heuristic)); transition: width 0.3s ease;"></div>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 9px; color: var(--text-muted); margin-top: 2px;">
+        <span id="trajectories-count">0 trajectories</span>
+        <span id="heuristics-count">0 heuristics</span>
+      </div>
+    </div>
+  </div>
+
   <!-- Title Badge -->
   <div class="glass-panel title-badge">
     <div class="connection-indicator disconnected" id="connection-indicator"></div>
@@ -1542,6 +1648,14 @@
       <div class="legend-item">
         <div class="legend-shape" style="color: var(--node-meta)">◎</div>
         <span>Meta Cluster</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-shape" style="color: var(--node-trajectory)">▮</div>
+        <span>Trajectory (prism)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-shape" style="color: var(--node-heuristic)">★</div>
+        <span>Heuristic (star)</span>
       </div>
     </div>
 
@@ -2137,9 +2251,22 @@
         crystal: 0x0891b2,     // Darker cyan
         reflection: 0x059669,  // Darker green
         goal: 0xea580c,        // Darker orange
+        trajectory: 0x14b8a6,  // Teal
+        heuristic: 0xf97316,   // Orange
         meta_cluster: 0x64748b,
         operatingsystem: 0x1d4ed8,
         default: 0x475569
+      },
+
+      rsiPhases: {
+        reflect: 0x8b5cf6,
+        verify: 0x6366f1,
+        collapse: 0xec4899,
+        route: 0xf59e0b,
+        practice: 0x10b981,
+        record: 0x3b82f6,
+        crystallize: 0x06b6d4,
+        measure: 0x84cc16
       },
 
       surfaces: {
@@ -2184,6 +2311,22 @@
     let catIdlePhase = 0;
     let catEyeGlow = 0.6;
     let currentByrdState = 'idle';
+
+    // RSI State (Recursive Self-Improvement)
+    const rsiState = {
+      currentPhase: null,           // Current RSI phase: reflect, verify, collapse, route, practice, record, crystallize, measure
+      currentCycleId: null,         // Current cycle ID for tracking
+      completeCycles: 0,            // Total completed cycles
+      activationRate: 0.0,          // Emergent desire activation rate
+      trajectoriesStored: 0,        // Learning trajectories stored
+      heuristicsCount: 0,           // Crystallized heuristics
+      domainDistribution: {         // Practice domain distribution
+        code: 0,
+        math: 0,
+        logic: 0
+      },
+      lastCrystallization: null     // Last crystallization event data
+    };
 
     // Animation state for new structures
     const animationState = {
@@ -2807,6 +2950,357 @@
     }
 
     // ==========================================================================
+    // RSI (RECURSIVE SELF-IMPROVEMENT) VISUALIZATION
+    // ==========================================================================
+
+    /**
+     * Handle RSI phase change events
+     * Updates the RSI ring to highlight the active phase
+     */
+    function handleRSIPhaseEvent(data) {
+      const phase = data.phase || data.current_phase;
+      const cycleId = data.cycle || data.cycle_id;
+
+      if (!phase) return;
+
+      rsiState.currentPhase = phase;
+      rsiState.currentCycleId = cycleId;
+
+      // Update RSI ring segments
+      const phases = ['reflect', 'verify', 'collapse', 'route', 'practice', 'record', 'crystallize', 'measure'];
+      phases.forEach(p => {
+        const seg = document.getElementById(`rsi-seg-${p}`);
+        if (seg) {
+          if (p === phase.toLowerCase()) {
+            seg.setAttribute('opacity', '1.0');
+            seg.style.filter = 'drop-shadow(0 0 8px currentColor)';
+          } else {
+            seg.setAttribute('opacity', '0.3');
+            seg.style.filter = 'none';
+          }
+        }
+      });
+
+      // Update center label
+      const label = document.getElementById('rsi-phase-label');
+      if (label) {
+        label.textContent = phase.toUpperCase();
+      }
+
+      // Update BYRD cat state based on RSI phase
+      if (phase === 'reflect') {
+        setByrdState('dreaming');
+      } else if (phase === 'practice') {
+        setByrdState('seeking');
+      } else if (phase === 'crystallize') {
+        setByrdState('yearning');
+      }
+
+      console.log(`RSI Phase: ${phase} (cycle: ${cycleId})`);
+    }
+
+    /**
+     * Handle quantum collapse events
+     * Creates a visual burst effect at the BYRD cat
+     */
+    function handleQuantumCollapseEvent(data) {
+      console.log('Quantum collapse:', data);
+
+      // Create particle burst effect at cat position
+      if (byrdCat) {
+        createQuantumBurst(byrdCat.position);
+      }
+    }
+
+    /**
+     * Create quantum burst visual effect
+     */
+    function createQuantumBurst(position) {
+      const particleCount = 50;
+      const geometry = new THREE.BufferGeometry();
+      const positions = new Float32Array(particleCount * 3);
+      const velocities = [];
+
+      for (let i = 0; i < particleCount; i++) {
+        positions[i * 3] = position.x;
+        positions[i * 3 + 1] = position.y;
+        positions[i * 3 + 2] = position.z;
+
+        velocities.push(new THREE.Vector3(
+          (Math.random() - 0.5) * 0.3,
+          (Math.random() - 0.5) * 0.3,
+          (Math.random() - 0.5) * 0.3
+        ));
+      }
+
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+      const material = new THREE.PointsMaterial({
+        size: 0.15,
+        color: COLORS.rsiPhases.collapse,
+        transparent: true,
+        opacity: 1.0
+      });
+
+      const particles = new THREE.Points(geometry, material);
+      scene.add(particles);
+
+      // Animate burst
+      const startTime = performance.now();
+      const duration = 1000;
+
+      function animateBurst() {
+        const elapsed = performance.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        const posArray = particles.geometry.attributes.position.array;
+        for (let i = 0; i < particleCount; i++) {
+          posArray[i * 3] += velocities[i].x;
+          posArray[i * 3 + 1] += velocities[i].y;
+          posArray[i * 3 + 2] += velocities[i].z;
+        }
+        particles.geometry.attributes.position.needsUpdate = true;
+        material.opacity = 1 - progress;
+
+        if (progress < 1) {
+          requestAnimationFrame(animateBurst);
+        } else {
+          scene.remove(particles);
+          geometry.dispose();
+          material.dispose();
+        }
+      }
+
+      requestAnimationFrame(animateBurst);
+    }
+
+    /**
+     * Handle crystallization events
+     */
+    function handleCrystallizationEvent(eventType, data) {
+      console.log(`Crystallization event: ${eventType}`, data);
+
+      if (eventType === 'crystallization_proposed') {
+        rsiState.lastCrystallization = data;
+        // Highlight trajectories being crystallized
+        const trajectoryIds = data.trajectory_ids || [];
+        trajectoryIds.forEach(id => {
+          const mesh = graphState.nodeMeshes.get(id);
+          if (mesh) {
+            mesh.material.emissiveIntensity = 0.8;
+          }
+        });
+      } else if (eventType === 'crystallization_collapsed') {
+        // Animate crystallization
+        if (data.heuristic_id && rsiState.lastCrystallization) {
+          animateCrystallization(
+            rsiState.lastCrystallization.trajectory_ids || [],
+            data.heuristic_id
+          );
+        }
+        rsiState.heuristicsCount++;
+        updateRSIMetricsDisplay();
+      }
+    }
+
+    /**
+     * Animate trajectories flowing into a new heuristic
+     */
+    function animateCrystallization(trajectoryIds, heuristicId) {
+      // Find heuristic position (or create at cat position)
+      let targetPos = byrdCat ? byrdCat.position.clone() : new THREE.Vector3(0, 0, 0);
+      const heuristicMesh = graphState.nodeMeshes.get(heuristicId);
+      if (heuristicMesh) {
+        targetPos = heuristicMesh.position.clone();
+      }
+
+      // Create flowing particles from each trajectory
+      trajectoryIds.forEach((trajId, index) => {
+        const trajMesh = graphState.nodeMeshes.get(trajId);
+        if (!trajMesh) return;
+
+        const startPos = trajMesh.position.clone();
+        const particleCount = 20;
+
+        for (let i = 0; i < particleCount; i++) {
+          setTimeout(() => {
+            createFlowingParticle(startPos, targetPos, COLORS.nodes.trajectory);
+          }, index * 100 + i * 50);
+        }
+      });
+
+      // Create heuristic birth effect after delay
+      setTimeout(() => {
+        createHeuristicBirth(targetPos);
+      }, trajectoryIds.length * 100 + 1000);
+    }
+
+    /**
+     * Create a particle that flows from source to target
+     */
+    function createFlowingParticle(from, to, color) {
+      const geometry = new THREE.SphereGeometry(0.1, 8, 8);
+      const material = new THREE.MeshBasicMaterial({
+        color: color,
+        transparent: true,
+        opacity: 1.0
+      });
+
+      const particle = new THREE.Mesh(geometry, material);
+      particle.position.copy(from);
+      scene.add(particle);
+
+      const startTime = performance.now();
+      const duration = 800;
+
+      function animate() {
+        const elapsed = performance.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3); // Ease out cubic
+
+        particle.position.lerpVectors(from, to, eased);
+        material.opacity = 1 - progress * 0.5;
+
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          scene.remove(particle);
+          geometry.dispose();
+          material.dispose();
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    /**
+     * Create expanding ring effect for new heuristic
+     */
+    function createHeuristicBirth(position) {
+      const geometry = new THREE.RingGeometry(0.5, 0.6, 32);
+      const material = new THREE.MeshBasicMaterial({
+        color: COLORS.nodes.heuristic,
+        transparent: true,
+        opacity: 1.0,
+        side: THREE.DoubleSide
+      });
+
+      const ring = new THREE.Mesh(geometry, material);
+      ring.position.copy(position);
+      ring.lookAt(camera.position);
+      scene.add(ring);
+
+      const startTime = performance.now();
+      const duration = 1000;
+
+      function animate() {
+        const elapsed = performance.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        ring.scale.setScalar(1 + progress * 3);
+        material.opacity = 1 - progress;
+
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          scene.remove(ring);
+          geometry.dispose();
+          material.dispose();
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    /**
+     * Fetch and display RSI metrics
+     */
+    async function fetchRSIMetrics() {
+      try {
+        const response = await fetch('/api/rsi/metrics');
+        if (!response.ok) {
+          console.warn('RSI metrics not available');
+          return;
+        }
+
+        const data = await response.json();
+        updateRSIMetricsFromData(data);
+      } catch (error) {
+        console.warn('Failed to fetch RSI metrics:', error);
+      }
+    }
+
+    /**
+     * Update RSI metrics display from API data
+     */
+    function updateRSIMetricsFromData(data) {
+      const rsiMetrics = data.rsi_metrics || {};
+
+      rsiState.activationRate = rsiMetrics.activation_rate || 0;
+      rsiState.completeCycles = rsiMetrics.complete_cycles || 0;
+      rsiState.trajectoriesStored = rsiMetrics.trajectories_stored || 0;
+      rsiState.heuristicsCount = rsiMetrics.heuristics_crystallized || 0;
+
+      // Update domain distribution
+      const domainDist = rsiMetrics.domain_distribution || {};
+      rsiState.domainDistribution = {
+        code: domainDist.code || 0,
+        math: domainDist.math || 0,
+        logic: domainDist.logic || 0
+      };
+
+      updateRSIMetricsDisplay();
+    }
+
+    /**
+     * Update the RSI metrics panel UI
+     */
+    function updateRSIMetricsDisplay() {
+      // Update activation rate
+      const activationEl = document.getElementById('rsi-activation-rate');
+      if (activationEl) {
+        activationEl.textContent = rsiState.activationRate.toFixed(2);
+      }
+
+      // Update complete cycles
+      const cyclesEl = document.getElementById('rsi-complete-cycles');
+      if (cyclesEl) {
+        cyclesEl.textContent = rsiState.completeCycles.toString();
+      }
+
+      // Update domain bars
+      const total = rsiState.domainDistribution.code + rsiState.domainDistribution.math + rsiState.domainDistribution.logic;
+      if (total > 0) {
+        const codeBar = document.getElementById('domain-code');
+        const mathBar = document.getElementById('domain-math');
+        const logicBar = document.getElementById('domain-logic');
+
+        if (codeBar) codeBar.style.width = `${(rsiState.domainDistribution.code / total) * 100}%`;
+        if (mathBar) mathBar.style.width = `${(rsiState.domainDistribution.math / total) * 100}%`;
+        if (logicBar) logicBar.style.width = `${(rsiState.domainDistribution.logic / total) * 100}%`;
+      }
+
+      // Update trajectories/heuristics counts
+      const trajEl = document.getElementById('trajectories-count');
+      if (trajEl) {
+        trajEl.textContent = `${rsiState.trajectoriesStored} trajectories`;
+      }
+
+      const heurEl = document.getElementById('heuristics-count');
+      if (heurEl) {
+        heurEl.textContent = `${rsiState.heuristicsCount} heuristics`;
+      }
+
+      // Update crystallization progress bar
+      const threshold = 10; // Assume crystallization threshold is 10 trajectories
+      const progress = Math.min((rsiState.trajectoriesStored % threshold) / threshold * 100, 100);
+      const progressBar = document.getElementById('crystallization-bar');
+      if (progressBar) {
+        progressBar.style.width = `${progress}%`;
+      }
+    }
+
+    // ==========================================================================
     // INITIALIZATION
     // ==========================================================================
 
@@ -2844,6 +3338,12 @@
 
       // Fetch initial data
       await fetchGraphData();
+
+      // Fetch RSI metrics
+      await fetchRSIMetrics();
+
+      // Set up periodic RSI metrics refresh (every 30 seconds)
+      setInterval(fetchRSIMetrics, 30000);
 
       // Hide loading overlay
       document.getElementById('loading-overlay').classList.add('hidden');
@@ -3948,6 +4448,12 @@
             break;
           case 'goal':
             geometry = new THREE.DodecahedronGeometry(size * 0.8, 0);
+            break;
+          case 'trajectory':
+            geometry = new THREE.CylinderGeometry(size * 0.5, size * 0.5, size * 1.5, 6);
+            break;
+          case 'heuristic':
+            geometry = new THREE.IcosahedronGeometry(size * 0.9, 0);
             break;
           default:
             geometry = new THREE.SphereGeometry(size, 16, 16);
@@ -5714,6 +6220,12 @@
           case 'reflection':
             geometry = new THREE.TorusKnotGeometry(size * 0.5, size * 0.15, 64, 8, 2, 3);
             break;
+          case 'trajectory':
+            geometry = new THREE.CylinderGeometry(size * 0.5, size * 0.5, size * 1.5, 6);
+            break;
+          case 'heuristic':
+            geometry = new THREE.IcosahedronGeometry(size * 0.9, 0);
+            break;
           default:
             // experience, operatingsystem, etc.
             geometry = new THREE.SphereGeometry(size, 16, 16);
@@ -6763,6 +7275,12 @@
         setByrdState('seeking');
       } else if (eventType === 'system_idle') {
         setByrdState('idle');
+      } else if (eventType === 'rsi_phase') {
+        handleRSIPhaseEvent(eventData);
+      } else if (eventType === 'quantum_collapse') {
+        handleQuantumCollapseEvent(eventData);
+      } else if (eventType === 'crystallization_proposed' || eventType === 'crystallization_collapsed') {
+        handleCrystallizationEvent(eventType, eventData);
       }
 
       // Handle relevant events
@@ -6773,6 +7291,8 @@
         case 'capability_acquired':
         case 'reflection_complete':
         case 'goal_created':
+        case 'trajectory_created':
+        case 'heuristic_created':
           if (liveUpdateState.enabled) {
             handleNewNodeEvent(eventType, eventData);
           }
@@ -6814,7 +7334,9 @@
         'experience_created': 'experience',
         'capability_acquired': 'capability',
         'reflection_complete': 'reflection',
-        'goal_created': 'goal'
+        'goal_created': 'goal',
+        'trajectory_created': 'trajectory',
+        'heuristic_created': 'heuristic'
       };
 
       const nodeType = typeMap[eventType] || 'experience';
@@ -6865,6 +7387,12 @@
           break;
         case 'reflection':
           geometry = new THREE.TorusKnotGeometry(size * 0.5, size * 0.15, 64, 8, 2, 3);
+          break;
+        case 'trajectory':
+          geometry = new THREE.CylinderGeometry(size * 0.5, size * 0.5, size * 1.5, 6);
+          break;
+        case 'heuristic':
+          geometry = new THREE.IcosahedronGeometry(size * 0.9, 0);
           break;
         default:
           geometry = new THREE.SphereGeometry(size, 16, 16);
