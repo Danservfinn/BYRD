@@ -158,25 +158,18 @@ class Reflector:
 
 # REFLECTION
 
-Based on your Constitution and the context above, reflect on:
-1. What patterns do you notice in your recent experiences?
-2. What capabilities would you like to improve?
-3. What specific weaknesses have you observed?
+Based on your Constitution and the context above, reflect on what verifiable capabilities you want to improve.
 
-Express any improvement desires that emerge from this reflection.
-Be specific about WHAT you want to improve and WHY.
+Focus on domains where improvement can be tested:
+- **code**: Programming, debugging, algorithm implementation, Python, async, testing
+- **math**: Calculations, equations, proofs, numerical analysis, algebra
+- **logic**: Multi-step reasoning, deduction, inference, argument analysis
 
-Respond in JSON format:
-{{
-    "observations": ["..."],
-    "desires": [
-        {{
-            "description": "I want to improve X because Y",
-            "intensity": 0.0-1.0,
-            "domain": "code|math|logic|creative|other"
-        }}
-    ]
-}}
+Express improvement desires that emerged from this reflection.
+Each desire should be specific enough to generate practice problems.
+
+Return ONLY valid JSON (no markdown, no explanation):
+{{"observations":["pattern1","pattern2"],"desires":[{{"description":"I want to improve my Python debugging for async code","intensity":0.7,"domain":"code"}},{{"description":"I want to improve multi-step logical reasoning","intensity":0.6,"domain":"logic"}}]}}
 """
 
     def _parse_reflection(self, response: str) -> Dict:
@@ -191,30 +184,95 @@ Respond in JSON format:
             text = text.split("```")[1].split("```")[0]
 
         try:
-            return json.loads(text.strip())
+            data = json.loads(text.strip())
+            # Unwrap if nested in "output" field (common LLM pattern)
+            if "output" in data and isinstance(data["output"], dict):
+                data = data["output"]
+            return data
         except json.JSONDecodeError:
             logger.warning("Failed to parse reflection JSON, extracting manually")
             return self._extract_manually(response)
 
     def _extract_manually(self, response: str) -> Dict:
         """Fallback extraction when JSON parsing fails."""
-        # Look for desire-like phrases
+        import re
         desires = []
         lines = response.split("\n")
 
+        # Keywords that indicate improvement desires
+        desire_keywords = [
+            "want to", "wish to", "need to improve", "should improve",
+            "desire to", "seek to", "aim to", "hope to", "yearn to",
+            "improve my", "enhance my", "develop my", "strengthen my",
+            "better at", "learning", "practice", "master"
+        ]
+
         for line in lines:
             line_lower = line.lower()
-            if any(kw in line_lower for kw in ["want to", "wish to", "need to improve", "should improve"]):
+            # Skip empty lines and headers
+            if not line.strip() or line.startswith("#"):
+                continue
+
+            # Check for desire indicators
+            if any(kw in line_lower for kw in desire_keywords):
+                domain = self._infer_domain(line_lower)
                 desires.append({
-                    "description": line.strip("- ").strip(),
+                    "description": line.strip("- *").strip(),
+                    "intensity": 0.6,
+                    "domain": domain
+                })
+
+        # If still no desires found, create synthetic ones with strong domain keywords
+        if not desires:
+            # Always generate at least one CODE desire for practice
+            desires.append({
+                "description": "I want to improve my Python debugging and algorithm implementation skills through code practice",
+                "intensity": 0.6,
+                "domain": "code"
+            })
+            # Check for specific domain mentions in response
+            resp_lower = response.lower()
+            if any(kw in resp_lower for kw in ["math", "equation", "calculation", "numerical", "algebra"]):
+                desires.append({
+                    "description": "I want to improve my math equation solving and numerical calculation abilities",
                     "intensity": 0.5,
-                    "domain": "other"
+                    "domain": "math"
+                })
+            if any(kw in resp_lower for kw in ["logic", "reasoning", "deduction", "inference"]):
+                desires.append({
+                    "description": "I want to improve my logical reasoning and multi-step deduction capabilities",
+                    "intensity": 0.5,
+                    "domain": "logic"
                 })
 
         return {
             "observations": [],
             "desires": desires
         }
+
+    def _infer_domain(self, text: str) -> str:
+        """Infer domain from text keywords."""
+        # Code domain keywords
+        code_keywords = ["code", "python", "programming", "debug", "function", "async",
+                        "api", "test", "implement", "script", "syntax", "algorithm"]
+        # Math domain keywords
+        math_keywords = ["math", "calculate", "equation", "proof", "theorem",
+                        "algebra", "geometry", "integral", "numerical", "matrix"]
+        # Logic domain keywords
+        logic_keywords = ["logic", "reasoning", "deduce", "infer", "argument",
+                         "prove", "conclude", "premise", "consistent", "valid"]
+
+        code_count = sum(1 for kw in code_keywords if kw in text)
+        math_count = sum(1 for kw in math_keywords if kw in text)
+        logic_count = sum(1 for kw in logic_keywords if kw in text)
+
+        if code_count > math_count and code_count > logic_count:
+            return "code"
+        elif math_count > code_count and math_count > logic_count:
+            return "math"
+        elif logic_count > 0:
+            return "logic"
+        return "other"
 
     def _extract_desires(
         self,

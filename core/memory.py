@@ -10095,6 +10095,7 @@ class Memory:
         solution: str,
         approach: str,
         success: bool,
+        partial_score: float = None,
         metadata: Optional[Dict] = None
     ) -> Optional[str]:
         """
@@ -10111,6 +10112,7 @@ class Memory:
             solution: The attempted solution
             approach: The approach taken
             success: Whether the attempt succeeded
+            partial_score: Optional partial success score (0.0-1.0)
             metadata: Optional additional metadata
 
         Returns:
@@ -10127,6 +10129,7 @@ class Memory:
                         solution: $solution,
                         approach: $approach,
                         success: $success,
+                        partial_score: $partial_score,
                         bootstrap: $bootstrap,
                         active: true,
                         created_at: datetime(),
@@ -10141,6 +10144,7 @@ class Memory:
                     "solution": solution,
                     "approach": approach,
                     "success": success,
+                    "partial_score": partial_score if partial_score is not None else 0.0,
                     "bootstrap": metadata.get("bootstrap", False) if metadata else False,
                     "metadata_json": json.dumps(metadata) if metadata else "{}"
                 })
@@ -10203,6 +10207,45 @@ class Memory:
                 return trajectories
         except Exception as e:
             logger.error(f"Failed to get trajectories: {e}")
+            return []
+
+    async def get_recent_trajectories(
+        self,
+        limit: int = 10
+    ) -> List[Dict]:
+        """
+        Get recent trajectories regardless of success status.
+
+        Used by Reflector to gather context about recent learning attempts.
+
+        Args:
+            limit: Maximum trajectories to return
+
+        Returns:
+            List of trajectory dicts
+        """
+        try:
+            async with self.driver.session() as session:
+                query = """
+                    MATCH (t:Trajectory)
+                    WHERE t.active = true OR t.active IS NULL
+                    RETURN t
+                    ORDER BY t.created_at DESC
+                    LIMIT $limit
+                """
+                result = await session.run(query, {"limit": limit})
+                trajectories = []
+                async for record in result:
+                    t = dict(record["t"])
+                    if "metadata_json" in t:
+                        try:
+                            t["metadata"] = json.loads(t["metadata_json"])
+                        except:
+                            t["metadata"] = {}
+                    trajectories.append(t)
+                return trajectories
+        except Exception as e:
+            logger.error(f"Failed to get recent trajectories: {e}")
             return []
 
     async def store_heuristic(

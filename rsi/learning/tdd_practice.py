@@ -35,6 +35,10 @@ class PracticeResult:
     test_output: str
     tests_passed: int
     tests_total: int
+    problem: str = ""
+    approach: str = ""
+    attempts: int = 1
+    difficulty: str = "beginner"
     error: Optional[str] = None
 
 
@@ -176,32 +180,50 @@ Return ONLY the problem specification."""
         prompt = f"""Write pytest unit tests for this problem:
 {spec}
 
-IMPORTANT: Write rigorous tests that check:
-- Normal cases
-- Edge cases (empty input, single element, etc.)
-- Boundary conditions
-- Invalid input handling (if applicable)
-
-The tests should be detailed enough to catch subtle bugs.
 Difficulty level: {difficulty}
 
-Return ONLY the pytest code. Start with imports.
-Example structure:
-```python
+CRITICAL: Return ONLY valid Python code that compiles. No explanations, no markdown.
+
+The output must be exactly this format (replace with actual tests):
+
 import pytest
-from solution import *
 
-def test_normal_case():
-    assert function_name(input) == expected
+def test_case_1():
+    # Test normal case
+    result = function_name(input_value)
+    assert result == expected_value
 
-def test_edge_case():
-    ...
-```"""
+def test_case_2():
+    # Test edge case
+    result = function_name(edge_input)
+    assert result == expected_edge
+
+Write 3-5 test functions covering normal and edge cases.
+Do NOT use markdown code blocks. Just output raw Python code."""
 
         response = await self.llm.query(prompt, temperature=0.3, max_tokens=800)
 
         # Extract code from response
-        return self._extract_code(response)
+        code = self._extract_code(response)
+
+        # Additional cleanup for common LLM issues
+        lines = []
+        in_code = False
+        for line in code.split('\n'):
+            stripped = line.strip()
+            # Skip explanation lines
+            if stripped.startswith('#') and 'explanation' in stripped.lower():
+                continue
+            # Skip empty lines at start
+            if not in_code and not stripped:
+                continue
+            # Start tracking once we see actual code
+            if stripped.startswith('import') or stripped.startswith('def ') or stripped.startswith('from '):
+                in_code = True
+            if in_code:
+                lines.append(line)
+
+        return '\n'.join(lines)
 
     def _extract_code(self, response: str) -> str:
         """Extract code from LLM response."""
@@ -235,22 +257,29 @@ def test_edge_case():
         """
         self._attempts += 1
 
+        # Initialize for loop
+        test_result = {"passed": False, "output": "", "error": "No attempts made", "passed_count": 0, "total_count": 1}
+        solution = ""
+        previous_solution = ""
+
         for attempt in range(self.MAX_SOLUTION_ATTEMPTS):
             # Generate solution
             if attempt == 0:
                 solution = await self._generate_solution(problem)
             else:
                 # Retry with feedback
+                error_msg = test_result.get("error", "") if test_result else "Syntax error in previous attempt"
                 solution = await self._generate_solution_with_feedback(
                     problem,
                     previous_solution,
-                    test_result.get("error", "")
+                    error_msg
                 )
 
             previous_solution = solution
 
             # Validate solution syntax
             if not self._validate_syntax(solution):
+                test_result = {"passed": False, "output": "Syntax error", "error": "Solution has syntax errors", "passed_count": 0, "total_count": 1}
                 continue
 
             # Run tests
@@ -263,7 +292,11 @@ def test_edge_case():
                     solution=solution,
                     test_output=test_result["output"],
                     tests_passed=test_result.get("passed_count", 1),
-                    tests_total=test_result.get("total_count", 1)
+                    tests_total=test_result.get("total_count", 1),
+                    problem=problem.spec[:500],
+                    approach="TDD Practice",
+                    attempts=attempt + 1,
+                    difficulty=problem.difficulty
                 )
 
         # All attempts failed
@@ -273,6 +306,10 @@ def test_edge_case():
             test_output=test_result["output"],
             tests_passed=test_result.get("passed_count", 0),
             tests_total=test_result.get("total_count", 1),
+            problem=problem.spec[:500],
+            approach="TDD Practice",
+            attempts=self.MAX_SOLUTION_ATTEMPTS,
+            difficulty=problem.difficulty,
             error=test_result.get("error")
         )
 
@@ -319,8 +356,11 @@ Return ONLY the corrected Python code."""
             solution_path = Path(tmpdir) / "solution.py"
             solution_path.write_text(solution)
 
-            # Write tests (import from solution)
-            test_code = f"from solution import *\n{tests}"
+            # Write tests (import from solution if not already present)
+            if "from solution import" not in tests and "import solution" not in tests:
+                test_code = f"from solution import *\n\n{tests}"
+            else:
+                test_code = tests
             test_path = Path(tmpdir) / "test_solution.py"
             test_path.write_text(test_code)
 

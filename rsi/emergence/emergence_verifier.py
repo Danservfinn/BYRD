@@ -7,8 +7,10 @@ Checks:
 """
 
 from dataclasses import dataclass
-from typing import Optional, Dict
+from typing import Optional, Dict, Union
 import logging
+
+from .reflector import Provenance
 
 logger = logging.getLogger("rsi.emergence.verifier")
 
@@ -69,13 +71,13 @@ class EmergenceVerifier:
         self._total_verified = 0
         self._llm_calls = 0
 
-    async def verify(self, desire: Dict, provenance: Dict) -> EmergenceResult:
+    async def verify(self, desire: Dict, provenance: Union[Provenance, Dict]) -> EmergenceResult:
         """
         Verify if a desire is genuinely emergent.
 
         Args:
             desire: The desire dict with description, intensity, domain
-            provenance: Provenance metadata (origin, reflection_id, etc.)
+            provenance: Provenance object or dict (origin, reflection_id, etc.)
 
         Returns:
             EmergenceResult with is_emergent and detailed scores
@@ -109,20 +111,26 @@ class EmergenceVerifier:
 
         return result
 
-    def _check_provenance(self, provenance: Dict) -> float:
+    def _check_provenance(self, provenance: Union[Provenance, Dict]) -> float:
         """
         Check if desire originated from reflection.
 
         Returns:
             0.0-1.0 provenance score
         """
-        origin = provenance.get("origin", "")
+        # Handle both Provenance dataclass and dict
+        if isinstance(provenance, Provenance):
+            origin = provenance.origin
+            external_request = provenance.external_request
+        else:
+            origin = provenance.get("origin", "")
+            external_request = provenance.get("external_request")
 
         if origin != "reflection":
             return 0.0
 
         # Penalize if there was an external request influence
-        if provenance.get("external_request"):
+        if external_request:
             return 0.3  # Partial credit - influenced but not dictated
 
         # Full score for pure reflection
@@ -179,6 +187,7 @@ class EmergenceVerifier:
 
     async def _check_specificity_llm(self, desire: Dict) -> float:
         """Use LLM to judge specificity for ambiguous cases."""
+        import re
         description = desire.get("description", "")
 
         prompt = f"""Rate the specificity of this improvement desire on a scale of 0.0 to 1.0.
@@ -191,21 +200,34 @@ Scoring guide:
 - 0.7-0.9: Specific ("improve my Python debugging for async code")
 - 1.0: Highly specific ("learn to use pytest fixtures for database mocking")
 
-A specific desire names:
-- A concrete capability or skill
-- A specific weakness or failure mode
-- Why this improvement matters
-
-Return ONLY a number between 0.0 and 1.0."""
+Reply with ONLY a decimal number like 0.7 - no explanation."""
 
         try:
-            # Use free tier for simple scoring
             response = await self.llm.query(prompt, max_tokens=10)
-            score = float(response.strip())
-            return max(0.0, min(1.0, score))
-        except (ValueError, AttributeError) as e:
+            text = response.strip()
+
+            # Try direct parse first
+            try:
+                score = float(text)
+                return max(0.0, min(1.0, score))
+            except ValueError:
+                pass
+
+            # Extract number using regex
+            match = re.search(r'(\d+\.?\d*)', text)
+            if match:
+                score = float(match.group(1))
+                return max(0.0, min(1.0, score))
+
+            # Fallback based on keywords
+            if "vague" in text.lower():
+                return 0.2
+            elif "specific" in text.lower() or "high" in text.lower():
+                return 0.8
+            return 0.5
+        except Exception as e:
             logger.warning(f"LLM specificity check failed: {e}")
-            return 0.5  # Default for failure
+            return 0.5
 
     def _get_rejection_reason(self, provenance_score: float, specificity_score: float) -> str:
         """Generate human-readable rejection reason."""

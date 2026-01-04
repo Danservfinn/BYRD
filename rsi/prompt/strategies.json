@@ -1,5 +1,30 @@
 {
-  "version": 1,
-  "updated_at": null,
-  "heuristics": []
+  "version": 4,
+  "updated_at": "2026-01-04T07:07:55.429217",
+  "heuristics": [
+    {
+      "domain": "logic",
+      "content": "The user wants a single, specific, actionable, concise principle based on a set of successful logic problem-solving trajectories.\n\nThe input data consists of:\n1.  **Validate logical argument...**: List premises -> Identify form -> Check inference patterns.\n2.  **Identify fallacy...**: Break down argument step by step -> Verify each inference independently.\n3.  **Construct proof by contradiction...**: Assume negation -> Derive consequences systematically -> Find contradiction.\n4.  **Repeat** of similar patterns.\n\nThe core actions across these are:\n- \"List all premises\" / \"Break down argument\"\n- \"Identify logical form\" / \"Verify each inference independently\"\n- \"Derive consequences systematically\"\n- \"Multi-run consistency verification\" (from the last item)\n\nCommon thread: Decomposition and explicit verification of components/steps.\n\nDrafting principles:\n1.  \"Break complex logic problems into smaller, verifiable steps and systematically verify each component.\"\n2.  \"Always decompose arguments",
+      "added_at": "2026-01-04T06:33:16.623822",
+      "trajectory_count": 13,
+      "usage_count": 0,
+      "last_used": null
+    },
+    {
+      "domain": "logic",
+      "content": "The user wants a single, specific, actionable, generalizable principle or heuristic based on the provided data about logic problem-solving.\nThe user specifically requested a JSON reflection format in the initial system prompt (\"Output a JSON reflection\"), but the final instruction in the user prompt says \"Return ONLY the principle, nothing else.\" and provides examples of the principle itself.\nWait, the prompt starts with \"You are a reflection engine...\" and gives rules about JSON output. However, the final task instruction says \"Return ONLY the principle, nothing else.\" This creates a conflict.\n\nLet's look at the structure again.\nSystem Prompt: \"Output valid JSON with an 'output' field... The contents of 'output' are yours to define...\"\nUser Prompt: \"Analyze these successful logic problem-solving trajectories... Extract ONE generalizable principle... Return ONLY the principle, nothing else.\"\n\nUsually, the system instructions govern the *format* (JSON), and the user prompt governs the *content*. If I return *only*",
+      "added_at": "2026-01-04T06:58:37.526795",
+      "trajectory_count": 14,
+      "usage_count": 0,
+      "last_used": null
+    },
+    {
+      "domain": "logic",
+      "content": "1.  **Analyze the Request:**\n    *   **Task:** Process provided logic problem-solving trajectories and extract *ONE* generalizable principle/heuristic.\n    *   **Data:**\n        *   Trajectory 1 (Validation): List premises -> Identify form -> Check patterns.\n        *   Trajectory 2 (Fallacy): Break down -> Verify each step.\n        *   Trajectory 3 (Contradiction): Assume negation -> Derive systematically -> Find contradiction.\n        *   Trajectory 4-6: Repetitions of 1-3.\n        *   Trajectory 7-10 (Self-improvement/Consistency): \"Improve reasoning/deduction,\" \"Logical decomposition skills,\" \"Step-by-step decomposition\" -> Approach: \"Multi-run consistency verification.\"\n    *   **Goal:** Output valid JSON with an \"output\" field. Inside \"output\", return *only* the principle.\n    *   **Constraints:** Principle must",
+      "added_at": "2026-01-04T07:07:55.429205",
+      "trajectory_count": 15,
+      "usage_count": 0,
+      "last_used": null
+    }
+  ]
 }

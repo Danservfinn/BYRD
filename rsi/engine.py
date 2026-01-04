@@ -132,9 +132,10 @@ class RSIEngine:
             system_prompt=self.system_prompt
         )
 
+        emergence_config = config.get("emergence", {}) if config else {}
         self.verifier = EmergenceVerifier(
             llm_client=llm_client,
-            threshold=config.get("emergence_threshold", 0.6) if config else 0.6
+            config=emergence_config
         )
 
         self.router = DomainRouter()
@@ -147,9 +148,10 @@ class RSIEngine:
             config=config
         )
 
+        consistency_config = config.get("consistency_check", {}) if config else {}
         self.consistency_check = ConsistencyCheck(
             llm_client=llm_client,
-            n_runs=config.get("consistency_n_runs", 5) if config else 5
+            config=consistency_config
         )
 
         self.crystallizer = Crystallizer(
@@ -249,25 +251,25 @@ class RSIEngine:
             await self._emit_event("RSI_PHASE", {"phase": "route", "cycle": cycle_id})
 
             classification = self.router.classify(selected)
-            result.domain = classification.domain.value
+            result.domain = classification.primary.value
 
-            if not self.router.can_practice(classification.domain):
+            if not self.router.can_practice(classification.primary):
                 result.domain_blocked = True
-                logger.info(f"Domain {classification.domain.value} blocked by oracle constraint")
+                logger.info(f"Domain {classification.primary.value} blocked by oracle constraint")
                 # Record that we tried but couldn't practice
                 result.phase_reached = CyclePhase.RECORD
-                await self._record_blocked_attempt(selected, classification.domain)
+                await self._record_blocked_attempt(selected, classification.primary)
                 return self._finalize_result(result)
 
             # Ensure bootstrap for this domain
-            await self.bootstrap.ensure_bootstrap(classification.domain.value)
+            await self.bootstrap.ensure_bootstrap(classification.primary.value)
 
             # Phase 5: PRACTICE
             result.phase_reached = CyclePhase.PRACTICE
             await self._emit_event("RSI_PHASE", {"phase": "practice", "cycle": cycle_id})
             result.practice_attempted = True
 
-            practice_result = await self._run_practice(selected, classification.domain)
+            practice_result = await self._run_practice(selected, classification.primary)
 
             if practice_result:
                 result.practice_succeeded = practice_result.success
@@ -285,7 +287,7 @@ class RSIEngine:
             if practice_result:
                 await self.experience_library.store_trajectory(
                     desire=selected,
-                    domain=classification.domain.value,
+                    domain=classification.primary.value,
                     problem=getattr(practice_result, 'problem', ''),
                     solution=getattr(practice_result, 'solution', ''),
                     approach=getattr(practice_result, 'approach', ''),
@@ -303,7 +305,7 @@ class RSIEngine:
                 await self._emit_event("RSI_PHASE", {"phase": "crystallize", "cycle": cycle_id})
 
                 heuristic = await self.crystallizer.maybe_crystallize(
-                    classification.domain.value
+                    classification.primary.value
                 )
 
                 if heuristic:
@@ -311,7 +313,7 @@ class RSIEngine:
                     logger.info(f"Crystallized heuristic: {heuristic.content[:80]}...")
 
                     # Notify bootstrap manager
-                    await self.bootstrap.on_crystallization(classification.domain.value)
+                    await self.bootstrap.on_crystallization(classification.primary.value)
 
                     # Prune if needed
                     pruned = self.pruner.prune_if_needed()
@@ -373,11 +375,14 @@ class RSIEngine:
                 result = await self.consistency_check.run(desire)
                 # Convert to PracticeResult-like
                 return PracticeResult(
-                    problem=desire.get("description", ""),
-                    solution=result.conclusion if result else "",
-                    approach="Multi-run consistency verification",
                     success=result.is_consistent if result else False,
-                    attempts=result.total_runs if result else 0,
+                    solution=result.reasoning or "" if result else "",
+                    test_output=result.variance_notes if result else "No result",
+                    tests_passed=int(result.consistency_score * len(result.responses)) if result else 0,
+                    tests_total=len(result.responses) if result else 0,
+                    problem=desire.get("description", ""),
+                    approach="Multi-run consistency verification",
+                    attempts=len(result.responses) if result else 0,
                     difficulty="intermediate"
                 )
 

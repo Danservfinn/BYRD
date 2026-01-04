@@ -19,11 +19,11 @@ import argparse
 import asyncio
 import json
 import logging
-import yaml
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Optional
 
+from core.config import load_config, get_memory_config, get_rsi_config, get_llm_config
 from core.memory import Memory
 from core.llm_client import create_llm_client
 from rsi import RSIEngine
@@ -53,8 +53,11 @@ class RSIValidator:
     def __init__(self, config: dict):
         """Initialize validator with configuration."""
         self.config = config
-        self.memory = Memory(config)
-        self.llm = create_llm_client(config)
+        # Extract section configs
+        memory_config = config.get("memory", config)
+        llm_config = config.get("local_llm", config)
+        self.memory = Memory(memory_config)
+        self.llm = create_llm_client(llm_config)
         self.rsi: Optional[RSIEngine] = None
         self.validator: Optional[HypothesisValidator] = None
 
@@ -237,15 +240,12 @@ async def main():
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    # Load configuration
-    config_path = Path(__file__).parent / "config.yaml"
-
-    if not config_path.exists():
+    # Load configuration with env var expansion
+    try:
+        config = load_config()
+    except FileNotFoundError:
         logger.error("config.yaml not found")
         return
-
-    with open(config_path) as f:
-        config = yaml.safe_load(f)
 
     # Create validator
     validator = RSIValidator(config)

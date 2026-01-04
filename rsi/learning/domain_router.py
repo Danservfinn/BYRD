@@ -53,7 +53,10 @@ class DomainRouter:
             "debug": 0.9, "implement": 0.7, "python": 1.0,
             "api": 0.6, "class": 0.7, "method": 0.7,
             "refactor": 0.8, "test": 0.6, "bug": 0.9,
-            "async": 0.8, "syntax": 0.9, "script": 0.7
+            "async": 0.8, "syntax": 0.9, "script": 0.7,
+            "algorithm": 0.9, "algorithms": 0.9, "testing": 0.8,
+            "unit": 0.7, "graph": 0.7, "data": 0.5, "structure": 0.5,
+            "software": 0.8, "improve": 0.4, "coding": 0.9
         },
         Domain.MATH: {
             "math": 1.0, "calculate": 0.9, "equation": 1.0,
@@ -62,10 +65,10 @@ class DomainRouter:
             "derivative": 1.0, "matrix": 0.8, "vector": 0.7
         },
         Domain.LOGIC: {
-            "logic": 1.0, "reasoning": 0.8, "deduce": 0.9,
-            "infer": 0.8, "argument": 0.7, "syllogism": 1.0,
-            "prove": 0.6, "conclude": 0.7, "premise": 0.9,
-            "fallacy": 0.8, "valid": 0.5, "consistent": 0.6
+            "logic": 1.0, "logical": 0.9, "reasoning": 0.8, "deduce": 0.9,
+            "infer": 0.8, "inference": 0.8, "argument": 0.7, "syllogism": 1.0,
+            "prove": 0.6, "proof": 0.8, "proofs": 0.8, "conclude": 0.7, "premise": 0.9,
+            "fallacy": 0.8, "valid": 0.5, "consistent": 0.6, "deduction": 0.9
         },
         Domain.CREATIVE: {
             "creative": 1.0, "write": 0.7, "story": 0.9,
@@ -161,8 +164,8 @@ class DomainRouter:
             if secondary_conf >= 0.5 * primary_confidence:
                 secondary = sorted_domains[1][0]
 
-        # Very low confidence -> ambiguous
-        if primary_confidence < 0.15:
+        # Very low confidence -> ambiguous (threshold allows single strong keyword)
+        if primary_confidence < 0.04:
             return ClassificationResult(
                 primary=Domain.AMBIGUOUS,
                 confidence=primary_confidence,
