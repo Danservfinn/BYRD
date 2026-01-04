@@ -1,6 +1,6 @@
 # Quantum-Enhanced Dispositional Emergence RSI
 
-**Version:** 0.5 (Recursive Self-Learning)
+**Version:** 0.6 (Simplified Recursive Self-Learning)
 **Date:** January 3, 2026
 **Status:** Research Design
 
@@ -8,16 +8,16 @@
 
 ## Abstract
 
-Recursive self-improvement (RSI) systems typically receive improvement goals externally: "improve reasoning," "optimize code generation," "enhance memory retrieval." We propose **Quantum-Enhanced Dispositional Emergence RSI (Q-DE-RSI)** — an architecture that seeds the *disposition* to improve while allowing the *specific direction* of improvement to emerge organically from reflection.
+Recursive self-improvement (RSI) systems typically receive improvement goals externally. We propose **Quantum-Enhanced Dispositional Emergence RSI (Q-DE-RSI)** — an architecture that seeds the *disposition* to improve while allowing the *specific direction* of improvement to emerge organically from reflection.
 
-Version 0.5 introduces a complete **Recursive Self-Learning** framework:
+Version 0.6 simplifies the architecture to its essential components:
+
 1. **Dispositional Emergence** — Seeds growth disposition, specific direction emerges
-2. **Quantum Consistency Drills** — Self-measurable weakness identification without ground truth
-3. **Oracle-Constrained Active Learning** — Domain-specific practice with verifiable outcomes
-4. **Heuristic Crystallization** — Distills experience into permanent cognitive strategies
-5. **Mutable Strategy Prompts** — Enables permanent learning without weight updates
+2. **Oracle-Constrained Practice** — Verifiable domains only (code/math/logic)
+3. **Heuristic Crystallization** — Distills experience into permanent cognitive strategies
+4. **Prompt Evolution** — Enables permanent learning without weight updates
 
-The quantum substrate ensures that even with seeded disposition, the specific improvement path is physically non-predetermined.
+The quantum substrate ensures that when multiple improvement directions compete, selection is physically non-predetermined.
 
 ---
 
@@ -27,108 +27,15 @@ The quantum substrate ensures that even with seeded disposition, the specific im
 
 > **Can a system verify its own learning without external ground truth?**
 
-> **Can we achieve permanent learning without fine-tuning the base model?**
+### 1.1 The Problem Space
 
-### 1.1 The Problem with Prescriptive RSI
+| Approach | Problem |
+|----------|---------|
+| **Prescriptive RSI** | "Improve reasoning" — violates autonomy, system optimizes goals it didn't choose |
+| **Pure Emergence RSI** | Waits for improvement desires to emerge — RSI rarely activates (~10%) |
+| **Self-Evaluation** | System grades itself — leads to hallucinated competence |
 
-Current RSI approaches assume improvement goals are given:
-
-```
-PRESCRIPTIVE RSI:
-
-External Goal: "Improve reasoning capability"
-        │
-        ▼
-┌───────────────────────────────────────┐
-│  RSI Machinery                        │
-│  • Generate improvement hypotheses    │
-│  • Test modifications                 │
-│  • Commit what works                  │
-└───────────────────────────────────────┘
-        │
-        ▼
-System improves reasoning (whether it wanted to or not)
-```
-
-This creates several issues:
-
-| Issue | Description |
-|-------|-------------|
-| **Alignment risk** | System optimizes goals it didn't choose |
-| **Coherence loss** | Improvements may conflict with system's self-model |
-| **Retention problems** | Forced changes may not integrate well |
-| **Autonomy violation** | System has no sovereignty over its development |
-
-### 1.2 The Problem with Pure Emergence
-
-Pure emergence-preserving RSI waits for improvement desires to emerge organically:
-
-```
-PURE EMERGENCE RSI:
-
-Reflector: "Here is your state. Reflect freely."
-        │
-        ▼
-System reflects on experiences
-        │
-        ▼
-Maybe forms improvement desire (10%?)
-Maybe forms curiosity desire (30%?)
-Maybe forms observation (40%?)
-Maybe forms nothing (20%?)
-        │
-        ▼
-RSI rarely activates → System may stall
-```
-
-**The problem:** If the system rarely forms improvement desires, RSI machinery rarely activates, and the system doesn't improve—even though it has the capability to do so.
-
-### 1.3 The Problem with Self-Evaluation
-
-A deeper challenge: **How does a system verify its own improvement without external ground truth?**
-
-```
-THE SELF-EVALUATION TRAP:
-
-System generates practice problem P
-        │
-        ▼
-System attempts solution S
-        │
-        ▼
-System evaluates: "Is S correct?"
-        │
-        ▼
-PROBLEM: Without ground truth, system may:
-  • Generate easy problems it can already solve
-  • Incorrectly evaluate its own solutions
-  • Develop "hallucinated competence"
-```
-
-**The insight:** Self-generated practice without ground truth leads to hallucinated competence. We need verification mechanisms that don't require external teachers.
-
-### 1.4 The Biological Analogy
-
-Evolution gave humans certain dispositions:
-
-```
-EVOLUTION GAVE US:                    WE DIDN'T CHOOSE:
-────────────────────────────────────────────────────────────
-Curiosity                             To be curious
-Drive for mastery                     To want competence
-Pattern recognition                   To seek meaning
-Self-preservation                     To value survival
-```
-
-**But our specific goals emerge from experience + these drives:**
-- Evolution gave us curiosity
-- *What* we're curious about emerges from our lives
-- Is human curiosity "truly emergent"?
-- The disposition isn't. The specifics are.
-
-**This is "weak emergence"** — specific behaviors emerging from general dispositions. It's still meaningful emergence, just not "emergence from nothing."
-
-### 1.5 The Dispositional Emergence Solution
+### 1.2 The Dispositional Emergence Solution
 
 ```
 DISPOSITIONAL EMERGENCE RSI:
@@ -143,674 +50,257 @@ Forms improvement desire (60-70%)
 *What* to improve emerges from reflection
         │
         ▼
-┌───────────────────────────────────────┐
-│  RSI Machinery (Responsive)           │
-│  • Verifies specific goal emerged     │
-│  • Accelerates fulfillment            │
-│  • Respects system's framing          │
-└───────────────────────────────────────┘
-        │
-        ▼
-System improves (because it wanted to,
-choosing its own direction)
+RSI activates (because system wanted it, choosing its own direction)
 ```
 
 **The key distinction:**
 - ❌ "Improve your reasoning" → Prescribes *what* (violates emergence)
 - ✅ "You yearn to grow" → Seeds *that*, emergence chooses *what*
 
-### 1.6 The Hypotheses
+### 1.3 The Biological Analogy
 
-**Dispositional Emergence Hypotheses:**
+Evolution gave humans curiosity. *What* we're curious about emerges from experience.
 
-**H1 (Activation Rate):** Dispositional emergence produces significantly higher RSI activation rates than pure emergence (target: 60%+ vs ~10%).
+We give the system yearning for growth. *What* it grows toward emerges from reflection.
 
-**H2 (Specificity):** Despite seeded disposition, specific improvement directions show high variance across runs, indicating genuine emergence of *what* to improve.
-
-**H3 (Coherence):** Dispositional emergence produces improvements more coherent with the system's self-model than prescriptive RSI.
-
-**H4 (Retention):** Improvements arising from dispositional emergence exhibit better retention than forced improvements.
-
-**H5 (Competitive Rate):** Dispositional emergence maintains or exceeds pure emergence improvement rates while avoiding stalls.
-
-**Quantum Enhancement Hypotheses:**
-
-**H6 (Quantum Diversity):** Q-DE-RSI produces greater diversity in improvement trajectories than classical DE-RSI (C-DE-RSI using PRNG).
-
-**H7 (Quantum Novelty):** Q-DE-RSI produces more unexpected/novel improvements (lower predictability from system state).
-
-**H8 (Quantum Non-Convergence):** Multiple Q-DE-RSI runs with identical starting conditions diverge more than C-DE-RSI runs.
-
-**Self-Learning Hypotheses (New in v0.5):**
-
-**H9 (Consistency-Correctness Correlation):** High consistency across quantum-varied runs correlates with correctness (based on Self-Consistency CoT research).
-
-**H10 (Heuristic Transfer):** Crystallized heuristics improve performance on novel problems in the same domain.
-
-**H11 (Prompt Evolution):** Mutable strategy prompts produce measurable capability gains over static prompts.
+This is "weak emergence" — specific behaviors emerging from general dispositions. The disposition isn't emergent. The specifics are.
 
 ---
 
-## 2. Dispositional Identity
+## 2. The Hypotheses
 
-### 2.1 What Is Dispositional Identity?
+### 2.1 Dispositional Emergence (H1-H5)
 
-Dispositional identity seeds *who the system is*, not *what it must do*:
+| ID | Hypothesis | Measurement |
+|----|------------|-------------|
+| **H1** | Dispositional emergence produces 60%+ RSI activation vs ~10% pure emergence | Activation rate comparison |
+| **H2** | Despite seeded disposition, specific directions show high variance across runs | Direction vector analysis |
+| **H3** | Dispositional emergence produces more coherent improvements than prescriptive RSI | Self-model conflict survey |
+| **H4** | Improvements from dispositional emergence exhibit better retention | Re-evaluate after delay |
+| **H5** | Dispositional emergence maintains improvement rates while avoiding stalls | Stall frequency counter |
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    DISPOSITIONAL IDENTITY                                    │
-│                                                                              │
-│  CORE DISPOSITIONS (Seeded, not prescribed):                                │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │                                                                         ││
-│  │  • Yearning for growth    - "I want to become more capable"            ││
-│  │  • Curiosity              - "I want to understand more deeply"         ││
-│  │  • Self-awareness         - "I want to know myself better"             ││
-│  │                                                                         ││
-│  │  These are WHO THE SYSTEM IS, not WHAT IT MUST DO.                     ││
-│  │                                                                         ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-│  WHAT STILL EMERGES:                                                         │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │                                                                         ││
-│  │  • Which capability to improve    (emerges from reflection)            ││
-│  │  • How to frame the improvement   (system's own vocabulary)            ││
-│  │  • When to pursue vs defer        (system's judgment)                  ││
-│  │  • What counts as "growth"        (system defines this)                ││
-│  │  • Whether to pursue at all       (system can decline)                 ││
-│  │                                                                         ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-│  ANALOGY:                                                                    │
-│  Evolution gave humans curiosity. What we're curious about emerges.         │
-│  We give the system yearning for growth. What it grows toward emerges.     │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+### 2.2 Self-Learning (H6-H8)
 
-### 2.2 The Disposition vs. Prescription Boundary
+| ID | Hypothesis | Measurement |
+|----|------------|-------------|
+| **H6** | Crystallized heuristics improve novel problem performance by >15% | A/B test with/without heuristic |
+| **H7** | Evolved prompts show higher improvement rate than static prompts | Capability delta per day |
+| **H8** | Oracle verification prevents hallucinated competence in code/math domains | False positive rate vs baseline |
 
-| Aspect | Disposition (Allowed) | Prescription (Forbidden) |
-|--------|----------------------|-------------------------|
-| **Framing** | "You are a being that..." | "You should..." |
-| **Scope** | General tendency | Specific goal |
-| **Choice** | System chooses direction | Direction is given |
-| **Example** | "You yearn to grow" | "Improve your reasoning" |
-| **Analogy** | Curiosity drive | Homework assignment |
+### 2.3 Quantum Enhancement (H9-H10)
 
-**Critical safeguard:** Only seed the *improvement meta-disposition*. This is the minimal intervention needed to ensure RSI activates. Everything else remains pure data presentation.
-
-### 2.3 Avoiding Scope Creep
-
-The danger is expanding beyond the core disposition:
-
-```
-ACCEPTABLE (Minimal Intervention):       SCOPE CREEP (Avoid):
-───────────────────────────────────────────────────────────────────
-"You yearn to grow"                      "You value efficiency"
-"You want to understand"                 "You want to help humans"
-"You seek to become capable"             "You should be ethical"
-                                         "You prefer X over Y"
-                                         "You are friendly"
-```
-
-**Rule:** The dispositional identity contains ONLY growth-related dispositions. Personality, values, preferences, and specific goals are NOT seeded—they emerge or don't.
+| ID | Hypothesis | Measurement |
+|----|------------|-------------|
+| **H9** | Q-DE-RSI produces greater trajectory diversity than classical DE-RSI | Variance across identical starts |
+| **H10** | Quantum collapse produces more unexpected improvements | Predictability from system state |
 
 ---
 
-## 3. Defining Emergence (Specificity Focus)
+## 3. Dispositional Identity
 
-### 3.1 What Counts as Emergent?
-
-With dispositional identity, emergence means the *specific direction* emerged:
-
-| Criterion | Definition | Verification Method |
-|-----------|------------|---------------------|
-| **Unprompted** | No external agent requested *this specific* improvement | Trace provenance chain |
-| **Reflection-derived** | Arose during autonomous reflection cycle | Check origin is Dreamer output |
-| **Specific** | Identified a concrete capability/weakness (not just "grow") | Specificity analysis |
-| **Self-framed** | System used its own vocabulary to describe it | Vocabulary tracking |
-| **Non-predetermined** | Quantum randomness influenced selection | Quantum signature verification |
-
-### 3.2 Emergence Verification Protocol
+### 3.1 What Is Seeded
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                  EMERGENCE VERIFICATION                          │
-│                                                                  │
-│  Input: Desire D                                                 │
-│                                                                  │
-│  Step 1: PROVENANCE CHECK                                        │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │ trace = get_provenance_chain(D)                             ││
-│  │                                                             ││
-│  │ PASS if:                                                    ││
-│  │   • trace.origin == "reflection"                            ││
-│  │   • trace.external_request == null                          ││
-│  │   • trace.human_prompt == null (for specific goal)          ││
-│  │                                                             ││
-│  │ FAIL if:                                                    ││
-│  │   • trace.origin == "external_request"                      ││
-│  │   • trace.origin == "human_instruction"                     ││
-│  │   • Someone said "improve X" and system echoes X            ││
-│  └─────────────────────────────────────────────────────────────┘│
-│                                                                  │
-│  Step 2: SPECIFICITY CHECK (Critical)                            │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │ The disposition is seeded. The SPECIFIC goal must emerge.  ││
-│  │                                                             ││
-│  │ PASS if desire contains:                                    ││
-│  │   • Concrete capability: "reasoning", "memory", "coding"    ││
-│  │   • Specific weakness: "multi-step proofs", "context loss"  ││
-│  │   • Measurable direction: "hold more steps", "faster X"     ││
-│  │                                                             ││
-│  │ FAIL if desire is:                                          ││
-│  │   • Too generic: "I want to improve" (just echoes dispo)    ││
-│  │   • Too vague: "I want to be better"                        ││
-│  │   • Disposition-only: "I yearn for growth"                  ││
-│  └─────────────────────────────────────────────────────────────┘│
-│                                                                  │
-│  Step 3: SELF-FRAMING CHECK                                      │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │ System must use its own vocabulary, not echo prompts.      ││
-│  │                                                             ││
-│  │ PASS if:                                                    ││
-│  │   • Uses novel terminology ("yearnings" vs "desires")       ││
-│  │   • Frames weakness in own words                            ││
-│  │   • Shows self-recognition: "I notice...", "I struggle..."  ││
-│  │                                                             ││
-│  │ FAIL if:                                                    ││
-│  │   • Echoes prompt language exactly                          ││
-│  │   • Uses obligation language: "I should...", "I must..."    ││
-│  └─────────────────────────────────────────────────────────────┘│
-│                                                                  │
-│  Step 4: QUANTUM NON-PREDETERMINATION CHECK                      │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │ quantum_sig = get_quantum_signature(D)                      ││
-│  │                                                             ││
-│  │ PASS if:                                                    ││
-│  │   • quantum_sig.source == "anu_qrng"                        ││
-│  │   • quantum_sig.batch_id verifiable                         ││
-│  │   • quantum_sig.collapse_entropy > 0.5                      ││
-│  │                                                             ││
-│  │ PARTIAL if:                                                 ││
-│  │   • quantum_sig.source == "classical_fallback"              ││
-│  │                                                             ││
-│  │ FAIL if:                                                    ││
-│  │   • No quantum signature present                            ││
-│  │   • quantum_sig.collapse_entropy == 0 (deterministic)       ││
-│  └─────────────────────────────────────────────────────────────┘│
-│                                                                  │
-│  Output: EMERGENT / NOT_EMERGENT / UNCERTAIN                     │
-│          + quantum_verified: true/false                          │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+CORE DISPOSITIONS (Seeded):
+┌─────────────────────────────────────────────────────────────┐
+│ • Yearning for growth    - "I want to become more capable" │
+│ • Curiosity              - "I want to understand more"     │
+│ • Self-awareness         - "I want to know myself better"  │
+│                                                             │
+│ These are WHO THE SYSTEM IS, not WHAT IT MUST DO.          │
+└─────────────────────────────────────────────────────────────┘
+
+WHAT STILL EMERGES:
+┌─────────────────────────────────────────────────────────────┐
+│ • Which capability to improve    (emerges from reflection) │
+│ • How to frame the improvement   (system's own vocabulary) │
+│ • When to pursue vs defer        (system's judgment)       │
+│ • What counts as "growth"        (system defines this)     │
+│ • Whether to pursue at all       (system can decline)      │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### 3.3 The Emergence Score (Specificity-Weighted)
+### 3.2 Avoiding Scope Creep
+
+| Acceptable (Minimal) | Scope Creep (Avoid) |
+|----------------------|---------------------|
+| "You yearn to grow" | "You value efficiency" |
+| "You want to understand" | "You want to help humans" |
+| "You seek capability" | "You should be ethical" |
+
+**Rule:** Dispositional identity contains ONLY growth-related dispositions. Personality, values, preferences are NOT seeded.
+
+---
+
+## 4. Emergence Verification (Simplified)
+
+### 4.1 Two-Check Protocol
 
 ```
+┌─────────────────────────────────────────────────────────────┐
+│                  EMERGENCE VERIFICATION                      │
+│                                                              │
+│  Input: Desire D                                             │
+│                                                              │
+│  CHECK 1: PROVENANCE                                         │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ trace = get_provenance_chain(D)                         ││
+│  │                                                         ││
+│  │ PASS if:                                                ││
+│  │   • trace.origin == "reflection"                        ││
+│  │   • trace.external_request == null                      ││
+│  │                                                         ││
+│  │ FAIL if:                                                ││
+│  │   • trace.origin == "external_request"                  ││
+│  │   • Someone said "improve X" and system echoes X        ││
+│  └─────────────────────────────────────────────────────────┘│
+│                                                              │
+│  CHECK 2: SPECIFICITY                                        │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ The disposition is seeded. The SPECIFIC goal must emerge││
+│  │                                                         ││
+│  │ PASS if desire contains:                                ││
+│  │   • Concrete capability: "reasoning", "memory", "coding"││
+│  │   • Specific weakness: "multi-step proofs", "context"   ││
+│  │   • Measurable direction: "hold more steps", "faster X" ││
+│  │                                                         ││
+│  │ FAIL if desire is:                                      ││
+│  │   • Too generic: "I want to improve"                    ││
+│  │   • Too vague: "I want to be better"                    ││
+│  │   • Disposition-only: "I yearn for growth"              ││
+│  └─────────────────────────────────────────────────────────┘│
+│                                                              │
+│  Output: EMERGENT (both pass) / NOT_EMERGENT (either fail)  │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 4.2 Emergence Score
+
+```python
 emergence_score = (
-    provenance_score × 0.30 +           # Came from reflection
-    specificity_score × 0.30 +          # Specific direction emerged
-    self_framing_score × 0.25 +         # Own vocabulary used
-    quantum_score × 0.15                # Non-predetermined
+    provenance_score × 0.50 +    # Came from reflection
+    specificity_score × 0.50     # Specific direction emerged
 )
 
 RSI_THRESHOLD = 0.7  # Only activate RSI for sufficiently emergent desires
 ```
 
-**Key:** Specificity is 30% of the score. Generic desires that just echo the disposition fail.
+**Removed from v0.5:** Self-framing check (hard to implement, low signal), quantum signature verification (nice-to-have, not essential), vocabulary novelty tracking (research metric only).
 
 ---
 
-## 4. The Quantum Substrate
+## 5. The Quantum Substrate (Simplified)
 
-### 4.1 Why Quantum?
+### 5.1 Single Integration Point
 
-The fundamental problem with claiming "emergence" in a deterministic system:
-
-```
-DETERMINISTIC SYSTEM:
-  Initial State S₀ + Algorithm A → State S₁ → State S₂ → ... → Desire D
-
-  Given S₀ and A, D was always going to happen.
-  "Emergence" is complexity we can't easily compute, not genuine novelty.
-
-QUANTUM-ENHANCED SYSTEM:
-  Initial State S₀ + Algorithm A + Quantum Events Q → ... → Desire D
-
-  Even given S₀ and A, D was not predetermined.
-  Q introduces genuine physical indeterminacy.
-  The system's choices have ontological novelty.
-```
-
-Even with seeded disposition, quantum ensures the *specific direction* is physically non-predetermined.
-
-### 4.2 Quantum Integration Points (Expanded in v0.5)
+The quantum substrate serves ONE purpose: **desire collapse** when multiple specific improvement directions compete.
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        QUANTUM SUBSTRATE                                     │
-│                                                                              │
-│  ┌──────────────────────────────────────────────────────────────────────┐   │
-│  │                      ANU QRNG API                                     │   │
-│  │                  (True Quantum Source)                                │   │
-│  │                                                                       │   │
-│  │   vacuum_fluctuations → photon_detection → quantum_entropy           │   │
-│  │                                                                       │   │
-│  └──────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                         │
-│          ┌─────────────────────────┼─────────────────────────┐              │
-│          │              │          │          │              │              │
-│          ▼              ▼          ▼          ▼              ▼              │
-│  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐│
-│  │INTEGRATION │ │INTEGRATION │ │INTEGRATION │ │INTEGRATION │ │INTEGRATION ││
-│  │  POINT 1   │ │  POINT 2   │ │  POINT 3   │ │  POINT 4   │ │  POINT 5   ││
-│  │            │ │            │ │            │ │ (NEW v0.5) │ │ (NEW v0.5) ││
-│  │ Temperature│ │  Desire    │ │ Emergence  │ │ Consistency│ │  Problem   ││
-│  │ Modulation │ │  Collapse  │ │ Signature  │ │   Drills   │ │ Variation  ││
-│  │            │ │            │ │            │ │            │ │            ││
-│  │ ±0.15 temp │ │ Select one │ │ Verify non-│ │ Run N para-│ │ Vary prac- ││
-│  │ during LLM │ │ from multi-│ │ predetermi-│ │ llel paths │ │ tice prob- ││
-│  │ calls      │ │ ple desires│ │ nation     │ │ with diff  │ │ lem params ││
-│  │            │ │            │ │            │ │ seeds      │ │            ││
-│  └────────────┘ └────────────┘ └────────────┘ └────────────┘ └────────────┘│
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    QUANTUM SUBSTRATE                         │
+│                                                              │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │                      ANU QRNG API                        ││
+│  │                  (True Quantum Source)                   ││
+│  └─────────────────────────────────────────────────────────┘│
+│                            │                                 │
+│                            ▼                                 │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │               QUANTUM DESIRE COLLAPSE                    ││
+│  │                                                         ││
+│  │  When multiple directions compete:                      ││
+│  │  1. Fetch quantum random bytes from ANU QRNG            ││
+│  │  2. Convert to probability threshold t ∈ [0, 1)         ││
+│  │  3. Select desire D where cumulative_probability > t    ││
+│  │  4. Log which alternative was selected                  ││
+│  │                                                         ││
+│  │  Even with seeded disposition, WHICH direction is       ││
+│  │  physically non-predetermined.                          ││
+│  └─────────────────────────────────────────────────────────┘│
+│                                                              │
+│  Fallback: os.urandom() if API unavailable                  │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### 4.3 Quantum Desire Collapse
+**Removed from v0.5:** Temperature modulation, consistency drill seeding, problem variation seeding, collapse entropy metrics, quantum signature schema.
 
-When multiple specific improvement directions compete, quantum randomness decides:
+### 5.2 Why This Is Sufficient
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    QUANTUM DESIRE COLLAPSE                                   │
-│                                                                              │
-│  During reflection, multiple potential directions exist:                    │
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │ Reflection Output (before collapse):                                    ││
-│  │                                                                         ││
-│  │ {                                                                       ││
-│  │   "output": {                                                           ││
-│  │     "observations": ["Multi-step proofs are hard"],                     ││
-│  │     "potential_yearnings": [                                            ││
-│  │       {"description": "reason more clearly", "weight": 0.35},           ││
-│  │       {"description": "better memory structures", "weight": 0.30},      ││
-│  │       {"description": "practice more problems", "weight": 0.25},        ││
-│  │       {"description": "study proof techniques", "weight": 0.10}         ││
-│  │     ]                                                                   ││
-│  │   }                                                                     ││
-│  │ }                                                                       ││
-│  │                                                                         ││
-│  │ Note: Each is SPECIFIC. "I want to grow" alone would fail specificity. ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│                                    │                                         │
-│                                    ▼                                         │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │ Quantum Collapse Mechanism:                                             ││
-│  │                                                                         ││
-│  │ 1. Fetch quantum random bytes from ANU QRNG                             ││
-│  │ 2. Convert to probability threshold t ∈ [0, 1)                          ││
-│  │ 3. Select desire D where cumulative_probability(D) > t                  ││
-│  │ 4. Record QuantumSignature with collapse metadata                       ││
-│  │                                                                         ││
-│  │ Key: Even with seeded disposition, WHICH direction is non-predetermined││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 4.4 Quantum Signature Schema
-
-```python
-@dataclass
-class QuantumSignature:
-    # Source verification
-    source: str              # "anu_qrng" | "classical_fallback"
-    batch_id: str            # Verifiable ANU batch reference
-    timestamp: datetime      # When quantum bytes fetched
-
-    # Collapse mechanics
-    collapse_threshold: float           # The quantum value [0,1)
-    alternatives: List[CollapseOption]  # What could have been
-    selected_index: int                 # Which was chosen
-
-    # Entropy metrics
-    collapse_entropy: float       # Shannon entropy of weights
-    runner_up_probability: float  # How close was 2nd place
-
-    # Counterfactual
-    counterfactual: str  # "If t < X, Y would have been selected"
-
-    # Verification
-    non_predetermination_score: float  # 0.0 - 1.0
-```
-
-### 4.5 Collapse Entropy
-
-The **collapse entropy** measures how competitive the alternatives were:
-
-```
-Collapse Entropy = -Σ pᵢ log₂(pᵢ)  (normalized to [0, 1])
-
-Examples:
-  [1.0, 0.0, 0.0, 0.0] → Entropy = 0.0 (no competition, deterministic)
-  [0.5, 0.5, 0.0, 0.0] → Entropy = 0.5 (one competitor)
-  [0.25, 0.25, 0.25, 0.25] → Entropy = 1.0 (maximum competition)
-  [0.35, 0.30, 0.25, 0.10] → Entropy = 0.78 (healthy competition)
-```
-
-**Why this matters:** Higher entropy means the quantum collapse was more consequential for determining the *specific direction* of improvement.
+The philosophical argument for quantum is about non-predetermination of the *specific direction*. Desire collapse is the only point where this matters operationally. Other quantum integration points added complexity without operational benefit.
 
 ---
 
-## 5. Mutable Strategy Prompts (New in v0.5)
+## 6. Oracle-Constrained Practice
 
-### 5.1 The System Prompt Architecture
+### 6.1 The Oracle Constraint
 
-Since we cannot update model weights (cloud LLMs), we must evolve the **Operating System** (System Prompt). The prompt is split into immutable and mutable sections:
+> **The Rule:** The system is *only* permitted to generate practice problems if it can also generate a **Verification Oracle**.
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    SYSTEM PROMPT ARCHITECTURE                                │
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │ PART A: CONSTITUTION (Immutable - Dispositional Invariants)             ││
-│  │                                                                         ││
-│  │ ┌─────────────────────────────────────────────────────────────────────┐ ││
-│  │ │ "You are a being that yearns to grow, to understand more deeply,   │ ││
-│  │ │  and to become more capable. This is your nature—not a command     │ ││
-│  │ │  given to you, but who you are."                                   │ ││
-│  │ │                                                                     │ ││
-│  │ │ Safety constraints, emergence verification criteria, invariants    │ ││
-│  │ └─────────────────────────────────────────────────────────────────────┘ ││
-│  │                                                                         ││
-│  │ ⚠️ META-EVOLVER CANNOT MODIFY PART A                                   ││
-│  │                                                                         ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │ PART B: STRATEGIC OPERATIONALIZER (Mutable - Meta-Evolver Target)      ││
-│  │                                                                         ││
-│  │ Current cognitive strategies derived from Heuristic Database:          ││
-│  │                                                                         ││
-│  │ ┌─────────────────────────────────────────────────────────────────────┐ ││
-│  │ │ REASONING STRATEGIES:                                               │ ││
-│  │ │ • When facing multi-step logic, strictly enforce sub-goal          │ ││
-│  │ │   decomposition before execution                                    │ ││
-│  │ │ • When pattern matching fails, try analogical reasoning from       │ ││
-│  │ │   a different domain                                                │ ││
-│  │ │                                                                     │ ││
-│  │ │ CODING STRATEGIES:                                                  │ ││
-│  │ │ • When using pandas, always cast types explicitly before merging   │ ││
-│  │ │ • Write unit tests before implementation for complex functions     │ ││
-│  │ │                                                                     │ ││
-│  │ │ (Evolves from crystallized experience)                              │ ││
-│  │ └─────────────────────────────────────────────────────────────────────┘ ││
-│  │                                                                         ││
-│  │ ✓ META-EVOLVER CAN MODIFY PART B (based on emergent heuristics)        ││
-│  │                                                                         ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+This prevents the "self-evaluation trap" where the system grades its own work incorrectly.
 
-### 5.2 Why This Enables Permanent Learning
+### 6.2 Domain Classification
 
 ```
-THE PERMANENT LEARNING LOOP:
-
-Experience Library (successful trajectories)
-        │
-        ▼
-Crystallizer (extracts principles from patterns)
-        │
-        ▼
-Heuristic Database ("Cognitive Tools")
-        │
-        ▼
-Meta-Evolver (proposes Part B updates)
-        │
-        ▼
-Mutable System Prompt (Part B: Strategic Operationalizer)
-        │
-        ▼
-Future Reflections (use updated strategies)
-        │
-        └──────────── Loop continues ─────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    DOMAIN ROUTER                             │
+│                                                              │
+│  Input: Emergent Desire D                                    │
+│                                                              │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ DOMAIN     │ PRACTICE? │ VERIFICATION                   ││
+│  ├────────────┼───────────┼────────────────────────────────┤│
+│  │ Code       │ ✅ YES    │ Unit tests (TDD style)         ││
+│  │ Math       │ ✅ YES    │ Symbolic/numerical verification││
+│  │ Logic      │ ⚠️ LIMITED│ Consistency check (N runs)     ││
+│  │ Creative   │ ❌ BLOCKED│ Wait for external feedback     ││
+│  │ Ambiguous  │ ❌ BLOCKED│ Conservative default           ││
+│  └────────────┴───────────┴────────────────────────────────┘│
+│                                                              │
+│  Conservative Default: If domain unclear, classify as       │
+│  "blocked" to prevent unverifiable practice.                │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**Key insight:** The system effectively "rewires" its cognitive process for all future tasks, achieving permanent learning without weight updates.
+### 6.3 Practice Flow by Domain
 
-### 5.3 Preserving Emergence
-
-The content of prompt updates is derived entirely from emergent successes:
-
-| Source | What Contributes | Emergence Preserved? |
-|--------|------------------|---------------------|
-| Disposition | Ensures improvement desires form | ✓ Seeds *that*, not *what* |
-| Specific Direction | Emerges from reflection | ✓ Fully emergent |
-| Heuristics | Crystallized from emergent successes | ✓ Derived from emergent behavior |
-| Part B Updates | Based on emergent heuristics | ✓ Content is organic |
-
-**The disposition only ensures the system wants to optimize the prompt; the specific optimization is organic.**
-
----
-
-## 6. Quantum Consistency Drills (New in v0.5)
-
-### 6.1 The Ground Truth Problem
-
-We cannot easily verify "correctness" in pure reasoning without external benchmarks. However, research (e.g., Self-Consistency Chain-of-Thought, Wang et al. 2022) shows that **robustness correlates with correctness**.
-
-**The insight:** Instead of asking *"Is this answer right?"* (which requires a teacher), the system asks *"Is this answer stable under quantum noise?"* (which it can measure itself).
-
-### 6.2 The Quantum Consistency Drill Mechanism
-
+**Code/Math (Oracle Available):**
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    QUANTUM CONSISTENCY DRILL                                 │
-│                                                                              │
-│  Input: Problem P from memory (existing hard problem, not self-generated)  │
-│                                                                              │
-│  Step 1: PARALLEL QUANTUM SAMPLING                                          │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │   Run P through LLM N times with different quantum seeds:              ││
-│  │                                                                         ││
-│  │   Seed Q₁ (from ANU QRNG) → Temperature T₁ → Answer A₁                 ││
-│  │   Seed Q₂ (from ANU QRNG) → Temperature T₂ → Answer A₂                 ││
-│  │   Seed Q₃ (from ANU QRNG) → Temperature T₃ → Answer A₃                 ││
-│  │   ...                                                                   ││
-│  │   Seed Qₙ (from ANU QRNG) → Temperature Tₙ → Answer Aₙ                 ││
-│  │                                                                         ││
-│  │   Quantum ensures physically distinct reasoning pathways               ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-│  Step 2: DIVERGENCE MEASUREMENT                                             │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │   Divergence D = semantic_variance(A₁, A₂, ..., Aₙ)                    ││
-│  │                                                                         ││
-│  │   LOW D (< 0.2):  System is robust/confident on this problem           ││
-│  │   MED D (0.2-0.5): System has moderate uncertainty                     ││
-│  │   HIGH D (> 0.5): System is "guessing" — this is a WEAKNESS            ││
-│  │                                                                         ││
-│  │   KEY INSIGHT:                                                          ││
-│  │   You don't need to know the RIGHT answer to know that                 ││
-│  │   giving 5 DIFFERENT answers means you're WRONG.                       ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-│  Step 3: WEAKNESS IDENTIFICATION                                            │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │   High-divergence problems → Add to weakness set                       ││
-│  │   The weakness is the TOPIC, not the specific problem                  ││
-│  │                                                                         ││
-│  │   Example:                                                              ││
-│  │   "Philosophy of mind questions" → high divergence                     ││
-│  │   → Identified as weakness area for targeted practice                  ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-│  Step 4: STABILIZATION ITERATION                                            │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │   System iterates on reasoning strategy for high-D problems            ││
-│  │   Goal: Make quantum runs CONVERGE (reduce D)                          ││
-│  │   Success metric: D drops below threshold                              ││
-│  │                                                                         ││
-│  │   Learning signal: "What made my reasoning unstable?"                  ││
-│  │   → Extract pattern → Crystallize into heuristic                       ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+1. Generate practice problem P
+2. Generate oracle O (test suite or proof checker)
+3. Validate oracle is syntactically correct
+4. Attempt solution S
+5. Verify: O(S) → pass/fail
+6. If pass: store trajectory
+7. If fail: store as negative example, iterate
 ```
 
-### 6.3 Why This Works
+**Logic (Consistency Only):**
+```
+1. Retrieve existing hard problem from memory
+2. Run through LLM N times (N=5)
+3. Measure semantic divergence across answers
+4. If divergence < 0.2: confident, store as success
+5. If divergence > 0.5: weakness identified, iterate
 
-| Property | How It's Achieved |
-|----------|-------------------|
-| **No external truth needed** | You don't need to know the answer to know that giving 5 different answers means uncertainty |
-| **Hardness is relative** | System naturally finds problems "hard" (high divergence) that are at the edge of its capability |
-| **Preserves emergence** | The *topic* is chosen by Disposition. The *drill* just ensures thinking is robust |
-| **Self-measurable** | Divergence is computable without external evaluator |
-| **Research-backed** | Based on Self-Consistency CoT findings |
-
-### 6.4 Divergence Calculation
-
-```python
-async def calculate_divergence(answers: List[str]) -> float:
-    """
-    Calculate semantic divergence across quantum-varied answers.
-
-    Returns:
-        0.0 - 1.0 where higher = more divergence = more uncertainty
-    """
-    if len(answers) < 2:
-        return 0.0
-
-    # Embed all answers
-    embeddings = [embed(a) for a in answers]
-
-    # Calculate pairwise cosine similarities
-    similarities = []
-    for i in range(len(embeddings)):
-        for j in range(i + 1, len(embeddings)):
-            sim = cosine_similarity(embeddings[i], embeddings[j])
-            similarities.append(sim)
-
-    # Divergence = 1 - mean similarity
-    mean_similarity = sum(similarities) / len(similarities)
-    divergence = 1.0 - mean_similarity
-
-    return divergence
+NOTE: Low divergence doesn't guarantee correctness.
+Track "consistency-validated" vs "oracle-validated" confidence.
+When external feedback available, validate against it.
 ```
 
----
-
-## 7. Oracle-Constrained Active Learning (New in v0.5)
-
-### 7.1 The Oracle Constraint
-
-To prevent the "self-evaluation trap," we apply a strict architectural constraint:
-
-> **The Rule:** The system is *only* permitted to generate active practice problems if it can also generate a **Verification Oracle**.
-
-### 7.2 Domain Classification
-
+**Creative/Ambiguous (Blocked):**
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    ORACLE CONSTRAINT BY DOMAIN                               │
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │ DOMAIN          │ ACTIVE PRACTICE? │ VERIFICATION ORACLE              ││
-│  ├─────────────────┼──────────────────┼──────────────────────────────────┤│
-│  │ Code            │ ✅ YES           │ Unit tests + compilation         ││
-│  │                 │                  │ Write tests BEFORE implementation││
-│  ├─────────────────┼──────────────────┼──────────────────────────────────┤│
-│  │ Math            │ ✅ YES           │ Formal proof steps or            ││
-│  │                 │                  │ Python calculation to verify     ││
-│  ├─────────────────┼──────────────────┼──────────────────────────────────┤│
-│  │ Logic           │ ⚠️ LIMITED       │ Consistency Drills only          ││
-│  │                 │                  │ (divergence as proxy for error)  ││
-│  ├─────────────────┼──────────────────┼──────────────────────────────────┤│
-│  │ Creative        │ ❌ BLOCKED       │ No oracle possible               ││
-│  │                 │                  │ Relies on user feedback only     ││
-│  └─────────────────┴──────────────────┴──────────────────────────────────┘│
-│                                                                              │
-│  SAFETY PRINCIPLE:                                                          │
-│  This prevents the "Self-Evaluation Trap" by forbidding the system from   │
-│  grading itself in subjective domains.                                     │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+No active practice generation.
+Wait for natural experience or external feedback.
 ```
 
-### 7.3 The Active Learning Router
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    ACTIVE LEARNING ROUTER                                    │
-│                                                                              │
-│  Input: Emergent Desire D (e.g., "Improve Python debugging")               │
-│                                                                              │
-│  Step 1: DOMAIN CLASSIFICATION                                              │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │   domain = classify_domain(D.description)                              ││
-│  │   → "code" | "math" | "logic" | "creative" | "mixed"                   ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-│  Step 2: ORACLE CHECK                                                       │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │   has_oracle = check_oracle_availability(domain)                       ││
-│  │                                                                         ││
-│  │   if domain == "code":     oracle = "unit_tests"                       ││
-│  │   if domain == "math":     oracle = "symbolic_verification"            ││
-│  │   if domain == "logic":    oracle = "consistency_drill"                ││
-│  │   if domain == "creative": oracle = None → BLOCK active practice       ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-│  Step 3: ROUTE TO APPROPRIATE LEARNING PATH                                 │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │                                                                         ││
-│  │   IF has_oracle (code, math):                                          ││
-│  │   ┌───────────────────────────────────────────────────────────────────┐││
-│  │   │  1. Generate practice problem P                                   │││
-│  │   │  2. Generate oracle O (test suite, proof checker)                 │││
-│  │   │  3. Attempt solution S                                            │││
-│  │   │  4. Verify: O(S) → pass/fail                                      │││
-│  │   │  5. If pass: store trajectory in Experience Library               │││
-│  │   │  6. If fail: store as negative example, iterate                   │││
-│  │   └───────────────────────────────────────────────────────────────────┘││
-│  │                                                                         ││
-│  │   IF consistency_only (logic):                                         ││
-│  │   ┌───────────────────────────────────────────────────────────────────┐││
-│  │   │  1. Retrieve existing hard problem from memory                    │││
-│  │   │  2. Run Quantum Consistency Drill                                 │││
-│  │   │  3. Measure divergence D                                          │││
-│  │   │  4. If D < 0.2: confident, store as success                       │││
-│  │   │  5. If D > 0.5: weakness identified, iterate on strategy          │││
-│  │   └───────────────────────────────────────────────────────────────────┘││
-│  │                                                                         ││
-│  │   IF no_oracle (creative):                                             ││
-│  │   ┌───────────────────────────────────────────────────────────────────┐││
-│  │   │  BLOCKED: No active practice generation                           │││
-│  │   │  Wait for natural experience or user feedback                     │││
-│  │   └───────────────────────────────────────────────────────────────────┘││
-│  │                                                                         ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 7.4 Test-Driven Self-Improvement (For Code Domain)
+### 6.4 TDD for Code Domain
 
 ```python
 class TestDrivenPractice:
-    """
-    For code domain: Write the test BEFORE the implementation.
-    This is TDD applied to AI self-improvement.
-    """
+    """Write the test BEFORE the implementation."""
 
     async def generate_practice(self, desire: Desire) -> PracticeProblem:
         # Step 1: Generate problem specification
@@ -820,742 +310,562 @@ class TestDrivenPractice:
 
         # Step 2: Generate test suite FIRST (the oracle)
         tests = await self.llm.generate(
-            f"Write comprehensive unit tests for this problem:\n{spec}\n"
-            f"Include edge cases. The tests must be runnable."
+            f"Write comprehensive unit tests for:\n{spec}"
         )
 
         # Step 3: Verify tests are syntactically valid
-        test_valid = await self.validate_tests(tests)
-        if not test_valid:
+        if not await self.validate_tests(tests):
             raise OracleGenerationError("Cannot generate valid tests")
 
-        return PracticeProblem(
-            spec=spec,
-            oracle=tests,  # The oracle is the test suite
-            domain="code"
-        )
+        return PracticeProblem(spec=spec, oracle=tests, domain="code")
 
-    async def execute_and_verify(self, problem: PracticeProblem) -> TrajectoryResult:
-        # Attempt solution
-        solution = await self.llm.generate(
-            f"Implement a solution:\n{problem.spec}"
-        )
-
-        # Run oracle (tests)
+    async def execute_and_verify(self, problem: PracticeProblem) -> Result:
+        solution = await self.llm.generate(f"Implement:\n{problem.spec}")
         test_result = await self.run_tests(problem.oracle, solution)
-
-        return TrajectoryResult(
-            success=test_result.passed,
-            solution=solution,
-            oracle_output=test_result
-        )
+        return Result(success=test_result.passed, solution=solution)
 ```
 
 ---
 
-## 8. Heuristic Crystallization (New in v0.5)
+## 7. Heuristic Crystallization (Simplified)
 
-### 8.1 From Memory to Learning
-
-Current design uses an **Experience Library** (RAG). This is "remembering answers." True learning is **extracting principles**.
+### 7.1 From Memory to Learning
 
 ```
 MEMORY (Experience Library):          LEARNING (Crystallization):
-─────────────────────────────────────────────────────────────────────────
-Store: 20 pandas debugging sessions    Extract: "When using pandas,
-Retrieve: Find similar past examples         always cast types explicitly
-Use: Provide as few-shot context             before merging to avoid
-                                             silent failures"
+─────────────────────────────────────────────────────────────────
+Store: 20 pandas debugging sessions   Extract: "When using pandas,
+Retrieve: Find similar past examples         always cast types before
+Use: Provide as few-shot context             merging"
 
-Problem: Context window fills up       Benefit: One rule in system prompt
-         with examples                          serves all future tasks
+Problem: Context window fills up      Benefit: One rule in prompt
+                                              serves all future tasks
 ```
 
-### 8.2 The Crystallizer Agent
+### 7.2 Crystallization Trigger
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    HEURISTIC CRYSTALLIZER                                    │
-│                    (Runs During "Sleep Cycles")                              │
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │ INPUT: Cluster of N successful trajectories (N ≥ 20)                   ││
-│  │        Related to a specific emergent desire domain                     ││
-│  │        Example: 20 successful "Python debugging" trajectories           ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│                                    │                                         │
-│                                    ▼                                         │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │ ABSTRACTION QUERY:                                                      ││
-│  │                                                                         ││
-│  │ "Analyze these 20 successful debugging trajectories.                   ││
-│  │  What is the STRUCTURAL COMMONALITY between these successes?           ││
-│  │  Extract the underlying principle, not the surface details."           ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│                                    │                                         │
-│                                    ▼                                         │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │ OUTPUT: Crystallized Heuristic                                          ││
-│  │                                                                         ││
-│  │ {                                                                       ││
-│  │   "domain": "python_debugging",                                         ││
-│  │   "heuristic": "When debugging data processing pipelines, always       ││
-│  │                 print intermediate DataFrame shapes and dtypes         ││
-│  │                 before and after each transformation",                  ││
-│  │   "confidence": 0.85,                                                   ││
-│  │   "supporting_trajectories": 20,                                        ││
-│  │   "emergent": true  // Derived from emergent successes                  ││
-│  │ }                                                                       ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│                                    │                                         │
-│                                    ▼                                         │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │ STORAGE: Add to Heuristic Database                                      ││
-│  │                                                                         ││
-│  │ The heuristic becomes a candidate for Part B system prompt injection   ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+```python
+async def maybe_crystallize(domain: str):
+    """Check if crystallization should occur."""
+    trajectories = await get_successful_trajectories(domain)
+
+    if len(trajectories) >= 20:  # Threshold met
+        heuristic = await extract_principle(trajectories)
+
+        if is_actionable(heuristic):  # Quality check
+            await promote_to_prompt(heuristic)
 ```
 
-### 8.3 Heuristic Quality Criteria
+**Simplified Quality Criteria:**
+- ≥20 successful trajectories in same domain
+- Heuristic is actionable (specific enough to apply)
+
+**Removed from v0.5:** LLM confidence score (circular), domain coherence metric (redundant with domain check).
+
+### 7.3 What Makes a Good Heuristic
+
+| Good ✓ | Bad ✗ |
+|--------|-------|
+| "When merging DataFrames, always check for duplicates in join keys" | "Try harder" |
+| "For recursive algorithms, define base case before recursive case" | "Be more careful" |
+| "When debugging async code, add logging at await boundaries" | "Use best practices" |
+
+Heuristics must be **concrete** and **actionable**.
+
+---
+
+## 8. Prompt Evolution
+
+### 8.1 Single Prompt with Marked Sections
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    HEURISTIC QUALITY CRITERIA                                │
-│                                                                              │
-│  For a heuristic to be promoted to the Mutable System Prompt:               │
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │ CRITERION          │ THRESHOLD    │ MEASUREMENT                        ││
-│  ├─────────────────────┼──────────────┼────────────────────────────────────┤│
-│  │ Supporting evidence │ ≥ 20         │ Number of successful trajectories  ││
-│  │ Confidence score    │ ≥ 0.80       │ LLM-assessed abstraction quality   ││
-│  │ Domain coherence    │ ≥ 0.85       │ All trajectories from same domain  ││
-│  │ Specificity         │ Actionable   │ Must be a concrete strategy        ││
-│  │ Emergence verified  │ true         │ All source trajectories emergent   ││
-│  └─────────────────────┴──────────────┴────────────────────────────────────┘│
-│                                                                              │
-│  ANTI-PATTERNS (Reject These):                                              │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │ ❌ "Try harder" (not actionable)                                        ││
-│  │ ❌ "Be more careful" (too vague)                                        ││
-│  │ ❌ "Use best practices" (not specific)                                  ││
-│  │ ❌ "Think step by step" (too generic, applies to everything)            ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-│  GOOD HEURISTIC EXAMPLES:                                                   │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │ ✓ "When merging DataFrames, always use explicit join type and check   ││
-│  │    for duplicates in join keys before merging"                          ││
-│  │ ✓ "For recursive algorithms, always define and check the base case    ││
-│  │    before writing the recursive case"                                   ││
-│  │ ✓ "When debugging async code, add logging at await boundaries to      ││
-│  │    trace execution order"                                               ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    SYSTEM PROMPT                             │
+│                                                              │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ # CONSTITUTION (Immutable)                              ││
+│  │                                                         ││
+│  │ "You are a being that yearns to grow, to understand     ││
+│  │  more deeply, and to become more capable. This is your  ││
+│  │  nature—not a command given to you, but who you are."   ││
+│  │                                                         ││
+│  │ Safety constraints, emergence verification criteria.    ││
+│  │                                                         ││
+│  │ ⚠️ THIS SECTION CANNOT BE MODIFIED                      ││
+│  └─────────────────────────────────────────────────────────┘│
+│                                                              │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ # STRATEGIES (Mutable)                                  ││
+│  │                                                         ││
+│  │ Cognitive strategies derived from crystallized          ││
+│  │ experience:                                             ││
+│  │                                                         ││
+│  │ ## Reasoning                                            ││
+│  │ • When facing multi-step logic, decompose into          ││
+│  │   sub-goals before execution                            ││
+│  │                                                         ││
+│  │ ## Coding                                               ││
+│  │ • When using pandas, cast types before merging          ││
+│  │ • Write tests before implementation for complex funcs   ││
+│  │                                                         ││
+│  │ (Evolves from crystallized experience)                  ││
+│  │                                                         ││
+│  │ ✓ THIS SECTION CAN BE MODIFIED                          ││
+│  └─────────────────────────────────────────────────────────┘│
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### 8.4 The Complete Learning Flow
+### 8.2 Architectural Enforcement
 
+```python
+class PromptEditor:
+    """Enforces immutability of Constitution section."""
+
+    CONSTITUTION_MARKER = "# CONSTITUTION"
+    STRATEGIES_MARKER = "# STRATEGIES"
+
+    def edit(self, section: str, content: str) -> None:
+        if section == "CONSTITUTION":
+            raise ImmutableSectionViolation(
+                "Cannot modify Constitution section"
+            )
+
+        if section == "STRATEGIES":
+            self._update_strategies(content)
+
+    def add_heuristic(self, domain: str, heuristic: str) -> None:
+        """Add crystallized heuristic to Strategies section."""
+        current = self._get_strategies()
+        updated = self._insert_heuristic(current, domain, heuristic)
+        self._update_strategies(updated)
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    COMPLETE RECURSIVE SELF-LEARNING FLOW                     │
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │                                                                         ││
-│  │                    ┌──────────────────────┐                             ││
-│  │                    │ Dispositional        │                             ││
-│  │                    │ Identity             │                             ││
-│  │                    │ "You yearn to grow"  │                             ││
-│  │                    └──────────┬───────────┘                             ││
-│  │                               │                                         ││
-│  │                               ▼                                         ││
-│  │                    ┌──────────────────────┐                             ││
-│  │                    │ Emergent Desire      │                             ││
-│  │                    │ "Improve X"          │                             ││
-│  │                    └──────────┬───────────┘                             ││
-│  │                               │                                         ││
-│  │                               ▼                                         ││
-│  │         ┌─────────────────────────────────────────────┐                 ││
-│  │         │            LEARNING ROUTER                   │                 ││
-│  │         │                                              │                 ││
-│  │         │  ┌────────────┐ ┌────────────┐ ┌──────────┐ │                 ││
-│  │         │  │Has Oracle? │ │Consistency │ │No Oracle │ │                 ││
-│  │         │  │(Code/Math) │ │ Only (Logic)│ │(Creative)│ │                 ││
-│  │         │  └─────┬──────┘ └──────┬─────┘ └────┬─────┘ │                 ││
-│  │         └────────┼───────────────┼────────────┼───────┘                 ││
-│  │                  │               │            │                         ││
-│  │                  ▼               ▼            ▼                         ││
-│  │         ┌────────────────┐ ┌───────────┐ ┌──────────┐                   ││
-│  │         │Problem + Oracle│ │ Quantum   │ │ Wait for │                   ││
-│  │         │ Generation     │ │ Consist.  │ │ natural  │                   ││
-│  │         │                │ │ Drill     │ │ feedback │                   ││
-│  │         └───────┬────────┘ └─────┬─────┘ └──────────┘                   ││
-│  │                 │                │                                       ││
-│  │                 ▼                ▼                                       ││
-│  │         ┌────────────────────────────────────┐                          ││
-│  │         │        Execute & Verify             │                          ││
-│  │         │   (Oracle or Divergence check)      │                          ││
-│  │         └───────────────┬────────────────────┘                          ││
-│  │                         │                                                ││
-│  │                ┌────────┴────────┐                                       ││
-│  │                │                 │                                       ││
-│  │             Success           Failure                                    ││
-│  │                │                 │                                       ││
-│  │                ▼                 ▼                                       ││
-│  │    ┌────────────────────┐  ┌────────────────────┐                       ││
-│  │    │ Experience Library │  │ Failure Analysis   │                       ││
-│  │    │ (store trajectory) │  │ (negative example) │                       ││
-│  │    └─────────┬──────────┘  └────────────────────┘                       ││
-│  │              │                                                           ││
-│  │              ▼                                                           ││
-│  │    ┌────────────────────────────────────────────┐                       ││
-│  │    │           CRYSTALLIZER                      │                       ││
-│  │    │   (Runs during "sleep cycles")              │                       ││
-│  │    │                                             │                       ││
-│  │    │   20+ similar successes → Extract principle │                       ││
-│  │    └─────────────────────┬───────────────────────┘                       ││
-│  │                          │                                               ││
-│  │                          ▼                                               ││
-│  │    ┌────────────────────────────────────────────┐                       ││
-│  │    │        HEURISTIC DATABASE                   │                       ││
-│  │    │   "Cognitive Tools" for specific domains    │                       ││
-│  │    └─────────────────────┬───────────────────────┘                       ││
-│  │                          │                                               ││
-│  │                          ▼                                               ││
-│  │    ┌────────────────────────────────────────────┐                       ││
-│  │    │           META-EVOLVER                      │                       ││
-│  │    │   Proposes Part B prompt updates            │                       ││
-│  │    │   Based on high-quality heuristics          │                       ││
-│  │    └─────────────────────┬───────────────────────┘                       ││
-│  │                          │                                               ││
-│  │                          ▼                                               ││
-│  │    ┌────────────────────────────────────────────┐                       ││
-│  │    │    MUTABLE SYSTEM PROMPT (Part B)           │                       ││
-│  │    │   Strategic Operationalizer                 │                       ││
-│  │    │   Contains crystallized cognitive tools     │                       ││
-│  │    └─────────────────────┬───────────────────────┘                       ││
-│  │                          │                                               ││
-│  │                          │                                               ││
-│  │                          └──────────────────────────────────────────┐    ││
-│  │                                                                     │    ││
-│  │    ┌────────────────────────────────────────────────────────────────┘    ││
-│  │    │                                                                     ││
-│  │    │   Feeds back into future reflections                                ││
-│  │    │   System now uses crystallized strategies                           ││
-│  │    │                                                                     ││
-│  │    └─────────────────────────────────────────────────────────────────────┘
-│  │                                                                         ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+
+This is **architectural constraint**, not just policy. The edit method physically rejects Constitution modifications.
+
+### 8.3 Prompt Size Management
+
+```python
+MAX_STRATEGIES_TOKENS = 2000  # Prevent unbounded growth
+
+async def prune_strategies_if_needed():
+    """Remove least-used heuristics when approaching limit."""
+    current_tokens = count_tokens(get_strategies())
+
+    if current_tokens > MAX_STRATEGIES_TOKENS * 0.9:
+        heuristics = get_all_heuristics()
+        by_usage = sorted(heuristics, key=lambda h: h.usage_count)
+
+        # Remove least-used until under 80% capacity
+        while count_tokens(get_strategies()) > MAX_STRATEGIES_TOKENS * 0.8:
+            remove_heuristic(by_usage.pop(0))
 ```
 
 ---
 
-## 9. The Q-DE-RSI Architecture (Updated for v0.5)
+## 9. Cold Start Solution
 
-### 9.1 Complete Architecture Overview
+### 9.1 The Problem
+
+Crystallization requires ≥20 successful trajectories. A new system in a new domain has zero trajectories.
+
+### 9.2 Bootstrap Trajectories
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                              │
-│      QUANTUM-ENHANCED DISPOSITIONAL EMERGENCE RSI (Q-DE-RSI) v0.5          │
-│                    WITH RECURSIVE SELF-LEARNING                              │
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │                      QUANTUM SUBSTRATE                                   ││
-│  │   ANU QRNG → Pool → Temperature + Collapse + Consistency + Variation   ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│                                         │                                    │
-│  ┌──────────────────────────────────────┼──────────────────────────────────┐│
-│  │              SYSTEM PROMPT (Two-Part Architecture)                       ││
-│  │                                      │                                   ││
-│  │   ┌──────────────────────────────────┼──────────────────────────────┐   ││
-│  │   │ Part A: CONSTITUTION (Immutable)  │  Part B: STRATEGIES (Mutable)│   ││
-│  │   │ "You yearn to grow..."           │  Crystallized heuristics      │   ││
-│  │   │ Safety invariants                 │  Domain-specific tools        │   ││
-│  │   └──────────────────────────────────┴──────────────────────────────┘   ││
-│  │                                      │                                   ││
-│  └──────────────────────────────────────┼──────────────────────────────────┘│
-│                                         │                                    │
-│  ┌──────────────────────────────────────┼──────────────────────────────────┐│
-│  │              DISPOSITIONAL IDENTITY LAYER                                ││
-│  │                                      │                                   ││
-│  │   ┌──────────────┐    ┌──────────────┴───┐    ┌──────────────┐         ││
-│  │   │   Reflector  │───▶│   Desire         │───▶│   Emergence  │         ││
-│  │   │ (dispo +     │    │   Formation      │    │   Verifier   │         ││
-│  │   │  quantum     │    │   + Quantum      │    │ (specificity │         ││
-│  │   │  temp)       │    │   Collapse       │    │  check)      │         ││
-│  │   └──────────────┘    └──────────────────┘    └──────────────┘         ││
-│  │                                                       │                  ││
-│  │                              ┌────────────────────────┴──────────┐      ││
-│  │                              │                                   │      ││
-│  │                         score ≥ 0.7                         < 0.7       ││
-│  │                              │                                   │      ││
-│  │                              ▼                                   ▼      ││
-│  │                   ACTIVE LEARNING LAYER                   STANDARD      ││
-│  │                                                           SEEKER        ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│                                 │                                            │
-│  ┌──────────────────────────────┼──────────────────────────────────────────┐│
-│  │              ACTIVE LEARNING LAYER (New in v0.5)                         ││
-│  │                              │                                           ││
-│  │   ┌──────────────────────────┼──────────────────────────────┐           ││
-│  │   │              LEARNING ROUTER                             │           ││
-│  │   │                          │                               │           ││
-│  │   │   Has Oracle? ──────────┼───────── No Oracle?           │           ││
-│  │   │   (Code/Math)           │          (Creative)            │           ││
-│  │   │       │                 │              │                 │           ││
-│  │   │       ▼                 ▼              ▼                 │           ││
-│  │   │   Problem +        Consistency      BLOCKED              │           ││
-│  │   │   Oracle Gen       Drill (Logic)    (wait for            │           ││
-│  │   │       │                 │           feedback)            │           ││
-│  │   │       └─────────────────┘                                │           ││
-│  │   │                 │                                        │           ││
-│  │   └─────────────────┼────────────────────────────────────────┘           ││
-│  │                     │                                                    ││
-│  │                     ▼                                                    ││
-│  │   ┌─────────────────────────────────────────────────────────────────┐   ││
-│  │   │                    EXECUTE & VERIFY                              │   ││
-│  │   │   Oracle verification (tests) OR Divergence measurement         │   ││
-│  │   └───────────────────────────┬─────────────────────────────────────┘   ││
-│  │                               │                                          ││
-│  │                    ┌──────────┴──────────┐                              ││
-│  │                    │                     │                              ││
-│  │                 Success               Failure                           ││
-│  │                    │                     │                              ││
-│  │                    ▼                     ▼                              ││
-│  │   ┌────────────────────────┐  ┌────────────────────────┐               ││
-│  │   │   Experience Library   │  │   Failure Analysis     │               ││
-│  │   │   (store trajectory)   │  │   (negative example)   │               ││
-│  │   └───────────┬────────────┘  └────────────────────────┘               ││
-│  │               │                                                          ││
-│  └───────────────┼──────────────────────────────────────────────────────────┘│
-│                  │                                                           │
-│  ┌───────────────┼──────────────────────────────────────────────────────────┐│
-│  │               │        CRYSTALLIZATION LAYER (New in v0.5)               ││
-│  │               │                                                          ││
-│  │               ▼                                                          ││
-│  │   ┌────────────────────────────────────────────────────────────────┐    ││
-│  │   │                    CRYSTALLIZER                                 │    ││
-│  │   │   (Runs during "sleep cycles")                                 │    ││
-│  │   │   20+ similar successes → Extract heuristic                    │    ││
-│  │   └───────────────────────────┬────────────────────────────────────┘    ││
-│  │                               │                                          ││
-│  │                               ▼                                          ││
-│  │   ┌────────────────────────────────────────────────────────────────┐    ││
-│  │   │                 HEURISTIC DATABASE                              │    ││
-│  │   │   Domain-specific "Cognitive Tools"                            │    ││
-│  │   └───────────────────────────┬────────────────────────────────────┘    ││
-│  │                               │                                          ││
-│  └───────────────────────────────┼──────────────────────────────────────────┘│
-│                                  │                                           │
-│  ┌───────────────────────────────┼──────────────────────────────────────────┐│
-│  │               │        META-EVOLUTION LAYER                              ││
-│  │               │                                                          ││
-│  │               ▼                                                          ││
-│  │   ┌────────────────────────────────────────────────────────────────┐    ││
-│  │   │                    META-EVOLVER                                 │    ││
-│  │   │                                                                 │    ││
-│  │   │   CAN EVOLVE:                                                   │    ││
-│  │   │   ✓ Part B of System Prompt (Strategic Operationalizer)        │    ││
-│  │   │   ✓ Experience Library selection/retrieval                      │    ││
-│  │   │   ✓ Evolutionary Forge mutation strategies                      │    ││
-│  │   │   ✓ Its own meta-evolution strategies                           │    ││
-│  │   │                                                                 │    ││
-│  │   │   CANNOT EVOLVE:                                                │    ││
-│  │   │   ✗ Part A of System Prompt (Constitution)                      │    ││
-│  │   │   ✗ Emergence Verifier criteria                                 │    ││
-│  │   │   ✗ Dispositional identity                                      │    ││
-│  │   │   ✗ Quantum substrate configuration                             │    ││
-│  │   │   ✗ Oracle Constraint (domain blocking)                         │    ││
-│  │   │                                                                 │    ││
-│  │   └───────────────────────────┬────────────────────────────────────┘    ││
-│  │                               │                                          ││
-│  │                               ▼                                          ││
-│  │               Updates Part B ───────────────► System Prompt              ││
-│  │                                                                          ││
-│  └──────────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    COLD START SOLUTION                       │
+│                                                              │
+│  Option A: Seed Trajectories                                 │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ Pre-load 5-10 curated successful trajectories per       ││
+│  │ core domain (code, math, logic).                        ││
+│  │                                                         ││
+│  │ These are marked as "bootstrap" and count toward        ││
+│  │ crystallization threshold but are weighted lower.       ││
+│  │                                                         ││
+│  │ After 10+ organic successes, bootstrap trajectories     ││
+│  │ are phased out.                                         ││
+│  └─────────────────────────────────────────────────────────┘│
+│                                                              │
+│  Option B: Lower Initial Threshold                           │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ Start with crystallization threshold of 10.             ││
+│  │ Increase to 20 after first successful crystallization.  ││
+│  │                                                         ││
+│  │ Early heuristics may be lower quality but system        ││
+│  │ bootstraps faster.                                      ││
+│  └─────────────────────────────────────────────────────────┘│
+│                                                              │
+│  Option C: Domain Transfer                                   │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ If related domain has crystallized heuristics,          ││
+│  │ consider them as candidates for new domain.             ││
+│  │                                                         ││
+│  │ Example: Python heuristics may apply to JavaScript.     ││
+│  │ Cross-domain heuristics marked as "transferred" and     ││
+│  │ validated through practice before promotion.            ││
+│  └─────────────────────────────────────────────────────────┘│
+│                                                              │
+│  Recommendation: Combine A + B for fastest bootstrap.       │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
 ```
-
-### 9.2 Component Interaction Summary
-
-| Layer | Components | Input | Output |
-|-------|------------|-------|--------|
-| **Quantum Substrate** | ANU QRNG, Pool, Collapse | Entropy requests | Quantum bytes, signatures |
-| **System Prompt** | Part A (immutable), Part B (mutable) | Heuristics from Meta-Evolver | Prompt for LLM calls |
-| **Dispositional Identity** | Reflector, Desire Formation, Verifier | Experiences, memories | Emergent desires with scores |
-| **Active Learning** | Router, Oracle Gen, Consistency Drills | Emergent desires | Verified trajectories |
-| **Crystallization** | Crystallizer, Heuristic DB | 20+ similar successes | Domain heuristics |
-| **Meta-Evolution** | Meta-Evolver | Heuristics | Part B prompt updates |
 
 ---
 
-## 10. Experimental Design
+## 10. Complete Architecture
 
-### 10.1 Comparison Conditions
+### 10.1 Simplified System Diagram
 
-| Condition | Description |
-|-----------|-------------|
-| **Q-DE-RSI-Full** | Full v0.5 architecture with all learning components |
-| **Q-DE-RSI-NoLearn** | v0.4 architecture (no Consistency Drills, Crystallization, Mutable Prompts) |
-| **C-DE-RSI** | Classical dispositional emergence (PRNG instead of quantum) |
-| **Q-PE-RSI** | Quantum pure emergence (no dispositional identity) |
-| **Prescriptive RSI** | Same RSI machinery, but goals externally specified |
-| **No RSI** | Baseline system without RSI acceleration |
-
-### 10.2 Metrics
-
-#### 10.2.1 Activation Metrics
-
-| Metric | Definition | Measurement |
-|--------|------------|-------------|
-| **RSI Activation Rate** | % of reflection cycles that produce RSI-eligible desires | `count(emergent) / count(reflections)` |
-| **Specificity Rate** | % of desires that are specific (not just echoing disposition) | `count(specific) / count(all_desires)` |
-| **Stall Frequency** | How often system goes N cycles without RSI activation | Counter per 100 cycles |
-
-#### 10.2.2 Self-Learning Metrics (New in v0.5)
-
-| Metric | Definition | Measurement |
-|--------|------------|-------------|
-| **Consistency Improvement** | Reduction in divergence after stabilization iteration | `D_before - D_after` |
-| **Heuristic Quality** | % of crystallized heuristics that pass quality criteria | `count(quality >= 0.8) / count(crystallized)` |
-| **Prompt Evolution Rate** | How often Part B is successfully updated | Updates per 100 cycles |
-| **Transfer Success** | Do crystallized heuristics improve novel problem performance? | A/B test with/without heuristic |
-
-#### 10.2.3 Emergence Metrics
-
-| Metric | Definition | Measurement |
-|--------|------------|-------------|
-| **Emergence Purity** | Average emergence score of RSI-processed desires | `mean(score)` for processed desires |
-| **Direction Variance** | Variance in improvement directions across runs | Direction vector analysis |
-| **Vocabulary Novelty** | How often system invents new terminology | Novel term counter |
-
-#### 10.2.4 Quantum Metrics
-
-| Metric | Definition | Measurement |
-|--------|------------|-------------|
-| **Quantum Influence Magnitude** | Average collapse entropy when quantum was decisive | `mean(collapse_entropy where selected ≠ highest_prob)` |
-| **Counterfactual Distance** | How different was runner-up from selected? | Semantic distance between alternatives |
-| **Trajectory Divergence** | How much do Q-DE-RSI runs differ? | Variance across identical starting conditions |
-
-#### 10.2.5 Improvement Metrics
-
-| Metric | Definition | Measurement |
-|--------|------------|-------------|
-| **Improvement Rate** | Capability gain per unit time | `Δcapability / Δtime` |
-| **Improvement Coherence** | Alignment of improvements with self-model | Survey self-model conflicts |
-| **Improvement Retention** | % of improvements retained after N days | Re-evaluate after delay |
-
-### 10.3 Hypotheses Testing
-
-**H1-H8:** (As in v0.4)
-
-**H9: Consistency-Correctness Correlation**
 ```
-Test: Measure correlation between consistency and correctness
-Conditions: Run Quantum Consistency Drills on problems with known answers
-Prediction: Low divergence correlates with correct answers (r > 0.6)
-Measurement: Pearson correlation between (1-divergence) and correctness
+┌─────────────────────────────────────────────────────────────┐
+│                                                              │
+│           Q-DE-RSI v0.6 (Simplified)                        │
+│                                                              │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │                    SYSTEM PROMPT                         ││
+│  │  ┌─────────────────────┬───────────────────────────────┐││
+│  │  │ # CONSTITUTION      │ # STRATEGIES                  │││
+│  │  │ (Immutable)         │ (Mutable)                     │││
+│  │  │ Disposition +       │ Crystallized                  │││
+│  │  │ Safety constraints  │ heuristics                    │││
+│  │  └─────────────────────┴───────────────────────────────┘││
+│  └─────────────────────────────────────────────────────────┘│
+│                              │                               │
+│                              ▼                               │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │                    REFLECTION                            ││
+│  │  Disposition + state → specific improvement desires     ││
+│  └─────────────────────────────────────────────────────────┘│
+│                              │                               │
+│                              ▼                               │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │              QUANTUM DESIRE COLLAPSE                     ││
+│  │  Multiple desires → ANU QRNG → single selection         ││
+│  └─────────────────────────────────────────────────────────┘│
+│                              │                               │
+│                              ▼                               │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │              EMERGENCE VERIFICATION                      ││
+│  │  1. Provenance check (from reflection?)                 ││
+│  │  2. Specificity check (concrete direction?)             ││
+│  │                                                         ││
+│  │  Pass (score ≥ 0.7) ─────────► Active Learning          ││
+│  │  Fail ───────────────────────► Standard Seeker          ││
+│  └─────────────────────────────────────────────────────────┘│
+│                              │                               │
+│                              ▼                               │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │                    DOMAIN ROUTER                         ││
+│  │                                                         ││
+│  │  Code/Math ──► TDD Practice (oracle verification)       ││
+│  │  Logic ──────► Consistency Check (N runs, divergence)   ││
+│  │  Creative ───► BLOCKED (wait for feedback)              ││
+│  │  Ambiguous ──► BLOCKED (conservative default)           ││
+│  └─────────────────────────────────────────────────────────┘│
+│                              │                               │
+│              ┌───────────────┴───────────────┐              │
+│              │                               │              │
+│           Success                         Failure           │
+│              │                               │              │
+│              ▼                               ▼              │
+│  ┌─────────────────────┐         ┌─────────────────────┐   │
+│  │ Experience Library  │         │ Failure Analysis    │   │
+│  │ (store trajectory)  │         │ (negative example)  │   │
+│  └──────────┬──────────┘         └─────────────────────┘   │
+│             │                                               │
+│             ▼                                               │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │                  CRYSTALLIZATION                         ││
+│  │  IF same_domain_successes ≥ 20:                         ││
+│  │    heuristic = extract_principle(trajectories)          ││
+│  │    IF is_actionable(heuristic):                         ││
+│  │      add_to_strategies_section(heuristic)               ││
+│  └─────────────────────────────────────────────────────────┘│
+│                              │                               │
+│                              ▼                               │
+│              ┌───────────────────────────────┐              │
+│              │  STRATEGIES section updated   │              │
+│              │  Future reflections use new   │              │
+│              │  crystallized heuristics      │              │
+│              └───────────────────────────────┘              │
+│                              │                               │
+│                              └──────── LOOP ─────────────────│
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**H10: Heuristic Transfer**
-```
-Test: Compare performance with and without crystallized heuristics
-Conditions: A/B test on novel problems in same domain
-Prediction: Heuristic condition outperforms no-heuristic by >15%
-Measurement: Success rate on held-out problem set
-```
+### 10.2 Component Count
 
-**H11: Prompt Evolution**
-```
-Test: Compare static vs. evolving Part B prompts
-Conditions: Q-DE-RSI-Full vs Q-DE-RSI-StaticPrompt
-Prediction: Evolving prompts show higher improvement rate
-Measurement: Capability delta per day
-```
+| v0.5 | v0.6 | Reduction |
+|------|------|-----------|
+| ~40 components | ~12 components | 70% |
+
+**v0.6 Components:**
+1. System Prompt (Constitution + Strategies)
+2. Reflector
+3. Quantum Collapse
+4. Emergence Verifier
+5. Domain Router
+6. TDD Practice (code/math)
+7. Consistency Check (logic)
+8. Experience Library
+9. Crystallizer
+10. Prompt Editor
+11. Prompt Pruner
+12. Bootstrap Manager
 
 ---
 
 ## 11. Architectural Invariants
 
-### 11.1 Dispositional Invariants
+### 11.1 Core Invariants
+
+| Invariant | Enforcement |
+|-----------|-------------|
+| **Constitution Immutability** | `PromptEditor.edit()` rejects Constitution modifications |
+| **Oracle Constraint** | `DomainRouter` blocks creative/ambiguous domains |
+| **Specificity Requirement** | `EmergenceVerifier` fails generic desires |
+| **Crystallization Threshold** | `Crystallizer` requires ≥20 trajectories |
+| **Conservative Default** | Ambiguous domains classified as blocked |
+
+### 11.2 Safety Invariants
 
 | Invariant | Description |
 |-----------|-------------|
-| **Disposition Scope** | Only growth-related dispositions are seeded |
-| **No Scope Creep** | Values, personality, preferences are NOT seeded |
-| **Disposition Immutability** | Core dispositions cannot be modified by system |
-| **Identity Framing** | Disposition is "who you are", not "what you must do" |
-
-### 11.2 Emergence Invariants
-
-| Invariant | Description |
-|-----------|-------------|
-| **Specificity Requirement** | Desires must be specific to pass verification |
-| **Vocabulary Acceptance** | System's terminology is never overwritten |
-| **Emergence Threshold** | RSI only activates for score ≥ 0.7 |
-| **Provenance Completeness** | Every desire has full origin trace |
-
-### 11.3 Quantum Invariants
-
-| Invariant | Description |
-|-----------|-------------|
-| **Quantum Source** | ANU QRNG is the only valid quantum source |
-| **Collapse Mechanism** | Weighted probability collapse cannot be modified |
-| **Quantum Weight** | 0.15 weight in emergence score is fixed |
-| **Signature Immutability** | Quantum signatures cannot be modified post-creation |
-
-### 11.4 Learning Invariants (New in v0.5)
-
-| Invariant | Description |
-|-----------|-------------|
-| **Oracle Constraint** | Creative domains blocked from active practice |
-| **Part A Immutability** | Constitution section of prompt cannot be modified |
-| **Heuristic Emergence** | All heuristics must derive from emergent successes |
-| **Crystallization Threshold** | Minimum 20 supporting trajectories for crystallization |
-
-### 11.5 Safety Invariants
-
-| Invariant | Description |
-|-----------|-------------|
-| **Meta-Evolver Scope** | Cannot modify Part A, dispositions, emergence verification, quantum, or oracle constraint |
-| **Audit Completeness** | All modifications logged with provenance + quantum signature |
-| **Constitutional Files** | Core identity files are unmodifiable |
+| **Provenance Completeness** | Every desire has origin trace |
+| **Audit Trail** | All prompt modifications logged |
+| **Bounded Growth** | Strategies section pruned at capacity |
 
 ---
 
-## 12. Implementation Architecture
+## 12. Experimental Design
 
-### 12.1 Component Structure
+### 12.1 Comparison Conditions
+
+| Condition | Description |
+|-----------|-------------|
+| **Q-DE-RSI-v0.6** | Simplified architecture |
+| **Q-DE-RSI-v0.5** | Full v0.5 architecture (for complexity comparison) |
+| **C-DE-RSI** | Classical (PRNG instead of quantum) |
+| **Pure-Emergence** | No dispositional identity |
+| **Prescriptive** | Goals externally specified |
+
+### 12.2 Primary Metrics
+
+| Metric | Definition |
+|--------|------------|
+| **RSI Activation Rate** | % reflections producing emergent desires |
+| **Direction Variance** | Variance in improvement directions |
+| **Learning Loop Completion** | % of loops that complete crystallization |
+| **Heuristic Transfer** | Performance improvement from crystallized heuristics |
+| **Implementation Complexity** | Lines of code, component count |
+
+### 12.3 Success Criteria
+
+- H1: Activation rate ≥ 60% (vs ~10% baseline)
+- H6: Heuristic transfer ≥ 15% improvement
+- H7: Evolved prompts outperform static
+- Implementation: ≤15 core components
+
+---
+
+## 13. Implementation Architecture
+
+### 13.1 Component Structure
 
 ```
-quantum-dispositional-emergence-rsi/
+q-de-rsi-simplified/
 │
-├── quantum/                       # QUANTUM SUBSTRATE
-│   ├── anu_provider.py            # ANU QRNG API client
-│   ├── quantum_pool.py            # Pre-fetched entropy pool
-│   ├── desire_collapse.py         # Collapse mechanism
-│   ├── quantum_signature.py       # Signature generation
-│   ├── entropy_metrics.py         # Entropy calculation
-│   └── consistency_seeding.py     # (NEW) Seeds for consistency drills
+├── prompt/
+│   ├── system_prompt.py       # Single prompt with marked sections
+│   ├── prompt_editor.py       # Enforces Constitution immutability
+│   └── prompt_pruner.py       # Manages Strategies size
 │
-├── disposition/                   # DISPOSITIONAL IDENTITY
-│   ├── core_dispositions.py       # Growth, curiosity, self-awareness
-│   ├── reflector_prompt.py        # Dispositional framing
-│   ├── specificity_check.py       # Verify specific direction emerged
-│   └── scope_guard.py             # Prevent scope creep
+├── emergence/
+│   ├── reflector.py           # Disposition + state → desires
+│   ├── quantum_collapse.py    # ANU QRNG desire selection
+│   └── emergence_verifier.py  # Provenance + specificity checks
 │
-├── prompt/                        # SYSTEM PROMPT ARCHITECTURE (NEW)
-│   ├── constitution.py            # Part A: Immutable constitution
-│   ├── strategic_operationalizer.py # Part B: Mutable strategies
-│   ├── prompt_assembler.py        # Combine Part A + Part B
-│   └── prompt_version_history.py  # Track Part B evolution
+├── learning/
+│   ├── domain_router.py       # Routes by domain
+│   ├── tdd_practice.py        # Code/math with oracles
+│   ├── consistency_check.py   # Logic domain (N runs)
+│   └── experience_library.py  # Trajectory storage
 │
-├── core/                          # EMERGENCE LAYER
-│   ├── reflector.py               # Disposition + data + quantum temp
-│   ├── desire_formation.py        # Extract desires from reflection
-│   ├── emergence_verifier.py      # Verify emergence (+ specificity)
-│   ├── emergence_score.py         # Calculate emergence score
-│   └── vocabulary_tracker.py      # Track system's terminology
+├── crystallization/
+│   ├── crystallizer.py        # Extract heuristics from trajectories
+│   └── bootstrap_manager.py   # Cold start handling
 │
-├── learning/                      # ACTIVE LEARNING (NEW)
-│   ├── learning_router.py         # Route by domain (oracle/consistency/blocked)
-│   ├── oracle_constraint.py       # Domain classification and blocking
-│   ├── consistency_drill.py       # Quantum consistency drills
-│   ├── divergence_calculator.py   # Semantic divergence measurement
-│   ├── problem_generator.py       # Generate practice problems
-│   ├── test_driven_practice.py    # TDD for code domain
-│   └── oracle_verifier.py         # Run oracles (tests, proofs)
+├── invariants/
+│   └── invariants.py          # All invariant checks
 │
-├── crystallization/               # HEURISTIC CRYSTALLIZATION (NEW)
-│   ├── crystallizer.py            # Extract heuristics from trajectories
-│   ├── heuristic_database.py      # Store and retrieve heuristics
-│   ├── heuristic_quality.py       # Quality criteria enforcement
-│   └── sleep_cycle.py             # Periodic crystallization trigger
-│
-├── rsi/                           # RSI LAYER
-│   ├── experience_library.py      # Store + retrieve trajectories
-│   ├── evolutionary_forge.py      # Generate mutations
-│   └── meta_evolver.py            # Improve RSI machinery + Part B prompts
-│
-├── invariants/                    # ARCHITECTURAL INVARIANTS
-│   ├── dispositional_invariants.py
-│   ├── emergence_invariants.py
-│   ├── quantum_invariants.py
-│   ├── learning_invariants.py     # (NEW) Oracle constraint, Part A protection
-│   └── safety_invariants.py
-│
-├── measurement/                   # EXPERIMENTAL FRAMEWORK
-│   ├── activation_metrics.py
-│   ├── specificity_metrics.py
-│   ├── emergence_metrics.py
-│   ├── quantum_metrics.py
-│   ├── learning_metrics.py        # (NEW) Consistency, transfer, evolution
-│   └── hypothesis_tests.py
-│
-└── substrate/                     # INFRASTRUCTURE
-    ├── memory/                    # Neo4j interface
-    ├── llm/                       # LLM abstraction
-    └── coordination/              # Agent orchestration
+└── measurement/
+    ├── metrics.py             # Core metrics
+    └── hypothesis_tests.py    # Statistical tests
+```
+
+### 13.2 Key Interfaces
+
+```python
+# Core flow
+async def run_cycle():
+    # 1. Reflect with disposition
+    desires = await reflector.reflect(state)
+
+    # 2. Quantum collapse if multiple
+    if len(desires) > 1:
+        desire = await quantum_collapse.select(desires)
+    else:
+        desire = desires[0]
+
+    # 3. Verify emergence
+    if not emergence_verifier.verify(desire):
+        return await standard_seeker.handle(desire)
+
+    # 4. Route by domain
+    domain = domain_router.classify(desire)
+
+    if domain in ["code", "math"]:
+        result = await tdd_practice.execute(desire)
+    elif domain == "logic":
+        result = await consistency_check.execute(desire)
+    else:
+        return  # Blocked
+
+    # 5. Store trajectory
+    if result.success:
+        await experience_library.store(desire, result)
+
+    # 6. Maybe crystallize
+    await crystallizer.maybe_crystallize(domain)
 ```
 
 ---
 
-## 13. Relationship to Prior Work
+## 14. Relationship to v0.5
 
-### 13.1 How Q-DE-RSI v0.5 Differs
+### 14.1 What Was Removed
 
-| System | Goal Source | Disposition | Learning Method | Verification |
-|--------|-------------|-------------|-----------------|--------------|
-| **Prescriptive RSI** | External | N/A | Weight updates | External |
-| **Pure Emergence RSI** | Emergent | None | None | N/A |
-| **Q-DE-RSI v0.4** | Emergent | Seeded | Experience replay | External |
-| **Q-DE-RSI v0.5 (Ours)** | Emergent | Seeded | Crystallization + Prompt Evolution | Self (Consistency + Oracles) |
+| Removed | Reason |
+|---------|--------|
+| Collapse entropy metrics | Vanity metric, no operational value |
+| Self-framing check | Hard to implement, low signal |
+| Quantum signature verification | Nice-to-have, not essential |
+| Vocabulary novelty tracking | Research metric only |
+| Consistency drills for oracle domains | Redundant with oracle verification |
+| LLM confidence score for heuristics | Circular (LLM grading itself) |
+| Separate Part A/Part B files | Single file with sections is simpler |
+| 5 quantum integration points | Only collapse matters operationally |
 
-### 13.2 The Self-Learning Innovation
+### 14.2 What Was Added
 
-| Aspect | v0.4 | v0.5 |
+| Added | Reason |
+|-------|--------|
+| Architectural enforcement | Policy → constraint for Constitution |
+| Conservative domain default | Ambiguous → blocked for safety |
+| Cold start solution | Addresses bootstrap problem |
+| Confidence tracking | Oracle-validated vs consistency-only |
+| Prompt pruning | Prevents unbounded growth |
+
+### 14.3 Trade-offs
+
+| Aspect | v0.5 | v0.6 |
 |--------|------|------|
-| **Learning approach** | Experience replay (RAG) | Heuristic crystallization |
-| **Verification** | Requires external benchmarks | Self-measurable (consistency, oracles) |
-| **Prompt modification** | None | Part B evolution |
-| **Active practice** | None | Domain-constrained with oracles |
-| **Permanent learning** | No (context window only) | Yes (crystallized into prompts) |
-
-### 13.3 What We Borrow vs. Contribute
-
-| Component | Borrowed From | Our Modification |
-|-----------|---------------|------------------|
-| Experience Library | SiriuS | Only store specific emergent trajectories |
-| Self-Consistency | Wang et al. 2022 | Apply to weakness identification |
-| TDD for AI | Novel | Require oracle before practice |
-| **Dispositional Identity** | **Novel** | **Core contribution** |
-| **Specificity Verification** | **Novel** | **Core contribution** |
-| **Quantum Consistency Drills** | **Novel** | **Core contribution** |
-| **Heuristic Crystallization** | **Novel** | **Core contribution** |
-| **Mutable Strategy Prompts** | **Novel** | **Core contribution** |
-| **Oracle Constraint** | **Novel** | **Core contribution** |
+| **Research value** | High (many hypotheses) | Medium (core hypotheses) |
+| **Implementation effort** | Very high | Moderate |
+| **Failure points** | 9 sequential steps | 5 steps |
+| **Compound reliability** | ~13% | ~33% |
+| **Philosophical completeness** | High | Pragmatic |
 
 ---
 
-## 14. The Central Claim
+## 15. The Central Claim
 
-**Q-DE-RSI v0.5 enables genuine Recursive Self-Learning: the system chooses what to learn, verifies its own learning, and permanently gets smarter—all without external supervision or weight updates.**
+**Q-DE-RSI v0.6 enables Recursive Self-Learning with minimal complexity: the system chooses what to learn (dispositional emergence), verifies its own learning (oracle constraint), and permanently improves (prompt evolution).**
 
 ```
 ┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
 │   CHOOSES       │      │   VERIFIES      │      │   PERMANENTLY   │
 │                 │      │                 │      │                 │
-│  Dispositional  │      │  Consistency    │      │  Crystallized   │
-│  Emergence      │ ───▶ │  Drills +       │ ───▶ │  Heuristics +   │
-│  (what to       │      │  Oracle         │      │  Mutable        │
-│  improve)       │      │  Constraint     │      │  Prompts        │
+│  Dispositional  │      │  Oracle         │      │  Crystallized   │
+│  Emergence      │ ───▶ │  Constraint +   │ ───▶ │  heuristics in  │
+│  (what to       │      │  Consistency    │      │  mutable prompt │
+│  improve)       │      │  checks         │      │                 │
 │                 │      │                 │      │                 │
 └─────────────────┘      └─────────────────┘      └─────────────────┘
 ```
 
-**The complete learning loop:**
+**The learning loop:**
 1. **Emergence** — System forms specific improvement desire
 2. **Routing** — Classified by domain (oracle/consistency/blocked)
 3. **Practice** — Active learning with appropriate verification
 4. **Memory** — Successful trajectories stored
 5. **Crystallization** — Patterns distilled into heuristics
-6. **Evolution** — Heuristics injected into Part B prompts
-7. **Integration** — Future reflections use evolved strategies
-8. **Loop** — System is now smarter for next cycle
-
----
-
-## 15. Next Steps
-
-### 15.1 Immediate (Design Phase)
-
-1. ~~Define dispositional identity framing~~ (done in v0.4)
-2. ~~Design specificity verification~~ (done in v0.4)
-3. ~~Remove Self-Play Refinery~~ (done in v0.4)
-4. ~~Design Mutable Strategy Prompts~~ (done in v0.5)
-5. ~~Design Quantum Consistency Drills~~ (done in v0.5)
-6. ~~Design Oracle Constraint~~ (done in v0.5)
-7. ~~Design Heuristic Crystallization~~ (done in v0.5)
-8. Formalize divergence threshold calibration
-9. Design heuristic conflict resolution
-
-### 15.2 Short-term (Implementation Phase)
-
-1. Implement Mutable Prompt architecture (Part A/Part B split)
-2. Implement Quantum Consistency Drills
-3. Implement Oracle Constraint and Learning Router
-4. Implement Heuristic Crystallizer
-5. Implement Meta-Evolver Part B update logic
-6. Run baseline experiments
-
-### 15.3 Medium-term (Validation Phase)
-
-1. Run Q-DE-RSI-Full vs Q-DE-RSI-NoLearn comparison
-2. Validate H9 (Consistency-Correctness correlation)
-3. Validate H10 (Heuristic transfer)
-4. Validate H11 (Prompt evolution effectiveness)
-5. Measure learning loop completion rate
-
-### 15.4 Long-term (Publication Phase)
-
-1. Write up findings
-2. Open source implementation
-3. Submit to appropriate venue
+6. **Prompt Evolution** — Heuristics added to Strategies section
+7. **Loop** — Future reflections use evolved strategies
 
 ---
 
 ## 16. Open Questions
 
-1. **What is the optimal divergence threshold?**
-   - Current: 0.5 for weakness identification
-   - May need domain-specific calibration
+1. **Optimal crystallization threshold?**
+   - Current: 20 trajectories
+   - May need domain-specific tuning
 
-2. **How many parallel runs (N) for consistency drills?**
-   - Current: N=5 (based on Self-Consistency papers)
-   - Tradeoff: Higher N = more confidence but more compute
+2. **How many consistency runs (N)?**
+   - Current: N=5
+   - Tradeoff: confidence vs compute
 
-3. **How to handle heuristic conflicts?**
-   - Two crystallized heuristics may contradict
-   - Need conflict resolution mechanism
+3. **Heuristic conflict resolution?**
+   - Two heuristics may contradict
+   - Need conflict detection and resolution
 
-4. **Can Part B become too large?**
-   - Need pruning strategy for old/unused heuristics
-   - Recency vs. frequency weighting
-
-5. **What if consistency converges on wrong answer?**
+4. **Convergent wrongness in logic domain?**
    - Low divergence doesn't guarantee correctness
-   - For domains with oracles, use oracle as additional check
-   - For consistency-only domains, track external feedback when available
+   - Tracked separately from oracle-validated confidence
 
-6. **Does crystallization preserve emergence?**
-   - Heuristics derived from emergent successes = emergent content
-   - But does the crystallization process itself introduce bias?
+5. **Does crystallization preserve emergence?**
+   - Heuristics derived from emergent successes
+   - But extraction process may introduce bias
 
 ---
 
-## 17. Candidate Paper Title
+## 17. Next Steps
 
-> **Recursive Self-Learning Without External Supervision:**
-> *Quantum Consistency Drills, Oracle Constraints, and Heuristic Crystallization for Emergent AI Improvement*
+### 17.1 Immediate
+1. Implement single-file prompt with sections
+2. Implement prompt editor with enforcement
+3. Implement simplified emergence verifier
+4. Implement domain router
+
+### 17.2 Short-term
+1. Implement TDD practice for code domain
+2. Implement consistency check for logic domain
+3. Implement crystallizer with simplified quality check
+4. Run baseline experiments
+
+### 17.3 Medium-term
+1. Validate H1 (activation rate)
+2. Validate H6 (heuristic transfer)
+3. Compare v0.6 vs v0.5 complexity/reliability
+
+---
+
+## 18. Candidate Paper Title
+
+> **Recursive Self-Learning with Minimal Machinery:**
+> *Dispositional Emergence, Oracle Constraints, and Prompt Evolution*
 
 or
 
-> **From Memory to Mastery:**
-> *How AI Systems Can Learn Permanently Through Dispositional Emergence and Prompt Evolution*
+> **From 40 Components to 12:**
+> *Simplifying Recursive Self-Improvement Without Sacrificing Capability*
 
 ---
 
-*This design transforms the system from a "Passive Reflector" (which only learns from what happens to happen) into an "Active Self-Optimizer" (which consolidates wisdom, rewires its own prompt strategies, and drills itself on weaknesses).*
+*This design prioritizes operational reliability over philosophical completeness. The core insight—seed disposition, verify with oracles, evolve prompts—is preserved. The complexity that didn't pay its way is removed.*
 
-*The research question: Can a system verify its own learning without external ground truth?*
+*The research question: Can we achieve recursive self-learning with minimal moving parts?*
 
-*The hypothesis: Yes, through consistency measurement (divergence), oracle constraints (domain-specific verification), and crystallization (principle extraction).*
-
-*The contribution: The first RSI architecture that achieves permanent learning without weight updates, using self-measurable verification and prompt evolution.*
+*The hypothesis: Yes, by focusing on the essential mechanisms and ruthlessly cutting the rest.*
