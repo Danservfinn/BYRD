@@ -32,7 +32,14 @@ phases:
       rsi_engine:
         status: "complete"  # Already exists
       baseline_measurement:
-        status: "not_started"
+        status: "complete"
+        files_created:
+          - rsi/measurement/baseline_manager.py
+          - tests/test_baseline_manager.py
+        files_modified:
+          - rsi/measurement/__init__.py
+        tests_passing: 20
+        tests_total: 20
   phase_2:
     status: "not_started"
     components:
@@ -63,17 +70,18 @@ phases:
       self_training_investment: "not_started"
 
 # METRICS
-total_files_created: 2
-total_files_modified: 2
-total_tests_written: 18
-total_tests_passing: 18
-commits_made: 0
+total_files_created: 4
+total_files_modified: 3
+total_tests_written: 38
+total_tests_passing: 38
+commits_made: 2
 
 # CURRENT WORK
-current_task: "Component 1.1 RalphLoop COMPLETE - Ready to commit"
-blockers: []
-last_commit: "f3b6d500"
-last_test_run: "pending"
+current_task: "Component 1.4 Baseline Measurement COMPLETE - Commit and move to Phase 1 validation"
+blockers:
+  - "Memvid SDK not publicly available - using in-memory fallback"
+last_commit: "ae29f6f8"
+last_test_run: "pass"
 
 # NOTES
 implementation_notes: |

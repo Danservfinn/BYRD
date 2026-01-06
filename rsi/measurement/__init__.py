@@ -1,15 +1,41 @@
-"""RSI Measurement Components - Metrics and validation."""
+"""RSI Measurement Components - Metrics, validation, and baselines."""
 from .metrics import MetricsCollector, RSIMetrics, CycleMetrics
 from .hypothesis_tests import (
-    HypothesisValidator, TestResult, ValidationReport, run_validation
+    HypothesisValidator, TestResult as HypothesisTestResult, ValidationReport, run_validation
+)
+from .baseline_manager import (
+    BaselineManager,
+    Baseline,
+    MeasurementResult,
+    GamingDetectionResult,
+    TestCase,
+    TestCaseType,
+    TestResult,
+    create_reasoning_test_suite,
+    create_code_test_suite,
+    create_math_test_suite,
 )
 
 __all__ = [
+    # Metrics
     "MetricsCollector",
     "RSIMetrics",
     "CycleMetrics",
+    # Hypothesis testing
     "HypothesisValidator",
-    "TestResult",
+    "HypothesisTestResult",
     "ValidationReport",
     "run_validation",
+    # Baseline management
+    "BaselineManager",
+    "Baseline",
+    "MeasurementResult",
+    "GamingDetectionResult",
+    "TestCase",
+    "TestCaseType",
+    "TestResult",
+    # Pre-built test suites
+    "create_reasoning_test_suite",
+    "create_code_test_suite",
+    "create_math_test_suite",
 ]
