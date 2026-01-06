@@ -19,6 +19,10 @@ from .engine import RSIEngine, CycleResult, CyclePhase
 # New modules for Memvid + Ralph integration
 from .consciousness import ConsciousnessStream, ConsciousnessFrame
 from .orchestration import (
+    RalphLoop,
+    LoopResult,
+    LoopTerminationReason,
+    run_ralph_loop,
     BYRDRalphAdapter,
     RalphIterationResult,
     EmergenceDetector,
@@ -67,7 +71,11 @@ __all__ = [
     # Consciousness (Memvid integration)
     "ConsciousnessStream",
     "ConsciousnessFrame",
-    # Orchestration (Ralph integration)
+    # Orchestration (Ralph Loop)
+    "RalphLoop",
+    "LoopResult",
+    "LoopTerminationReason",
+    "run_ralph_loop",
     "BYRDRalphAdapter",
     "RalphIterationResult",
     "EmergenceDetector",
