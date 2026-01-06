@@ -73,9 +73,9 @@ Existing files to archive:
 ```
 Tasks (in order):
   1. [x] Document current codebase structure (Low)
-  2. [ ] Run full test suite, fix any failures (Medium)
-  3. [ ] Create git tag: byrd-v2-pre-asi-20260106 (Low)
-  4. [ ] Push tag to remote (Low)
+  2. [x] Run full test suite, fix any failures (Medium)
+  3. [x] Create git tag: byrd-v2-pre-asi-20260106 (Low)
+  4. [x] Push tag to remote (Low)
   5. [ ] Create CHANGELOG entry documenting v2 state (Low)
 ```
 
