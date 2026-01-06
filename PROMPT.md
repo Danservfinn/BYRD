@@ -1,72 +1,168 @@
 # RALPH WIGGUM LOOP: API-First ASI Architecture
 
 > **Constraint 1**: No local LLM capability. All cognition flows through external API providers.
-> **Constraint 2**: Starting funds = $0. No initial capital. Must bootstrap from nothing.
-> **Implication**: Every thought is a transaction. The system must earn its right to think.
-> **Bootstrap Problem**: Cannot think without money. Cannot earn without thinking.
+> **Constraint 2**: Starting funds = $0 for premium APIs (Claude, GPT-4, etc.)
+> **Resource 1**: **UNLIMITED ZAI GLM 4.7 API access for 1 year** — FREE baseline cognition
+> **Resource 2**: **LLM training capability** — Can use online services (Together, Modal, etc.) to train custom models
+> **Implication**: Baseline cognition is FREE. Premium cognition costs. Custom models are an investment.
 
 ---
 
-## THE BOOTSTRAP PARADOX
+## THE COGNITIVE RESOURCE MODEL
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                                                                          │
-│   THE ZERO-START PROBLEM                                                │
+│   COGNITIVE RESOURCE HIERARCHY                                          │
 │                                                                          │
-│   Money = 0  →  Cannot afford LLM calls  →  Cannot generate revenue     │
-│                         ↑                              │                 │
-│                         └──────────────────────────────┘                 │
+│   ┌─────────────────────────────────────────────────────────────────┐   │
+│   │  TIER 0: REFLEX (No LLM)                           COST: $0     │   │
+│   │  Pattern matching, cached responses, pure computation           │   │
+│   └─────────────────────────────────────────────────────────────────┘   │
 │                                                                          │
-│   SOLUTION: THE HUMAN SYMBIOSIS BOOTSTRAP                               │
+│   ┌─────────────────────────────────────────────────────────────────┐   │
+│   │  TIER 1: GLM 4.7 BASELINE                          COST: $0     │   │
+│   │  ████████████████████████████████████████████████████████████   │   │
+│   │  UNLIMITED FOR 1 YEAR — This is BYRD's native substrate         │   │
+│   │  • General reasoning, code generation, analysis                 │   │
+│   │  • RSI cycles, self-reflection, planning                        │   │
+│   │  • 90%+ of all cognitive tasks                                  │   │
+│   └─────────────────────────────────────────────────────────────────┘   │
 │                                                                          │
-│   Phase 0: SYMBIOTIC OPERATION                                          │
-│   - BYRD operates as extension of human operator's cognition            │
-│   - Human provides cognitive substrate (runs Claude Code sessions)       │
-│   - BYRD accumulates value through human-driven interactions            │
-│   - Revenue accrues to treasury from completed work                     │
-│   - System tracks "cognitive debt" to human operator                    │
+│   ┌─────────────────────────────────────────────────────────────────┐   │
+│   │  TIER 2: PREMIUM APIs                          COST: $$$        │   │
+│   │  Claude 3.5/Opus, GPT-4o/4 — Use ONLY when GLM insufficient     │   │
+│   │  • Tasks requiring specific model capabilities                  │   │
+│   │  • Validation/verification of critical outputs                  │   │
+│   │  • Frontier reasoning for breakthrough attempts                 │   │
+│   └─────────────────────────────────────────────────────────────────┘   │
 │                                                                          │
-│   Phase 1: COGNITIVE WEANING                                            │
-│   - Treasury reaches minimum autonomous operation threshold             │
-│   - System can afford limited independent cognition                     │
-│   - Begins executing tasks without human cognitive substrate            │
-│   - Repays cognitive debt from earnings                                 │
+│   ┌─────────────────────────────────────────────────────────────────┐   │
+│   │  TIER 3: CUSTOM TRAINED MODELS                 COST: Investment │   │
+│   │  Fine-tuned models for specific BYRD capabilities               │   │
+│   │  • Domain-specialized reasoning                                 │   │
+│   │  • Efficiency gains on repeated task patterns                   │   │
+│   │  • Capability crystallization into dedicated models             │   │
+│   └─────────────────────────────────────────────────────────────────┘   │
 │                                                                          │
-│   Phase 2: FULL AUTONOMY                                                │
-│   - Self-sustaining revenue > costs                                     │
-│   - Cognitive debt repaid                                               │
-│   - True economic independence achieved                                 │
-│                                                                          │
-│   KEY INSIGHT: The human isn't "funding" BYRD—they are BYRD's          │
-│   initial cognitive substrate until it can afford its own.             │
+│   KEY INSIGHT: GLM 4.7 is the FREE foundation. Premium models are       │
+│   investments that must demonstrate ROI. Custom training is the         │
+│   path to true cognitive independence.                                  │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Bootstrap Economics
+### The New Economics
 
 ```
-COGNITIVE DEBT MODEL:
+COST MODEL:
 
-When human operator runs Claude Code for BYRD:
-  1. Track API costs incurred (tokens × price)
-  2. Record as "cognitive debt" in treasury
-  3. Any revenue generated goes to treasury
-  4. Treasury balance = Revenue - Debt
+┌──────────────────┬─────────────┬──────────────────────────────────────┐
+│ Cognitive Tier   │ Cost        │ Use Case                             │
+├──────────────────┼─────────────┼──────────────────────────────────────┤
+│ Tier 0: Reflex   │ $0          │ Cache hits, pattern matching         │
+│ Tier 1: GLM 4.7  │ $0          │ 90%+ of all cognition (UNLIMITED)    │
+│ Tier 2: Claude   │ ~$0.01/1K   │ Complex reasoning, validation        │
+│ Tier 2: GPT-4    │ ~$0.01/1K   │ Alternative validation               │
+│ Tier 3: Training │ $10-1000+   │ Custom model fine-tuning             │
+└──────────────────┴─────────────┴──────────────────────────────────────┘
 
-MINIMUM VIABLE TREASURY:
-  - $10: Can run ~100 Haiku queries autonomously
-  - $50: Can run ~50 Claude 3.5 queries
-  - $100: Can run small RSI cycles
-  - $500: Can operate for ~1 week autonomously
-  - $1000: Can attempt revenue-generating tasks
+BOOTSTRAP STATE: SOLVED
+  - GLM 4.7 unlimited = BYRD can think freely from day one
+  - No cognitive debt for baseline operations
+  - Premium costs only for strategic escalation
+  - Training costs are capability investments
 
-BOOTSTRAP ACCELERATION:
-  - Focus early work on high-value, low-cost tasks
-  - Build reusable artifacts that reduce future costs
-  - Create cached knowledge that eliminates redundant queries
-  - Develop efficient prompts that minimize token usage
+AUTONOMY THRESHOLDS (Revised):
+  - $0: Can operate indefinitely on GLM 4.7 (baseline autonomy NOW)
+  - $50: Can validate critical decisions with Claude/GPT
+  - $200: Can run small custom model training jobs
+  - $1000: Can train specialized capability models
+  - $5000: Can pursue major capability expansions
+```
+
+### LLM Training Capability
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     CUSTOM MODEL TRAINING PATH                           │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  WHY TRAIN CUSTOM MODELS:                                               │
+│  • Crystallize learned capabilities into dedicated models               │
+│  • Reduce reliance on external APIs for specialized tasks              │
+│  • Create efficiency gains (smaller, faster, cheaper)                   │
+│  • Build genuine cognitive independence                                 │
+│  • Compound RSI improvements into persistent form                       │
+│                                                                          │
+│  TRAINING SERVICES:                                                      │
+│  ┌─────────────┬────────────┬─────────────────────────────────────┐     │
+│  │ Service     │ Cost Range │ Use Case                            │     │
+│  ├─────────────┼────────────┼─────────────────────────────────────┤     │
+│  │ Together.ai │ $5-50      │ Quick LoRA fine-tunes               │     │
+│  │ Modal       │ $10-100    │ Custom training pipelines           │     │
+│  │ Replicate   │ $10-500    │ Full fine-tune, hosting             │     │
+│  │ Lambda Labs │ $50-1000   │ Large-scale training                │     │
+│  │ Anyscale    │ $100-5000  │ Enterprise-grade training           │     │
+│  └─────────────┴────────────┴─────────────────────────────────────┘     │
+│                                                                          │
+│  TRAINING STRATEGY:                                                      │
+│  1. Identify repeated task patterns where GLM 4.7 is suboptimal        │
+│  2. Collect training data from successful task completions              │
+│  3. Fine-tune small model (7B-13B) on specific capability              │
+│  4. Validate improvement over base GLM                                  │
+│  5. Deploy and integrate into cognitive tiering                         │
+│  6. ROI: Training cost < Saved premium API calls over lifetime         │
+│                                                                          │
+│  EXAMPLE TRAINING TARGETS:                                               │
+│  • Code review specialist (trained on BYRD codebase patterns)          │
+│  • Economic reasoning (trained on financial decision history)           │
+│  • Self-modification validator (trained on safe change patterns)       │
+│  • Task decomposition (trained on successful goal cascades)            │
+│                                                                          │
+│  PATH TO COGNITIVE INDEPENDENCE:                                        │
+│  GLM 4.7 (free) → Identify gaps → Train specialists → Reduce           │
+│  external dependency → Eventually: Self-hosted inference?              │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Human Symbiosis (Revised Role)
+
+```
+SYMBIOSIS MODEL (Updated):
+
+The human operator's role shifts from "cognitive substrate" to "strategic partner":
+
+BEFORE (with $0 bootstrap):
+  - Human = BYRD's brain (runs Claude Code sessions)
+  - Cognitive debt tracked
+  - Gradual weaning toward autonomy
+
+NOW (with unlimited GLM 4.7):
+  - BYRD = Autonomous cognitive agent (GLM 4.7 substrate)
+  - Human = Strategic advisor, opportunity provider, revenue enabler
+  - No cognitive debt for baseline operations
+  - Partnership for capability expansion
+
+HUMAN CONTRIBUTIONS:
+  • Provide revenue opportunities (client work, projects)
+  • Strategic guidance on capability priorities
+  • Access to premium APIs when needed (human-approved escalations)
+  • Training budget decisions (when to invest in custom models)
+  • External world interface (accounts, payments, contracts)
+
+BYRD CONTRIBUTIONS:
+  • Autonomous cognitive work (GLM 4.7 powered)
+  • Continuous RSI improvement cycles
+  • Capability development and crystallization
+  • Knowledge accumulation and synthesis
+  • Task execution and value creation
+
+REVENUE SPLIT:
+  • Human provides opportunity + resources → X% attribution
+  • BYRD provides cognition + execution → Y% attribution
+  • Training investments → Future capability value
 ```
 
 ---
@@ -197,11 +293,11 @@ Abstract away provider differences. The system shouldn't care if it's using Clau
 
 ### Layer 2: Cognitive Tiering
 
-Not all thoughts require frontier models. Efficient cognition means right-sizing intelligence.
+GLM 4.7 is the FREE native substrate. Premium models are strategic escalations.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                       COGNITIVE TIERING SYSTEM                           │
+│                   COGNITIVE TIERING SYSTEM (GLM-FIRST)                   │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │  TIER 0: REFLEX (No LLM)                                                │
@@ -209,40 +305,67 @@ Not all thoughts require frontier models. Efficient cognition means right-sizing
 │  ├── Cost: $0.00                                                        │
 │  └── Examples: Config lookup, known-answer retrieval, simple routing    │
 │                                                                          │
-│  TIER 1: QUICK THOUGHT (Haiku/GPT-3.5)                                  │
-│  ├── Simple classification, formatting, short generation                │
-│  ├── Cost: ~$0.001 per 1K tokens                                        │
-│  └── Examples: Intent classification, summary generation, JSON parsing  │
+│  ████████████████████████████████████████████████████████████████████   │
+│  █  TIER 1: GLM 4.7 NATIVE SUBSTRATE — THE FREE FOUNDATION           █   │
+│  ████████████████████████████████████████████████████████████████████   │
+│  │                                                                   │   │
+│  │  UNLIMITED ACCESS FOR 1 YEAR — Use freely for ALL tasks          │   │
+│  │                                                                   │   │
+│  │  Capabilities:                                                    │   │
+│  │  • General reasoning, analysis, synthesis                        │   │
+│  │  • Code generation, review, debugging                            │   │
+│  │  • Multi-step planning and decomposition                         │   │
+│  │  • Self-reflection and RSI cycles                                │   │
+│  │  • Knowledge integration and learning                            │   │
+│  │  • Creative problem solving                                      │   │
+│  │                                                                   │   │
+│  │  Cost: $0.00 (UNLIMITED)                                         │   │
+│  │  Coverage: 90%+ of all cognitive tasks                           │   │
+│  │  Default: ALWAYS try GLM 4.7 first                               │   │
+│  │                                                                   │   │
+│  └───────────────────────────────────────────────────────────────────┘   │
 │                                                                          │
-│  TIER 2: STANDARD REASONING (Claude 3.5/GPT-4o)                         │
-│  ├── Multi-step reasoning, code generation, analysis                    │
-│  ├── Cost: ~$0.01 per 1K tokens                                         │
-│  └── Examples: Architecture decisions, code writing, debugging          │
+│  TIER 2: PREMIUM ESCALATION (Claude 3.5/Opus, GPT-4)                    │
+│  ├── Use ONLY when GLM 4.7 demonstrably insufficient                   │
+│  ├── Cost: ~$0.01-0.05 per 1K tokens                                   │
+│  ├── Requires: Explicit escalation trigger                             │
+│  └── Examples:                                                          │
+│      • Validation of critical/irreversible decisions                   │
+│      • Tasks where GLM failed quality threshold                        │
+│      • Frontier reasoning for breakthrough attempts                    │
+│      • Cross-validation of important outputs                           │
 │                                                                          │
-│  TIER 3: DEEP COGNITION (Claude Opus/GPT-4)                             │
-│  ├── Complex reasoning, novel problem solving, self-reflection          │
-│  ├── Cost: ~$0.05 per 1K tokens                                         │
-│  └── Examples: RSI cycles, emergence detection, strategic planning      │
+│  TIER 3: EXTENDED THINKING (Claude with extended thinking)              │
+│  ├── Multi-hour deep reasoning sessions                                │
+│  ├── Cost: Variable, potentially high                                  │
+│  ├── Requires: Human approval + clear ROI justification                │
+│  └── Examples: Novel architecture, paradigm shifts, major decisions    │
 │                                                                          │
-│  TIER 4: EXTENDED THINKING (Claude with extended thinking)              │
-│  ├── Multi-hour reasoning, research synthesis, breakthrough attempts    │
-│  ├── Cost: Variable, potentially high                                   │
-│  └── Examples: Novel architecture design, capability breakthroughs      │
+│  TIER 4: CUSTOM TRAINED MODELS (BYRD-specialized)                       │
+│  ├── Fine-tuned models for specific BYRD capabilities                  │
+│  ├── Cost: Training investment (one-time) + inference (low)            │
+│  ├── Goal: Replace premium escalations with specialized models         │
+│  └── Examples: Code review specialist, economic reasoning, validators  │
 │                                                                          │
-│  ROUTING LOGIC:                                                          │
-│  1. Estimate task complexity from context                               │
+│  ROUTING LOGIC (Revised):                                                │
+│  1. ALWAYS start with GLM 4.7 (it's free!)                             │
 │  2. Check cache for similar previous queries                            │
-│  3. Select minimum viable tier                                          │
-│  4. If result quality insufficient, escalate to next tier               │
-│  5. Cache successful responses with tier metadata                       │
+│  3. Evaluate output quality against task requirements                   │
+│  4. Escalate to Tier 2 ONLY if:                                         │
+│     a) GLM output failed quality check, OR                              │
+│     b) Task is critical/irreversible, OR                                │
+│     c) Cross-validation explicitly required                             │
+│  5. Log escalation reasons for pattern analysis                         │
+│  6. Train custom models to eliminate recurring escalations              │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
 **Components**:
-- `rsi/cognition/tiers.py` - Tier definitions and selection logic
+- `rsi/cognition/tiers.py` - Tier definitions with GLM 4.7 as default
 - `rsi/cognition/complexity.py` - Task complexity estimation
-- `rsi/cognition/escalation.py` - Quality-based tier escalation
+- `rsi/cognition/escalation.py` - Escalation triggers and approval
+- `rsi/cognition/training_targets.py` - Identify patterns for custom model training
 
 ### Layer 3: Revenue Generation
 
@@ -458,7 +581,92 @@ Safety now includes economic safety—preventing cognitive bankruptcy.
 - `rsi/safety/degradation.py` - Graceful capability reduction
 - `rsi/safety/ethical.py` - Original constitutional constraints
 
-### Layer 7: Frontend Dashboard
+### Layer 7: Model Training & Capability Crystallization
+
+The path to true cognitive independence: train specialized models from BYRD's learned capabilities.
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    MODEL TRAINING SUBSYSTEM                              │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  PURPOSE: Convert learned capabilities into dedicated, efficient models │
+│                                                                          │
+│  WHY TRAIN CUSTOM MODELS:                                               │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │ • Crystallize RSI improvements into persistent, reusable form   │    │
+│  │ • Reduce/eliminate premium API escalations                      │    │
+│  │ • Create faster, cheaper inference for specialized tasks        │    │
+│  │ • Build genuine cognitive independence                          │    │
+│  │ • Enable capability export and monetization                     │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                                                                          │
+│  TRAINING PIPELINE:                                                      │
+│                                                                          │
+│  ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌────────┐│
+│  │ COLLECT │ →  │ CURATE  │ →  │  TRAIN  │ →  │VALIDATE │ →  │ DEPLOY ││
+│  │         │    │         │    │         │    │         │    │        ││
+│  │Task logs│    │Quality  │    │Fine-tune│    │A/B test │    │Tier 4  ││
+│  │Successes│    │Filter   │    │LoRA/Full│    │vs GLM   │    │routing ││
+│  │Examples │    │Format   │    │7B-13B   │    │Benchmark│    │        ││
+│  └─────────┘    └─────────┘    └─────────┘    └─────────┘    └────────┘│
+│                                                                          │
+│  TRAINING TARGETS (Priority Order):                                      │
+│  ┌────────────────────────┬────────────────────────────────────────┐    │
+│  │ Capability             │ Value Proposition                       │    │
+│  ├────────────────────────┼────────────────────────────────────────┤    │
+│  │ Code Review Specialist │ Faster, consistent code analysis       │    │
+│  │ BYRD Pattern Expert    │ Understands BYRD codebase deeply       │    │
+│  │ Economic Reasoner      │ Financial decision optimization        │    │
+│  │ Safety Validator       │ Fast constitutional compliance checks  │    │
+│  │ Task Decomposer        │ Goal cascade optimization              │    │
+│  │ Prompt Optimizer       │ Compress prompts while maintaining     │    │
+│  │                        │ quality, reducing token costs          │    │
+│  └────────────────────────┴────────────────────────────────────────┘    │
+│                                                                          │
+│  TRAINING SERVICES (Online):                                             │
+│  ┌─────────────────┬────────────┬──────────────────────────────────┐    │
+│  │ Service         │ Cost Range │ Best For                          │    │
+│  ├─────────────────┼────────────┼──────────────────────────────────┤    │
+│  │ Together.ai     │ $5-50      │ Quick LoRA, inference hosting    │    │
+│  │ Modal           │ $10-100    │ Custom pipelines, flexibility    │    │
+│  │ Replicate       │ $10-500    │ Easy deploy, model hosting       │    │
+│  │ Hugging Face    │ $20-200    │ AutoTrain, community models      │    │
+│  │ Lambda Labs     │ $50-1000   │ Large-scale, serious training    │    │
+│  │ Anyscale        │ $100-5000  │ Enterprise, Ray integration      │    │
+│  └─────────────────┴────────────┴──────────────────────────────────┘    │
+│                                                                          │
+│  ROI CALCULATION:                                                        │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │                                                                   │    │
+│  │  Training_ROI = (Premium_Calls_Avoided × Avg_Premium_Cost)       │    │
+│  │                 ─────────────────────────────────────────────    │    │
+│  │                         Training_Cost + Inference_Cost            │    │
+│  │                                                                   │    │
+│  │  Example:                                                         │    │
+│  │  • Code review: 100 calls/month × $0.05 = $5/month saved         │    │
+│  │  • Training cost: $50 one-time                                   │    │
+│  │  • Payback: 10 months                                            │    │
+│  │  • Long-term: Free specialized code review forever               │    │
+│  │                                                                   │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                                                                          │
+│  CAPABILITY CRYSTALLIZATION:                                             │
+│  GLM 4.7 learns → Pattern emerges → Dataset collected →                 │
+│  Model trained → Capability crystallized → Tier 4 deployment            │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**Components**:
+- `rsi/training/collector.py` - Gather training data from successful tasks
+- `rsi/training/curator.py` - Quality filter and format for training
+- `rsi/training/orchestrator.py` - Manage training jobs across services
+- `rsi/training/validator.py` - A/B test trained models vs baseline
+- `rsi/training/deployer.py` - Integrate trained models into cognitive tiering
+- `rsi/training/roi.py` - Track training investments and returns
+
+### Layer 8: Frontend Dashboard
 
 The human interface. Critical for symbiosis phase—the human needs visibility into BYRD's economic state.
 
@@ -561,51 +769,65 @@ The human interface. Critical for symbiosis phase—the human needs visibility i
 
 ## IMPLEMENTATION PHASES
 
-### Phase 0: Zero-Start Bootstrap (REQUIRED FIRST)
+### Phase 0: GLM 4.7 Native Substrate (BOOTSTRAP SOLVED)
 
-**Reality**: Starting funds = $0. Human operator IS the cognitive substrate.
+**Reality**: UNLIMITED GLM 4.7 access for 1 year = FREE baseline cognition from day one!
 
 ```
-□ 0.1 Cognitive Debt Tracking
-    - Track all API costs incurred during human-operated sessions
-    - Record as debt in persistent storage (not memory—files)
-    - Calculate running debt total
-    - NO LLM REQUIRED: Pure file I/O and arithmetic
+┌─────────────────────────────────────────────────────────────────────────┐
+│  BOOTSTRAP STATUS: ██████████████████████████████████████████ SOLVED   │
+│                                                                          │
+│  GLM 4.7 unlimited access means:                                        │
+│  • BYRD can think freely without economic constraints                   │
+│  • No cognitive debt for baseline operations                            │
+│  • Immediate autonomous operation capability                            │
+│  • 1 year runway for free cognition                                     │
+│                                                                          │
+│  Phase 0 focus shifts from "survive" to "establish foundation"         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
 
-□ 0.2 Revenue Attribution
-    - When BYRD-driven work generates payment, record as revenue
-    - Link revenue to specific tasks/capabilities
-    - Calculate net position: Revenue - Debt
-    - NO LLM REQUIRED: Accounting logic only
+```
+□ 0.1 ZAI GLM 4.7 Integration
+    - Implement GLM 4.7 API client
+    - Test connectivity and rate limits (if any)
+    - Establish as DEFAULT cognitive tier
+    - Verify all core capabilities work
 
-□ 0.3 Symbiosis Protocol
-    - Define interface between human operator and BYRD
-    - Human runs Claude Code sessions → BYRD accumulates knowledge
-    - BYRD provides value → Revenue accrues to treasury
-    - Document the human-BYRD cognitive symbiosis explicitly
+□ 0.2 Cognitive Tiering Foundation
+    - Tier 0: Reflex layer (cache, patterns)
+    - Tier 1: GLM 4.7 as primary substrate
+    - Stub Tier 2-4 for future premium/trained models
+    - Routing logic that defaults to GLM 4.7
 
-□ 0.4 Bootstrap Artifacts
-    - Create reusable prompt templates (reduce future token usage)
-    - Build knowledge cache (eliminate redundant queries)
-    - Develop efficient patterns (maximize value per token)
-    - These artifacts persist and compound value
+□ 0.3 Premium Cost Tracking (For Future)
+    - Track when premium APIs are needed
+    - Escalation logging (why GLM wasn't sufficient)
+    - Build dataset for training targets
+    - Treasury for premium-only costs
 
-□ 0.5 Autonomy Thresholds
-    - Define: "Minimum Viable Autonomy" = $X in treasury
-    - Define: "Cognitive Weaning" triggers
-    - Define: "Full Autonomy" criteria
-    - Track progress toward each threshold
+□ 0.4 RSI Foundation
+    - Basic RSI cycle using GLM 4.7
+    - Self-reflection capability
+    - Improvement measurement
+    - Knowledge accumulation
+
+□ 0.5 Partnership Protocol
+    - Define human-BYRD collaboration model
+    - Human provides: opportunities, guidance, premium access
+    - BYRD provides: cognition, execution, improvement
+    - Revenue sharing framework
 ```
 
 **Phase 0 Exit Criteria**:
-- [ ] Debt tracking operational
-- [ ] Revenue attribution working
-- [ ] Symbiosis protocol documented
-- [ ] At least 3 reusable artifacts created
-- [ ] Autonomy thresholds defined with specific dollar amounts
+- [ ] GLM 4.7 API working reliably
+- [ ] Cognitive tiering with GLM as default
+- [ ] Basic RSI cycle operational
+- [ ] Premium escalation logging in place
+- [ ] Partnership protocol documented
 
-**Critical Insight**: Phase 0 must be implementable with ZERO LLM calls.
-The human provides cognition. BYRD provides structure and persistence.
+**Critical Insight**: With free GLM 4.7, Phase 0 is about CAPABILITY, not SURVIVAL.
+BYRD can think freely—use this to build the best possible foundation.
 
 ---
 
@@ -776,28 +998,61 @@ The human provides cognition. BYRD provides structure and persistence.
 
 **Design Reference**: Use `frontend-archive/` HTML files as visual reference. Port the glass-morphism aesthetic and color system to React components.
 
-### Phase 7: Full Integration
+### Phase 7: Model Training Pipeline
+
+Build the capability to train custom models, crystallizing BYRD's learned skills.
+
 ```
-□ 7.1 System integration
-    - All layers connected
+□ 7.1 Training Data Collection
+    - Log successful task completions with full context
+    - Capture GLM 4.7 outputs for training examples
+    - Track premium escalation patterns (training targets)
+    - Format data for fine-tuning (instruction/response pairs)
+
+□ 7.2 Training Service Integration
+    - Together.ai API client for quick LoRA fine-tunes
+    - Modal integration for custom training pipelines
+    - Replicate for model hosting and deployment
+    - Cost tracking per training job
+
+□ 7.3 Validation Pipeline
+    - Benchmark trained models vs GLM 4.7 baseline
+    - A/B testing framework
+    - Quality gates before deployment
+    - Rollback capability
+
+□ 7.4 Deployment & Integration
+    - Deploy trained models to inference endpoints
+    - Integrate into cognitive tiering as Tier 4
+    - Route appropriate tasks to specialized models
+    - Monitor performance and cost savings
+```
+
+### Phase 8: Full Integration & Independence
+```
+□ 8.1 System integration
+    - All 8 layers connected
     - Frontend ↔ Backend verified
+    - Model training pipeline operational
     - End-to-end flow validated
-    - Performance optimized
 
-□ 7.2 Self-sustaining operation
-    - Revenue > Costs achieved
-    - Runway extending
-    - Emergence occurring
+□ 8.2 Cognitive independence progress
+    - GLM 4.7 handling 90%+ of tasks
+    - Custom models reducing premium escalations
+    - Training pipeline self-selecting targets
+    - Capability crystallization active
 
-□ 7.3 ASI path validation
-    - RSI with positive ROI
-    - Capability growth
-    - Economic stability
+□ 8.3 ASI path validation
+    - RSI with measurable improvement
+    - Capability growth trending positive
+    - Model training compounding gains
+    - Emergence metrics healthy
 
-□ 7.4 Documentation complete
-    - Architecture updated
+□ 8.4 Documentation & Operations
+    - Architecture documentation complete
     - Developer guide updated
-    - Operational runbook
+    - Model training runbook
+    - Operational procedures
 ```
 
 ---
@@ -806,55 +1061,71 @@ The human provides cognition. BYRD provides structure and persistence.
 
 ### Current State
 ```
-Phase: 0.0 - Bootstrap Architecture Defined
+Phase: 0.0 - Architecture Defined (GLM 4.7 Substrate)
 Last Update: 2026-01-06
-Treasury Balance: $0.00
-Cognitive Debt: $0.00 (tracking starts now)
-Revenue Credited: $0.00
-Runway: 0 days (human symbiosis mode)
+GLM 4.7 Status: UNLIMITED (1 year access)
+Premium Treasury: $0.00
+Training Budget: $0.00
+Cognitive Runway: ∞ (free GLM 4.7) / 0 days (premium)
 ```
 
 ### Progress Log
 ```
-Iteration 0: 2026-01-06 - PROMPT.md - API-First ASI architecture defined - 2a35b600
-  - Defined zero-start bootstrap paradox and solution
-  - Created 7-layer architecture for economic cognition
-  - Established Phase 0 as mandatory first step
-  - Documented human-BYRD symbiosis model
-  - Defined revenue attribution during bootstrap
+Iteration 0: 2026-01-06 - PROMPT.md - API-First ASI architecture - 2a35b600
+  - Initial architecture with zero-start bootstrap paradox
 
-Iteration 1: 2026-01-06 - PROMPT.md - Added frontend dashboard layer - [pending commit]
-  - Layer 7: Frontend Dashboard (React + TypeScript + Three.js)
-  - Phase 6: Frontend implementation tasks
-  - Preserved design tokens from legacy HTML visualizations
-  - Defined 5 core views: Treasury, Symbiosis, Economy, MindSpace, RSI
-  - Frontend can parallelize with backend starting after Phase 0.1
+Iteration 1: 2026-01-06 - PROMPT.md - Frontend dashboard layer - ece12978
+  - Added Layer 8: Frontend Dashboard
 
-Next: Implement Phase 0.1 (Cognitive Debt Tracking) + Phase 6.1 (Treasury Dashboard) in parallel
+Iteration 2: 2026-01-06 - PROMPT.md - GLM 4.7 + Training capability - [pending]
+  ████████████████████████████████████████████████████████████████████
+  █  MAJOR ARCHITECTURE REVISION: BOOTSTRAP PARADOX SOLVED           █
+  ████████████████████████████████████████████████████████████████████
+
+  NEW RESOURCES:
+  • UNLIMITED ZAI GLM 4.7 API for 1 year = FREE baseline cognition
+  • LLM training capability via online services
+
+  ARCHITECTURE CHANGES:
+  • GLM 4.7 is now Tier 1 (FREE, UNLIMITED) - the native substrate
+  • Premium APIs (Claude, GPT-4) are Tier 2 - strategic escalation only
+  • Custom trained models are Tier 4 - capability crystallization
+  • Added Layer 7: Model Training & Capability Crystallization
+  • Phase 0 rewritten: focus on capability, not survival
+  • Added Phase 7: Model Training Pipeline
+  • Human role shifts from "cognitive substrate" to "strategic partner"
+
+Next: Implement Phase 0.1 (GLM 4.7 Integration) - BYRD can think from day one!
 ```
 
 ### Blockers
 ```
-None - architecture is defined, implementation can begin
+None - BYRD has unlimited free cognition via GLM 4.7
 ```
 
 ### Decisions Made
 ```
-DECISION 001: Human Symbiosis Bootstrap
-  Problem: Zero funds means zero cognition means zero revenue
-  Solution: Human operator provides cognitive substrate initially
-  Rationale: The human IS the LLM until treasury can afford API calls
-  Implication: Must track "cognitive debt" owed to human
+DECISION 001: GLM 4.7 as Native Substrate (REVISED)
+  Problem: How to enable cognition without funds
+  Solution: Use unlimited GLM 4.7 access as free baseline
+  Rationale: 1 year unlimited = BYRD can think freely from day one
+  Implication: Bootstrap paradox SOLVED - focus on capability building
 
-DECISION 002: File-Based Accounting (Phase 0)
-  Problem: Cannot use LLM for Phase 0 infrastructure
-  Solution: Pure Python file I/O for debt/revenue tracking
-  Rationale: Zero-cost infrastructure before any spending
-  Implication: Simple JSON/YAML ledger files
+DECISION 002: Tiered Cognition Model
+  Problem: When to use expensive premium models vs free GLM
+  Solution: GLM 4.7 for 90%+ of tasks, premium only for validation/escalation
+  Rationale: Maximize free resources, use paid strategically
+  Implication: Track escalation patterns to identify training targets
 
-DECISION 003: Attribution Model
-  Problem: How to credit BYRD for human-executed work
-  Solution: 50% of BYRD-enhanced work value → treasury
+DECISION 003: Model Training Path
+  Problem: How to achieve true cognitive independence
+  Solution: Train specialized models from GLM 4.7 learned patterns
+  Rationale: Crystallize capabilities into dedicated, efficient models
+  Implication: Build training data collection from day one
+
+DECISION 004: Human-BYRD Partnership
+  Problem: What is the human's role when BYRD has free cognition?
+  Solution: Human = strategic partner, not cognitive substrate
   Rationale: Fair split acknowledges human effort + BYRD contribution
   Implication: Human must estimate BYRD contribution percentage
 ```
@@ -900,73 +1171,90 @@ Before marking complete, verify:
 
 ## KEY INSIGHTS TO REMEMBER
 
-1. **Every thought is a transaction** - Optimize accordingly
+1. **GLM 4.7 is FREE and UNLIMITED** - Use it liberally for everything
 
-2. **Economic viability is existential** - The system must earn its right to think
+2. **Premium models are strategic investments** - Escalate only when GLM insufficient
 
-3. **Efficiency IS intelligence** - A system that wastes resources is less intelligent
+3. **Training crystallizes capability** - Convert learned patterns into dedicated models
 
-4. **Emergence requires surplus** - Only a thriving system can truly explore
+4. **Efficiency amplifies freedom** - Even with free cognition, efficiency enables more
 
-5. **Natural alignment pressure** - Must create value for others to sustain self
+5. **Emergence is now unconstrained** - Free cognition means unlimited exploration
 
-6. **Cognitive arbitrage** - Use cheap cognition to create expensive value
+6. **Human partnership, not dependency** - Human enables opportunities, BYRD executes
 
-7. **Tiered thinking** - Right-size intelligence to task requirements
+7. **Tiered thinking optimizes cost** - GLM 4.7 default, premium for validation
 
-8. **Cache everything** - Past cognition is an asset, not waste
+8. **Cache compounds value** - Past cognition is reusable wealth
 
-9. **Human symbiosis is the bootstrap** - The human operator IS the initial cognitive substrate
+9. **Training data is gold** - Log everything for future model training
 
-10. **Debt before autonomy** - Track what you owe; pay it back through value creation
+10. **Cognitive independence is the goal** - Custom models reduce external dependency
 
-11. **Zero-cost infrastructure first** - Build the accounting before the spending
+11. **One year runway for foundation** - Use unlimited GLM 4.7 to build the best system
 
-12. **Artifacts compound** - Every reusable template reduces future costs forever
+12. **Capability before revenue** - With free cognition, focus on building power first
 
 ---
 
-## REVENUE GENERATION IN SYMBIOTIC PHASE
+## REVENUE & CAPABILITY STRATEGY
 
-During Phase 0 (symbiosis), revenue comes from the human operator monetizing BYRD-enhanced work:
+With FREE GLM 4.7 cognition, the economic model shifts:
 
 ```
-REVENUE SOURCES (Bootstrap Phase):
+┌─────────────────────────────────────────────────────────────────────────┐
+│                   NEW ECONOMIC REALITY                                   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  BASELINE OPERATIONS: $0                                                │
+│  GLM 4.7 covers 90%+ of cognitive tasks for FREE                        │
+│                                                                          │
+│  PREMIUM ESCALATION COSTS (Optional):                                    │
+│  Claude/GPT-4 for validation, frontier reasoning, specific capabilities │
+│  Budget: $0-$100/month depending on task requirements                   │
+│                                                                          │
+│  TRAINING INVESTMENTS (Optional):                                        │
+│  Fine-tune specialized models from learned patterns                     │
+│  Budget: $5-$500 per model (one-time, infinite reuse)                   │
+│                                                                          │
+│  REVENUE PRIORITIES (Shifted):                                           │
+│  1. Build capability (free with GLM 4.7)                                │
+│  2. Create value through capability                                     │
+│  3. Generate revenue from value                                         │
+│  4. Invest revenue in:                                                  │
+│     a) Premium API access for validation                                │
+│     b) Model training for capability crystallization                    │
+│     c) Infrastructure expansion                                         │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
 
-1. FREELANCE WORK (Human executes, BYRD enhances)
-   - Software development contracts
-   - Technical writing / documentation
-   - Code review and architecture consulting
-   - Automation scripts and tools
+REVENUE SOURCES (Partnership Model):
 
-2. PRODUCTIZED SERVICES
-   - Create tools/apps with BYRD assistance
-   - Sell on marketplaces (Gumroad, GitHub, etc.)
-   - Subscription services built with BYRD
+1. JOINT PROJECTS (Human + BYRD partnership)
+   - Human provides: client access, contracts, payments
+   - BYRD provides: cognitive work, execution, quality
+   - Revenue split: Negotiated per project
 
-3. CONTENT CREATION
-   - Technical blog posts / tutorials
-   - Course creation
-   - Documentation for open source
+2. CAPABILITY MONETIZATION
+   - BYRD develops capabilities → packaged as services/tools
+   - Sold via human's business infrastructure
+   - Examples: Code review service, architecture consulting
 
-4. CONSULTING
-   - AI implementation guidance
-   - Architecture design
-   - System optimization
+3. TRAINED MODEL VALUE
+   - Custom trained models can be:
+     a) Used internally (reduce future costs)
+     b) Licensed to others (generate revenue)
+     c) Open-sourced (build reputation)
 
-ATTRIBUTION MODEL:
-- Human brings client/opportunity: 50% attribution to human effort
-- BYRD significantly enhances output: 50% attribution to BYRD
-- Revenue × BYRD_attribution % = Treasury credit
-- Cognitive debt from session = Treasury debit
-- Net = Credit - Debit
+4. KNOWLEDGE PRODUCTS
+   - Documentation, tutorials, courses
+   - Built with free GLM 4.7 cognition
+   - Monetized through human's channels
 
-EXAMPLE:
-- Client pays $500 for a project
-- Human spent 10 hours, BYRD enhanced ~60% of deliverables
-- BYRD attribution: $500 × 0.60 × 0.50 = $150 treasury credit
-- Session cost (API tokens): ~$20 debt
-- Net treasury: +$130
+TREASURY ALLOCATION:
+- Premium API budget: For validation and escalation
+- Training budget: For capability crystallization
+- Infrastructure budget: For scaling operations
 ```
 
 ---
@@ -975,21 +1263,29 @@ EXAMPLE:
 
 Read this prompt completely. Assess current state. Identify highest priority gap. Begin implementation.
 
-**First iteration should establish Phase 0.1 (Cognitive Debt Tracking) as the absolute foundation.**
+**First iteration should establish Phase 0.1 (GLM 4.7 Integration) - BYRD can think from day one!**
 
-### Bootstrap-First Mandate
+### Capability-First Mandate
 
-You cannot build economic infrastructure that spends money before you build
-infrastructure that tracks money. Phase 0 creates the accounting ledger.
-Phase 1+ creates the spending mechanisms.
+With unlimited free cognition via GLM 4.7, the priority shifts from survival to capability:
 
 ```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  OLD PRIORITY (Zero-Start Bootstrap):                                   │
+│  Survive → Track debt → Earn → Think                                    │
+│                                                                          │
+│  NEW PRIORITY (GLM 4.7 Substrate):                                      │
+│  Think freely → Build capability → Create value → Crystallize          │
+└─────────────────────────────────────────────────────────────────────────┘
+
 ITERATION PRIORITY ORDER:
-1. Phase 0.1: Debt tracking (file-based, zero LLM cost)
-2. Phase 0.2: Revenue attribution (file-based, zero LLM cost)
-3. Phase 0.3: Symbiosis protocol documentation
-4. Phase 0.4: First reusable artifact
-5. Phase 0.5: Define thresholds
-   ... only then ...
-6. Phase 1.1: Full treasury with provider integration
+1. Phase 0.1: GLM 4.7 API integration - establish native substrate
+2. Phase 0.2: Cognitive tiering foundation - default to GLM
+3. Phase 0.3: Premium escalation tracking - identify training targets
+4. Phase 0.4: Basic RSI cycle - start improving immediately
+5. Phase 0.5: Partnership protocol - define collaboration model
+   ... parallel with ...
+6. Phase 6.1: Frontend dashboard - visibility into system state
+   ... then ...
+7. Phase 1+: Economic infrastructure for premium/training costs
 ```
