@@ -168,8 +168,8 @@ def restart_server():
     os.execv(sys.executable, [sys.executable, str(BYRD_DIR / "server.py")])
 
 
-from event_bus import EventBus, Event, EventType, event_bus
-from llm_client import create_llm_client, LLMError
+from core.event_bus import EventBus, Event, EventType, event_bus
+from core.llm_client import create_llm_client, LLMError
 
 
 # =============================================================================
@@ -241,8 +241,11 @@ async def lifespan(app: FastAPI):
     # Subscribe connection manager to event bus
     event_bus.subscribe_async(manager.broadcast_event)
 
-    # Initialize BYRD
-    byrd_instance = BYRD()
+    # Load config and initialize BYRD
+    config_path = BYRD_DIR / "config.yaml"
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
+    byrd_instance = BYRD(config)
 
     # Connect to Neo4j immediately to avoid "Driver closed" on first request
     await byrd_instance.memory.connect()
@@ -618,7 +621,7 @@ class OmegaMetricsResponse(BaseModel):
 # =============================================================================
 
 # Import version marker for deployment verification
-from memory import MEMORY_VERSION, Memory
+from core.memory import MEMORY_VERSION, Memory
 
 @app.get("/api/version")
 async def get_version():
@@ -4400,6 +4403,151 @@ async def get_rsi_metrics():
             pass
 
     return {"rsi_metrics": rsi_metrics}
+
+
+# =============================================================================
+# RALPH ORCHESTRATION ENDPOINTS
+# =============================================================================
+
+@app.get("/api/ralph/status")
+async def get_ralph_status():
+    """
+    Get Ralph orchestration loop status.
+
+    Returns current iteration, consciousness stats, and emergence status.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        return {
+            "status": "not_initialized",
+            "message": "BYRD not initialized"
+        }
+
+    result = {
+        "status": "inactive",
+        "ralph_adapter": None,
+        "consciousness": None,
+        "emergence": None
+    }
+
+    # Check for Ralph adapter
+    if hasattr(byrd_instance, '_ralph_adapter') and byrd_instance._ralph_adapter:
+        adapter = byrd_instance._ralph_adapter
+        stats = adapter.get_stats()
+        result["ralph_adapter"] = {
+            "status": "active",
+            "iterations_completed": stats.get('iterations_completed', 0),
+            "total_time_seconds": stats.get('total_time_seconds', 0),
+            "meta_awareness_enabled": stats.get('meta_awareness_enabled', False)
+        }
+        result["status"] = "active"
+
+        # Consciousness stats
+        if 'consciousness_stats' in stats:
+            result["consciousness"] = stats['consciousness_stats']
+
+    # Check for standalone consciousness stream
+    elif hasattr(byrd_instance, '_consciousness') and byrd_instance._consciousness:
+        result["consciousness"] = byrd_instance._consciousness.get_stats()
+
+    return result
+
+
+@app.get("/api/ralph/consciousness")
+async def get_ralph_consciousness():
+    """
+    Get consciousness stream details including recent frames.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        return {"error": "BYRD not initialized"}
+
+    result = {
+        "stats": None,
+        "recent_frames": [],
+        "entropy_delta": None,
+        "circular_patterns": None
+    }
+
+    consciousness = None
+
+    # Try to get consciousness from adapter
+    if hasattr(byrd_instance, '_ralph_adapter') and byrd_instance._ralph_adapter:
+        consciousness = byrd_instance._ralph_adapter.consciousness
+
+    # Or standalone
+    elif hasattr(byrd_instance, '_consciousness'):
+        consciousness = byrd_instance._consciousness
+
+    if not consciousness:
+        return {"error": "No consciousness stream available"}
+
+    result["stats"] = consciousness.get_stats()
+
+    # Get recent frames (last 10)
+    if hasattr(consciousness, '_frames') and consciousness._frames:
+        recent = consciousness._frames[-10:]
+        result["recent_frames"] = [f.to_dict() for f in recent]
+
+        # Compute entropy delta if we have enough frames
+        if len(consciousness._frames) >= 5:
+            try:
+                result["entropy_delta"] = await consciousness.compute_entropy_delta(window=5)
+            except Exception as e:
+                result["entropy_delta"] = {"error": str(e)}
+
+        # Check for circular patterns if we have enough frames
+        if len(consciousness._frames) >= 10:
+            try:
+                result["circular_patterns"] = await consciousness.detect_circular_patterns(window=10)
+            except Exception as e:
+                result["circular_patterns"] = {"error": str(e)}
+
+    return result
+
+
+@app.get("/api/ralph/emergence")
+async def get_ralph_emergence():
+    """
+    Get emergence detection status and metrics.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        return {"error": "BYRD not initialized"}
+
+    result = {
+        "last_check": None,
+        "emerged": False,
+        "metrics": {},
+        "history": []
+    }
+
+    # Try to get emergence detector from adapter
+    if hasattr(byrd_instance, '_ralph_adapter') and byrd_instance._ralph_adapter:
+        adapter = byrd_instance._ralph_adapter
+        if hasattr(adapter, 'emergence_detector'):
+            detector = adapter.emergence_detector
+            result["metrics"] = {
+                "min_cycles": detector.config.get('min_cycles', 50),
+                "entropy_threshold": detector.config.get('entropy_threshold', 0.05)
+            }
+
+            # Get last emergence result if available
+            if hasattr(adapter, '_last_emergence_result'):
+                last = adapter._last_emergence_result
+                if last:
+                    result["last_check"] = {
+                        "emerged": last.emerged,
+                        "reason": last.reason,
+                        "confidence": last.confidence,
+                        "metrics": last.metrics
+                    }
+                    result["emerged"] = last.emerged
+
+    return result
 
 
 # =============================================================================

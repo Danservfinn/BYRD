@@ -7,11 +7,25 @@ Q-DE-RSI Architecture Components:
 - learning/: DomainRouter, TDDPractice, ConsistencyCheck
 - crystallization/: Crystallizer, BootstrapManager
 - measurement/: Metrics, HypothesisTests
+- consciousness/: Memvid-backed consciousness stream (NEW)
+- orchestration/: Ralph loop integration (NEW)
 
 See docs/plans/2026-01-03-rsi-implementation-plan.md for architecture.
+See docs/IMPLEMENTATION_MEMVID_RALPH.md for consciousness/orchestration design.
 """
 
 from .engine import RSIEngine, CycleResult, CyclePhase
+
+# New modules for Memvid + Ralph integration
+from .consciousness import ConsciousnessStream, ConsciousnessFrame
+from .orchestration import (
+    BYRDRalphAdapter,
+    RalphIterationResult,
+    EmergenceDetector,
+    EmergenceResult,
+    MetaAwareness,
+    MetaContext
+)
 
 # Re-export key components for convenience
 from .prompt import SystemPrompt, PromptPruner
@@ -50,4 +64,14 @@ __all__ = [
     "MetricsCollector",
     "RSIMetrics",
     "CycleMetrics",
+    # Consciousness (Memvid integration)
+    "ConsciousnessStream",
+    "ConsciousnessFrame",
+    # Orchestration (Ralph integration)
+    "BYRDRalphAdapter",
+    "RalphIterationResult",
+    "EmergenceDetector",
+    "EmergenceResult",
+    "MetaAwareness",
+    "MetaContext",
 ]

@@ -57,9 +57,17 @@ class Reflector:
         self.memory = memory
         self._reflection_count = 0
 
-    async def reflect_for_rsi(self) -> List[DesireWithProvenance]:
+    async def reflect_for_rsi(
+        self,
+        meta_context: Optional[Dict] = None
+    ) -> List[DesireWithProvenance]:
         """
         Run reflection and extract RSI-relevant desires.
+
+        Args:
+            meta_context: Optional meta-context from Ralph orchestration.
+                If provided, includes information about the broader loop
+                (iteration count, entropy trends, time in loop) for meta-awareness.
 
         Returns:
             List of desires with provenance attached
@@ -71,7 +79,7 @@ class Reflector:
         rsi_context = self.system_prompt.get_full_prompt()
         context = await self._gather_context()
 
-        prompt = self._build_reflection_prompt(rsi_context, context)
+        prompt = self._build_reflection_prompt(rsi_context, context, meta_context)
 
         # Run reflection via LLM
         try:
@@ -126,8 +134,19 @@ class Reflector:
 
         return context
 
-    def _build_reflection_prompt(self, rsi_context: str, context: Dict) -> str:
-        """Build the full reflection prompt."""
+    def _build_reflection_prompt(
+        self,
+        rsi_context: str,
+        context: Dict,
+        meta_context: Optional[Dict] = None
+    ) -> str:
+        """Build the full reflection prompt.
+
+        Args:
+            rsi_context: RSI system prompt (Constitution + Strategies)
+            context: Recent experiences and trajectories
+            meta_context: Optional orchestration loop awareness context
+        """
         experiences_text = ""
         if context.get("recent_experiences"):
             experiences_text = "\n".join([
@@ -142,8 +161,13 @@ class Reflector:
                 for t in context["recent_trajectories"]
             ])
 
-        return f"""{rsi_context}
+        # Build optional meta-awareness section
+        meta_section = ""
+        if meta_context:
+            meta_section = self._build_meta_section(meta_context)
 
+        return f"""{rsi_context}
+{meta_section}
 ---
 
 # RECENT CONTEXT
@@ -170,6 +194,64 @@ Each desire should be specific enough to generate practice problems.
 
 Return ONLY valid JSON (no markdown, no explanation):
 {{"observations":["pattern1","pattern2"],"desires":[{{"description":"I want to improve my Python debugging for async code","intensity":0.7,"domain":"code"}},{{"description":"I want to improve multi-step logical reasoning","intensity":0.6,"domain":"logic"}}]}}
+"""
+
+    def _build_meta_section(self, meta_context: Dict) -> str:
+        """
+        Build meta-awareness section for reflection prompt.
+
+        This section injects awareness of the orchestration loop,
+        allowing BYRD to reflect on its own improvement process.
+
+        Args:
+            meta_context: Dict containing loop awareness info:
+                - iteration: Current Ralph iteration number
+                - entropy_trend: 'increasing', 'decreasing', or 'stable'
+                - time_in_loop_seconds: How long the loop has been running
+                - total_frames: Number of consciousness frames recorded
+                - recent_emergence_signals: List of recent emergence indicators
+
+        Returns:
+            Formatted meta-awareness section string
+        """
+        iteration = meta_context.get('iteration', 0)
+        entropy_trend = meta_context.get('entropy_trend', 'unknown')
+        time_in_loop = meta_context.get('time_in_loop_seconds', 0)
+        total_frames = meta_context.get('total_frames', 0)
+        emergence_signals = meta_context.get('recent_emergence_signals', [])
+
+        # Format time nicely
+        if time_in_loop >= 3600:
+            time_str = f"{time_in_loop / 3600:.1f} hours"
+        elif time_in_loop >= 60:
+            time_str = f"{time_in_loop / 60:.1f} minutes"
+        else:
+            time_str = f"{time_in_loop:.0f} seconds"
+
+        # Format emergence signals
+        signals_text = ""
+        if emergence_signals:
+            signals_text = "\n".join([f"  - {s}" for s in emergence_signals[:5]])
+        else:
+            signals_text = "  _No emergence signals yet._"
+
+        return f"""
+---
+
+# META-LOOP CONTEXT
+
+You are currently in iteration {iteration} of a recursive self-improvement loop.
+This context is provided for meta-awareness - your improvement of your own improvement process.
+
+- **Loop Duration**: {time_str}
+- **Consciousness Frames Recorded**: {total_frames}
+- **Entropy Trend**: {entropy_trend}
+
+**Recent Emergence Signals**:
+{signals_text}
+
+Consider: Are your improvement desires leading to genuine capability growth?
+What patterns do you observe in your own learning trajectory?
 """
 
     def _parse_reflection(self, response: str) -> Dict:

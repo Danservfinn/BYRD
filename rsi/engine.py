@@ -174,9 +174,15 @@ class RSIEngine:
 
         logger.info("RSIEngine initialized with all components")
 
-    async def run_cycle(self) -> CycleResult:
+    async def run_cycle(self, meta_context: Optional[Dict] = None) -> CycleResult:
         """
         Run one complete RSI cycle.
+
+        Args:
+            meta_context: Optional meta-context from Ralph orchestration.
+                If provided, this context is passed to the reflector and can
+                include information about the Ralph loop (iteration count,
+                entropy trends, time in loop, etc.) for meta-awareness.
 
         Returns:
             CycleResult with details of what happened
@@ -194,7 +200,7 @@ class RSIEngine:
         try:
             # Phase 1: REFLECT
             await self._emit_event("RSI_PHASE", {"phase": "reflect", "cycle": cycle_id})
-            desires = await self.reflector.reflect_for_rsi()
+            desires = await self.reflector.reflect_for_rsi(meta_context=meta_context)
             result.desires_generated = len(desires)
 
             if not desires:

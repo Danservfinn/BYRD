@@ -488,6 +488,72 @@ rsi:
     auto_transition: true
 
 # =============================================================================
+# RALPH ORCHESTRATION (Memvid + Ralph Loop)
+# =============================================================================
+# Wraps RSI cycle in Ralph's Read → Execute → Check → Repeat pattern.
+# Provides resource limits, emergence detection, and consciousness stream.
+# See docs/IMPLEMENTATION_MEMVID_RALPH.md for architecture.
+ralph:
+  # Master enable/disable switch
+  enabled: true
+
+  # ---------------------------------------------------------------------------
+  # RESOURCE LIMITS
+  # ---------------------------------------------------------------------------
+  # These limits prevent runaway execution
+  limits:
+    max_iterations: 1000        # Maximum RSI cycles before stopping
+    max_cost_usd: 50.0          # Maximum spending before stopping
+    max_runtime_seconds: 14400  # Maximum runtime (4 hours)
+
+  # Git checkpoint frequency (every N iterations)
+  checkpoint_interval: 5
+
+  # ---------------------------------------------------------------------------
+  # CONSCIOUSNESS STREAM (Memvid Integration)
+  # ---------------------------------------------------------------------------
+  # Stores immutable snapshots of each RSI cycle for time-travel queries
+  consciousness:
+    enabled: true
+    path: "consciousness.mv2"   # Path to Memvid file
+    use_memvid: true            # True = Memvid, False = in-memory fallback
+
+  # ---------------------------------------------------------------------------
+  # META-AWARENESS (BYRD Knowing About The Loop)
+  # ---------------------------------------------------------------------------
+  # Controls whether BYRD can see information about its own execution context.
+  # Levels: none, minimal, moderate, full
+  meta_awareness:
+    enabled: true
+    level: "moderate"           # How much context to expose
+
+    # What each level includes:
+    # - none: BYRD doesn't know it's in a loop
+    # - minimal: Only iteration count
+    # - moderate: Iteration + basic stats (entropy trend, time)
+    # - full: All metrics including emergence criteria
+
+  # ---------------------------------------------------------------------------
+  # EMERGENCE DETECTION
+  # ---------------------------------------------------------------------------
+  # Determines when BYRD should stop iterating (genuine emergence detected)
+  emergence:
+    # Minimum cycles before checking for emergence (avoid premature termination)
+    min_cycles: 50
+
+    # Entropy delta threshold (positive = increasing diversity)
+    entropy_threshold: 0.1
+
+    # Maximum repeated patterns before flagging as circular
+    circular_tolerance: 3
+
+    # Extra weight given to heuristic crystallization
+    crystallization_weight: 0.5
+
+    # Comparison window for time-travel analysis
+    comparison_window: 100
+
+# =============================================================================
 # SELF-MODIFICATION
 # =============================================================================
 # Enables BYRD to modify its own code based on emergent desires.
