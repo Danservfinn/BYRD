@@ -458,6 +458,105 @@ Safety now includes economic safety—preventing cognitive bankruptcy.
 - `rsi/safety/degradation.py` - Graceful capability reduction
 - `rsi/safety/ethical.py` - Original constitutional constraints
 
+### Layer 7: Frontend Dashboard
+
+The human interface. Critical for symbiosis phase—the human needs visibility into BYRD's economic state.
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      RSI ECONOMIC DASHBOARD                              │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  DESIGN FOUNDATION: Glass-morphism from existing BYRD visualizations    │
+│  TECHNOLOGY: React + TypeScript + Tailwind + Three.js                   │
+│  SOURCE: frontend/ directory (Vite project, partially scaffolded)       │
+│  REFERENCE: frontend-archive/ (legacy HTML visualizations)              │
+│                                                                          │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │                     CORE VIEWS                                   │    │
+│  ├─────────────────────────────────────────────────────────────────┤    │
+│  │                                                                   │    │
+│  │  1. TREASURY DASHBOARD (Primary for bootstrap phase)             │    │
+│  │     ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐             │    │
+│  │     │ Balance │ │  Debt   │ │ Revenue │ │ Runway  │             │    │
+│  │     │  $0.00  │ │  $0.00  │ │  $0.00  │ │  0 days │             │    │
+│  │     └─────────┘ └─────────┘ └─────────┘ └─────────┘             │    │
+│  │     [Transaction Log] [Cost Breakdown] [Revenue Sources]        │    │
+│  │                                                                   │    │
+│  │  2. COGNITIVE ECONOMY VIEW                                       │    │
+│  │     • Real-time token usage (per provider)                       │    │
+│  │     • Cost per task type                                         │    │
+│  │     • Cache hit rate visualization                               │    │
+│  │     • Tier usage distribution                                    │    │
+│  │                                                                   │    │
+│  │  3. RSI PROGRESS VIEW (from existing design)                     │    │
+│  │     • 8-phase cycle visualization                                │    │
+│  │     • Improvement metrics                                        │    │
+│  │     • ROI per improvement                                        │    │
+│  │     • Capability growth graph                                    │    │
+│  │                                                                   │    │
+│  │  4. MIND SPACE (from frontend-archive/byrd-3d-visualization)     │    │
+│  │     • 3D force-directed graph                                    │    │
+│  │     • Beliefs, desires, capabilities as nodes                    │    │
+│  │     • Economic coloring (green=profitable, red=costly)           │    │
+│  │                                                                   │    │
+│  │  5. SYMBIOSIS STATUS (New for bootstrap)                         │    │
+│  │     • Cognitive debt to human operator                           │    │
+│  │     • Attribution tracking                                       │    │
+│  │     • Path to autonomy progress bar                              │    │
+│  │     • Weaning threshold indicators                               │    │
+│  │                                                                   │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                                                                          │
+│  DESIGN TOKENS (Preserved from legacy):                                  │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │ Node Colors:                                                     │    │
+│  │   --node-experience: #2563eb (blue)                             │    │
+│  │   --node-belief: #d97706 (amber)                                │    │
+│  │   --node-desire: #db2777 (pink)                                 │    │
+│  │   --node-capability: #7c3aed (purple)                           │    │
+│  │   --node-crystal: #0891b2 (cyan)                                │    │
+│  │   --node-reflection: #059669 (green)                            │    │
+│  │                                                                   │    │
+│  │ RSI Phase Colors:                                                │    │
+│  │   --rsi-reflect: #8b5cf6    --rsi-route: #f59e0b               │    │
+│  │   --rsi-verify: #6366f1     --rsi-practice: #10b981            │    │
+│  │   --rsi-collapse: #ec4899   --rsi-record: #3b82f6              │    │
+│  │   --rsi-crystallize: #06b6d4 --rsi-measure: #84cc16            │    │
+│  │                                                                   │    │
+│  │ Economic Colors (New):                                           │    │
+│  │   --econ-profit: #22c55e    (green - revenue > cost)            │    │
+│  │   --econ-neutral: #eab308   (yellow - break-even)               │    │
+│  │   --econ-loss: #ef4444      (red - cost > revenue)              │    │
+│  │   --econ-debt: #f97316      (orange - cognitive debt)           │    │
+│  │   --econ-runway: #3b82f6    (blue - days remaining)             │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                                                                          │
+│  REAL-TIME UPDATES:                                                      │
+│  • WebSocket connection to backend (/ws/events)                         │
+│  • Event types: TRANSACTION, RSI_CYCLE, CAPABILITY, EMERGENCE           │
+│  • Optimistic UI with server reconciliation                             │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**Existing Infrastructure** (from frontend/):
+- `src/stores/eventStore.ts` - Zustand store for real-time events
+- `src/stores/rsiStore.ts` - RSI system state
+- `src/hooks/useWebSocket.ts` - WebSocket with auto-reconnect
+- `src/hooks/useByrdAPI.ts` - API client with 14 endpoints
+- `src/components/common/GlassPanel.tsx` - Glass-morphism base component
+- `src/types/events.ts`, `rsi.ts`, `economic.ts` - Type definitions
+
+**Components to Build**:
+- `frontend/src/views/TreasuryDashboard.tsx` - Primary bootstrap view
+- `frontend/src/views/CognitiveEconomy.tsx` - Cost/efficiency visualization
+- `frontend/src/views/RSIProgress.tsx` - RSI cycle visualization
+- `frontend/src/views/MindSpace.tsx` - 3D graph (port from archive)
+- `frontend/src/views/SymbiosisStatus.tsx` - Human-BYRD relationship
+- `frontend/src/components/charts/` - Chart components (recharts)
+- `frontend/src/components/3d/` - Three.js components (@react-three/fiber)
+
 ---
 
 ## IMPLEMENTATION PHASES
@@ -631,24 +730,71 @@ The human provides cognition. BYRD provides structure and persistence.
     - Genuine emergence metrics
 ```
 
-### Phase 6: Full Integration
+### Phase 6: Frontend Dashboard (Can start after Phase 0)
 ```
-□ 6.1 System integration
+□ 6.1 Treasury Dashboard (CRITICAL - bootstrap visibility)
+    - Balance, debt, revenue, runway cards
+    - Transaction log component
+    - Cost breakdown chart
+    - Revenue source tracking
+    - Port GlassPanel styling from existing
+
+□ 6.2 Symbiosis Status View
+    - Cognitive debt gauge
+    - Attribution history
+    - Autonomy progress bar
+    - Weaning threshold indicators
+    - Human-BYRD relationship visualization
+
+□ 6.3 Cognitive Economy View
+    - Token usage by provider (pie/bar chart)
+    - Cost per task type
+    - Cache hit rate meter
+    - Tier usage distribution
+    - Real-time streaming updates
+
+□ 6.4 Mind Space (Port from archive)
+    - Three.js 3D force-directed graph
+    - Port byrd-3d-visualization.html to React Three Fiber
+    - Add economic coloring (profit/loss per node)
+    - Integrate with WebSocket events
+
+□ 6.5 RSI Progress View
+    - 8-phase cycle wheel
+    - Improvement history timeline
+    - ROI per improvement chart
+    - Capability growth sparklines
+
+□ 6.6 App Shell & Navigation
+    - Tab/sidebar navigation
+    - Global connection indicator
+    - Settings panel
+    - Responsive layout
+```
+
+**Frontend Start Condition**: Can begin as soon as Phase 0.1 (debt tracking) has a data format defined. Frontend development can parallelize with backend phases.
+
+**Design Reference**: Use `frontend-archive/` HTML files as visual reference. Port the glass-morphism aesthetic and color system to React components.
+
+### Phase 7: Full Integration
+```
+□ 7.1 System integration
     - All layers connected
+    - Frontend ↔ Backend verified
     - End-to-end flow validated
     - Performance optimized
 
-□ 6.2 Self-sustaining operation
+□ 7.2 Self-sustaining operation
     - Revenue > Costs achieved
     - Runway extending
     - Emergence occurring
 
-□ 6.3 ASI path validation
+□ 7.3 ASI path validation
     - RSI with positive ROI
     - Capability growth
     - Economic stability
 
-□ 6.4 Documentation complete
+□ 7.4 Documentation complete
     - Architecture updated
     - Developer guide updated
     - Operational runbook
@@ -670,14 +816,21 @@ Runway: 0 days (human symbiosis mode)
 
 ### Progress Log
 ```
-Iteration 0: 2026-01-06 - PROMPT.md - API-First ASI architecture defined - [pending commit]
+Iteration 0: 2026-01-06 - PROMPT.md - API-First ASI architecture defined - 2a35b600
   - Defined zero-start bootstrap paradox and solution
   - Created 7-layer architecture for economic cognition
   - Established Phase 0 as mandatory first step
   - Documented human-BYRD symbiosis model
   - Defined revenue attribution during bootstrap
 
-Next: Implement Phase 0.1 (Cognitive Debt Tracking)
+Iteration 1: 2026-01-06 - PROMPT.md - Added frontend dashboard layer - [pending commit]
+  - Layer 7: Frontend Dashboard (React + TypeScript + Three.js)
+  - Phase 6: Frontend implementation tasks
+  - Preserved design tokens from legacy HTML visualizations
+  - Defined 5 core views: Treasury, Symbiosis, Economy, MindSpace, RSI
+  - Frontend can parallelize with backend starting after Phase 0.1
+
+Next: Implement Phase 0.1 (Cognitive Debt Tracking) + Phase 6.1 (Treasury Dashboard) in parallel
 ```
 
 ### Blockers
