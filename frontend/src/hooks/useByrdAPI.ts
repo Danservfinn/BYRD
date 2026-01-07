@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import type { SystemStatus } from '../types/events';
 import type {
   RSIMetricsResponse,
@@ -19,12 +19,60 @@ import type {
 } from '../types/api';
 
 const API_BASE = '/api';
+const BACKEND_CHECK_KEY = 'byrd_backend_available';
 
 export function useByrdAPI() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [backendAvailable, setBackendAvailable] = useState<boolean | null>(null);
+  const hasLoggedRef = useRef(false);
+
+  // Check backend availability once on mount
+  useEffect(() => {
+    const checkBackend = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/status`, {
+          method: 'HEAD',
+          signal: AbortSignal.timeout(5000), // 5 second timeout
+        });
+
+        const available = response.ok;
+        setBackendAvailable(available);
+        localStorage.setItem(BACKEND_CHECK_KEY, available.toString());
+
+        if (!available && !hasLoggedRef.current) {
+          console.log('🟡 BYRD Demo Mode: Backend not available. Running in demo mode.');
+          hasLoggedRef.current = true;
+        } else if (available && !hasLoggedRef.current) {
+          console.log('🟢 BYRD Backend: Connected and operational.');
+          hasLoggedRef.current = true;
+        }
+      } catch {
+        setBackendAvailable(false);
+        localStorage.setItem(BACKEND_CHECK_KEY, 'false');
+
+        if (!hasLoggedRef.current) {
+          console.log('🟡 BYRD Demo Mode: Backend not available. Running in demo mode.');
+          hasLoggedRef.current = true;
+        }
+      }
+    };
+
+    // Check localStorage first to avoid unnecessary requests
+    const cached = localStorage.getItem(BACKEND_CHECK_KEY);
+    if (cached !== null) {
+      setBackendAvailable(cached === 'true');
+    }
+
+    checkBackend();
+  }, []);
 
   const fetchWithError = useCallback(async <T>(url: string, options?: RequestInit): Promise<T | null> => {
+    // If backend is known to be unavailable, return null immediately
+    if (backendAvailable === false) {
+      return null;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -43,13 +91,23 @@ export function useByrdAPI() {
       return await response.json();
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown error';
-      setError(message);
-      console.error(`API Error: ${message}`);
+
+      // If 404 or network error, mark backend as unavailable
+      if (message.includes('404') || message.includes('Failed to fetch')) {
+        setBackendAvailable(false);
+        localStorage.setItem(BACKEND_CHECK_KEY, 'false');
+      }
+
+      // Only log errors once per session type
+      if (backendAvailable === true) {
+        setError(message);
+        console.error(`API Error: ${message}`);
+      }
       return null;
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [backendAvailable]);
 
   const getStatus = useCallback(async (): Promise<SystemStatus | null> => {
     return fetchWithError<SystemStatus>('/status');
@@ -204,6 +262,7 @@ export function useByrdAPI() {
   return {
     loading,
     error,
+    backendAvailable,
     // System controls
     getStatus,
     startByrd,

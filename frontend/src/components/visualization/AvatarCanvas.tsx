@@ -52,13 +52,19 @@ export function AvatarCanvas({
     if (!containerRef.current) return;
 
     const container = containerRef.current;
-    const width = container.clientWidth;
-    const height = container.clientHeight;
+    const getDimensions = () => ({
+      width: container.clientWidth || 1,
+      height: container.clientHeight || 1,
+    });
+
+    let { width, height } = getDimensions();
 
     // Scene
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xf8fafc);
+    scene.background = new THREE.Color(0xf1f5f9); // Slightly darker for visibility
     sceneRef.current = scene;
+
+    console.log('[AvatarCanvas] Scene initialized', { width, height });
 
     // Camera
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
@@ -105,6 +111,7 @@ export function AvatarCanvas({
     createProceduralAvatar(scene);
 
     setIsLoading(false);
+    console.log('[AvatarCanvas] Scene initialization complete');
 
     // Animation loop
     let animationFrameId: number;
@@ -114,19 +121,86 @@ export function AvatarCanvas({
       // Update controls for damping
       controls.update();
 
-      // Simple animation based on state
-      if (avatarRef.current) {
+      // Animate avatar based on state
+      if (avatarRef.current && avatarRef.current.children) {
         const time = Date.now() * 0.001;
 
+        // Core sphere (index 0)
+        const core = avatarRef.current.children[0] as THREE.Mesh;
+        // Wireframe shell (index 1)
+        const shell = avatarRef.current.children[1] as THREE.Mesh;
+        // Rings (indices 2, 3, 4)
+        const ring1 = avatarRef.current.children[2] as THREE.Mesh;
+        const ring2 = avatarRef.current.children[3] as THREE.Mesh;
+        const ring3 = avatarRef.current.children[4] as THREE.Mesh;
+
         if (animationState === 'idle') {
-          avatarRef.current.rotation.y = Math.sin(time * 0.5) * 0.1;
-          avatarRef.current.position.y = Math.sin(time * 2) * 0.05;
+          // Gentle floating and slow rotation
+          avatarRef.current.position.y = Math.sin(time * 1.5) * 0.08;
+          avatarRef.current.rotation.y = Math.sin(time * 0.3) * 0.15;
+
+          // Slow ring rotations
+          if (ring1) ring1.rotation.z = time * 0.2;
+          if (ring2) ring2.rotation.x = Math.PI / 3 + Math.sin(time * 0.15) * 0.2;
+          if (ring3) ring3.rotation.y = time * 0.25;
+
+          // Subtle shell pulsing
+          if (shell && shell.scale) {
+            const scale = 1 + Math.sin(time * 2) * 0.05;
+            shell.scale.set(scale, scale, scale);
+          }
         } else if (animationState === 'thinking') {
-          avatarRef.current.rotation.y = time * 2;
-          avatarRef.current.position.y = Math.sin(time * 5) * 0.1;
+          // Fast rotation, elevated position
+          avatarRef.current.rotation.y = time * 1.5;
+          avatarRef.current.rotation.x = Math.sin(time * 2) * 0.1;
+          avatarRef.current.position.y = Math.sin(time * 3) * 0.12 + 0.2;
+
+          // Rapid ring rotations in different directions
+          if (ring1) {
+            ring1.rotation.z = time * 0.8;
+            ring1.rotation.x = Math.sin(time * 2) * 0.3;
+          }
+          if (ring2) {
+            ring2.rotation.x = time * 0.6;
+            ring2.rotation.y = Math.cos(time * 1.5) * 0.4;
+          }
+          if (ring3) {
+            ring3.rotation.y = time * 0.7;
+            ring3.rotation.z = Math.sin(time * 2.5) * 0.3;
+          }
+
+          // Shell expanding/contracting rapidly
+          if (shell && shell.scale) {
+            const scale = 1 + Math.sin(time * 8) * 0.15;
+            shell.scale.set(scale, scale, scale);
+          }
+
+          // Core pulses faster
+          if (core && core.scale) {
+            const pulse = 1 + Math.sin(time * 10) * 0.1;
+            core.scale.set(pulse, pulse, pulse);
+          }
         } else if (animationState === 'speaking') {
-          avatarRef.current.rotation.y = Math.sin(time * 3) * 0.2;
-          avatarRef.current.scale.y = 1 + Math.sin(time * 10) * 0.05;
+          // Rhythmic movement simulating speech
+          avatarRef.current.rotation.y = Math.sin(time * 5) * 0.2;
+          avatarRef.current.position.y = Math.sin(time * 8) * 0.05;
+
+          // Ring waves ripple outward
+          if (ring1) ring1.rotation.z = Math.sin(time * 4) * 0.3;
+          if (ring2) ring2.rotation.x = Math.sin(time * 4 + 1) * 0.3;
+          if (ring3) ring3.rotation.y = Math.sin(time * 4 + 2) * 0.3;
+
+          // Shell breathes rhythmically
+          if (shell && shell.scale) {
+            const scale = 1 + Math.sin(time * 6) * 0.08;
+            shell.scale.set(scale, scale, scale);
+          }
+
+          // Core pulses with speech rhythm
+          if (core && core.scale) {
+            const pulse = 1 + Math.sin(time * 12) * 0.08;
+            core.scale.set(pulse, pulse, pulse);
+          }
         }
       }
 
@@ -139,17 +213,24 @@ export function AvatarCanvas({
     // Handle resize
     const handleResize = () => {
       if (!container || !cameraRef.current || !rendererRef.current) return;
-      const width = container.clientWidth;
-      const height = container.clientHeight;
+      const width = container.clientWidth || 1;
+      const height = container.clientHeight || 1;
       cameraRef.current.aspect = width / height;
       cameraRef.current.updateProjectionMatrix();
       rendererRef.current.setSize(width, height);
     };
     window.addEventListener('resize', handleResize);
 
+    // Also use ResizeObserver for container changes
+    const resizeObserver = new ResizeObserver(() => {
+      handleResize();
+    });
+    resizeObserver.observe(container);
+
     // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
       cancelAnimationFrame(animationFrameId);
       controls.dispose();
       if (rendererRef.current && container.contains(rendererRef.current.domElement)) {
@@ -168,29 +249,87 @@ export function AvatarCanvas({
   }, [showInfo]);
 
   function createProceduralAvatar(scene: THREE.Scene) {
-    // Create a simple box as placeholder avatar
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const material = new THREE.MeshStandardMaterial({
-      color: 0x7c3aed,
-      metalness: 0.3,
-      roughness: 0.4,
-    });
-    const avatar = new THREE.Mesh(geometry, material);
-    avatar.position.set(0, 0, 0);
-    scene.add(avatar);
-    avatarRef.current = avatar;
+    console.log('[AvatarCanvas] Creating procedural avatar...');
+    // Create a sophisticated AI core avatar
+    const avatarGroup = new THREE.Group();
 
-    // Add eyes
-    const eyeGeometry = new THREE.SphereGeometry(0.1, 16, 16);
-    const eyeMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x7c3aed, emissiveIntensity: 0.5 });
+    // Core sphere (the "brain")
+    const coreGeometry = new THREE.IcosahedronGeometry(0.5, 1);
+    const coreMaterial = new THREE.MeshStandardMaterial({
+      color: 0x7c3aed,
+      metalness: 0.7,
+      roughness: 0.2,
+      emissive: 0x7c3aed,
+      emissiveIntensity: 0.3,
+      wireframe: false,
+    });
+    const core = new THREE.Mesh(coreGeometry, coreMaterial);
+    avatarGroup.add(core);
+
+    // Outer wireframe shell
+    const shellGeometry = new THREE.IcosahedronGeometry(0.7, 2);
+    const shellMaterial = new THREE.MeshBasicMaterial({
+      color: 0xa78bfa,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.4,
+    });
+    const shell = new THREE.Mesh(shellGeometry, shellMaterial);
+    avatarGroup.add(shell);
+
+    // Orbital rings (representing recursive thought)
+    const ringMaterial = new THREE.MeshStandardMaterial({
+      color: 0x7c3aed,
+      metalness: 0.8,
+      roughness: 0.1,
+      emissive: 0x7c3aed,
+      emissiveIntensity: 0.2,
+    });
+
+    const ring1Geometry = new THREE.TorusGeometry(0.9, 0.02, 16, 100);
+    const ring1 = new THREE.Mesh(ring1Geometry, ringMaterial);
+    ring1.rotation.x = Math.PI / 2;
+    avatarGroup.add(ring1);
+
+    const ring2Geometry = new THREE.TorusGeometry(1.0, 0.02, 16, 100);
+    const ring2 = new THREE.Mesh(ring2Geometry, ringMaterial);
+    ring2.rotation.x = Math.PI / 3;
+    ring2.rotation.y = Math.PI / 6;
+    avatarGroup.add(ring2);
+
+    const ring3Geometry = new THREE.TorusGeometry(0.85, 0.02, 16, 100);
+    const ring3 = new THREE.Mesh(ring3Geometry, ringMaterial);
+    ring3.rotation.y = Math.PI / 4;
+    avatarGroup.add(ring3);
+
+    // Glowing "eyes" - energy points that represent consciousness
+    const eyeGeometry = new THREE.SphereGeometry(0.12, 32, 32);
+    const eyeMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      emissive: 0x7c3aed,
+      emissiveIntensity: 0.8,
+      metalness: 0.9,
+      roughness: 0.1,
+    });
 
     const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-    leftEye.position.set(-0.2, 0.1, 0.5);
-    avatar.add(leftEye);
+    leftEye.position.set(-0.25, 0.15, 0.5);
+    avatarGroup.add(leftEye);
 
     const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-    rightEye.position.set(0.2, 0.1, 0.5);
-    avatar.add(rightEye);
+    rightEye.position.set(0.25, 0.15, 0.5);
+    avatarGroup.add(rightEye);
+
+    // Add point light at center for glow effect
+    const centerLight = new THREE.PointLight(0x7c3aed, 1, 3);
+    centerLight.position.set(0, 0, 0);
+    avatarGroup.add(centerLight);
+
+    // Position the entire avatar
+    avatarGroup.position.set(0, 0, 0);
+    scene.add(avatarGroup);
+    avatarRef.current = avatarGroup;
+    console.log('[AvatarCanvas] Avatar created successfully', { children: avatarGroup.children.length });
   }
 
   return (
@@ -257,7 +396,7 @@ export function AvatarCanvas({
             </div>
             <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
               <p className="text-[10px] text-slate-500 dark:text-slate-500">
-                Current: Procedural avatar (cat.glb coming soon)
+                AI Core avatar with recursive orbital rings
               </p>
             </div>
           </div>

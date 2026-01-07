@@ -1,7 +1,13 @@
 import { Settings, Info, FileText, Github } from 'lucide-react';
 import { GlassPanel } from '../common/GlassPanel';
+import { AppearanceSettings } from '../settings/AppearanceSettings';
+import { SystemLogs } from '../settings/SystemLogs';
+import { useState } from 'react';
 
 export function MorePage() {
+  const [showAppearance, setShowAppearance] = useState(false);
+  const [showLogs, setShowLogs] = useState(false);
+
   return (
     <div className="space-y-4 lg:space-y-6 animate-fade-in pb-20">
       {/* Header */}
@@ -22,7 +28,10 @@ export function MorePage() {
 
         <GlassPanel padding="md">
           <div className="space-y-1">
-            <button className="w-full flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors">
+            <button
+              onClick={() => setShowAppearance(true)}
+              className="w-full flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
               <div className="flex items-center gap-3">
                 <Settings className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                 <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
@@ -30,17 +39,23 @@ export function MorePage() {
                 </span>
               </div>
               <span className="text-xs text-slate-500 dark:text-slate-400">
-                Dark mode
+                Theme, colors
               </span>
             </button>
 
-            <button className="w-full flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors">
+            <button
+              onClick={() => setShowLogs(true)}
+              className="w-full flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
               <div className="flex items-center gap-3">
                 <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
                   System Logs
                 </span>
               </div>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                View events
+              </span>
             </button>
           </div>
         </GlassPanel>
@@ -109,6 +124,14 @@ export function MorePage() {
           </div>
         </GlassPanel>
       </div>
+
+      {/* Modals */}
+      {showAppearance && (
+        <AppearanceSettings onClose={() => setShowAppearance(false)} />
+      )}
+      {showLogs && (
+        <SystemLogs onClose={() => setShowLogs(false)} />
+      )}
     </div>
   );
 }

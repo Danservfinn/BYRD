@@ -1,8 +1,10 @@
 import { HashRouter, Routes, Route } from 'react-router-dom';
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { MobileLayout } from './components/layout/MobileLayout';
 import { useWebSocket } from './hooks/useWebSocket';
+import { useByrdAPI } from './hooks/useByrdAPI';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
+import { DemoModeBanner } from './components/common/DemoModeBanner';
 import './index.css';
 
 // Lazy load page components for better performance
@@ -23,27 +25,34 @@ function PageLoader() {
 }
 
 function AppContent() {
-  // Initialize WebSocket connection
+  // Initialize WebSocket connection and check backend availability
   const { isConnected } = useWebSocket();
+  const { backendAvailable } = useByrdAPI();
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   useEffect(() => {
     console.log(`WebSocket connection status: ${isConnected ? 'connected' : 'disconnected'}`);
   }, [isConnected]);
 
+  const showDemoBanner = backendAvailable === false && !bannerDismissed;
+
   return (
-    <Suspense fallback={<PageLoader />}>
-      <MobileLayout>
-        <Routes>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/home" element={<DashboardPage />} />
-          <Route path="/byrd" element={<ByrdChatPage />} />
-          <Route path="/rsi" element={<RSIPage />} />
-          <Route path="/memory" element={<MemoryPage />} />
-          <Route path="/economic" element={<EconomicPage />} />
-          <Route path="/more" element={<MorePage />} />
-        </Routes>
-      </MobileLayout>
-    </Suspense>
+    <>
+      {showDemoBanner && <DemoModeBanner onDismiss={() => setBannerDismissed(true)} />}
+      <Suspense fallback={<PageLoader />}>
+        <MobileLayout>
+          <Routes>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/home" element={<DashboardPage />} />
+            <Route path="/byrd" element={<ByrdChatPage />} />
+            <Route path="/rsi" element={<RSIPage />} />
+            <Route path="/memory" element={<MemoryPage />} />
+            <Route path="/economic" element={<EconomicPage />} />
+            <Route path="/more" element={<MorePage />} />
+          </Routes>
+        </MobileLayout>
+      </Suspense>
+    </>
   );
 }
 

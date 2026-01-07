@@ -2,15 +2,28 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useEventStore } from '../stores/eventStore';
 import type { ByrdEvent } from '../types/events';
 
+const WS_CHECK_KEY = 'byrd_websocket_available';
+
 export function useWebSocket() {
   const ws = useRef<WebSocket | null>(null);
   const reconnectAttempts = useRef(0);
-  const maxReconnectAttempts = 10;
+  const maxReconnectAttempts = 2; // Reduced from 10 to 2 for demo mode
+  const hasLoggedRef = useRef(false);
 
   const addEvent = useEventStore((state) => state.addEvent);
   const setConnected = useEventStore((state) => state.setConnected);
 
   const connect = useCallback(() => {
+    // Check if we've already determined WebSocket is unavailable
+    const wsUnavailable = localStorage.getItem(WS_CHECK_KEY) === 'false';
+    if (wsUnavailable && reconnectAttempts.current >= maxReconnectAttempts) {
+      if (!hasLoggedRef.current) {
+        console.log('🟡 BYRD Demo Mode: WebSocket not available. Real-time events disabled.');
+        hasLoggedRef.current = true;
+      }
+      return;
+    }
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws/events`;
 
@@ -18,9 +31,10 @@ export function useWebSocket() {
       ws.current = new WebSocket(wsUrl);
 
       ws.current.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('🟢 WebSocket connected');
         setConnected(true);
         reconnectAttempts.current = 0;
+        localStorage.setItem(WS_CHECK_KEY, 'true');
       };
 
       ws.current.onmessage = (event) => {
@@ -44,14 +58,21 @@ export function useWebSocket() {
         console.log('WebSocket disconnected');
         setConnected(false);
 
-        // Exponential backoff reconnect
+        // Exponential backoff reconnect with max attempts
         if (reconnectAttempts.current < maxReconnectAttempts) {
           const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
-          console.log(`Reconnecting in ${delay}ms...`);
+          console.log(`Reconnecting in ${delay}ms... (attempt ${reconnectAttempts.current + 1}/${maxReconnectAttempts})`);
           setTimeout(() => {
             reconnectAttempts.current++;
             connect();
           }, delay);
+        } else {
+          // Mark WebSocket as unavailable after max attempts
+          localStorage.setItem(WS_CHECK_KEY, 'false');
+          if (!hasLoggedRef.current) {
+            console.log('🟡 BYRD Demo Mode: WebSocket unavailable after connection attempts. Real-time events disabled.');
+            hasLoggedRef.current = true;
+          }
         }
       };
 
@@ -60,6 +81,7 @@ export function useWebSocket() {
       };
     } catch (e) {
       console.error('Failed to create WebSocket:', e);
+      localStorage.setItem(WS_CHECK_KEY, 'false');
     }
   }, [addEvent, setConnected]);
 
