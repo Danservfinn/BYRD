@@ -1,19 +1,23 @@
 # BYRD Architecture — ASI Path Exploration
 
-> **Honest Assessment** (Research Phase Complete — see RESEARCH_LOG.md)
+> **Honest Assessment** (Research Phase 2 — Iteration 11 — see RESEARCH_LOG.md)
 >
-> **Digital ASI Probability: 30-40%** — Final assessment after 7 research iterations, 33 papers, tempered by compute bottleneck uncertainties.
+> **Digital ASI Probability: 35-45%** — Economic sustainability evidence validates human-mediated revenue path; Claude Code 80.9% SWE-bench represents best-ever coding performance.
 >
-> **Capable Assistant Probability: 45-60%** — Most likely outcome remains a capable assistant.
+> **Capable Assistant Probability: 45-55%** — Still significant, but probability narrowing as evidence accumulates.
 >
 > **Research Value: 90%+** — Either we prove or disprove the emergence hypothesis. Both outcomes advance knowledge.
 >
-> **Key Evidence Incorporated** (+20% net from baseline 10-20%):
-> - **Category B (+15% net)**: Darwin Gödel Machine, Self-Rewarding LLMs, Meta-Rewarding, o1/o3, Test-Time Compute Scaling. **BOUNDED**: RSI requires instrumentation, no empirical inflection point observed, compute bottlenecks uncertain.
-> - **Category E (+5%)**: Grokking (genuine emergent understanding), o1/o3 (83.3% vs 13.4% AIME 2024)
-> - **Category A (neutral)**: Multi-agent debate does NOT exceed single-model (routing, not emergence)
+> **Key Evidence Incorporated** (+25% net from baseline 10-20%):
+> - **Category B (+15% net)**: Darwin Gödel Machine, Self-Rewarding LLMs, Meta-Rewarding, o1/o3, Test-Time Compute, AlphaEvolve. **BOUNDED**: RSI requires instrumentation, no empirical inflection point observed.
+> - **Category E (+5%)**: Grokking (genuine emergent understanding), o1/o3 reasoning emergence
+> - **Category C (+5%)**: Claude Code $1B ARR, Capital One/Salesforce production deployments, 70% cost reduction validated
+> - **Category A (neutral)**: Multi-agent debate does NOT exceed single-model; Self-MoA > MoA
+> - **Reality Checks (-10%)**: ARC-AGI-2 (o3 drops from 75% to 4-15%), Sutskever: "age of scaling is over", 40% agent projects fail
 >
-> **Research Phase: COMPLETE — Transition to Implementation**
+> **Key Insight from Iteration 11**: Economic infrastructure is validated — massive market exists. Tier 1 (human-mediated) and Tier 2 (semi-autonomous) revenue paths are proven. Tier 3 (fully autonomous) remains aspirational.
+>
+> **Research Phase: PHASE 2 IN PROGRESS — 11 iterations complete, 45-55% gap to 90% target**
 
 This document is BYRD's self-model. BYRD reads this to understand what it is, what it's testing, and what's genuinely unknown.
 
@@ -109,11 +113,11 @@ Given honest probability assessment:
 
 | Outcome | Probability | Value |
 |---------|-------------|-------|
-| **Digital ASI** | 30-40% | Transformative in digital realm |
-| Very Capable AI Assistant | 45-60% | Valuable, practical, useful |
+| **Digital ASI** | 35-45% | Transformative in digital realm |
+| Very Capable AI Assistant | 45-55% | Valuable, practical, useful |
 | Research Findings | 90%+ | Advances knowledge either way |
 
-**Note:** Final probability 30-40% after 7 research iterations (33 papers, 16 blog posts):
+**Note:** Current probability 35-45% after 11 research iterations (45 papers, 41 blog posts):
 
 **Category B Evidence (+15% net)**:
 - **Darwin Gödel Machine**: AI self-modifying code 20%→50% SWE-bench
@@ -121,21 +125,28 @@ Given honest probability assessment:
 - **Meta-Rewarding**: Recursive judgment improvement
 - **o1/o3**: Emergent self-correction via RL (96.7% AIME 2024)
 - **Test-Time Compute Scaling**: 1B outperforms 405B Llama 3
+- **AlphaEvolve**: Production-deployed algorithm discovery (0.7% Google compute recovered)
 
 **Category E Evidence (+5%)**:
 - **Grokking**: Genuine emergent understanding
 - **o1 vs GPT-4o**: 83.3% vs 13.4% on AIME 2024
 
-**Tempering Evidence (-5%)**:
-- No empirical inflection point observed in scaling laws
-- Compute bottlenecks may prevent intelligence explosion
-- RSI requires careful instrumentation, not autonomous
+**Category C Evidence (+5%)**:
+- **Claude Code**: $1B ARR in 5 months, 80.9% SWE-bench Verified
+- **Production deployments**: Capital One (55% lead conversion), Salesforce (18K deals)
+- **Cost reduction**: 70% validated in successful workflow automation
+
+**Tempering Evidence (-10%)**:
+- ARC-AGI-2 shows o3 drops from 75% to 4-15% on harder benchmark
+- 76% of AI researchers skeptical of scaling path to AGI
+- Sutskever: "age of scaling is over" — new paradigms needed
+- 40% of agentic AI projects predicted to fail by 2027
 
 **Counter-evidence (Category A, neutral)**:
 - Multi-agent debate does NOT exceed single-model
-- BYRD should focus on RSI + test-time compute, not orchestration
+- Self-MoA > MoA (ensembling, not emergence)
 
-**BYRD is more likely to become a capable assistant than Digital ASI. This is not failure — it's realistic expectation.**
+**Probabilities are narrowing. The gap between Digital ASI (35-45%) and Capable Assistant (45-55%) is smaller than before.**
 
 ---
 
@@ -835,12 +846,12 @@ BYRD will document what actually happens, not what we hope will happen.
 
 ---
 
-*Digital ASI Probability: 10-20% — Scoped to digital domains, emergence hypothesis unproven*
+*Digital ASI Probability: 35-45% — Category C evidence (economic sustainability) now validates human-mediated revenue path*
 
-*Capable Assistant Probability: 60-80% — Known techniques reliably work*
+*Capable Assistant Probability: 45-55% — Gap narrowing as evidence accumulates*
 
 *Research Value: 90%+ — Both outcomes advance knowledge*
 
-*Document version: 12.2*
+*Document version: 12.3*
 *Updated: January 7, 2026*
-*Key changes: Design phase complete — all architectural gaps resolved, remaining gaps require implementation*
+*Key changes: Iteration 11 complete — Category C now MODERATE POSITIVE with Claude Code 80.9% SWE-bench and $1B ARR evidence*

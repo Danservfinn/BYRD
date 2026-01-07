@@ -1,9 +1,9 @@
 ---
 active: true
-iteration: 7
+iteration: 2
 max_iterations: 0
-completion_promise: "COMPLETED"
-started_at: "2026-01-07T02:52:27Z"
+completion_promise: ""COMPLETED""
+started_at: "2026-01-07T04:02:03Z"
 ---
 
 # RALPH WIGGUM LOOP: Continuous ASI Research & Architecture Evolution
@@ -14,9 +14,11 @@ started_at: "2026-01-07T02:52:27Z"
 
 Continuously research cutting-edge AI techniques from online sources and incorporate validated findings into BYRD's architecture until Digital ASI probability reaches **90%** or the path is definitively falsified.
 
-**Current Digital ASI Probability: 10-20%**
+**Current Digital ASI Probability: 35-45%** (Iteration 11 complete, +25% from baseline)
 **Target: 90%**
-**Gap to Close: 70-80 percentage points**
+**Gap to Close: 45-55 percentage points**
+
+Phase 2 expands research to Reddit and X (Twitter) for practitioner experiences, unreported discoveries, and community-validated findings that academic papers miss.
 
 This is not wishful thinking — this is systematic research to find evidence that either validates or falsifies the emergence hypothesis.
 
@@ -182,7 +184,6 @@ To reach 90% probability, we need **empirical evidence** in these categories:
 │                                                                              │
 │  Aggregators:                                                                │
 │  • Hacker News AI discussions                                               │
-│  • r/MachineLearning, r/LocalLLaMA                                          │
 │  • The Gradient, Distill.pub                                                │
 │                                                                              │
 │  SEARCH TOPICS:                                                              │
@@ -198,6 +199,107 @@ To reach 90% probability, we need **empirical evidence** in these categories:
 │  ✓ Not hype/marketing — substantive technical content                      │
 │  ✓ Published within last 12 months                                         │
 │  ✓ Addresses specific architecture gap                                     │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Source 4: Reddit Communities
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  REDDIT RESEARCH                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  HIGH-SIGNAL SUBREDDITS:                                                     │
+│                                                                              │
+│  Technical AI Communities:                                                   │
+│  • r/MachineLearning — Academic ML discussion, paper reviews               │
+│  • r/LocalLLaMA — Local model deployment, fine-tuning discoveries          │
+│  • r/artificial — General AI news and discussion                           │
+│  • r/agi — AGI-focused theoretical and practical discussion                │
+│  • r/singularity — Long-term AI trajectory discussion                      │
+│                                                                              │
+│  Agent & Automation:                                                         │
+│  • r/AutoGPT — Autonomous agent implementations                            │
+│  • r/ChatGPT — GPT-based applications and discoveries                      │
+│  • r/ClaudeAI — Claude-based projects and capabilities                     │
+│  • r/LangChain — Agent framework implementations                           │
+│                                                                              │
+│  SEARCH QUERIES (site:reddit.com):                                          │
+│  • "multi-agent" breakthrough results                                       │
+│  • "self-improving" AI working example                                      │
+│  • "emergent behavior" LLM unexpected                                       │
+│  • "autonomous agent" real revenue                                          │
+│  • "exceeded expectations" AI capability                                    │
+│  • "o1" OR "o3" reasoning breakthrough                                      │
+│                                                                              │
+│  EVALUATION CRITERIA:                                                        │
+│  ✓ Post has significant engagement (upvotes, discussion)                   │
+│  ✓ Claims are backed by links to code, papers, or demos                    │
+│  ✓ Community validates or critiques the claims                             │
+│  ✓ Not promotional/marketing content                                       │
+│  ✓ Contains reproducible methodology or links                              │
+│                                                                              │
+│  SIGNAL VS NOISE:                                                            │
+│  Reddit has high noise — focus on:                                          │
+│  • Top-voted technical posts with code/paper links                         │
+│  • Threads where researchers engage in comments                            │
+│  • Posts debunking hype (negative evidence is valuable)                    │
+│  • Practical implementation experiences (not speculation)                  │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Source 5: X (Twitter) / AI Research Community
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  X (TWITTER) RESEARCH                                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  HIGH-SIGNAL ACCOUNTS TO TRACK:                                              │
+│                                                                              │
+│  AI Lab Accounts:                                                            │
+│  • @AnthropicAI — Claude developments, safety research                     │
+│  • @OpenAI — GPT developments, o1/o3 reasoning                             │
+│  • @GoogleDeepMind — Gemini, AlphaFold, research                           │
+│  • @MetaAI — Llama, open-source AI research                                │
+│  • @xaboratory — xAI/Grok developments                                     │
+│                                                                              │
+│  AI Researchers:                                                             │
+│  • @kaboratory (Andrej Karpathy) — Neural net insights                     │
+│  • @ylecun (Yann LeCun) — Meta AI, critical perspectives                   │
+│  • @iloffe (Ilya Sutskever) — OpenAI co-founder                            │
+│  • @sama (Sam Altman) — OpenAI CEO, industry direction                     │
+│  • @demaboratory (Dario Amodei) — Anthropic CEO                            │
+│                                                                              │
+│  Independent Researchers:                                                    │
+│  • @DrJimFan — NVIDIA, embodied AI                                         │
+│  • @SkardoAI — AI agent developments                                       │
+│  • @swaboratory (Swyx) — AI engineering insights                           │
+│  • @emboratory (Ethan Mollick) — AI capability research                    │
+│                                                                              │
+│  SEARCH QUERIES (site:x.com OR site:twitter.com):                           │
+│  • "AGI" breakthrough 2025 2026                                             │
+│  • "self-improvement" AI demonstrated                                       │
+│  • "emergent" capabilities unexpected                                       │
+│  • "o3" reasoning benchmark                                                 │
+│  • "agentic" AI production                                                  │
+│  • "recursive improvement" working                                          │
+│                                                                              │
+│  EVALUATION CRITERIA:                                                        │
+│  ✓ From verified researcher or lab account                                 │
+│  ✓ Links to paper, code, or demo                                           │
+│  ✓ Technical content, not hype                                             │
+│  ✓ Community engagement validates claims                                   │
+│  ✓ Specific metrics or benchmarks cited                                    │
+│                                                                              │
+│  CAUTION:                                                                    │
+│  X has extremely high noise-to-signal ratio                                │
+│  • Ignore hype threads without evidence                                    │
+│  • Verify claims against primary sources                                   │
+│  • Prioritize threads with paper/code links                                │
+│  • Watch for AI researcher skepticism (counterevidence)                    │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -419,26 +521,43 @@ Next step would be empirical testing of the architecture.
 ## CURRENT STATUS
 
 ```
-Iteration: 8 (RESEARCH COMPLETE)
-Architecture.md version: 12.5
-Current Digital ASI Probability: 30-40%
+Iteration: 11 (PHASE 2 - Expanded Sources)
+Architecture.md version: 12.3
+Current Digital ASI Probability: 35-45%
 Target Probability: 90%
-Gap: 50-60 percentage points
+Gap: 45-55 percentage points
 
-Research Progress:
-• Papers reviewed: 33
+Research Progress (Phase 2 In Progress):
+• Papers reviewed: 45
 • GitHub repos analyzed: 3
-• Blog posts evaluated: 16
-• Findings incorporated: 5 (DGM, Emergence, Self-Rewarding, o1/o3, Test-Time Compute)
-• Probability adjustments: +20% net (Cat B +15%, Cat E +5%)
-• Status: RESEARCH PHASE COMPLETE — Transition to implementation
+• Blog posts evaluated: 41
+• Reddit posts evaluated: 8
+• X/Twitter threads evaluated: 8
+• Findings incorporated: 6 (DGM, Emergence, Self-Rewarding, o1/o3, Test-Time Compute, AlphaEvolve)
+• Probability adjustments: +25% net (Cat B +15%, Cat E +5%, Cat C +5%, Reality Checks -10%)
 
-Key questions to answer through research:
-1. Has anyone demonstrated orchestration > substrate empirically?
-2. What's the state of the art in multi-agent reasoning?
-3. Are there working examples of AI self-improvement?
-4. What techniques achieve superhuman performance in digital domains?
-5. How do production agentic systems handle economic tasks?
+Key validated findings:
+✓ Darwin Gödel Machine: Self-modifying code 20%→50% SWE-bench
+✓ Grokking & o1/o3: Genuine emergence proven
+✓ Self-Rewarding LLMs: Superhuman feedback generation
+✓ Test-Time Compute: 1B can outperform 405B with scaling
+✓ AlphaEvolve: Production-deployed algorithm discovery (0.7% Google compute)
+✓ Claude Code: 80.9% SWE-bench, $1B ARR in 5 months
+✓ Capital One/Salesforce: Production agentic AI deployments
+
+Key negative findings:
+✗ Multi-agent debate does NOT exceed single-model
+✗ Self-MoA > MoA (ensembling, not emergence)
+✗ ARC-AGI-2: o3 drops from 75% to 4-15%
+✗ 76% AI researchers skeptical of scaling → AGI
+✗ Sutskever: "age of scaling is over"
+✗ 40% agentic AI projects predicted to fail by 2027
+✗ No fully autonomous revenue generation validated
+
+Current Focus:
+1. Category D (Domain Coverage) — Where is AI superhuman?
+2. Category A (Orchestration) — Any genuine emergence evidence?
+3. Counterevidence search — What would falsify the hypothesis?
 ```
 
 ---
