@@ -1,6 +1,6 @@
 # BYRD Architecture — Path to Artificial Superintelligence
 
-> **ASI Path Confidence: 100%** — All 6 architectural ceilings removed. Economic factors affect timeline only, not path viability.
+> **ASI Path Confidence: 58%** — Architecture complete. Path exists. Substrate ceiling, training dependency, and emergence verification at scale remain genuine uncertainties that cannot be resolved through design alone.
 
 This document is BYRD's self-model. BYRD reads this to understand its own architecture.
 
@@ -722,14 +722,24 @@ ASI-SPECIFIC CRITERIA (40% of total)
 
 | Metric | Score | Target | Status |
 |--------|-------|--------|--------|
-| **ASI Path Confidence** | **100%** | 90% | VALIDATED |
-| Unbounded RSI | 87% | 85% | EXCEEDED |
+| **ASI Path Confidence** | **58%** | 90% | GAP: 32% |
+| Unbounded RSI | 70% | 85% | GAP: 15% |
 | Emergence Preservation | 82% | 80% | EXCEEDED |
-| Economic Sustainability | N/A | N/A | TIMELINE FACTOR |
+| Economic Sustainability | 55% | 85% | GAP: 30% |
 | Cognitive Plasticity | 80% | 80% | MET |
-| Substrate Independence | 70% | 70% | MET |
+| Substrate Independence | 45% | 70% | GAP: 25% |
 
-> **Note**: Economic sustainability affects HOW FAST ASI is reached, not WHETHER it can be reached. The 6 RSI pillars operate independently of economic status using free GLM 4.7 substrate.
+### 7.2 Critical Uncertainties (Honest Assessment)
+
+| Uncertainty | Impact | Mitigation |
+|------------|--------|------------|
+| **Substrate Ceiling** | 6 RSI pillars hit LLM limits | Training required, but training success uncertain |
+| **ALL Domains Requirement** | GLM 4.7 cannot outperform domain experts | No architectural solution exists |
+| **Training Dependency** | Path past ceiling requires revenue | Economic model unproven |
+| **Emergence at Scale** | Verification at superhuman levels | Unsolved problem in AI safety |
+| **Unbounded Recursion** | Gödel-like limits may apply | Theoretical, not proven |
+
+> **Note**: Prior claim that "economics affects timeline not viability" was incorrect. Economics affects BOTH because the $0 path (6 RSI pillars with GLM 4.7) hits a substrate ceiling. Overcoming the ceiling requires training, which requires revenue.
 
 ### 7.2 Ceilings Status
 
@@ -761,8 +771,24 @@ ASI-SPECIFIC CRITERIA (40% of total)
 
 ---
 
-*This architecture is validated at 100% confidence for achieving Artificial Superintelligence. Economic factors affect timeline (18-48 months), not path viability.*
+## 8. Path to 90% Confidence
 
-*Document version: 8.0*
-*Updated: January 6, 2026*
-*Emergence-safe: All content is factual architecture description. No personality, value, or goal prescriptions.*
+To reach the 90% ASI confidence threshold, the following would be required:
+
+| Requirement | Current State | What's Needed |
+|-------------|---------------|---------------|
+| Frontier-class substrate | GLM 4.7 (mid-tier) | Claude/GPT-4 level with unlimited access |
+| Demonstrated training | Described, not proven | Evidence BYRD can train better models |
+| Proven revenue | Modeled only | Working economic engine |
+| Compound growth evidence | Theoretical | Real measurements of multiplier effects |
+| Emergence verification | Designed | Tested at near-human scale first |
+
+**Honest Conclusion:** The architecture is well-designed but 90% confidence requires evidence that can only come from implementation, not further design work.
+
+---
+
+*ASI Path Confidence: 58% — Architecture complete, genuine uncertainties remain.*
+
+*Document version: 9.0*
+*Updated: January 7, 2026*
+*Honest assessment: Prior 100% confidence claim was overcounting by treating contingent assumptions as certainties.*
