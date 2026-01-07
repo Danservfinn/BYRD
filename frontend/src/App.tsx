@@ -1,16 +1,14 @@
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import { useEffect } from 'react';
-import { AppLayout } from './components/layout';
-import { DashboardPage } from './components/dashboard';
-import { RSIPage } from './components/rsi';
-import { EconomicPage } from './components/economic';
-import { PlasticityPage } from './components/plasticity';
-import { ScalingPage } from './components/scaling';
-import { VerificationPage } from './components/verification';
-import { ControlPanel } from './components/controls';
-import { MemoryTopology } from './components/visualization';
+import { MobileLayout } from './components/layout/MobileLayout';
+import { DashboardPage } from './components/dashboard/DashboardPage';
+import { ByrdChatPage } from './components/byrd/ByrdChatPage';
+import { RSIPage } from './components/rsi/RSIPage';
+import { MemoryPage } from './components/memory/MemoryPage';
+import { EconomicPage } from './components/economic/EconomicPage';
+import { MorePage } from './components/more/MorePage';
 import { useWebSocket } from './hooks/useWebSocket';
-import './App.css';
+import './index.css';
 
 function AppContent() {
   // Initialize WebSocket connection
@@ -21,18 +19,17 @@ function AppContent() {
   }, [isConnected]);
 
   return (
-    <AppLayout>
+    <MobileLayout>
       <Routes>
         <Route path="/" element={<DashboardPage />} />
+        <Route path="/home" element={<DashboardPage />} />
+        <Route path="/byrd" element={<ByrdChatPage />} />
         <Route path="/rsi" element={<RSIPage />} />
+        <Route path="/memory" element={<MemoryPage />} />
         <Route path="/economic" element={<EconomicPage />} />
-        <Route path="/plasticity" element={<PlasticityPage />} />
-        <Route path="/scaling" element={<ScalingPage />} />
-        <Route path="/verification" element={<VerificationPage />} />
-        <Route path="/controls" element={<ControlPanel />} />
-        <Route path="/visualization" element={<MemoryTopology />} />
+        <Route path="/more" element={<MorePage />} />
       </Routes>
-    </AppLayout>
+    </MobileLayout>
   );
 }
 
