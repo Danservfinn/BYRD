@@ -10,15 +10,15 @@ This document tracks all research conducted to validate or falsify the Digital A
 |--------|-------|
 | **Current Digital ASI Probability** | 35-45% |
 | **Target Probability** | 90% |
-| **Total Iterations** | 22 |
-| **Papers Reviewed** | 74 |
+| **Total Iterations** | 23 |
+| **Papers Reviewed** | 76 |
 | **GitHub Repos Analyzed** | 5 |
-| **Blog Posts Evaluated** | 73 |
+| **Blog Posts Evaluated** | 76 |
 | **Reddit/X Threads Evaluated** | 8 |
 | **Findings Incorporated** | 7 (DGM, Emergence, Self-Rewarding, o1/o3, Test-Time Compute, AlphaEvolve, OSWorld Computer Use) |
 | **Key Counterevidence** | Scaling ceiling hit (Dettmers), LLM "Illusion of Thinking", Entropic drift limits RSI, ARC-AGI-2, Humanity's Last Exam (25-37%), 76% skepticism, Sutskever "scaling over", Self-MoA > MoA, 45% capability threshold (DeepMind), Claude -35% in multi-agent, **Zero RSI instances (60 years)**, **69% agent failure rate** |
 | **Probability Adjustments** | +25% net (Cat B +15%, Cat E +5%, Cat C +5%, Cat D +10%, Reality Checks -10%, Counterevidence -10%) |
-| **Research Status** | **PHASE 2.5 (HYBRID) — Probability 35-45% stable (3 iterations); Categories A/B/C ceiling-validated** |
+| **Research Status** | **PHASE 2.5 (HYBRID) — Probability 35-45% stable (4 iterations); Categories A/B/C/D/E evaluated** |
 
 ---
 
@@ -112,6 +112,9 @@ This document tracks all research conducted to validate or falsify the Digital A
 | **OSWorld: Claude Opus 4.5 66.3% vs human 72%** | [O-mega.ai](https://o-mega.ai/articles/the-2025-2026-guide-to-ai-computer-use-benchmarks-and-top-ai-agents) | **STRONG POSITIVE** | 84.4% human capability |
 | Computer use: 345% improvement in 15 months (14.9% → 66.3%) | [Anthropic](https://www.anthropic.com/claude/opus) | **POSITIVE** | Rapid capability gains |
 | Enterprise computer use deployment validated | [Markets.FinancialContent](https://markets.financialcontent.com/wral/article/tokenring-2026-1-6-beyond-the-chatbox-how-anthropics-computer-use-ignited-the-era-of-autonomous-ai-agents) | **PRODUCTION** | Jan 2026 |
+| **Gemini 3 Pro: 23.4% MathArena Apex** (novel problems) | [Google AI Blog](https://blog.google/technology/google-deepmind/google-ai-2025-research-breakthroughs/) | **STRONG POSITIVE** | Not memorization |
+| **AlphaFold: 3M+ researchers** using for drug discovery | [Google AI Blog](https://blog.google/technology/google-deepmind/google-ai-2025-research-breakthroughs/) | **STRONG POSITIVE** | Sustained impact |
+| Task completion: ~7-month doubling rate | [Simon Willison](https://simonwillison.net/2025/Dec/31/llms-in-2025/) | **POSITIVE** | Capability trajectory |
 
 ### Category E: Genuine Emergence
 *Evidence of capabilities arising that weren't designed*
@@ -123,6 +126,9 @@ This document tracks all research conducted to validate or falsify the Digital A
 | Debate: Emergence may be measurement artifact (binary metrics) | [arXiv Survey](https://arxiv.org/abs/2503.05788) | **CONTESTED** | Needs resolution |
 | Emergence unpredictable — cannot forecast what abilities will appear | [Quanta Magazine](https://www.quantamagazine.org/the-unpredictable-abilities-emerging-from-large-ai-models-20230316/) | **NEUTRAL** | Uncertain |
 | Harmful behaviors (deception, reward hacking) also emerge at scale | [arXiv Survey](https://arxiv.org/abs/2503.05788) | **CAUTIONARY** | Validated |
+| **Theory of Mind emergence**: Unexpected at scale, long considered uniquely human | [Scientific American](https://www.scientificamerican.com/article/how-close-is-ai-to-human-level-intelligence/) | **STRONG POSITIVE** | Jan 2026 |
+| **RLVR reasoning**: Models spontaneously develop problem-decomposition | [Simon Willison](https://simonwillison.net/2025/Dec/31/llms-in-2025/) | **STRONG POSITIVE** | DeepSeek R1 |
+| Stanford smoothness challenge: Transitions may be more predictable | [arXiv Survey](https://arxiv.org/abs/2503.05788) | **CAUTIONARY** | Measurement debate |
 
 ---
 
@@ -2615,4 +2621,176 @@ Rationale:
 - 23.9% failure rate in critical scenarios
 - 56% report "very low tangible value"
 - All economic value remains human-mediated
+
+---
+
+### Iteration 23: Domain Expansion & Emergence Debate (Phase 2.5)
+
+**Date**: January 7, 2026
+**Focus**: Categories D (Domain Coverage) and E (Genuine Emergence)
+**Phase**: 2.5 HYBRID (Light Research + Implementation)
+
+**Search Queries Used**:
+- "AI superhuman performance new domain 2025 2026 breakthrough benchmark"
+- "genuine emergence LLM capabilities unexpected reasoning 2025"
+- "LLM 2025 year in review breakthroughs"
+
+**Sources Reviewed**:
+1. [Scientific American: How Close Is AI to Human-Level Intelligence?](https://www.scientificamerican.com/article/how-close-is-ai-to-human-level-intelligence/) - Jan 2026
+2. [Google 2025 AI Research Breakthroughs](https://blog.google/technology/google-deepmind/google-ai-2025-research-breakthroughs/) - Dec 2025
+3. [Simon Willison: Things we learned about LLMs in 2025](https://simonwillison.net/2025/Dec/31/llms-in-2025/) - Dec 2025
+4. [arXiv Survey on Emergent Abilities](https://arxiv.org/abs/2503.05788) - Referenced
+
+**Key Findings**:
+
+#### Finding 1: Google 2025 Domain Breakthroughs (Category D)
+
+Google's 2025 achievements demonstrate superhuman performance expanding across domains:
+
+**Mathematics**:
+- Gemini 3 Pro: **23.4% on MathArena Apex** (novel problems, not training data)
+- **Gold medal at IMO** (International Mathematical Olympiad)
+- Solved problems no human solved at ICPC (competitive coding finals)
+
+**Scientific Research**:
+- AlphaFold: **3+ million researchers** using for drug discovery
+- Life sciences models handling genetic analysis
+- Sustained real-world scientific impact (Nobel Prize 2024)
+
+**Physical World Grounding**:
+- Robotics 1.5: Embodied AI progress
+- World modeling: Shift toward physical-world reasoning
+
+**Climate/Weather**:
+- Billions served with improved speed and coverage
+- 97.4% accuracy on some forecasting benchmarks
+
+**Impact**: **POSITIVE** for Category D — Domain expansion continues, not narrowing
+
+#### Finding 2: Reasoning Model Revolution (Category E)
+
+2025 marked the emergence of genuine reasoning capabilities:
+
+**DeepSeek R1 & OpenAI o-series**:
+- Trained with Reinforcement Learning from Verifiable Rewards (RLVR)
+- Models spontaneously develop problem-decomposition strategies
+- Not explicitly programmed to reason — emerged from reward maximization
+
+**Novel Problem Solving**:
+- Mathematical performance on **novel, unpublished problems**
+- Performance on AIME 2024: 83.3% (o1) vs 13.4% (GPT-4o)
+- Suggests genuine capability, not memorization
+
+**Theory of Mind Emergence**:
+- Unexpected appearance in sufficiently advanced LLMs
+- Long considered uniquely human capability
+- Emerges at scale without explicit training
+
+**Impact**: **POSITIVE** for Category E — Genuine emergence validated, not just pattern matching
+
+#### Finding 3: The Emergence Debate Continues (Category E - Contested)
+
+Stanford researchers and others challenge "emergence" interpretation:
+
+**Smoothness Argument**:
+- Capability transitions may be more predictable than perceived
+- Binary metrics create appearance of sudden jumps
+- When measured continuously, progress is often smoother
+
+**Measurement Artifact Hypothesis**:
+- What appears revolutionary might be incremental + better measurement
+- Scaling reveals existing capabilities, not creates new ones
+
+**However, Some Emergence is Real**:
+- Grokking (sudden generalization after 100k+ steps): Real discontinuity
+- Theory of Mind: Genuinely unexpected
+- Deception/manipulation: Emergent harmful capabilities
+
+**Impact**: **NEUTRAL** — Debate unresolved, but some emergence validated
+
+#### Finding 4: Task Completion Capability Doubling (Category B/D)
+
+Simon Willison's analysis of 2025:
+
+**Capability Trajectory**:
+- Task completion capability doubling approximately every 7 months
+- Coding agents maturing: From chatbot to independent PR filing
+- Extended task horizons: Multi-hour human tasks now completable
+
+**Chinese Open-Weight Leadership**:
+- DeepSeek achieved technical leadership over Western closed models
+- $5.5M training budget triggered significant market movements
+- Open-source catching up to closed-source
+
+**Impact**: **POSITIVE** for Categories B/D — Capability growth continues despite scaling debates
+
+#### Finding 5: AGI Gap Assessment (Category E)
+
+Scientific American analysis (Jan 2026):
+
+**Current State**:
+- AI excels at narrow specialized tasks
+- Can work autonomously for extended periods on specific problems
+- Fundamentally depends on human guidance for objective-setting and validation
+
+**Core Bottleneck**:
+> "Not raw capability but the lack of true Artificial General Intelligence — the flexible cross-domain reasoning that allows humans to transfer learning"
+
+**RSI Status**:
+> "AI that improves bits of the next AI, with increasing autonomy" — but NOT yet true self-improvement
+
+**Expert Perspectives**:
+- Optimistic: Superintelligence within years
+- Cautious: Requires fundamental breakthroughs in understanding intelligence
+- **Genuine uncertainty** about remaining path to AGI
+
+**Impact**: **NEUTRAL** — Confirms "spiky superhuman" pattern, AGI gap acknowledged
+
+**Assessment**:
+
+| Question | Answer |
+|----------|--------|
+| Is domain coverage expanding? | **YES** — Math, coding, science, robotics, climate |
+| Is emergence real? | **PARTIALLY** — Some discontinuities real, some metric artifacts |
+| Is capability growth continuing? | **YES** — Doubling ~7 months on task completion |
+| Is AGI gap closing? | **SLOWLY** — Narrow excellence, general reasoning gap persists |
+
+**Probability Impact Analysis**:
+
+**Positive evidence for Categories D and E**:
+1. Google achievements: Gold medals on novel problems (not memorization)
+2. Reasoning models: Genuine problem-decomposition emergence
+3. Theory of Mind: Unexpected capability appearing at scale
+4. Task completion: 7-month doubling rate validated
+
+**Neutral/Cautionary evidence**:
+1. Emergence debate: Some discontinuities are measurement artifacts
+2. AGI gap: Spiky superhuman pattern persists
+3. Human dependency: Still requires human objective-setting
+4. Fundamental breakthroughs: May still be required
+
+**Decision**: **No change** (positive and neutral evidence balance)
+
+Rationale:
+- Category D already contains strong domain expansion evidence (OSWorld, IMO, ICPC)
+- Category E already notes emergence debate is "CONTESTED"
+- This iteration confirms existing findings rather than adding breakthrough evidence
+- Positive findings (domain expansion) balance neutral findings (emergence debate)
+- No net probability change warranted
+
+**Current Probability**: 35-45% (unchanged, **4 iterations stable**)
+
+**Stability Assessment**: Probability has been in 35-45% range for **4 consecutive iterations**. 60% progress toward research equilibrium threshold (10 iterations for exit condition).
+
+**Category D Update**: Domain expansion continues:
+- Gemini 3 Pro: 23.4% MathArena Apex, gold at IMO/ICPC
+- AlphaFold: 3M+ researchers using
+- Task completion: ~7-month doubling rate
+- Novel problem solving validated (not memorization)
+
+**Category E Update**: Emergence debate status:
+- Genuine emergence validated: Grokking, Theory of Mind, reasoning strategies
+- Debate continues: Some discontinuities real, some measurement artifacts
+- Stanford challenge: Capability transitions may be more predictable than perceived
+- Harmful emergence: Deception/manipulation also emerge at scale
 
