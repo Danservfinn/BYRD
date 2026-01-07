@@ -1,21 +1,35 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* ==========================================================================
-   BYRD RSI Dashboard Theme
+   BYRD Mobile-First ASI Control Panel - Design Tokens
    ========================================================================== */
 
+/* CSS Variables - Design Tokens */
 :root {
-  /* Background colors */
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8fafc;
-  --bg-card: #ffffff;
+  /* Colors - Light Mode */
+  --color-bg-base: 255 255 255;           /* white */
+  --color-bg-surface: 248 250 252;        /* slate-50 */
+  --color-bg-elevated: 241 245 249;       /* slate-100 */
 
-  /* Glass colors */
-  --glass-fill: rgba(147, 197, 253, 0.08);
-  --glass-border: rgba(147, 197, 253, 0.35);
-  --glass-glow: rgba(147, 197, 253, 0.5);
+  --color-text-primary: 15 23 42;         /* slate-900 */
+  --color-text-secondary: 71 85 105;      /* slate-600 */
+  --color-text-tertiary: 148 163 184;     /* slate-400 */
 
-  /* Node colors */
+  --color-border-base: 226 232 240;       /* slate-200 */
+
+  /* Spacing */
+  --header-height: 56px;
+  --tab-bar-height: 64px;
+  --input-height: 56px;
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Node colors (preserve existing) */
   --node-experience: #2563eb;
   --node-belief: #d97706;
   --node-desire: #db2777;
@@ -34,35 +48,99 @@
   --rsi-record: #3b82f6;
   --rsi-crystallize: #06b6d4;
   --rsi-measure: #84cc16;
-
-  /* Economic colors */
-  --econ-revenue: #22c55e;
-  --econ-expense: #ef4444;
-  --econ-investment: #3b82f6;
-  --econ-treasury: #f59e0b;
-
-  /* Safety tiers */
-  --safety-automatic: #22c55e;
-  --safety-verified: #84cc16;
-  --safety-reviewed: #f59e0b;
-  --safety-human: #ef4444;
-  --safety-constitutional: #7c3aed;
-
-  /* Explosion phases */
-  --explosion-normal: #22c55e;
-  --explosion-elevated: #84cc16;
-  --explosion-high: #f59e0b;
-  --explosion-critical: #ef4444;
-  --explosion-runaway: #7c3aed;
 }
 
+/* Dark Mode */
 .dark {
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-card: #1e293b;
+  --color-bg-base: 15 23 42;              /* slate-900 */
+  --color-bg-surface: 30 41 59;           /* slate-800 */
+  --color-bg-elevated: 51 65 85;          /* slate-700 */
+
+  --color-text-primary: 248 250 252;      /* slate-50 */
+  --color-text-secondary: 203 213 225;    /* slate-300 */
+  --color-text-tertiary: 100 116 139;     /* slate-500 */
+
+  --color-border-base: 51 65 85;          /* slate-700 */
 }
 
-/* Glass Panel Effect */
+/* Base Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: rgb(var(--color-text-primary));
+  background-color: rgb(var(--color-bg-base));
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--color-border-base));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--color-text-tertiary));
+}
+
+/* Touch Actions */
+canvas {
+  touch-action: none; /* Prevent scrolling while interacting with 3D */
+}
+
+/* Focus Styles */
+:focus-visible {
+  outline: 2px solid rgb(124 58 237);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Utilities */
+.container-custom {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* Safe Area Insets for Mobile */
+.pb-safe {
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+}
+
+.pt-safe {
+  padding-top: calc(1rem + env(safe-area-inset-top));
+}
+
+/* Responsive Typography */
+@media (max-width: 640px) {
+  html {
+    font-size: 14px;
+  }
+}
+
+/* Glass Panel Effect (preserve existing) */
 .glass-panel {
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(12px);
@@ -77,59 +155,4 @@
 .dark .glass-panel {
   background: rgba(30, 41, 59, 0.9);
   border: 1px solid rgba(100, 116, 139, 0.3);
-}
-
-/* Animations */
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 8px var(--glass-glow); }
-  50% { box-shadow: 0 0 20px var(--glass-glow); }
-}
-
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-fade-in {
-  animation: fade-in 0.3s ease-out;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
-}
-
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.3);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.5);
-}
-
-/* Base styles */
-html, body, #root {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: var(--bg-primary);
-  color: #1e293b;
-}
-
-.dark body {
-  color: #f1f5f9;
 }
