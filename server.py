@@ -684,7 +684,7 @@ async def get_status():
 
         # Format started_at timestamp
         started_at = None
-        if byrd_instance._started_at:
+        if hasattr(byrd_instance, '_started_at') and byrd_instance._started_at:
             started_at = byrd_instance._started_at.isoformat()
 
         # Get quantum status if provider exists
