@@ -68,6 +68,11 @@ class BYRD:
         """Backward compatibility property for server.py."""
         return self.llm
 
+    @property
+    def quantum_provider(self):
+        """Backward compatibility property for server.py."""
+        return self.quantum
+
     async def start(self):
         """Initialize and start BYRD."""
         logger.info("BYRD v2 starting...")
