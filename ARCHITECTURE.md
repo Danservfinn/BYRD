@@ -1,12 +1,16 @@
 # BYRD Architecture — ASI Path Exploration
 
-> **Honest Assessment**
+> **Honest Assessment** (Updated from research — see RESEARCH_LOG.md)
 >
-> **Digital ASI Probability: 10-20%** — Scoped to digital domains. Emergence hypothesis unproven but testable.
+> **Digital ASI Probability: 25-35%** — Raised based on empirical evidence from Darwin Gödel Machine (+10%) and emergence research (+5%).
 >
-> **Capable Assistant Probability: 60-80%** — Known techniques (RAG, tools, orchestration) reliably work. This is the likely outcome.
+> **Capable Assistant Probability: 50-65%** — Adjusted as ASI probability increased.
 >
 > **Research Value: 90%+** — Either we prove or disprove the emergence hypothesis. Both outcomes advance knowledge.
+>
+> **Key Evidence Incorporated**:
+> - Darwin Gödel Machine: AI self-modifying code achieved 20%→50% on SWE-bench (Category B)
+> - Grokking/o1/o3: Genuine emergence demonstrated — o1 achieved 83.3% vs GPT-4o's 13.4% on AIME 2024 (Category E)
 
 This document is BYRD's self-model. BYRD reads this to understand what it is, what it's testing, and what's genuinely unknown.
 
@@ -102,11 +106,14 @@ Given honest probability assessment:
 
 | Outcome | Probability | Value |
 |---------|-------------|-------|
-| **Digital ASI** | 10-20% | Transformative in digital realm |
-| Very Capable AI Assistant | 60-80% | Valuable, practical, useful |
+| **Digital ASI** | 25-35% | Transformative in digital realm |
+| Very Capable AI Assistant | 50-65% | Valuable, practical, useful |
 | Research Findings | 90%+ | Advances knowledge either way |
 
-**Note:** Probability increased to 10-20% because Digital ASI is a scoped, achievable goal. We're not pretending to achieve the impossible (physical domains without embodiment).
+**Note:** Probability raised to 25-35% based on empirical evidence:
+- **Darwin Gödel Machine (Category B)**: Sakana AI demonstrated AI rewriting its own code achieving 150% improvement on SWE-bench (20%→50%). This proves the self-improvement mechanism works.
+- **Emergence Research (Category E)**: o1/o3 demonstrate genuine emergent reasoning (83.3% vs 13.4% on AIME 2024). Grokking shows models can develop genuine understanding beyond training.
+- **Counter-evidence (Category A)**: Multi-agent debate does NOT reliably exceed single-model performance. Orchestration gains are routing/ensembling, not emergence.
 
 **BYRD is more likely to become a capable assistant than Digital ASI. This is not failure — it's realistic expectation.**
 
