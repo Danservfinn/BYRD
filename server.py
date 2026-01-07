@@ -672,7 +672,7 @@ async def get_status():
         beliefs = await byrd_instance.memory.get_beliefs(limit=10)
 
         # Get LLM info
-        client = byrd_instance.llm_client
+        client = byrd_instance.llm
         model_name = client.model_name
         if "/" in model_name:
             llm_provider, llm_model = model_name.split("/", 1)
