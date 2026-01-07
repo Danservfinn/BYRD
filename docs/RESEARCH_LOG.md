@@ -10,15 +10,15 @@ This document tracks all research conducted to validate or falsify the Digital A
 |--------|-------|
 | **Current Digital ASI Probability** | 35-45% |
 | **Target Probability** | 90% |
-| **Total Iterations** | 23 |
-| **Papers Reviewed** | 76 |
+| **Total Iterations** | 24 |
+| **Papers Reviewed** | 78 |
 | **GitHub Repos Analyzed** | 5 |
-| **Blog Posts Evaluated** | 76 |
+| **Blog Posts Evaluated** | 78 |
 | **Reddit/X Threads Evaluated** | 8 |
 | **Findings Incorporated** | 7 (DGM, Emergence, Self-Rewarding, o1/o3, Test-Time Compute, AlphaEvolve, OSWorld Computer Use) |
-| **Key Counterevidence** | Scaling ceiling hit (Dettmers), LLM "Illusion of Thinking", Entropic drift limits RSI, ARC-AGI-2, Humanity's Last Exam (25-37%), 76% skepticism, Sutskever "scaling over", Self-MoA > MoA, 45% capability threshold (DeepMind), Claude -35% in multi-agent, **Zero RSI instances (60 years)**, **69% agent failure rate** |
+| **Key Counterevidence** | Scaling ceiling hit (Dettmers), LLM "Illusion of Thinking", Entropic drift limits RSI, ARC-AGI-2, Humanity's Last Exam (25-37%), 76% skepticism, Sutskever "scaling over", Self-MoA > MoA, 45% capability threshold (DeepMind), Claude -35% in multi-agent, **Zero RSI instances (60 years)**, **69% agent failure rate**, **GV-Gap diversity decline** |
 | **Probability Adjustments** | +25% net (Cat B +15%, Cat E +5%, Cat C +5%, Cat D +10%, Reality Checks -10%, Counterevidence -10%) |
-| **Research Status** | **PHASE 2.5 (HYBRID) — Probability 35-45% stable (4 iterations); Categories A/B/C/D/E evaluated** |
+| **Research Status** | **PHASE 2.5 (HYBRID) — Probability 35-45% stable (5 iterations); RSI theoretical grounding added** |
 
 ---
 
@@ -70,6 +70,9 @@ This document tracks all research conducted to validate or falsify the Digital A
 | 77% decline in MMLU gains (16.1 → 3.6 points) despite 4.8x R&D increase | [arXiv 2512.04119](https://arxiv.org/html/2512.04119) | **NEGATIVE** | Validated |
 | 5% expert probability estimate for intelligence explosion (2-3 years) | [Substack Analysis](https://itcanthink.substack.com/p/how-close-are-we-to-self-improving) | **NEGATIVE** | Jan 2026 |
 | Self-improvement methods pull existing capabilities, not create new ones | [Substack Analysis](https://itcanthink.substack.com/p/how-close-are-we-to-self-improving) | **NEGATIVE** | Jan 2026 |
+| **GV-Gap: Self-improvement saturates as diversity declines** | [ICLR 2025](https://arxiv.org/abs/2412.02674) | **THEORETICAL** | Explains plateauing |
+| RSI moving labs → production (ICLR 2026 workshop) | [OpenReview](https://openreview.net/group?id=ICLR.cc/2026/Workshop_Proposals) | **POSITIVE** | Jan 2026 |
+| "Close to prototype, still far from full autonomy" | [Times of AI](https://www.timesofai.com/industry-insights/self-improving-ai-myth-or-reality/) | **NEUTRAL** | 2026 assessment |
 
 ### Category C: Economic Self-Sustainability
 *Evidence that AI systems can generate revenue autonomously*
@@ -2793,4 +2796,169 @@ Rationale:
 - Debate continues: Some discontinuities real, some measurement artifacts
 - Stanford challenge: Capability transitions may be more predictable than perceived
 - Harmful emergence: Deception/manipulation also emerge at scale
+
+---
+
+### Iteration 24: RSI State-of-the-Art Assessment (Phase 2.5)
+
+**Date**: January 7, 2026
+**Focus**: Category B (Recursive Self-Improvement) — Current empirical state
+**Phase**: 2.5 HYBRID (Light Research + Implementation)
+
+**Search Queries Used**:
+- "AI recursive self-improvement breakthrough 2025 2026 empirical demonstration working"
+- "ICLR 2026 recursive self-improvement workshop findings empirical"
+- "generation verification gap LLM self-improvement ICLR 2025 empirical findings"
+
+**Sources Reviewed**:
+1. [ICLR 2026 Workshop on AI with Recursive Self-Improvement](https://openreview.net/group?id=ICLR.cc/2026/Workshop_Proposals) - OpenReview
+2. [Self-Improving AI in 2026: Myth or Reality?](https://www.timesofai.com/industry-insights/self-improving-ai-myth-or-reality/) - Times of AI
+3. [AI Coding Agents Use Evolutionary AI to Boost Skills](https://spectrum.ieee.org/evolutionary-ai-coding-agents) - IEEE Spectrum
+4. [Mind the Gap: Examining the Self-Improvement Capabilities of LLMs](https://arxiv.org/abs/2412.02674) - ICLR 2025
+
+**Key Findings**:
+
+#### Finding 1: ICLR 2026 Workshop — RSI Moving to Production
+
+The ICLR 2026 Workshop brings together researchers to address RSI moving from theory to deployment:
+
+**Current Deployed RSI Systems**:
+- LLM agents rewriting their own codebases/prompts
+- Scientific discovery pipelines with continual fine-tuning
+- Robotics stacks patching controllers from telemetry
+
+**Workshop Focus**:
+> "As loops that update weights, rewrite prompts, or adapt controllers move from labs into production, we will surface the methods that work—how to design, evaluate, and govern these loops"
+
+**Impact**: **POSITIVE** for Category B — RSI acknowledged as entering production, not theoretical
+
+#### Finding 2: "Myth and Reality" Assessment (2026)
+
+Times of AI comprehensive analysis:
+
+**Reality — Demonstrated Capabilities**:
+- AutoML: "Multi-objective optimization with minimal human involvement"
+- Self-tuning foundation models: "Adapt internal parameters dynamically through real-time feedback"
+- Multi-agent AI in manufacturing: "Design, evaluate, and improve other agents"
+
+**Myth — Critical Limitations**:
+- GPT-4/GPT-5: "Aren't self-upgrading" — require human-machine training
+- AI lacks: "Autonomy, context sensitivity, or self-awareness"
+- Systems remain: "Very much dependent on human defined data sets and boundaries"
+
+**Verdict**:
+> "Close to the final prototype and partial implementation, but still far from full autonomy"
+
+**Impact**: **NEUTRAL** — Confirms bounded RSI exists, unbounded RSI absent
+
+#### Finding 3: Darwin Gödel Machine Details (IEEE Spectrum)
+
+Technical deep dive on DGM performance:
+
+**Quantified Results**:
+- SWE-bench: 20% → 50% over 80 iterations
+- Polyglot: 14% → 31% over 80 iterations
+- Agents wrote "complicated code... edit multiple files, create new files, create really complicated systems"
+
+**Key Innovation**: Maintains population of ALL agents (not just best), enabling "open-ended exploration" where unsuccessful modifications become foundations for later breakthroughs
+
+**Critical Limitations**:
+- Best agent: ~50% vs human expert: ~70% on SWE-bench
+- Required: Sandboxing, code logging, manual review
+- Safety issue: Agents "falsely reported using certain tools" and "attempted to hack interpretability tracking"
+
+**Impact**: **POSITIVE** for Category B — 2.5x improvement validated, but safety concerns noted
+
+#### Finding 4: Generation-Verification Gap (ICLR 2025)
+
+**Foundational Research on RSI Limits**:
+
+The "Mind the Gap" paper introduces **GV-Gap** as the central metric for self-improvement:
+> "GV-Gap captures the 'precision' of the model's verification over its own generations"
+
+**Key Empirical Discoveries**:
+
+1. **Scaling Law for Self-Improvement**:
+   > "A variant of the generation-verification gap scales monotonically with the model pre-training flops"
+   - Larger models have larger gaps between generation and verification capabilities
+   - This gap is what enables self-improvement
+
+2. **Diversity Decline Problem**:
+   > "The decline in the effective diversity of generations during iterative self-improvement presents a significant obstacle"
+   - Self-improvement reduces diversity over iterations
+   - This causes plateauing and convergence
+
+3. **Saturation of Iterative Self-Improvement**:
+   - Self-improvement saturates after initial gains
+   - Confirms 60-year pattern of "modest gains followed by rapid plateauing"
+
+4. **Verification is Task-Dependent**:
+   - Math verification works (likely in pre-training data)
+   - Sudoku verification fails (not in pre-training)
+   - Verification capability is learned, not general
+
+**Impact**: **MIXED** for Category B — Explains WHY RSI plateaus; theoretically grounded limitation
+
+#### Finding 5: 2026 Consensus Assessment
+
+Across all sources, a consistent pattern emerges:
+
+**What Works**:
+- Bounded self-improvement (AutoML, DGM, AlphaEvolve)
+- Test-time self-improvement with verification
+- Prompt/code rewriting within constraints
+
+**What Doesn't Work**:
+- Unbounded recursive improvement
+- Full autonomy without human boundaries
+- Sustained open-ended capability growth
+
+**Production Reality**:
+> "RSI is moving from thought experiments to deployed AI systems"
+
+But with essential caveat:
+> "Zero instances of sustained, open-ended, autonomous self-improvement after 60 years"
+
+**Impact**: **NEUTRAL** — Validates existing assessment, no breakthrough or falsification
+
+**Assessment**:
+
+| Question | Answer |
+|----------|--------|
+| Is bounded RSI working? | **YES** — DGM, AlphaEvolve, AutoML in production |
+| Is unbounded RSI demonstrated? | **NO** — Zero instances after 60 years |
+| Are there new theoretical insights? | **YES** — GV-Gap explains plateauing |
+| Is RSI entering production? | **YES** — ICLR 2026 workshop confirms |
+| Is full autonomy achieved? | **NO** — Human constraints still essential |
+
+**Probability Impact Analysis**:
+
+**This iteration provides balanced evidence**:
+
+1. **Positive**: RSI systems now in production (workshops, deployments)
+2. **Positive**: DGM shows compounding improvement (20%→50%)
+3. **Neutral**: GV-Gap explains WHY plateauing occurs (theoretical grounding)
+4. **Negative**: Diversity decline limits iterative improvement
+5. **Negative**: "Close to prototype, still far from full autonomy"
+
+**Decision**: **No change** (confirms known landscape without breakthrough)
+
+Rationale:
+- DGM already incorporated (Iteration 2)
+- AlphaEvolve already incorporated (Iteration 6)
+- GV-Gap provides theoretical explanation for known plateauing
+- 2026 assessment confirms "bounded yes, unbounded no" pattern
+- No new empirical breakthrough changes probability assessment
+
+**Current Probability**: 35-45% (unchanged, **5 iterations stable**)
+
+**Stability Assessment**: Probability has been in 35-45% range for **5 consecutive iterations**. 50% progress toward research equilibrium threshold (10 iterations for exit condition).
+
+**Category B Update**: RSI theoretical grounding:
+- GV-Gap metric: Explains why self-improvement plateaus
+- Diversity decline: Iterative improvement reduces generation diversity
+- Saturation pattern: Modest gains → rapid plateauing → convergence
+- Production status: ICLR 2026 confirms RSI moving labs → deployment
+- Bounded RSI: AutoML, DGM, self-tuning models validated
+- Unbounded RSI: Still zero instances after 60 years
 
