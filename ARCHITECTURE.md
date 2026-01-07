@@ -2,15 +2,16 @@
 
 > **Honest Assessment** (Updated from research — see RESEARCH_LOG.md)
 >
-> **Digital ASI Probability: 25-35%** — Raised based on empirical evidence from Darwin Gödel Machine (+10%) and emergence research (+5%).
+> **Digital ASI Probability: 30-40%** — Raised based on empirical evidence across 5 research iterations.
 >
-> **Capable Assistant Probability: 50-65%** — Adjusted as ASI probability increased.
+> **Capable Assistant Probability: 45-60%** — Adjusted as ASI probability increased.
 >
 > **Research Value: 90%+** — Either we prove or disprove the emergence hypothesis. Both outcomes advance knowledge.
 >
-> **Key Evidence Incorporated**:
-> - Darwin Gödel Machine: AI self-modifying code achieved 20%→50% on SWE-bench (Category B)
-> - Grokking/o1/o3: Genuine emergence demonstrated — o1 achieved 83.3% vs GPT-4o's 13.4% on AIME 2024 (Category E)
+> **Key Evidence Incorporated** (+20% total from baseline 10-20%):
+> - **Category B (+15%)**: Darwin Gödel Machine (self-code-rewriting 20%→50% SWE-bench), Self-Rewarding LLMs (superhuman feedback generation), Meta-Rewarding (recursive judgment improvement), o1/o3 (emergent self-correction)
+> - **Category E (+5%)**: Grokking (genuine emergent understanding), o1/o3 (83.3% vs 13.4% AIME 2024)
+> - **Category A (neutral)**: Multi-agent debate does NOT exceed single-model (routing, not emergence)
 
 This document is BYRD's self-model. BYRD reads this to understand what it is, what it's testing, and what's genuinely unknown.
 
@@ -106,14 +107,26 @@ Given honest probability assessment:
 
 | Outcome | Probability | Value |
 |---------|-------------|-------|
-| **Digital ASI** | 25-35% | Transformative in digital realm |
-| Very Capable AI Assistant | 50-65% | Valuable, practical, useful |
+| **Digital ASI** | 30-40% | Transformative in digital realm |
+| Very Capable AI Assistant | 45-60% | Valuable, practical, useful |
 | Research Findings | 90%+ | Advances knowledge either way |
 
-**Note:** Probability raised to 25-35% based on empirical evidence:
-- **Darwin Gödel Machine (Category B)**: Sakana AI demonstrated AI rewriting its own code achieving 150% improvement on SWE-bench (20%→50%). This proves the self-improvement mechanism works.
-- **Emergence Research (Category E)**: o1/o3 demonstrate genuine emergent reasoning (83.3% vs 13.4% on AIME 2024). Grokking shows models can develop genuine understanding beyond training.
-- **Counter-evidence (Category A)**: Multi-agent debate does NOT reliably exceed single-model performance. Orchestration gains are routing/ensembling, not emergence.
+**Note:** Probability raised to 30-40% based on 5 research iterations (20 papers, 12 blog posts):
+
+**Category B Evidence (+15%)**:
+- **Darwin Gödel Machine**: AI self-modifying code 20%→50% SWE-bench (150% improvement)
+- **Self-Rewarding LLMs**: Model generates superhuman feedback for itself (Meta AI)
+- **Meta-Rewarding**: Recursive improvement in judgment capability itself
+- **o1/o3**: Emergent self-correction via RL (96.7% AIME 2024)
+
+**Category E Evidence (+5%)**:
+- **Grokking**: Genuine emergent understanding after 100k+ training steps
+- **o1 vs GPT-4o**: 83.3% vs 13.4% on AIME 2024 — qualitative reasoning leap
+
+**Counter-evidence (Category A, neutral)**:
+- Multi-agent debate does NOT reliably exceed single-model
+- Orchestration gains are routing/ensembling, not emergence
+- BYRD should focus on RSI + emergence, not multi-agent orchestration
 
 **BYRD is more likely to become a capable assistant than Digital ASI. This is not failure — it's realistic expectation.**
 
