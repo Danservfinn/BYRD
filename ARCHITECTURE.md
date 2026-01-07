@@ -1,24 +1,24 @@
 # BYRD Architecture — ASI Path Exploration
 
-> **Honest Assessment** (Research Phase 2.5 HYBRID — Iteration 18 — see RESEARCH_LOG.md)
+> **Honest Assessment** (Research Phase 2.5 HYBRID — Iteration 20 — see RESEARCH_LOG.md)
 >
-> **Digital ASI Probability: 40-50%** — Increased from 35-45% (OSWorld breakthrough: 66.3% vs human 72%).
+> **Digital ASI Probability: 35-45%** — Decreased from 40-50% (Self-MoA > MoA: ensembling, not emergence).
 >
-> **Capable Assistant Probability: 40-50%** — Equal probability with Digital ASI given new evidence.
+> **Capable Assistant Probability: 55-65%** — Probability increased given Self-MoA counterevidence.
 >
 > **Research Value: 90%+** — Either we prove or disprove the emergence hypothesis. Both outcomes advance knowledge.
 >
-> **Key Evidence Incorporated** (+30% net from baseline 10-20%):
+> **Key Evidence Incorporated** (+25% net from baseline 10-20%):
 > - **Category B (+15% net)**: Darwin Gödel Machine, Self-Rewarding LLMs, Meta-Rewarding, o1/o3, Test-Time Compute, AlphaEvolve. **BOUNDED**: RSI requires external verification to avoid entropic drift. Solver-verifier gap provides theoretical foundation.
 > - **Category E (+5%)**: Grokking (genuine emergent understanding), o1/o3 reasoning emergence
 > - **Category C (+5%)**: Claude Code $1B ARR, Capital One/Salesforce production deployments, 70% cost reduction validated
-> - **Category D (+10%)**: Superhuman in chess, Go, protein folding, competitive coding, IMO math, medical diagnosis. "Spiky" pattern — narrow domains only. **OSWorld: 66.3% (human 72%) — 345% improvement in 15 months. Enterprise computer use deployed.**
-> - **Category A (neutral overall)**: MAS +80.9% on finance, -70% on planning. Orchestration is TASK-DEPENDENT. **Gastown/VC** shows 254 issues, 90.9% quality gate, 7.2x throughput in production. Multi-agent: 80x specificity, 140x correctness (arXiv 2511.15755).
-> - **Counterevidence (-15% cumulative)**: Scaling ceiling (Dettmers), LLM "Illusion of Thinking", Entropic drift, ARC-AGI-2, Humanity's Last Exam, 76% expert skepticism
+> - **Category D (+10%)**: Superhuman in chess, Go, protein folding, competitive coding, IMO math, medical diagnosis. "Spiky" pattern — narrow domains only. OSWorld: 66.3% (human 72%) — 345% improvement in 15 months. Enterprise computer use deployed.
+> - **Category A (negative overall)**: MAS +80.9% on finance, -70% on planning. Orchestration is TASK-DEPENDENT. **Self-MoA > MoA by 6.6%** — mixing LLMs may introduce noise, ensembling outperforms emergence. Multi-agent: 80x specificity, 140x correctness (arXiv 2511.15755).
+> - **Counterevidence (-20% cumulative)**: Scaling ceiling (Dettmers), LLM "Illusion of Thinking", Entropic drift, ARC-AGI-2, Humanity's Last Exam, 76% expert skepticism, **Self-MoA > MoA**
 >
-> **Key Insight from Iteration 18**: OSWorld computer use approaching human-level (66.3% vs 72%) with 345% improvement in 15 months. Enterprise deployment validated. First probability increase since iteration 12.
+> **Key Insight from Iteration 20**: Self-MoA outperforms MoA by 6.6% on AlpacaEval 2.0. "Quality trumps diversity" — intra-model diversity exceeds inter-model diversity. This challenges the core assumption that orchestration creates emergent capabilities beyond ensembling.
 >
-> **Research Phase: PHASE 2.5 HYBRID — 18 iterations, 65 papers, 63 blog posts. Light research + implementation active.**
+> **Research Phase: PHASE 2.5 HYBRID — 20 iterations, 69 papers, 68 blog posts. Light research + implementation active.**
 
 This document is BYRD's self-model. BYRD reads this to understand what it is, what it's testing, and what's genuinely unknown.
 

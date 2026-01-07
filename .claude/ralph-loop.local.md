@@ -1,6 +1,6 @@
 ---
 active: true
-iteration: 19
+iteration: 20
 max_iterations: 0
 completion_promise: "COMPLETED"
 started_at: "2026-01-07T04:02:03Z"
@@ -14,11 +14,11 @@ started_at: "2026-01-07T04:02:03Z"
 
 Continuously research cutting-edge AI techniques from online sources and incorporate validated findings into BYRD's architecture until Digital ASI probability reaches **90%** or the path is definitively falsified.
 
-**Current Digital ASI Probability: 40-50%** (Iteration 18 complete, Phase 2.5 HYBRID)
+**Current Digital ASI Probability: 35-45%** (Iteration 20 complete, Phase 2.5 HYBRID)
 **Target: 90%**
-**Gap to Close: 40-50 percentage points**
+**Gap to Close: 45-55 percentage points**
 
-**Phase 2.5 (HYBRID)**: Light research (1-2 iterations/week) + implementation. **Probability increased +5%** in iteration 18 due to OSWorld computer use breakthrough (66.3% vs human 72%).
+**Phase 2.5 (HYBRID)**: Light research (1-2 iterations/week) + implementation. Probability decreased -5% in iteration 20 due to Self-MoA counterevidence (ensembling > emergence).
 
 Research continues in parallel with implementation of Gastown-inspired patterns.
 
@@ -521,20 +521,20 @@ Next step would be empirical testing of the architecture.
 ## CURRENT STATUS
 
 ```
-Iteration: 19 (PHASE 2.5 HYBRID - Light Research + Implementation)
+Iteration: 20 (PHASE 2.5 HYBRID - Light Research + Implementation)
 Architecture.md version: 18.0
-Current Digital ASI Probability: 40-50% (stable after iteration 18 increase)
+Current Digital ASI Probability: 35-45% (decreased after Self-MoA counterevidence)
 Target Probability: 90%
-Gap: 40-50 percentage points
+Gap: 45-55 percentage points
 
 Research Progress (Phase 2.5 HYBRID):
-• Papers reviewed: 67
+• Papers reviewed: 69
 • GitHub repos analyzed: 5 (+ Gastown, VC)
-• Blog posts evaluated: 66
+• Blog posts evaluated: 68
 • Reddit posts evaluated: 8
 • X/Twitter threads evaluated: 8
 • Findings incorporated: 7 (DGM, Emergence, Self-Rewarding, o1/o3, Test-Time Compute, AlphaEvolve, OSWorld)
-• Probability adjustments: +30% net (Cat B +15%, Cat E +5%, Cat C +5%, Cat D +10%, Reality Checks -10%, Counterevidence -5%)
+• Probability adjustments: +25% net (Cat B +15%, Cat E +5%, Cat C +5%, Cat D +10%, Reality Checks -10%, Counterevidence -10%)
 
 Key validated findings:
 ✓ Darwin Gödel Machine: Self-modifying code 20%→50% SWE-bench
@@ -577,9 +577,11 @@ Key negative findings:
 ✗ **LADDER debunked** — curriculum learning with external scaffolding, NOT true RSI
 ✗ Full autonomy rare: <10% at full autonomy, 47% at guardrails level
 ✗ Adoption gap: 11% Deloitte vs 57% LangChain — selection bias
+✗ **Self-MoA > MoA by 6.6%** — Mixing different LLMs may introduce noise (arXiv 2502.00674)
+✗ "Quality trumps diversity" — Intra-model > inter-model diversity
 
 Phase 2.5 Status:
-1. **Probability stable** — 40-50% (1 iteration stable after OSWorld increase)
+1. **Probability decreased** — 35-45% (Self-MoA challenges emergence hypothesis)
 2. **L5 autonomy gap** — <10% at full autonomy, key blocker identified
 3. **Light research continues** (1-2 iterations/week)
 4. **Implementation phase active** — Gastown patterns actionable

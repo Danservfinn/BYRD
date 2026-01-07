@@ -8,17 +8,17 @@ This document tracks all research conducted to validate or falsify the Digital A
 
 | Metric | Value |
 |--------|-------|
-| **Current Digital ASI Probability** | 40-50% |
+| **Current Digital ASI Probability** | 35-45% |
 | **Target Probability** | 90% |
-| **Total Iterations** | 19 |
-| **Papers Reviewed** | 67 |
+| **Total Iterations** | 20 |
+| **Papers Reviewed** | 69 |
 | **GitHub Repos Analyzed** | 5 |
-| **Blog Posts Evaluated** | 66 |
+| **Blog Posts Evaluated** | 68 |
 | **Reddit/X Threads Evaluated** | 8 |
 | **Findings Incorporated** | 7 (DGM, Emergence, Self-Rewarding, o1/o3, Test-Time Compute, AlphaEvolve, OSWorld Computer Use) |
-| **Key Counterevidence** | Scaling ceiling hit (Dettmers), LLM "Illusion of Thinking", Entropic drift limits RSI, ARC-AGI-2, Humanity's Last Exam (25-37%), 76% skepticism, Sutskever "scaling over" |
-| **Probability Adjustments** | +30% net (Cat B +15%, Cat E +5%, Cat C +5%, Cat D +10%, Reality Checks -10%, Counterevidence -5%) |
-| **Research Status** | **PHASE 2.5 (HYBRID) — Probability increased to 40-50% (OSWorld breakthrough); light research + implementation** |
+| **Key Counterevidence** | Scaling ceiling hit (Dettmers), LLM "Illusion of Thinking", Entropic drift limits RSI, ARC-AGI-2, Humanity's Last Exam (25-37%), 76% skepticism, Sutskever "scaling over", **Self-MoA > MoA (ensembling, not emergence)** |
+| **Probability Adjustments** | +25% net (Cat B +15%, Cat E +5%, Cat C +5%, Cat D +10%, Reality Checks -10%, Counterevidence -10%) |
+| **Research Status** | **PHASE 2.5 (HYBRID) — Probability 35-45% (Self-MoA counterevidence); light research + implementation** |
 
 ---
 
@@ -43,6 +43,8 @@ This document tracks all research conducted to validate or falsify the Digital A
 | **Multi-agent: 80x specificity, 140x correctness on incident response** | [arXiv 2511.15755](https://arxiv.org/abs/2511.15755) | **STRONG POSITIVE** | Controlled trials |
 | Zero variance enables production SLA commitments | [arXiv 2511.15755](https://arxiv.org/abs/2511.15755) | **PRODUCTION** | Validated |
 | 57% agents in production (LangChain 2026) vs 11% (Deloitte) — selection bias | [LangChain Survey](https://www.langchain.com/state-of-agent-engineering) | **CAUTIONARY** | Gap persists |
+| **Self-MoA > MoA by 6.6%** — Mixing different LLMs may introduce noise | [arXiv 2502.00674](https://arxiv.org/abs/2502.00674) | **NEGATIVE** | Challenges emergence hypothesis |
+| "Quality trumps diversity" — Intra-model > inter-model diversity | [arXiv 2502.00674](https://arxiv.org/abs/2502.00674) | **NEGATIVE** | Ensembling, not emergence |
 
 ### Category B: Recursive Self-Improvement
 *Evidence that AI systems can genuinely improve themselves*
@@ -2229,4 +2231,116 @@ Rationale:
 - 100+ documented abilities remain empirical fact
 - Data quality affects emergence timing
 - Scientific debate unresolved
+
+---
+
+### Iteration 20: Self-MoA Challenge & Autonomy Reality Check (Phase 2.5)
+
+**Date**: January 7, 2026
+**Source Type**: Academic papers, industry analysis
+**Research Focus**: MoA evidence reassessment and autonomous agent reality
+
+**Context**: Fourth light research iteration. Investigating Category A evidence validity.
+
+**Sources Reviewed**:
+1. [Rethinking Mixture-of-Agents: Self-MoA](https://arxiv.org/abs/2502.00674) - arXiv Feb 2025
+2. [Self-MoA Analysis](https://arxiv.org/html/2502.00674v1) - Full paper
+3. [AI Agents Explained 2026](https://aitoolinsight.com/ai-agents-explained/) - Industry overview
+4. [LLM Bubble Bursting](https://medium.com/generative-ai-revolution-ai-native-transformation/the-llm-bubble-is-bursting-the-2026-ai-reset-powering-agentic-engineering-085da564b6cd) - Industry analysis
+5. [Recursive Language Models](https://www.primeintellect.ai/blog/rlm) - Prime Intellect
+
+**Key Findings — CRITICAL CATEGORY A CHALLENGE**:
+
+#### Finding 1: Self-MoA Outperforms MoA — Mixing LLMs May Not Help
+> "Self-MoA outperforms standard MoA that mixes different LLMs in a large number of scenarios"
+> "6.6% improvement over MoA on AlpacaEval 2.0"
+> "3.8% average improvement across MMLU, CRUX, and MATH"
+
+[arXiv 2502.00674](https://arxiv.org/abs/2502.00674) challenges our Category A assumptions:
+
+**Original MoA claim**: Mixing diverse LLMs creates emergent capability
+**Self-MoA finding**: Single best model sampled multiple times outperforms mixed models
+
+**Key insight**:
+- **Quality trumps diversity** — mixing introduces lower-performing models
+- **Intra-model diversity > inter-model diversity** — sample same model multiple times
+- Self-MoA achieves **new state-of-the-art** on AlpacaEval 2.0
+
+**Impact**: **NEGATIVE** for Category A. This undermines the "orchestration exceeds substrate" hypothesis. The gains from MoA may be **ensembling**, not emergence.
+
+#### Finding 2: "True Autonomy is Rare and Often Undesirable"
+> "Many systems labeled as 'autonomous agents' are heavily scaffolded behind the scenes"
+> "They rely on predefined workflows, narrow toolsets, and extensive guardrails"
+> "Effective agents are constrained executors, not independent thinkers"
+
+Industry reality check confirms iteration 19 findings:
+- "Full autonomy" claims are often overstated
+- Production agents are "constrained executors"
+- Unpredictable behavior and silent failure modes are common
+
+**Impact**: **CAUTIONARY** for Category C. Reinforces L5 autonomy gap.
+
+#### Finding 3: 2026 Paradigm Shift — Small Specialist Models
+> "The 2026 AI Reset is shifting toward small specialist models, model fleets, and Agentic Engineering"
+> "The belief that a single language model could anchor everything was becoming structurally unsound"
+> "Language alone cannot supply the full cognitive substrate"
+
+This suggests a shift in industry direction:
+- Away from single large models
+- Toward specialized model fleets
+- Recognition of language-only limitations
+
+**Impact**: **MIXED**. Validates multi-model approach, but questions whether this is "emergence" or just "engineering."
+
+#### Finding 4: Progress from Inference, Not Training
+> "2026's capability jumps will stem from better tool ecosystems and inference strategies, not raw model size"
+> "Progress will be real but sourced from deployment innovation rather than training breakthroughs"
+
+[Simon Willison's analysis](https://simonwillison.net/2025/Dec/31/the-year-in-llms/) and Prime Intellect's RLM paper suggest:
+- Inference-time compute is the new frontier
+- Test-time scaling is where gains are happening
+- This aligns with our o1/o3 and test-time compute findings
+
+**Impact**: **NEUTRAL**. Confirms existing findings without new breakthrough.
+
+**Assessment**:
+
+| Question | Answer |
+|----------|--------|
+| Does MoA prove orchestration > substrate? | **CHALLENGED** — Self-MoA suggests ensembling, not emergence |
+| Is true autonomy being achieved? | **NO** — Industry confirms "constrained executors" |
+| Where is progress coming from? | **Inference/deployment** — Not training scale |
+| Does this change probability? | **POSSIBLY** — Self-MoA is significant counterevidence |
+
+**Probability Impact Analysis**:
+
+**Self-MoA is significant counterevidence**:
+1. Directly challenges Category A assumptions
+2. Published February 2025, peer-reviewed quality
+3. Achieves SOTA with single-model approach
+4. Suggests MoA gains are ensembling, not emergence
+
+**However**:
+1. Self-MoA still shows improvement from multi-sampling
+2. Different from task-specific orchestration (MAS +80% finance)
+3. Doesn't invalidate test-time compute or o1/o3 reasoning
+4. Industry still moving toward multi-model architectures
+
+**Decision**: **-5% adjustment** (counterevidence warrants decrease)
+
+Rationale:
+- Self-MoA directly challenges the MoA evidence we used for Category A
+- "Quality trumps diversity" undermines the emergence hypothesis
+- However, it doesn't invalidate all orchestration evidence (task-specific MAS, incident response)
+- Conservative decrease: -5% rather than -10%
+
+**Updated Probability**: 35-45% (was 40-50%, returning to pre-OSWorld range)
+
+**This is an honest adjustment** — we increased probability based on computer use, and now decrease based on Self-MoA challenge to orchestration.
+
+**Category A Update**: Added Self-MoA counterevidence:
+- Self-MoA > MoA by 6.6% on AlpacaEval 2.0
+- Intra-model diversity > inter-model diversity
+- Quality trumps diversity — mixing introduces noise
+- MoA gains may be ensembling, NOT emergence
 
