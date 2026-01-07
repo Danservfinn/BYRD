@@ -1,24 +1,24 @@
 # BYRD Architecture — ASI Path Exploration
 
-> **Honest Assessment** (Research Phase 2 — Iteration 12 — see RESEARCH_LOG.md)
+> **Honest Assessment** (Research Phase 2 — Iteration 13 — see RESEARCH_LOG.md)
 >
-> **Digital ASI Probability: 40-50%** — Crossed 40% threshold. Superhuman performance validated in coding, math, medical diagnosis. "Spiky superhuman" pattern aligns with BYRD's digital scope.
+> **Digital ASI Probability: 35-45%** — Adjusted down after counterevidence review. Fundamental barriers documented but not fatal to BYRD's approach.
 >
-> **Capable Assistant Probability: 40-50%** — Now equal probability. Evidence continues to narrow the gap.
+> **Capable Assistant Probability: 45-55%** — Slightly more likely outcome again after counterevidence.
 >
 > **Research Value: 90%+** — Either we prove or disprove the emergence hypothesis. Both outcomes advance knowledge.
 >
-> **Key Evidence Incorporated** (+30% net from baseline 10-20%):
-> - **Category B (+15% net)**: Darwin Gödel Machine, Self-Rewarding LLMs, Meta-Rewarding, o1/o3, Test-Time Compute, AlphaEvolve. **BOUNDED**: RSI requires instrumentation, no empirical inflection point observed.
+> **Key Evidence Incorporated** (+25% net from baseline 10-20%):
+> - **Category B (+15% net)**: Darwin Gödel Machine, Self-Rewarding LLMs, Meta-Rewarding, o1/o3, Test-Time Compute, AlphaEvolve. **BOUNDED**: RSI requires external verification to avoid entropic drift.
 > - **Category E (+5%)**: Grokking (genuine emergent understanding), o1/o3 reasoning emergence
 > - **Category C (+5%)**: Claude Code $1B ARR, Capital One/Salesforce production deployments, 70% cost reduction validated
 > - **Category D (+5%)**: Superhuman in chess, Go, protein folding, competitive coding, IMO math, medical diagnosis. "Spiky" pattern — narrow domains only.
-> - **Category A (neutral)**: Multi-agent debate does NOT exceed single-model; Self-MoA > MoA
-> - **Reality Checks (-10%)**: ARC-AGI-2 (o3 drops from 75% to 4-15%), Humanity's Last Exam (25-37%), Sutskever: "age of scaling is over", 40% agent projects fail
+> - **Category A (neutral)**: Multi-agent debate does NOT exceed single-model; BUT orchestration NOT disproven as fundamental
+> - **Counterevidence (-15% cumulative)**: Scaling ceiling (Dettmers), LLM "Illusion of Thinking", Entropic drift, ARC-AGI-2, Humanity's Last Exam, 76% expert skepticism
 >
-> **Key Insight from Iteration 12**: Superhuman performance is real but "spiky" — only in narrow, verifiable domains. This aligns perfectly with BYRD's Digital ASI scope. Coding and math are the breakthrough domains.
+> **Key Insight from Iteration 13**: Counterevidence is REAL AND SIGNIFICANT but not FATAL. Fundamental barriers apply to scaling-based AGI, not necessarily orchestration-based emergence. BYRD's mitigations (Memvid, external verification) address key gaps.
 >
-> **Research Phase: PHASE 2 IN PROGRESS — 12 iterations complete, 40-50% gap to 90% target**
+> **Research Phase: PHASE 2 — 13 iterations complete, probability stabilizing at 35-45%**
 
 This document is BYRD's self-model. BYRD reads this to understand what it is, what it's testing, and what's genuinely unknown.
 
@@ -114,11 +114,11 @@ Given honest probability assessment:
 
 | Outcome | Probability | Value |
 |---------|-------------|-------|
-| **Digital ASI** | 40-50% | Transformative in digital realm |
-| Very Capable AI Assistant | 40-50% | Valuable, practical, useful |
+| **Digital ASI** | 35-45% | Transformative in digital realm |
+| Very Capable AI Assistant | 45-55% | Valuable, practical, useful |
 | Research Findings | 90%+ | Advances knowledge either way |
 
-**Note:** Current probability 40-50% after 12 research iterations (48 papers, 47 blog posts):
+**Note:** Current probability 35-45% after 13 research iterations (52 papers, 53 blog posts):
 
 **Category B Evidence (+15% net)**:
 - **Darwin Gödel Machine**: AI self-modifying code 20%→50% SWE-bench

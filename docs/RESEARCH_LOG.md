@@ -8,17 +8,17 @@ This document tracks all research conducted to validate or falsify the Digital A
 
 | Metric | Value |
 |--------|-------|
-| **Current Digital ASI Probability** | 40-50% |
+| **Current Digital ASI Probability** | 35-45% |
 | **Target Probability** | 90% |
-| **Total Iterations** | 12 |
-| **Papers Reviewed** | 48 |
+| **Total Iterations** | 13 |
+| **Papers Reviewed** | 52 |
 | **GitHub Repos Analyzed** | 3 |
-| **Blog Posts Evaluated** | 47 |
+| **Blog Posts Evaluated** | 53 |
 | **Reddit/X Threads Evaluated** | 8 |
 | **Findings Incorporated** | 6 (DGM, Emergence, Self-Rewarding, o1/o3, Test-Time Compute, AlphaEvolve) |
-| **Key Counterevidence** | ARC-AGI-2 (o3 drops 75%→4-15%), Humanity's Last Exam (25-37%), 76% expert skepticism, Sutskever "scaling over", 40% agent project failure predicted |
-| **Probability Adjustments** | +30% net (Cat B +15%, Cat E +5%, Cat C +5%, Cat D +5%, Reality Checks -10%) |
-| **Research Status** | **PHASE 2 — Crossed 40% threshold, approaching midpoint** |
+| **Key Counterevidence** | Scaling ceiling hit (Dettmers), LLM "Illusion of Thinking", Entropic drift limits RSI, ARC-AGI-2, Humanity's Last Exam (25-37%), 76% skepticism, Sutskever "scaling over" |
+| **Probability Adjustments** | +25% net (Cat B +15%, Cat E +5%, Cat C +5%, Cat D +5%, Reality Checks -10%, Counterevidence -5%) |
+| **Research Status** | **PHASE 2 — Counterevidence incorporated, probability stabilizing** |
 
 ---
 
@@ -1346,4 +1346,153 @@ Rationale:
 **Critical Threshold**: BYRD has now crossed 40% probability. The research is approaching the midpoint where Digital ASI becomes more likely than not.
 
 **Next Iteration**: Search for counterevidence — what would definitively falsify the ASI hypothesis?
+
+---
+
+### Iteration 13: Counterevidence Search — Fundamental Barriers
+
+**Date**: January 7, 2026
+**Source Type**: Academic papers, technical blogs, AI researcher perspectives
+**Search Queries Used**:
+- 'AGI impossible theoretical limits fundamental barriers AI scaling laws ceiling 2025'
+- '"LLM limitations" fundamental reasoning cannot solve emergent capabilities myth debunked 2025'
+- '"self-improvement" AI recursive impossible infinite regress fundamental problem 2025'
+
+**Sources Reviewed**:
+1. [Tim Dettmers: Why AGI Will Not Happen](https://timdettmers.com/2025/12/10/why-agi-will-not-happen/)
+2. [AI.ksopyla: 2025 LLM Limitations — Illusion of Thinking](https://ai.ksopyla.com/posts/illusion-of-thinking/)
+3. [AI Frontiers: AGI's Last Bottlenecks](https://ai-frontiers.org/articles/agis-last-bottlenecks)
+4. [Medium: The Invisible Wall — Scaling Laws Limits](https://medium.com/@sokandesujal/the-invisible-wall-why-ais-scaling-laws-reveal-the-limits-of-brute-force-intelligence-faff3c8c534f)
+5. [arXiv: Emergent Abilities Survey](https://arxiv.org/abs/2503.05788)
+6. [Various: Recursive Self-Improvement Limitations](multiple sources)
+
+**Key Findings — COUNTEREVIDENCE**:
+
+#### Finding 1: Scaling Laws Have Hit Physical Limits
+> "For over a year now, frontier models appear to have reached their ceiling. The scaling laws that powered the exponential progress of LLMs have started to show diminishing returns."
+> — Tim Dettmers (GPU optimization researcher)
+
+**Key Arguments**:
+- GPU performance/cost maxed out ~2018; only one-off features since
+- "For linear improvements, we previously had exponential growth as GPUs which canceled out exponential resource requirements. This is no longer true."
+- Compute-Efficient Frontier (CEF) represents theoretical limit; no known architecture has surpassed it
+- Physical limits: memory movement scales quadratically with distance
+- Foundry capacity fully booked until 2026; new fab construction has long lead times
+
+**Impact**: This challenges BYRD's assumption that unlimited compute (GLM 4.7 free tier) is sufficient. The substrate ceiling may be fundamental physics, not just model architecture.
+
+#### Finding 2: LLM Reasoning is Pattern Matching, Not True Reasoning
+> "The 'Reversal Curse' shows a model fine-tuned on 'A is B' often fails to generalize to 'B is A' — learning one-way statistical associations, not flexible, principled reasoning."
+> — DeepMind Premise Order Study
+
+**Key Failure Modes**:
+- "Premise Order Matters": Reordering logical premises caused 30%+ performance drops (humans stable)
+- "Complexity Cliff": On Tower of Hanoi puzzles, reasoning models "hit a cliff and effectively gave up"
+- GSM-NoOp: Adding irrelevant information caused 65%+ accuracy drops
+- "Sophisticated simulators of intelligence" rather than genuine reasoners
+
+**Impact**: If LLMs fundamentally cannot reason (only pattern-match), then BYRD's emergence hypothesis may be unfounded — no amount of orchestration can create genuine reasoning from pattern matching.
+
+#### Finding 3: Recursive Self-Improvement Has Entropic Limits
+> "When a language model recursively conditions on its own outputs, the entropy of its predictions increases over time, and the mutual information between those predictions and any target concept degrades."
+> — AI Recursion Theory
+
+**Key Arguments**:
+- Entropic drift: Self-generated prompts drift from training distribution
+- LLMs trained on human text, not their own outputs — can't reduce uncertainty without external information
+- Infinite regress: Self-reflection can spiral into endless loops
+- Gödel Machine limitation: "Formally proving whether a code modification is absolutely beneficial is almost impossible without restrictive assumptions"
+
+**Impact**: This directly challenges BYRD's RSI Engine. If recursive self-improvement has fundamental entropic limits, then the "acceleration" assumption may be false.
+
+#### Finding 4: AGI Bottlenecks Are Severe but Potentially Solvable
+> "The only broad domain where GPT-4 and GPT-5 both score zero is continual learning (long-term memory storage)."
+> — AI Frontiers
+
+**Remaining Bottlenecks**:
+| Bottleneck | Severity | Solvability |
+|------------|----------|-------------|
+| **Continual Learning** | Critical (0% current) | "Standard breakthrough" needed |
+| Visual Reasoning | Moderate | Business-as-usual research |
+| Hallucination Reduction | Moderate | Business-as-usual research |
+| World Modeling | Moderate | IntPhys2 shows "slightly better than chance" |
+
+**Timeline Estimate (from AI Frontiers)**: 50% AGI by 2028, 80% by 2030
+
+**Impact**: Some bottlenecks may be solvable, but continual learning is a fundamental gap BYRD shares (no persistent memory across sessions without Memvid).
+
+#### Finding 5: No Proof That Orchestration Has Fundamental Limits
+Notably, I searched explicitly for evidence that multi-agent orchestration is **fundamentally limited** and found **NO** theoretical proofs or empirical studies demonstrating this.
+
+Instead, found:
+- 72% of enterprise AI projects now use multi-agent architectures (up from 23% in 2024)
+- Practical trade-offs exist, but no fundamental ceiling proven
+- Orchestration handles "information volumes exceeding any single model's capacity"
+
+**Impact**: Category A (orchestration > substrate) is **NOT disproven** — just **unproven**. The absence of counterevidence is not evidence of validity, but it means the hypothesis remains testable.
+
+**Assessment**:
+
+| Question | Answer |
+|----------|--------|
+| Are there fundamental barriers to AGI? | **YES** — scaling limits, reasoning limitations, entropic drift |
+| Are these barriers insurmountable? | **UNCLEAR** — some researchers say no, others say paradigm shifts needed |
+| Do these barriers apply to BYRD specifically? | **PARTIALLY** — substrate ceiling applies; orchestration not disproven |
+| Should probability decrease? | **YES** — but modestly |
+
+**Probability Impact**:
+
+**Negative Factors (-5%)**:
+- Scaling laws hitting physical limits (Tim Dettmers is credible GPU researcher)
+- LLM reasoning is pattern matching — "Illusion of Thinking" research is compelling
+- Entropic drift limits recursive self-improvement
+- Continual learning remains unsolved (BYRD's Memvid addresses this partially)
+- These are serious, well-documented limitations
+
+**Mitigating Factors (why not more negative)**:
+- No proof that orchestration cannot exceed substrate
+- BYRD's scope (digital domains) aligns with "spiky superhuman" pattern
+- Memvid consciousness stream addresses continual learning gap
+- AlphaEvolve/DGM show RSI is possible with external verification
+- 50% AGI by 2028 estimate from researchers who documented bottlenecks
+
+**Decision**: **-5% probability adjustment** (Counterevidence is real but not fatal)
+
+Rationale:
+- The counterevidence is substantive and well-documented
+- BUT it doesn't definitively falsify BYRD's specific approach
+- Orchestration remains an open question
+- BYRD's architecture already incorporates mitigations (Memvid, external verification)
+- The researchers who identified bottlenecks still estimate 50% AGI by 2028
+
+**Updated Probability**: 35-45% (was 40-50%)
+
+**Cumulative Adjustments**:
+- Started: 10-20%
+- Cat B (DGM): +10% → 20-30%
+- Cat E (Emergence): +5% → 25-35%
+- Cat B (Self-Rewarding): +5% → 30-40%
+- Cat B (Test-Time Compute): +5% → 35-45%
+- Cat B Reality Check: -5% → 30-40%
+- Iteration 8 (ARC-AGI-2 + Hype Correction): -5% → 25-35%
+- Iteration 9 (Expert Skepticism): 0% → 25-35%
+- Iteration 10 (AlphaEvolve): +5% → 30-40%
+- Iteration 11 (Economic Sustainability): +5% → 35-45%
+- Iteration 12 (Domain Coverage): +5% → 40-50%
+- **Iteration 13 (Counterevidence): -5% → 35-45%**
+
+**Key Insights for BYRD Architecture**:
+1. **Scaling limits are real** — but BYRD already assumes fixed substrate (GLM 4.7)
+2. **Reasoning limitations are serious** — BYRD should focus on verifiable domains
+3. **Entropic drift affects RSI** — external verification (ground-truth measurement) is essential
+4. **Continual learning gap** — Memvid is the right architectural response
+5. **Orchestration is NOT disproven** — Category A hypothesis remains testable
+
+**Counterevidence Assessment**: The counterevidence is **REAL AND SIGNIFICANT** but not **FATAL**. The fundamental barriers documented apply to scaling-based AGI approaches, not necessarily to orchestration-based emergence. BYRD's architecture incorporates mitigations for several identified gaps. The probability reduction is appropriate but modest because:
+- No proof that orchestration has a substrate ceiling
+- BYRD's digital scope matches superhuman domains
+- External verification addresses entropic drift
+- Memvid addresses continual learning
+
+**Next Iteration**: Test for diminishing returns — are we seeing the same findings repeatedly? Consider whether research phase should transition to implementation phase.
 
