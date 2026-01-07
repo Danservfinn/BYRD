@@ -1,10 +1,11 @@
 """
 Verification Module.
 
-Provides scale-invariant verification and human anchoring
-for safe capability scaling.
+Provides scale-invariant verification, human anchoring,
+and multi-verifier lattice composition for safe capability scaling.
 
 See docs/IMPLEMENTATION_PLAN_ASI.md Section 4.2 for specification.
+See docs/IMPLEMENTATION_PLAN.md Phase 1.1 for lattice specification.
 """
 
 from .scale_invariant import (
@@ -36,6 +37,32 @@ from .human_anchoring import (
     HumanAnchoringSystem,
 )
 
+from .lattice import (
+    VerifierType,
+    VerificationOutcome,
+    VerifierResult,
+    LatticeResult,
+    Improvement,
+    BaseVerifier,
+    ExecutionTestsVerifier,
+    PropertyChecksVerifier,
+    LLMCritiqueVerifier,
+    AdversarialProbesVerifier,
+    HumanSpotCheckVerifier,
+    VerificationLattice,
+)
+
+from .entropic_drift import (
+    DriftSeverity,
+    DriftType,
+    DriftSignal,
+    DriftReport,
+    SolutionDiversityTracker,
+    BenchmarkTracker,
+    StrategyEntropyTracker,
+    EntropicDriftMonitor,
+)
+
 __all__ = [
     # Scale-Invariant Metrics
     "MetricDomain",
@@ -60,4 +87,26 @@ __all__ = [
     "AnchorPoint",
     "AnchoringResult",
     "HumanAnchoringSystem",
+    # Verification Lattice
+    "VerifierType",
+    "VerificationOutcome",
+    "VerifierResult",
+    "LatticeResult",
+    "Improvement",
+    "BaseVerifier",
+    "ExecutionTestsVerifier",
+    "PropertyChecksVerifier",
+    "LLMCritiqueVerifier",
+    "AdversarialProbesVerifier",
+    "HumanSpotCheckVerifier",
+    "VerificationLattice",
+    # Entropic Drift Detection
+    "DriftSeverity",
+    "DriftType",
+    "DriftSignal",
+    "DriftReport",
+    "SolutionDiversityTracker",
+    "BenchmarkTracker",
+    "StrategyEntropyTracker",
+    "EntropicDriftMonitor",
 ]

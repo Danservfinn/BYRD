@@ -30,6 +30,25 @@ from .measurement import MetricsCollector
 logger = logging.getLogger("rsi.engine")
 
 
+# Domain Stratification - Effort allocation by verifiability
+# Based on research showing RSI is most effective in fully verifiable domains
+DOMAIN_WEIGHTS = {
+    "stratum_1": 0.60,  # Fully verifiable (code, math) - highest priority
+    "stratum_2": 0.30,  # Partially verifiable (planning, logic)
+    "stratum_3": 0.10,  # Weakly verifiable (creative, open-ended)
+}
+
+# Domain-to-stratum mapping
+DOMAIN_STRATUM = {
+    "code": "stratum_1",      # Ground truth via tests
+    "math": "stratum_1",      # Provable correctness
+    "logic": "stratum_2",     # Consistency checkable
+    "planning": "stratum_2",  # Partially verifiable
+    "creative": "stratum_3",  # Subjective evaluation
+    "general": "stratum_3",   # Weak verification
+}
+
+
 class CyclePhase(Enum):
     """Phases of the RSI cycle."""
     REFLECT = "reflect"
@@ -476,3 +495,50 @@ class RSIEngine:
         self.tdd_practice.reset()
         self.verifier.reset()
         logger.info("RSIEngine reset complete")
+
+    def get_domain_weight(self, domain: str) -> float:
+        """
+        Get effort weight for a domain based on stratification.
+
+        Domains in stratum_1 (fully verifiable) get highest priority.
+        """
+        stratum = DOMAIN_STRATUM.get(domain.lower(), "stratum_3")
+        return DOMAIN_WEIGHTS.get(stratum, 0.10)
+
+    def should_prioritize_domain(self, domain: str) -> bool:
+        """
+        Check if a domain should be prioritized for improvement.
+
+        Stratum 1 domains (code, math) are always prioritized.
+        """
+        stratum = DOMAIN_STRATUM.get(domain.lower(), "stratum_3")
+        return stratum == "stratum_1"
+
+    def get_stratum_for_domain(self, domain: str) -> str:
+        """Get the verification stratum for a domain."""
+        return DOMAIN_STRATUM.get(domain.lower(), "stratum_3")
+
+    def get_domain_stratification_stats(self) -> Dict:
+        """Get statistics on domain stratification usage."""
+        # Count cycles by stratum
+        stratum_counts = {"stratum_1": 0, "stratum_2": 0, "stratum_3": 0}
+        stratum_successes = {"stratum_1": 0, "stratum_2": 0, "stratum_3": 0}
+
+        for cycle in self._cycle_history:
+            if cycle.domain:
+                stratum = self.get_stratum_for_domain(cycle.domain)
+                stratum_counts[stratum] += 1
+                if cycle.practice_succeeded:
+                    stratum_successes[stratum] += 1
+
+        return {
+            "domain_weights": DOMAIN_WEIGHTS,
+            "domain_stratum_mapping": DOMAIN_STRATUM,
+            "stratum_counts": stratum_counts,
+            "stratum_successes": stratum_successes,
+            "stratum_success_rates": {
+                s: stratum_successes[s] / stratum_counts[s]
+                   if stratum_counts[s] > 0 else 0.0
+                for s in stratum_counts
+            }
+        }

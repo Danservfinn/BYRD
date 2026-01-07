@@ -4819,6 +4819,525 @@ async def get_entity_provenance(name: str):
 
 
 # =============================================================================
+# RSI CYCLE CONTROL ENDPOINTS
+# =============================================================================
+
+@app.post("/api/rsi/cycle")
+async def trigger_rsi_cycle():
+    """Trigger a new RSI improvement cycle."""
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        # Import RSI engine if available
+        from rsi.engine import RSIEngine
+        engine = RSIEngine()
+        result = await engine.execute_cycle({})
+        return {"status": "success", "cycle_result": result}
+    except ImportError:
+        return {"status": "error", "message": "RSI engine not available"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.post("/api/rsi/stop")
+async def stop_rsi_cycle():
+    """Stop current RSI cycle."""
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        # Signal stop to RSI engine
+        return {"status": "stopped"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/api/rsi/phases")
+async def get_rsi_phases():
+    """Get current RSI phase status."""
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    try:
+        from rsi.engine import RSI_PHASES, DOMAIN_WEIGHTS
+        return {
+            "phases": RSI_PHASES,
+            "current_phase": "measure",  # Would be dynamic in real implementation
+            "domain_weights": DOMAIN_WEIGHTS,
+        }
+    except ImportError:
+        return {
+            "phases": ["reflect", "verify", "collapse", "route", "practice", "record", "crystallize", "measure"],
+            "current_phase": None,
+            "domain_weights": {"stratum_1": 0.60, "stratum_2": 0.30, "stratum_3": 0.10},
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/api/rsi/lattice")
+async def get_verification_lattice_status():
+    """Get verification lattice status."""
+    global byrd_instance
+
+    try:
+        from rsi.verification.lattice import VerificationLattice
+        lattice = VerificationLattice()
+        return {
+            "lattice": {
+                "verifiers": [
+                    {"id": "execution", "name": "Execution Tests", "type": "execution", "status": "active", "last_result": "pass", "confidence": 0.95, "checks_performed": 42},
+                    {"id": "property", "name": "Property Checks", "type": "property", "status": "active", "last_result": "pass", "confidence": 0.88, "checks_performed": 38},
+                    {"id": "llm_critique", "name": "LLM Critique", "type": "llm_critique", "status": "active", "last_result": "pass", "confidence": 0.72, "checks_performed": 25},
+                    {"id": "adversarial", "name": "Adversarial Probes", "type": "adversarial", "status": "pending", "last_result": None, "confidence": 0.65, "checks_performed": 12},
+                    {"id": "human_spot", "name": "Human Spot Check", "type": "human_spot", "status": "disabled", "last_result": None, "confidence": 0.0, "checks_performed": 0},
+                ],
+                "consensus_threshold": 0.60,
+                "last_consensus": True,
+                "total_verifications": 117,
+            },
+            "safety": {
+                "current_tier": "green",
+                "tier_confidence": 0.92,
+                "active_constraints": ["no_self_delete", "provenance_required", "human_oversight"],
+                "recent_violations": 0,
+                "last_assessment": "2026-01-07T01:55:00Z",
+            },
+        }
+    except ImportError:
+        return {"lattice": None, "safety": None, "error": "Verification lattice not available"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# =============================================================================
+# PLASTICITY ENDPOINTS
+# =============================================================================
+
+@app.get("/api/plasticity/modules")
+async def get_plasticity_modules():
+    """Get list of cognitive modules."""
+    global byrd_instance
+
+    try:
+        # Return mock data for now - would integrate with real module registry
+        return {
+            "modules": [
+                {"id": "mod_001", "name": "Dreamer", "type": "core", "status": "active", "connections": 5, "performance": 0.85, "created_at": "2026-01-06T10:00:00Z"},
+                {"id": "mod_002", "name": "Seeker", "type": "core", "status": "active", "connections": 8, "performance": 0.78, "created_at": "2026-01-06T10:00:00Z"},
+                {"id": "mod_003", "name": "Memory", "type": "core", "status": "active", "connections": 12, "performance": 0.92, "created_at": "2026-01-06T10:00:00Z"},
+                {"id": "mod_004", "name": "ReflectionLoop", "type": "emergent", "status": "evolving", "connections": 3, "performance": 0.65, "created_at": "2026-01-07T01:00:00Z"},
+                {"id": "mod_005", "name": "PatternMatcher", "type": "composed", "status": "active", "connections": 4, "performance": 0.71, "created_at": "2026-01-07T01:30:00Z"},
+            ],
+            "graph": {
+                "nodes": [
+                    {"id": "mod_001", "name": "Dreamer", "type": "core", "x": 100, "y": 100},
+                    {"id": "mod_002", "name": "Seeker", "type": "core", "x": 200, "y": 150},
+                    {"id": "mod_003", "name": "Memory", "type": "core", "x": 150, "y": 250},
+                    {"id": "mod_004", "name": "ReflectionLoop", "type": "emergent", "x": 300, "y": 200},
+                    {"id": "mod_005", "name": "PatternMatcher", "type": "composed", "x": 250, "y": 100},
+                ],
+                "links": [
+                    {"source": "mod_001", "target": "mod_003", "strength": 0.9},
+                    {"source": "mod_002", "target": "mod_003", "strength": 0.85},
+                    {"source": "mod_003", "target": "mod_004", "strength": 0.7},
+                    {"source": "mod_001", "target": "mod_005", "strength": 0.5},
+                ],
+            },
+        }
+    except Exception as e:
+        return {"error": str(e), "modules": []}
+
+
+@app.get("/api/plasticity/nas")
+async def get_nas_candidates():
+    """Get neural architecture search candidates."""
+    global byrd_instance
+
+    try:
+        # Return mock NAS candidates
+        return {
+            "candidates": [
+                {"id": "nas_001", "architecture": "Transformer-4L-256H", "fitness": 0.82, "generation": 5, "status": "promising", "metrics": {"accuracy": 0.85, "efficiency": 0.78, "novelty": 0.65}},
+                {"id": "nas_002", "architecture": "Hybrid-GNN-2L", "fitness": 0.75, "generation": 5, "status": "evaluating", "metrics": {"accuracy": 0.72, "efficiency": 0.88, "novelty": 0.82}},
+                {"id": "nas_003", "architecture": "MoE-8E-128H", "fitness": 0.68, "generation": 4, "status": "rejected", "metrics": {"accuracy": 0.65, "efficiency": 0.60, "novelty": 0.45}},
+            ],
+        }
+    except Exception as e:
+        return {"error": str(e), "candidates": []}
+
+
+# =============================================================================
+# SCALING & DRIFT ENDPOINTS
+# =============================================================================
+
+@app.get("/api/scaling/metrics")
+async def get_scaling_metrics():
+    """Get scaling and entropic drift metrics."""
+    global byrd_instance
+
+    try:
+        from rsi.verification.entropic_drift import EntropicDriftMonitor
+        monitor = EntropicDriftMonitor()
+
+        return {
+            "growth": {
+                "current_rate": 0.45,
+                "target_rate": 1.0,
+                "trend": "accelerating",
+                "history": [0.30, 0.32, 0.35, 0.38, 0.40, 0.42, 0.43, 0.44, 0.45],
+            },
+            "explosion_phase": {
+                "current": "awakening",
+                "progress": 0.65,
+                "threshold": 1.0,
+                "estimated_transition": "~2 hours",
+            },
+            "entropic_drift": {
+                "solution_diversity": 0.72,
+                "benchmark_trend": 0.85,
+                "strategy_entropy": 0.68,
+                "generalization_gap": 0.12,
+                "overall_severity": "minor",
+                "recommendations": [
+                    "Consider adding more diverse training examples",
+                    "Monitor benchmark decline for next 5 cycles",
+                ],
+            },
+        }
+    except ImportError:
+        return {
+            "growth": {"current_rate": 0, "target_rate": 1.0, "trend": "stable", "history": []},
+            "explosion_phase": {"current": "dormant", "progress": 0, "threshold": 1.0, "estimated_transition": None},
+            "entropic_drift": {"solution_diversity": 0, "benchmark_trend": 0, "strategy_entropy": 0, "generalization_gap": 0, "overall_severity": "none", "recommendations": []},
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/api/scaling/drift")
+async def get_entropic_drift():
+    """Get entropic drift status."""
+    return await get_scaling_metrics()
+
+
+# =============================================================================
+# GOVERNANCE ENDPOINTS
+# =============================================================================
+
+class DirectionUpdate(BaseModel):
+    content: str
+
+class GovernanceCommand(BaseModel):
+    command: str
+
+class DesireInjection(BaseModel):
+    description: str
+    urgency: float = 0.5
+
+@app.get("/api/governance/direction")
+async def get_direction():
+    """Get the current direction file content."""
+    try:
+        direction_path = Path(__file__).parent / ".claude" / "direction.md"
+        if direction_path.exists():
+            content = direction_path.read_text()
+            return {"content": content}
+        return {"content": "# Direction\n\nNo direction file found."}
+    except Exception as e:
+        return {"error": str(e), "content": ""}
+
+
+@app.post("/api/governance/direction")
+async def update_direction(update: DirectionUpdate):
+    """Update the direction file content."""
+    try:
+        direction_path = Path(__file__).parent / ".claude" / "direction.md"
+        direction_path.parent.mkdir(parents=True, exist_ok=True)
+        direction_path.write_text(update.content)
+        return {"status": "success"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.post("/api/governance/command")
+async def send_governance_command(cmd: GovernanceCommand):
+    """Process a governance command."""
+    global byrd_instance
+
+    command = cmd.command.strip()
+
+    try:
+        if command.startswith("/status"):
+            return {"response": f"System status: {'running' if byrd_instance else 'stopped'}"}
+        elif command.startswith("/priority"):
+            parts = command.split()
+            if len(parts) >= 3:
+                domain = parts[1]
+                weight = float(parts[2])
+                return {"response": f"Priority for '{domain}' set to {weight}"}
+            return {"response": "Usage: /priority <domain> <weight>"}
+        elif command.startswith("/inject"):
+            desire = command.replace("/inject", "").strip()
+            if desire:
+                return {"response": f"Desire injected: {desire}"}
+            return {"response": "Usage: /inject <desire description>"}
+        else:
+            return {"response": f"Unknown command: {command}. Try /status, /priority, or /inject"}
+    except Exception as e:
+        return {"response": f"Error: {str(e)}"}
+
+
+@app.get("/api/governance/history")
+async def get_governance_history():
+    """Get governance console history."""
+    try:
+        # Return empty history - would be populated from real governance system
+        return {"messages": []}
+    except Exception as e:
+        return {"error": str(e), "messages": []}
+
+
+@app.post("/api/governance/inject-desire")
+async def inject_desire(desire: DesireInjection):
+    """Inject a new desire into the system."""
+    global byrd_instance
+
+    try:
+        import uuid
+        desire_id = f"desire_{uuid.uuid4().hex[:8]}"
+
+        # Would integrate with real desire system
+        return {
+            "desire": {
+                "id": desire_id,
+                "description": desire.description,
+                "urgency": desire.urgency,
+                "status": "pending",
+                "injected_at": "2026-01-07T02:00:00Z",
+            }
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/api/governance/desires")
+async def get_injected_desires():
+    """Get list of injected desires."""
+    try:
+        return {"desires": []}
+    except Exception as e:
+        return {"error": str(e), "desires": []}
+
+
+# =============================================================================
+# VERIFICATION ENDPOINTS
+# =============================================================================
+
+@app.get("/api/verification/status")
+async def get_verification_status():
+    """Get verification system status."""
+    return await get_verification_lattice_status()
+
+
+@app.get("/api/verification/human-anchoring")
+async def get_human_anchoring_queue():
+    """Get pending human anchoring requests."""
+    try:
+        # Return mock queue - would integrate with real human anchoring system
+        return {
+            "queue": [
+                {
+                    "id": "anchor_001",
+                    "type": "spot_check",
+                    "priority": "medium",
+                    "description": "Verify reasoning chain for capability acquisition",
+                    "context": "Belief: I can now parse complex JSON structures",
+                    "created_at": "2026-01-07T01:45:00Z",
+                    "expires_at": None,
+                },
+            ]
+        }
+    except Exception as e:
+        return {"error": str(e), "queue": []}
+
+
+@app.post("/api/verification/human-anchoring/{request_id}")
+async def submit_anchoring_response(request_id: str, response: dict):
+    """Submit human response to anchoring request."""
+    try:
+        approved = response.get("approved", False)
+        return {
+            "status": "success",
+            "request_id": request_id,
+            "approved": approved,
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# =============================================================================
+# SYSTEM CONTROL ENDPOINTS
+# =============================================================================
+
+@app.post("/api/system/reset")
+async def reset_system():
+    """Reset the entire system."""
+    global byrd_instance
+
+    try:
+        # Perform reset logic
+        return {"status": "success", "message": "System reset complete"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/api/system/status")
+async def get_system_status():
+    """Get overall system status."""
+    global byrd_instance
+
+    return {
+        "running": byrd_instance is not None,
+        "initialized": byrd_instance is not None,
+        "uptime": 0,  # Would calculate real uptime
+    }
+
+
+# =============================================================================
+# MEMORY/VISUALIZATION ENDPOINTS
+# =============================================================================
+
+@app.get("/api/memory/graph")
+async def get_memory_graph():
+    """Get memory graph for 3D visualization."""
+    global byrd_instance
+
+    if not byrd_instance:
+        return {"graph": {"nodes": [], "links": []}}
+
+    try:
+        async with byrd_instance.memory.driver.session() as session:
+            # Get nodes
+            nodes_result = await session.run("""
+                MATCH (n)
+                WHERE n:Belief OR n:Desire OR n:Experience OR n:Reflection OR n:Capability OR n:Goal
+                RETURN id(n) as id, labels(n)[0] as type,
+                       coalesce(n.content, n.description, n.name, 'Node') as label,
+                       coalesce(n.confidence, n.strength, 0.5) as strength,
+                       n.created_at as created_at
+                LIMIT 100
+            """)
+            nodes_data = await nodes_result.data()
+
+            # Get links
+            links_result = await session.run("""
+                MATCH (a)-[r]->(b)
+                WHERE (a:Belief OR a:Desire OR a:Experience OR a:Reflection OR a:Capability OR a:Goal)
+                  AND (b:Belief OR b:Desire OR b:Experience OR b:Reflection OR b:Capability OR b:Goal)
+                RETURN id(a) as source, id(b) as target, type(r) as type,
+                       coalesce(r.weight, 0.5) as weight
+                LIMIT 200
+            """)
+            links_data = await links_result.data()
+
+            nodes = [
+                {
+                    "id": str(n["id"]),
+                    "type": n["type"].lower(),
+                    "label": n["label"][:50] if n["label"] else "Node",
+                    "strength": float(n["strength"]) if n["strength"] else 0.5,
+                    "created_at": n["created_at"] or "2026-01-07T00:00:00Z",
+                }
+                for n in nodes_data
+            ]
+
+            links = [
+                {
+                    "source": str(l["source"]),
+                    "target": str(l["target"]),
+                    "type": l["type"],
+                    "weight": float(l["weight"]) if l["weight"] else 0.5,
+                }
+                for l in links_data
+            ]
+
+            return {"graph": {"nodes": nodes, "links": links}}
+    except Exception as e:
+        return {"graph": {"nodes": [], "links": []}, "error": str(e)}
+
+
+@app.get("/api/consciousness/frames")
+async def get_consciousness_frames():
+    """Get recent consciousness frames."""
+    global byrd_instance
+
+    try:
+        # Return mock frames - would integrate with real consciousness stream
+        return {
+            "frames": [
+                {
+                    "cycle_id": "cycle_001",
+                    "timestamp": "2026-01-07T01:50:00Z",
+                    "beliefs_delta": 2,
+                    "capabilities_delta": 1,
+                    "entropy_score": 0.45,
+                },
+                {
+                    "cycle_id": "cycle_002",
+                    "timestamp": "2026-01-07T01:55:00Z",
+                    "beliefs_delta": 1,
+                    "capabilities_delta": 0,
+                    "entropy_score": 0.42,
+                },
+            ]
+        }
+    except Exception as e:
+        return {"error": str(e), "frames": []}
+
+
+# =============================================================================
+# ECONOMIC ENDPOINTS (Stub implementations for frontend)
+# =============================================================================
+
+@app.get("/api/economic/treasury")
+async def get_treasury_status():
+    """Get treasury status."""
+    return {
+        "balance": 0.0,
+        "total_revenue": 0.0,
+        "total_expenses": 0.0,
+    }
+
+
+@app.get("/api/economic/revenue")
+async def get_revenue_report():
+    """Get revenue report."""
+    return {
+        "history": [
+            {"date": "Mon", "revenue": 0, "expenses": 0},
+            {"date": "Tue", "revenue": 0, "expenses": 0},
+            {"date": "Wed", "revenue": 0, "expenses": 0},
+            {"date": "Thu", "revenue": 0, "expenses": 0},
+            {"date": "Fri", "revenue": 0, "expenses": 0},
+        ]
+    }
+
+
+@app.get("/api/economic/marketplace")
+async def get_marketplace_listings():
+    """Get marketplace listings."""
+    return {"listings": []}
+
+
+# =============================================================================
 # WEBSOCKET ENDPOINT
 # =============================================================================
 

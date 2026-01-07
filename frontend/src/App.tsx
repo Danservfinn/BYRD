@@ -1,35 +1,47 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
+import { AppLayout } from './components/layout';
+import { DashboardPage } from './components/dashboard';
+import { RSIPage } from './components/rsi';
+import { EconomicPage } from './components/economic';
+import { PlasticityPage } from './components/plasticity';
+import { ScalingPage } from './components/scaling';
+import { VerificationPage } from './components/verification';
+import { ControlPanel } from './components/controls';
+import { MemoryTopology } from './components/visualization';
+import { useWebSocket } from './hooks/useWebSocket';
+import './App.css';
 
-function App() {
-  const [count, setCount] = useState(0)
+function AppContent() {
+  // Initialize WebSocket connection
+  const { isConnected } = useWebSocket();
+
+  useEffect(() => {
+    console.log(`WebSocket connection status: ${isConnected ? 'connected' : 'disconnected'}`);
+  }, [isConnected]);
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <AppLayout>
+      <Routes>
+        <Route path="/" element={<DashboardPage />} />
+        <Route path="/rsi" element={<RSIPage />} />
+        <Route path="/economic" element={<EconomicPage />} />
+        <Route path="/plasticity" element={<PlasticityPage />} />
+        <Route path="/scaling" element={<ScalingPage />} />
+        <Route path="/verification" element={<VerificationPage />} />
+        <Route path="/controls" element={<ControlPanel />} />
+        <Route path="/visualization" element={<MemoryTopology />} />
+      </Routes>
+    </AppLayout>
+  );
 }
 
-export default App
+function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
+  );
+}
+
+export default App;

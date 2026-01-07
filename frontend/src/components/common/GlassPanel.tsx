@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 interface GlassPanelProps {
   children: ReactNode;
   className?: string;
-  glow?: 'blue' | 'green' | 'amber' | 'rose' | 'purple' | 'none';
+  glow?: 'blue' | 'green' | 'amber' | 'rose' | 'purple' | 'cyan' | 'red' | 'none';
   padding?: 'none' | 'sm' | 'md' | 'lg';
 }
 
@@ -14,6 +14,8 @@ const glowColors = {
   amber: 'shadow-amber-500/20 hover:shadow-amber-500/30',
   rose: 'shadow-rose-500/20 hover:shadow-rose-500/30',
   purple: 'shadow-purple-500/20 hover:shadow-purple-500/30',
+  cyan: 'shadow-cyan-500/20 hover:shadow-cyan-500/30',
+  red: 'shadow-red-500/20 hover:shadow-red-500/30',
   none: '',
 };
 
