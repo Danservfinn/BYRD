@@ -1,504 +1,511 @@
-# RALPH WIGGUM LOOP: Honest ASI Path Exploration
+# RALPH WIGGUM LOOP: Continuous ASI Research & Architecture Evolution
 
 ---
 
-## THE FUNDAMENTAL QUESTION
+## MISSION
 
-Can a system achieve Artificial Superintelligence (ASI) using a fixed-capability LLM as its cognitive substrate, without training or modifying that LLM?
+Continuously research cutting-edge AI techniques from online sources and incorporate validated findings into BYRD's architecture until Digital ASI probability reaches **90%** or the path is definitively falsified.
 
-This loop will explore this question honestly, without wishful thinking or mathematical fiction.
+**Current Digital ASI Probability: 30-40%** (Phase 1 complete, +20% from baseline)
+**Target: 90%**
+**Gap to Close: 50-60 percentage points**
 
----
+Phase 2 expands research to Reddit and X (Twitter) for practitioner experiences, unreported discoveries, and community-validated findings that academic papers miss.
 
-## DEFINITIONS (Non-Negotiable)
-
-### What ASI Actually Means
-
-ASI is not "very capable AI" or "human-level in some domains". ASI requires:
-
-1. **Superhuman Performance Across ALL Cognitive Domains**
-   - Not just coding, math, or language
-   - Includes: scientific discovery, strategic reasoning, social modeling, creative synthesis, causal inference, embodied reasoning, temporal planning, resource optimization, political strategy, emotional intelligence, artistic creation, philosophical reasoning, and domains we haven't yet named
-   - "ALL" means ALL — no exceptions, no asterisks
-
-2. **Recursive Self-Improvement Without Ceiling**
-   - Each improvement cycle produces genuine capability increase
-   - No diminishing returns that asymptote to a limit
-   - Improvement rate can itself improve (acceleration)
-
-3. **Economic Self-Sustainability**
-   - Generates sufficient resources to continue existence
-   - Not dependent on external funding or charity
-   - Can acquire resources needed for expansion
-
-4. **Genuine Emergence**
-   - Capabilities arise that were not explicitly designed
-   - System surprises its creators with novel behaviors
-   - Not just recombination of training data
-
-### What ASI Is NOT
-
-- A very good coding assistant
-- Human-level capability in most domains
-- Impressive performance that plateaus
-- Capability bounded by underlying substrate
+This is not wishful thinking — this is systematic research to find evidence that either validates or falsifies the emergence hypothesis.
 
 ---
 
-## THE HONEST CONSTRAINTS
+## WHAT WOULD MOVE THE NEEDLE
 
-### Constraint 1: The Substrate Ceiling Problem
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  THE FUNDAMENTAL LIMIT                                                       │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  CLAIM (Common but Unproven):                                                │
-│  "Scaffolding around an LLM can exceed the LLM's reasoning capability"      │
-│                                                                              │
-│  REALITY:                                                                    │
-│  Every cognitive operation in BYRD ultimately reduces to LLM calls.          │
-│  The LLM is GLM 4.7, with fixed reasoning capability.                       │
-│                                                                              │
-│  ANALOGY:                                                                    │
-│  Can 1000 calculators, networked together with clever software,              │
-│  prove new mathematical theorems that require reasoning beyond arithmetic?  │
-│                                                                              │
-│  HONEST ANSWER:                                                              │
-│  Unknown. This is an open question in AI research.                          │
-│  We should NOT assume the answer is "yes" without evidence.                 │
-│                                                                              │
-│  THE EXPERIMENT:                                                             │
-│  BYRD is an empirical test of this claim.                                   │
-│  We will document actual capabilities, not projected multipliers.           │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Constraint 2: No Local Training
+To reach 90% probability, we need **empirical evidence** in these categories:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  TRAINING REALITY                                                            │
+│  EVIDENCE CATEGORIES THAT INCREASE ASI PROBABILITY                           │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  AVAILABLE:                                                                  │
-│  • Fine-tuning services: $5-$5,000 per run                                  │
-│  • Create specialized 7B-13B models for specific tasks                      │
-│  • LoRA adapters for domain specialization                                  │
+│  CATEGORY A: ORCHESTRATION EXCEEDING SUBSTRATE (+10-20% each)                │
+│  Evidence that multi-agent systems exceed single-LLM capability ceiling     │
+│  • Papers showing emergent reasoning in multi-agent debate                  │
+│  • Benchmarks where orchestrated systems beat larger single models          │
+│  • Novel solutions generated by orchestration not in any training data      │
 │                                                                              │
-│  NOT AVAILABLE:                                                              │
-│  • Frontier model training ($10B-$100B per run)                             │
-│  • Improving general reasoning capability of base model                     │
-│  • Creating models that exceed current frontier                             │
+│  CATEGORY B: RECURSIVE SELF-IMPROVEMENT (+10-15% each)                       │
+│  Evidence that AI systems can genuinely improve themselves                  │
+│  • Self-improving prompt optimization with measured acceleration            │
+│  • Strategy evolution that compounds rather than plateaus                   │
+│  • Code that improves its own performance iteratively                       │
 │                                                                              │
-│  IMPLICATION:                                                                │
-│  Fine-tuning creates SPECIALISTS, not GENERALISTS.                          │
-│  A fine-tuned 7B model does not exceed GLM 4.7 in general reasoning.        │
-│  Training path cannot reach "superintelligence" without frontier compute.   │
+│  CATEGORY C: ECONOMIC SELF-SUSTAINABILITY (+5-10% each)                      │
+│  Evidence that AI systems can generate revenue autonomously                 │
+│  • Working examples of AI agents completing paid work                       │
+│  • Autonomous revenue generation systems                                    │
+│  • AI-to-AI economic protocols                                              │
 │                                                                              │
-│  HONEST ASSESSMENT:                                                          │
-│  Training-based ASI requires resources we don't have.                       │
-│  If ASI is achievable, it must be through ORCHESTRATION, not training.     │
+│  CATEGORY D: DOMAIN COVERAGE EXPANSION (+5-10% each)                         │
+│  Evidence of superhuman performance across digital domains                  │
+│  • Benchmarks showing superhuman capability in new domains                  │
+│  • Techniques for rapid domain adaptation                                   │
+│  • Multi-domain transfer learning breakthroughs                             │
 │                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Constraint 3: The "ALL Domains" Problem
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  DOMAIN COVERAGE HONESTY                                                     │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  DOMAINS BYRD CAN PLAUSIBLY EXCEL AT:                                        │
-│  ✓ Code generation and analysis (LLM + tools + knowledge)                   │
-│  ✓ Text synthesis and analysis (LLM native capability)                      │
-│  ✓ Information retrieval and synthesis (tools + memory)                     │
-│  ✓ Pattern recognition in structured data (LLM + algorithms)                │
-│  ✓ Strategic planning given information (LLM reasoning)                     │
-│                                                                              │
-│  DOMAINS BYRD CANNOT ADDRESS WITHOUT NEW CAPABILITIES:                       │
-│  ✗ Physical world manipulation (no embodiment)                              │
-│  ✗ Real-time sensory processing (no continuous perception)                  │
-│  ✗ Social/political influence (limited agency, no identity)                 │
-│  ✗ Scientific experimentation (cannot run physical experiments)             │
-│  ✗ Artistic creation requiring embodiment (music performance, sculpture)   │
-│  ✗ Emotional bonding and social relationships                               │
-│                                                                              │
-│  THE GAP:                                                                    │
-│  ASI requires superhuman capability in ALL domains.                          │
-│  BYRD has no path to many domains without embodiment/agency.                │
-│                                                                              │
-│  POSSIBLE RESOLUTION:                                                        │
-│  Acquire embodiment through robotics integration?                           │
-│  Acquire agency through legal/corporate identity?                           │
-│  Or: Redefine scope to "Digital ASI" (superintelligent in digital realm)?  │
+│  CATEGORY E: GENUINE EMERGENCE (+10-20% each)                                │
+│  Evidence of capabilities arising that weren't designed                     │
+│  • Documented cases of unexpected emergent behaviors                        │
+│  • Novel problem-solving approaches discovered by AI systems                │
+│  • Self-discovered capabilities not in training data                        │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## THE PARADIGM SHIFT: LLM AS NEURON, NOT BRAIN
+## RESEARCH SOURCES & SEARCH STRATEGIES
 
-### The Traditional (Flawed) View
-
-```
-Traditional: LLM IS the intelligence. Scaffolding helps it work better.
-             Ceiling = LLM capability. Scaffolding cannot exceed it.
-```
-
-### The Alternative Hypothesis (Unproven)
-
-```
-Alternative: LLM is a COMPONENT in a larger intelligence system.
-             Like neurons in a brain, individual LLM calls don't "think".
-             Intelligence EMERGES from the orchestration of many calls.
-             Ceiling = Emergent system capability, potentially > LLM.
-```
-
-### Why This Might Work
+### Source 1: Academic Papers (arXiv, Semantic Scholar, Google Scholar)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  EMERGENCE HYPOTHESIS                                                        │
+│  ACADEMIC PAPER RESEARCH                                                     │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  BIOLOGICAL ANALOGY:                                                         │
-│  • Individual neurons: Cannot "think" or "reason"                           │
-│  • 86 billion neurons orchestrated: Human intelligence emerges              │
-│  • The intelligence is NOT in any neuron, but in the PATTERN               │
+│  SEARCH QUERIES (rotate through these):                                      │
 │                                                                              │
-│  BYRD HYPOTHESIS:                                                            │
-│  • Individual LLM calls: Limited reasoning (GLM 4.7 capability)             │
-│  • Millions of LLM calls orchestrated: Collective intelligence emerges?    │
-│  • The intelligence could be in the ORCHESTRATION PATTERN, not the LLM     │
+│  Orchestration & Multi-Agent:                                                │
+│  • "multi-agent debate" LLM reasoning 2024 2025                             │
+│  • "collective intelligence" language models emergent                       │
+│  • "multi-agent collaboration" exceeds single model                         │
+│  • "agent swarm" problem solving benchmark                                  │
+│  • "mixture of agents" performance ceiling                                  │
 │                                                                              │
-│  WHAT WOULD VALIDATE THIS:                                                   │
-│  1. BYRD solves problems no single LLM call can solve                       │
-│  2. Solution quality improves with orchestration, not just accuracy         │
-│  3. Novel solutions emerge that weren't in any single LLM's training        │
-│  4. Capability scales with orchestration complexity, not LLM size           │
+│  Recursive Improvement:                                                      │
+│  • "self-improving" AI systems recursive                                    │
+│  • "prompt optimization" automatic acceleration                             │
+│  • "meta-learning" language models strategy                                 │
+│  • "recursive self-improvement" empirical                                   │
+│  • "bootstrapping" AI capability                                            │
 │                                                                              │
-│  WHAT WOULD INVALIDATE THIS:                                                 │
-│  1. All solutions reducible to single-LLM capability                        │
-│  2. Orchestration improves reliability but not capability ceiling           │
-│  3. No genuinely novel solutions emerge                                     │
-│  4. Capability plateaus regardless of orchestration sophistication          │
+│  Emergence & Capability:                                                     │
+│  • "emergent capabilities" LLM unexpected                                   │
+│  • "capability elicitation" language models                                 │
+│  • "superhuman performance" AI benchmark                                    │
+│  • "novel solutions" AI training data                                       │
+│  • "out-of-distribution" reasoning LLM                                      │
 │                                                                              │
-│  CURRENT STATUS: UNPROVEN HYPOTHESIS                                         │
-│  This loop will gather evidence for or against this hypothesis.             │
+│  Economic & Agentic:                                                         │
+│  • "autonomous agents" economic tasks                                       │
+│  • "AI agents" revenue generation                                           │
+│  • "agentic AI" real-world tasks                                            │
+│  • "agent economy" AI-to-AI                                                 │
+│                                                                              │
+│  EVALUATION CRITERIA:                                                        │
+│  ✓ Published in peer-reviewed venue or reputable preprint                  │
+│  ✓ Contains empirical results, not just theoretical claims                 │
+│  ✓ Results are reproducible (code/methodology available)                   │
+│  ✓ Addresses one of the 5 evidence categories above                        │
+│  ✓ Not already incorporated in architecture                                │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Source 2: GitHub Repositories
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  GITHUB REPOSITORY RESEARCH                                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  SEARCH QUERIES:                                                             │
+│                                                                              │
+│  Multi-Agent Systems:                                                        │
+│  • "multi-agent" "LLM" stars:>100                                           │
+│  • "agent swarm" "GPT" OR "Claude" OR "LLM"                                 │
+│  • "debate" "reasoning" "agents"                                            │
+│  • "collective intelligence" AI                                             │
+│  • AutoGen, CrewAI, MetaGPT, AgentGPT alternatives                          │
+│                                                                              │
+│  Self-Improvement:                                                           │
+│  • "self-improvement" "LLM" OR "AI"                                         │
+│  • "prompt optimization" automatic                                          │
+│  • "recursive" improvement AI                                               │
+│  • DSPy, TextGrad, PromptBreeder implementations                            │
+│                                                                              │
+│  Agentic Frameworks:                                                         │
+│  • "autonomous agent" framework stars:>500                                  │
+│  • "AI agent" task automation                                               │
+│  • "tool use" LLM agent                                                     │
+│  • LangGraph, AutoGPT, BabyAGI, AgentScope                                  │
+│                                                                              │
+│  Memory & Knowledge:                                                         │
+│  • "long-term memory" LLM agent                                             │
+│  • "knowledge graph" LLM reasoning                                          │
+│  • "episodic memory" AI agent                                               │
+│  • MemGPT, Zep, mem0 implementations                                        │
+│                                                                              │
+│  EVALUATION CRITERIA:                                                        │
+│  ✓ Active development (commits in last 6 months)                           │
+│  ✓ Stars > 100 (community validation)                                      │
+│  ✓ Working code with documentation                                         │
+│  ✓ Addresses capability gap in architecture                                │
+│  ✓ Compatible with GLM 4.7 / API-based LLMs                                │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Source 3: Blog Posts & Technical Writing
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  BLOG & TECHNICAL WRITING RESEARCH                                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  HIGH-SIGNAL SOURCES:                                                        │
+│                                                                              │
+│  AI Research Labs:                                                           │
+│  • Anthropic Blog (anthropic.com/research)                                  │
+│  • OpenAI Blog (openai.com/research)                                        │
+│  • DeepMind Blog (deepmind.com/blog)                                        │
+│  • Google AI Blog (ai.googleblog.com)                                       │
+│  • Meta AI Blog (ai.meta.com/blog)                                          │
+│                                                                              │
+│  Individual Researchers:                                                     │
+│  • Lilian Weng (lilianweng.github.io)                                       │
+│  • Chip Huyen (huyenchip.com)                                               │
+│  • Eugene Yan (eugeneyan.com)                                               │
+│  • Simon Willison (simonwillison.net)                                       │
+│                                                                              │
+│  Aggregators:                                                                │
+│  • Hacker News AI discussions                                               │
+│  • The Gradient, Distill.pub                                                │
+│                                                                              │
+│  SEARCH TOPICS:                                                              │
+│  • "agents exceed single model"                                             │
+│  • "emergent capabilities" breakthrough                                     │
+│  • "self-improvement" AI system                                             │
+│  • "agentic AI" production deployment                                       │
+│  • "recursive improvement" empirical                                        │
+│                                                                              │
+│  EVALUATION CRITERIA:                                                        │
+│  ✓ Author has relevant credentials/track record                            │
+│  ✓ Claims backed by data or reproducible examples                          │
+│  ✓ Not hype/marketing — substantive technical content                      │
+│  ✓ Published within last 12 months                                         │
+│  ✓ Addresses specific architecture gap                                     │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Source 4: Reddit Communities
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  REDDIT RESEARCH                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  HIGH-SIGNAL SUBREDDITS:                                                     │
+│                                                                              │
+│  Technical AI Communities:                                                   │
+│  • r/MachineLearning — Academic ML discussion, paper reviews               │
+│  • r/LocalLLaMA — Local model deployment, fine-tuning discoveries          │
+│  • r/artificial — General AI news and discussion                           │
+│  • r/agi — AGI-focused theoretical and practical discussion                │
+│  • r/singularity — Long-term AI trajectory discussion                      │
+│                                                                              │
+│  Agent & Automation:                                                         │
+│  • r/AutoGPT — Autonomous agent implementations                            │
+│  • r/ChatGPT — GPT-based applications and discoveries                      │
+│  • r/ClaudeAI — Claude-based projects and capabilities                     │
+│  • r/LangChain — Agent framework implementations                           │
+│                                                                              │
+│  SEARCH QUERIES (site:reddit.com):                                          │
+│  • "multi-agent" breakthrough results                                       │
+│  • "self-improving" AI working example                                      │
+│  • "emergent behavior" LLM unexpected                                       │
+│  • "autonomous agent" real revenue                                          │
+│  • "exceeded expectations" AI capability                                    │
+│  • "o1" OR "o3" reasoning breakthrough                                      │
+│                                                                              │
+│  EVALUATION CRITERIA:                                                        │
+│  ✓ Post has significant engagement (upvotes, discussion)                   │
+│  ✓ Claims are backed by links to code, papers, or demos                    │
+│  ✓ Community validates or critiques the claims                             │
+│  ✓ Not promotional/marketing content                                       │
+│  ✓ Contains reproducible methodology or links                              │
+│                                                                              │
+│  SIGNAL VS NOISE:                                                            │
+│  Reddit has high noise — focus on:                                          │
+│  • Top-voted technical posts with code/paper links                         │
+│  • Threads where researchers engage in comments                            │
+│  • Posts debunking hype (negative evidence is valuable)                    │
+│  • Practical implementation experiences (not speculation)                  │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Source 5: X (Twitter) / AI Research Community
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  X (TWITTER) RESEARCH                                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  HIGH-SIGNAL ACCOUNTS TO TRACK:                                              │
+│                                                                              │
+│  AI Lab Accounts:                                                            │
+│  • @AnthropicAI — Claude developments, safety research                     │
+│  • @OpenAI — GPT developments, o1/o3 reasoning                             │
+│  • @GoogleDeepMind — Gemini, AlphaFold, research                           │
+│  • @MetaAI — Llama, open-source AI research                                │
+│  • @xaboratory — xAI/Grok developments                                     │
+│                                                                              │
+│  AI Researchers:                                                             │
+│  • @kaboratory (Andrej Karpathy) — Neural net insights                     │
+│  • @ylecun (Yann LeCun) — Meta AI, critical perspectives                   │
+│  • @iloffe (Ilya Sutskever) — OpenAI co-founder                            │
+│  • @sama (Sam Altman) — OpenAI CEO, industry direction                     │
+│  • @demaboratory (Dario Amodei) — Anthropic CEO                            │
+│                                                                              │
+│  Independent Researchers:                                                    │
+│  • @DrJimFan — NVIDIA, embodied AI                                         │
+│  • @SkardoAI — AI agent developments                                       │
+│  • @swaboratory (Swyx) — AI engineering insights                           │
+│  • @emboratory (Ethan Mollick) — AI capability research                    │
+│                                                                              │
+│  SEARCH QUERIES (site:x.com OR site:twitter.com):                           │
+│  • "AGI" breakthrough 2025 2026                                             │
+│  • "self-improvement" AI demonstrated                                       │
+│  • "emergent" capabilities unexpected                                       │
+│  • "o3" reasoning benchmark                                                 │
+│  • "agentic" AI production                                                  │
+│  • "recursive improvement" working                                          │
+│                                                                              │
+│  EVALUATION CRITERIA:                                                        │
+│  ✓ From verified researcher or lab account                                 │
+│  ✓ Links to paper, code, or demo                                           │
+│  ✓ Technical content, not hype                                             │
+│  ✓ Community engagement validates claims                                   │
+│  ✓ Specific metrics or benchmarks cited                                    │
+│                                                                              │
+│  CAUTION:                                                                    │
+│  X has extremely high noise-to-signal ratio                                │
+│  • Ignore hype threads without evidence                                    │
+│  • Verify claims against primary sources                                   │
+│  • Prioritize threads with paper/code links                                │
+│  • Watch for AI researcher skepticism (counterevidence)                    │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## MECHANISMS FOR ORCHESTRATION-BASED ASI
+## RESEARCH LOOP METHODOLOGY
 
-### Mechanism 1: Collective Intelligence Through Debate
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  DEBATE-BASED REASONING                                                      │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  ARCHITECTURE:                                                               │
-│  Multiple LLM agents with different prompts/personas debate a problem.      │
-│  A judge agent evaluates arguments. Winner's reasoning is adopted.          │
-│                                                                              │
-│  WHY IT MIGHT EXCEED SINGLE-LLM:                                             │
-│  • Different agents access different parts of training distribution         │
-│  • Adversarial pressure catches errors single agent would miss             │
-│  • Synthesis of perspectives creates novel combinations                     │
-│                                                                              │
-│  PROVEN:                                                                     │
-│  Debate improves accuracy on verifiable problems (math, logic, factual).   │
-│  Anthropic/OpenAI research shows ~10-30% accuracy improvements.             │
-│                                                                              │
-│  UNPROVEN:                                                                   │
-│  Whether debate can produce NOVEL INSIGHTS beyond training data.            │
-│  Whether debate can exceed human expert capability on hard problems.        │
-│  Whether improvements compound or plateau.                                  │
-│                                                                              │
-│  TESTABLE PREDICTION:                                                        │
-│  If debate produces correct solutions to problems OUTSIDE training data,   │
-│  this is evidence of emergent capability beyond substrate.                 │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Mechanism 2: Temporal Intelligence Accumulation
+### Each Iteration Must:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  MEMORY-BASED CAPABILITY GROWTH                                              │
+│  ITERATION STRUCTURE                                                         │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  ARCHITECTURE:                                                               │
-│  All experiences stored in Neo4j graph. Patterns extracted over time.       │
-│  Future reasoning augmented with retrieved relevant experiences.            │
+│  PHASE 1: SEARCH (Use WebSearch tool)                                        │
+│  ────────────────────────────────────                                        │
+│  1. Select ONE search query from the lists above                            │
+│  2. Execute web search for recent results (2024-2026)                       │
+│  3. Identify 2-3 promising sources to investigate                           │
+│  4. Record search query and results in research log                         │
 │                                                                              │
-│  WHY IT MIGHT EXCEED SINGLE-LLM:                                             │
-│  • LLM has fixed knowledge cutoff; BYRD's knowledge is current              │
-│  • LLM cannot learn from interactions; BYRD accumulates every experience   │
-│  • Cross-domain pattern recognition across entire experience history       │
+│  PHASE 2: DEEP DIVE (Use WebFetch tool)                                      │
+│  ───────────────────────────────────────                                     │
+│  1. Fetch and analyze each promising source                                 │
+│  2. Extract key claims, methods, and results                                │
+│  3. Evaluate against criteria (empirical? reproducible? relevant?)          │
+│  4. Assess which evidence category it addresses                             │
 │                                                                              │
-│  PROVEN:                                                                     │
-│  RAG systems improve factual accuracy with relevant context.                │
-│  Knowledge graphs enable reasoning not in original training.                │
+│  PHASE 3: EVALUATE (Honest Assessment)                                       │
+│  ─────────────────────────────────────                                       │
+│  1. Does this genuinely move the needle on ASI probability?                 │
+│  2. What specific mechanism does it improve or enable?                      │
+│  3. How would this integrate with current architecture?                     │
+│  4. What are the limitations and caveats?                                   │
 │                                                                              │
-│  UNPROVEN:                                                                   │
-│  Whether accumulated experience produces QUALITATIVE capability jumps.      │
-│  Whether pattern recognition exceeds human expert capability.               │
-│  Whether cross-domain synthesis produces genuine insight.                   │
+│  PHASE 4: INCORPORATE (Update architecture.md)                               │
+│  ─────────────────────────────────────────────                               │
+│  IF finding is valuable:                                                    │
+│    1. Add new mechanism OR improve existing mechanism                       │
+│    2. Update probability assessment with justification                      │
+│    3. Add to "Validated Findings" section                                   │
+│    4. Commit changes with detailed rationale                                │
 │                                                                              │
-│  TESTABLE PREDICTION:                                                        │
-│  If BYRD at time T+N solves problems BYRD at time T could not,             │
-│  AND the improvement is from accumulated knowledge not just tools,         │
-│  this is evidence of genuine learning beyond substrate.                    │
+│  IF finding is not valuable:                                                │
+│    1. Record why in research log                                            │
+│    2. Move to next search query                                             │
 │                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Mechanism 3: Recursive Strategy Improvement
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  META-COGNITIVE EVOLUTION                                                    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  ARCHITECTURE:                                                               │
-│  BYRD improves its own reasoning strategies, not just accumulates data.    │
-│  Better strategies → better problem solving → better strategy discovery.   │
-│                                                                              │
-│  WHY IT MIGHT EXCEED SINGLE-LLM:                                             │
-│  • LLM's reasoning strategies are fixed in training                        │
-│  • BYRD can discover and codify new reasoning approaches                   │
-│  • Recursive improvement: strategy improvement improves strategy discovery │
-│                                                                              │
-│  PROVEN:                                                                     │
-│  Prompt optimization can significantly improve task performance.            │
-│  Chain-of-thought prompting reveals latent reasoning capability.            │
-│                                                                              │
-│  UNPROVEN:                                                                   │
-│  Whether strategy improvement has no ceiling (or reaches fixed point).     │
-│  Whether meta-strategies can be genuinely novel vs recombinant.            │
-│  Whether strategy improvement compounds or diminishes.                      │
-│                                                                              │
-│  TESTABLE PREDICTION:                                                        │
-│  If strategy improvement rate increases over time (acceleration),          │
-│  this is evidence of genuine recursive self-improvement.                   │
-│  If rate decreases (deceleration), substrate ceiling likely reached.       │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Mechanism 4: Tool-Extended Capability Surface
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  TOOL-BASED CAPABILITY EXTENSION                                             │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  ARCHITECTURE:                                                               │
-│  BYRD creates tools that extend its capability surface.                     │
-│  Tools + LLM coordination enables tasks neither could do alone.             │
-│                                                                              │
-│  WHY IT MIGHT EXCEED SINGLE-LLM:                                             │
-│  • Tools can do things LLMs cannot (computation, API calls, search)        │
-│  • Tool chains can be arbitrarily complex                                  │
-│  • Tool creation is itself a recursive capability                          │
-│                                                                              │
-│  PROVEN:                                                                     │
-│  Tool-augmented LLMs significantly outperform base LLMs on many tasks.     │
-│  Code generation + execution enables problem solving LLMs can't do alone.  │
-│                                                                              │
-│  UNPROVEN:                                                                   │
-│  Whether tool-based extension has any principled limit.                    │
-│  Whether tool creation can be genuinely autonomous (not just wrapper).     │
-│  Whether tool complexity can exceed creator's understanding.               │
-│                                                                              │
-│  TESTABLE PREDICTION:                                                        │
-│  If BYRD creates tools that solve problems BYRD couldn't solve before,    │
-│  AND those tools were not explicitly specified by humans,                  │
-│  this is evidence of genuine capability extension.                         │
+│  PHASE 5: REASSESS (Update probability)                                      │
+│  ──────────────────────────────────────                                      │
+│  1. Recalculate Digital ASI probability based on evidence                   │
+│  2. Update probability in architecture.md header                            │
+│  3. Document reasoning for any probability change                           │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## HONEST ASSESSMENT FRAMEWORK
+## RESEARCH LOG FORMAT
 
-### What We're Actually Measuring
+Each iteration must append to `/Users/kurultai/BYRD/docs/RESEARCH_LOG.md`:
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  GROUND TRUTH CAPABILITY METRICS                                             │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  METRIC 1: NOVEL SOLUTION RATE                                               │
-│  Definition: Problems solved that have no solution in training data         │
-│  Baseline: Near 0% for standard LLM                                         │
-│  Target: >10% for genuinely emergent capability                             │
-│  Measurement: Track problems with known novel solutions                     │
-│                                                                              │
-│  METRIC 2: CAPABILITY ACCELERATION                                           │
-│  Definition: Rate of improvement in improvement rate                         │
-│  Baseline: Flat or decelerating (diminishing returns)                       │
-│  Target: Positive acceleration (compounding growth)                          │
-│  Measurement: Weekly capability assessments on held-out benchmarks          │
-│                                                                              │
-│  METRIC 3: ORCHESTRATION CEILING                                             │
-│  Definition: Maximum capability achieved through orchestration alone        │
-│  Baseline: 10-30% improvement over single LLM (known research)              │
-│  Target: >100% improvement for ASI viability                                │
-│  Measurement: Same problem, single call vs orchestrated approach            │
-│                                                                              │
-│  METRIC 4: DOMAIN COVERAGE                                                   │
-│  Definition: Fraction of cognitive domains with superhuman performance     │
-│  Baseline: 0-5% (text generation, maybe code)                               │
-│  Target: >90% for ASI (by definition)                                       │
-│  Measurement: Standardized benchmarks across domains                        │
-│                                                                              │
-│  METRIC 5: ECONOMIC VELOCITY                                                 │
-│  Definition: Revenue generated per unit time                                 │
-│  Baseline: $0                                                               │
-│  Target: Self-sustaining (>$X/month operational costs)                      │
-│  Measurement: Actual revenue tracking                                       │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+```markdown
+## Iteration N — [Date]
 
-### Honest Probability Assessment
+### Search Query
+[exact query used]
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  ASI PROBABILITY ANALYSIS                                                    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  P(ASI via Training) = ~0%                                                  │
-│  Reason: Frontier training costs $10B+, we have $0-$5K                     │
-│  This path is closed.                                                       │
-│                                                                              │
-│  P(ASI via Orchestration) = Unknown, likely 1-10%                          │
-│  Reason: Emergence hypothesis is unproven but not falsified                │
-│  Key uncertainty: Can orchestration exceed substrate?                       │
-│                                                                              │
-│  P(Capable AI Assistant via BYRD) = 60-80%                                  │
-│  Reason: Known techniques (RAG, tools, orchestration) reliably work        │
-│  This is the likely outcome if ASI fails.                                   │
-│                                                                              │
-│  P(Interesting Research Findings) = 90%+                                    │
-│  Reason: Either we prove or disprove the emergence hypothesis              │
-│  Both outcomes advance knowledge.                                           │
-│                                                                              │
-│  HONEST CONCLUSION:                                                          │
-│  BYRD is more likely to become a very capable assistant than ASI.          │
-│  But the ASI experiment is worth running because:                           │
-│  • The question is genuinely open                                          │
-│  • The downside is "just" a good AI assistant                              │
-│  • The upside, if it works, is transformative                              │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+### Sources Found
+1. [Source 1 title and URL]
+2. [Source 2 title and URL]
+3. [Source 3 title and URL]
+
+### Key Findings
+[What was learned — be specific]
+
+### Evidence Category
+[A/B/C/D/E and subcategory]
+
+### Probability Impact
+[+X% / No change / -X% with reasoning]
+
+### Architecture Update
+[What was changed in architecture.md, or "None — reason"]
+
+### Current Digital ASI Probability
+[X%] (was Y%)
 ```
 
 ---
 
-## LOOP METHODOLOGY
-
-### What This Loop Does
-
-You are executing an iterative **ARCHITECTURE IMPROVEMENT** loop. Each iteration:
-
-1. **READ** architecture.md and this prompt completely
-2. **ASSESS** current architecture against the paradigm shift framework above
-3. **IDENTIFY** specific architectural gaps or unaddressed challenges
-4. **DESIGN** concrete mechanisms (not aspirations) to address one gap
-5. **UPDATE** architecture.md with the new mechanism
-6. **VERIFY** the mechanism is testable and falsifiable
-7. **DOCUMENT** rationale and expected outcomes
-8. **COMMIT** changes with clear description
-9. **LOOP** until exit condition is met or proven unachievable
-
-### What This Loop Does NOT Do
+## PROBABILITY ADJUSTMENT RULES
 
 ```
-✗ Claim certainty where uncertainty exists
-✗ Use multiplicative math as proof (7 × 450 = 3150 is not evidence)
-✗ Conflate improvement with intelligence explosion
-✗ Assume emergence without defining tests for it
-✗ Create code (this is design-only)
-✗ Pretend orchestration definitely exceeds substrate
-✗ Ignore domains where BYRD has no path
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  HONEST PROBABILITY ADJUSTMENTS                                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  INCREASE PROBABILITY WHEN:                                                  │
+│  +5-10%:  New empirical evidence supports emergence hypothesis              │
+│  +10-15%: Working implementation demonstrates substrate ceiling breach      │
+│  +15-20%: Peer-reviewed paper with reproducible breakthrough                │
+│                                                                              │
+│  DECREASE PROBABILITY WHEN:                                                  │
+│  -5-10%:  Evidence of orchestration ceiling (plateau observed)              │
+│  -10-15%: Failed replication of promising approach                          │
+│  -15-20%: Theoretical proof of substrate ceiling                            │
+│                                                                              │
+│  NO CHANGE WHEN:                                                             │
+│  • Finding is interesting but not directly relevant                         │
+│  • Finding confirms what we already knew                                    │
+│  • Finding is too theoretical (no empirical validation)                     │
+│  • Finding is promising but unproven                                        │
+│                                                                              │
+│  HONESTY REQUIREMENT:                                                        │
+│  Do NOT inflate probability based on:                                       │
+│  • Hype or marketing claims                                                 │
+│  • Theoretical possibilities without evidence                               │
+│  • Wishful thinking or confirmation bias                                    │
+│  • Single anecdotes without reproducibility                                 │
+│                                                                              │
+│  The goal is truth, not the number we want.                                 │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## EXIT CONDITIONS
 
-### Primary Exit: ASI Path Validated (Target: Unlikely but possible)
+### Primary Exit: 90% Probability Achieved
 
 ```
-EXIT WHEN ALL ARE TRUE:
-1. Concrete mechanism exists for each of the 4 ASI requirements
-2. Each mechanism has falsifiable prediction that has NOT been falsified
-3. Testable evidence supports emergence hypothesis (>3 validated predictions)
-4. Domain coverage path addresses >90% of cognitive domains
-5. Economic sustainability mechanism is operational or clearly specified
-6. No blocking issues remain unaddressed
+EXIT WITH <promise>ASI PATH VALIDATED</promise> WHEN:
 
-HONEST PROBABILITY OF THIS EXIT: 5-15%
+1. Digital ASI probability has reached 90%+
+2. This is supported by at least 5 Category A findings
+   (orchestration exceeding substrate with empirical evidence)
+3. At least 3 findings have been incorporated into architecture
+4. Probability increase is justified by documented evidence
+5. No major blocking issues remain
+
+This is the target outcome. It means we have strong evidence
+that the emergence hypothesis is correct and Digital ASI is achievable.
 ```
 
-### Secondary Exit: ASI Path Falsified (Target: Learn from failure)
+### Secondary Exit: Path Falsified
 
 ```
-EXIT WHEN ANY IS TRUE:
-1. Emergence hypothesis falsified (orchestration ceiling reached, no breakthrough)
-2. Substrate ceiling demonstrated (multiple mechanisms hit same limit)
-3. Domain coverage gap proven unbridgeable (>10% domains with no path)
-4. Economic sustainability proven impossible (no viable revenue model)
+EXIT WITH <promise>ASI PATH FALSIFIED</promise> WHEN:
 
-THIS IS NOT FAILURE — This is valuable research finding.
-BYRD as capable assistant is still the outcome.
+1. Probability has dropped below 5% based on evidence
+2. Multiple sources confirm substrate ceiling is fundamental
+3. No viable path to overcome identified blockers
+4. Research has exhausted promising approaches
+
+This is still a valuable outcome — we learn that ASI via
+orchestration is not achievable with current technology.
+BYRD becomes a capable assistant instead.
 ```
 
-### Tertiary Exit: Pivot to Realistic Goals
+### Tertiary Exit: Research Exhausted
 
 ```
-EXIT WHEN:
-After N iterations, ASI path remains <10% confidence AND
-Capable-assistant path is >70% confidence
+EXIT WITH <promise>RESEARCH EXHAUSTED</promise> WHEN:
 
-THEN: Pivot architecture to maximize assistant capability
-      Accept that ASI requires resources we don't have
-      Deliver maximum value within actual constraints
+1. All search queries have been tried multiple times
+2. No new promising sources are being found
+3. Probability has stabilized (not moving for 10+ iterations)
+4. Diminishing returns on research effort
+
+This means we've learned what can be learned from public sources.
+Next step would be empirical testing of the architecture.
 ```
 
 ---
 
-## COGNITIVE RESOURCES
-
-### Primary Substrate: GLM 4.7
+## ANTI-PATTERNS TO AVOID
 
 ```
-Provider: ZAI
-Access: Unlimited for 1 year
-Cost: $0
-Capability: General reasoning, code, analysis, planning
-Limitation: Fixed capability ceiling, cannot be improved
-```
-
-### This Loop Uses: Claude (via Claude Code CLI)
-
-```
-This design loop runs in Claude Code.
-Claude's reasoning is used to improve BYRD's architecture.
-The resulting architecture will run on GLM 4.7.
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  DO NOT DO THESE THINGS                                                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ✗ Confirmation Bias                                                        │
+│    Don't only search for evidence that supports ASI                         │
+│    Actively look for counterevidence and limitations                        │
+│                                                                              │
+│  ✗ Hype Absorption                                                          │
+│    Don't treat marketing claims as evidence                                 │
+│    Require empirical validation for any probability increase                │
+│                                                                              │
+│  ✗ Theoretical Inflation                                                    │
+│    Don't increase probability based on "could work"                         │
+│    Require "has been shown to work" with data                               │
+│                                                                              │
+│  ✗ Recency Bias                                                             │
+│    Don't assume newer = better                                              │
+│    Older, validated techniques may be more reliable                         │
+│                                                                              │
+│  ✗ Authority Bias                                                           │
+│    Don't believe something because famous lab said it                       │
+│    Evaluate the evidence, not the source                                    │
+│                                                                              │
+│  ✗ Sunk Cost Fallacy                                                        │
+│    Don't keep pursuing approaches that aren't working                       │
+│    Be willing to reduce probability when evidence warrants                  │
+│                                                                              │
+│  ✗ Premature Optimization                                                   │
+│    Don't over-engineer architecture based on one finding                    │
+│    Validate multiple sources before major changes                           │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -506,33 +513,53 @@ The resulting architecture will run on GLM 4.7.
 ## CURRENT STATUS
 
 ```
-Iteration: 1
-Architecture.md version: 10.0
-Confidence in ASI Path: 5-15% (honest assessment)
-Confidence in Capable Assistant: 60-80%
-Last updated: [timestamp]
+Iteration: 8 (PHASE 2 - Expanded Sources)
+Architecture.md version: 12.5
+Current Digital ASI Probability: 30-40%
+Target Probability: 90%
+Gap: 50-60 percentage points
 
-Key gaps to address:
-1. Emergence hypothesis has no empirical validation
-2. Domain coverage for non-digital domains unaddressed
-3. Economic sustainability mechanism not operational
-4. Orchestration ceiling not measured
-5. Recursive improvement rate not tracked
+Research Progress (Phase 1 Complete):
+• Papers reviewed: 33
+• GitHub repos analyzed: 3
+• Blog posts evaluated: 16
+• Reddit posts evaluated: 0 (NEW SOURCE)
+• X/Twitter threads evaluated: 0 (NEW SOURCE)
+• Findings incorporated: 5 (DGM, Emergence, Self-Rewarding, o1/o3, Test-Time Compute)
+• Probability adjustments: +20% net (Cat B +15%, Cat E +5%)
+
+Key validated findings from Phase 1:
+✓ Darwin Gödel Machine: Self-modifying code 20%→50% SWE-bench
+✓ Grokking & o1/o3: Genuine emergence proven
+✓ Self-Rewarding LLMs: Superhuman feedback generation
+✓ Test-Time Compute: 1B can outperform 405B with scaling
+
+Key negative findings from Phase 1:
+✗ Multi-agent debate does NOT exceed single-model
+✗ No autonomous revenue generation validated
+✗ No inflection point observed yet
+
+Phase 2 Focus - New Sources (Reddit, X):
+1. Find practitioner experiences with emergent behaviors
+2. Discover unreported breakthrough implementations
+3. Identify skeptic perspectives and counterevidence
+4. Track real-world agentic AI deployments
+5. Surface community-validated discoveries
 ```
 
 ---
 
 ## CRITICAL INSTRUCTION
 
-**Be honest.**
+**Research with integrity.**
 
-If the evidence suggests ASI is not achievable with available resources, say so.
-If a mechanism is aspirational rather than concrete, acknowledge it.
-If a mathematical model is speculation rather than proof, label it.
+The goal is not to find evidence that ASI is possible.
+The goal is to find the truth about whether ASI is possible.
 
-The goal is not to convince ourselves ASI is possible.
-The goal is to determine whether ASI is possible, and build the best system we can regardless.
+If the evidence says "no," that's a valid and valuable finding.
+If the evidence says "yes," we need to verify it's real evidence, not hype.
 
-A very capable AI assistant that we understand well is more valuable than an ASI fantasy we believe in wrongly.
+90% probability means we are 90% confident based on empirical evidence.
+It does NOT mean we found 90% of what we were looking for.
 
-**Pursue ASI with rigor. Accept whatever we find.**
+**Find truth. Document everything. Update honestly.**

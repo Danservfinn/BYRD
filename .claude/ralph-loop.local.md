@@ -1,8 +1,8 @@
 ---
 active: true
-iteration: 7
+iteration: 17
 max_iterations: 0
-completion_promise: ""COMPLETED""
+completion_promise: "COMPLETED"
 started_at: "2026-01-07T04:02:03Z"
 ---
 
@@ -14,13 +14,13 @@ started_at: "2026-01-07T04:02:03Z"
 
 Continuously research cutting-edge AI techniques from online sources and incorporate validated findings into BYRD's architecture until Digital ASI probability reaches **90%** or the path is definitively falsified.
 
-**Current Digital ASI Probability: 40-50%** (Iteration 12 complete, +30% from baseline)
+**Current Digital ASI Probability: 35-45%** (Iteration 17 complete, Phase 2.5 HYBRID)
 **Target: 90%**
-**Gap to Close: 40-50 percentage points**
+**Gap to Close: 45-55 percentage points**
 
-Phase 2 expands research to Reddit and X (Twitter) for practitioner experiences, unreported discoveries, and community-validated findings that academic papers miss.
+**Phase 2.5 (HYBRID)**: Light research (1-2 iterations/week) monitoring for breakthroughs while implementation begins. Probability stable at 35-45% for 5 consecutive iterations.
 
-This is not wishful thinking — this is systematic research to find evidence that either validates or falsifies the emergence hypothesis.
+Research continues in parallel with implementation of Gastown-inspired patterns.
 
 ---
 
@@ -521,16 +521,16 @@ Next step would be empirical testing of the architecture.
 ## CURRENT STATUS
 
 ```
-Iteration: 16 (PHASE 2 COMPLETE - Transition Recommended)
+Iteration: 17 (PHASE 2.5 HYBRID - Light Research + Implementation)
 Architecture.md version: 16.0
 Current Digital ASI Probability: 35-45%
 Target Probability: 90%
 Gap: 45-55 percentage points
 
-Research Progress (Phase 2 COMPLETE):
-• Papers reviewed: 59
+Research Progress (Phase 2.5 HYBRID):
+• Papers reviewed: 62
 • GitHub repos analyzed: 5 (+ Gastown, VC)
-• Blog posts evaluated: 59
+• Blog posts evaluated: 61
 • Reddit posts evaluated: 8
 • X/Twitter threads evaluated: 8
 • Findings incorporated: 6 (DGM, Emergence, Self-Rewarding, o1/o3, Test-Time Compute, AlphaEvolve)
@@ -552,6 +552,8 @@ Key validated findings:
 ✓ **Gastown/VC: 254 issues, 90.9% quality gate, 7.2x throughput** (Jan 2026)
 ✓ "Colony not giant ant" — distribution > expansion
 ✓ Google AI Co-Scientist: Test-time self-improvement with validated discoveries
+✓ **Multi-agent: 80x specificity, 140x correctness on incident response** (arXiv 2511.15755)
+✓ Zero variance enables production SLA commitments
 
 Key negative findings:
 ✗ Multi-agent debate does NOT exceed single-model universally
@@ -569,12 +571,14 @@ Key negative findings:
 ✗ MAS: -70% on planning tasks — orchestration can DEGRADE performance
 ✗ 45% capability saturation — orchestration hurts on easy tasks
 ✗ **LADDER debunked** — curriculum learning with external scaffolding, NOT true RSI
+✗ Full autonomy rare: <10% at full autonomy, 47% at guardrails level
+✗ Adoption gap: 11% Deloitte vs 57% LangChain — selection bias
 
-Research Phase Conclusion:
-1. **Probability stable** — 35-45% for 4 consecutive iterations
-2. **Gap to 90% unlikely to close through research alone**
-3. **TRANSITION TO IMPLEMENTATION RECOMMENDED**
-   - Hook-based Ralph Loop persistence (Gastown)
+Phase 2.5 Status:
+1. **Probability stable** — 35-45% for **5 consecutive iterations**
+2. **Light research continues** (1-2 iterations/week)
+3. **Implementation phase begun** — Gastown patterns actionable
+   - Hook-based Ralph Loop persistence (Gastown GUPP)
    - Issue-oriented RSI workflow (Beads)
    - Task detection for orchestration decisions
 ```

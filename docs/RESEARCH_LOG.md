@@ -10,15 +10,15 @@ This document tracks all research conducted to validate or falsify the Digital A
 |--------|-------|
 | **Current Digital ASI Probability** | 35-45% |
 | **Target Probability** | 90% |
-| **Total Iterations** | 16 |
-| **Papers Reviewed** | 59 |
+| **Total Iterations** | 17 |
+| **Papers Reviewed** | 62 |
 | **GitHub Repos Analyzed** | 5 |
-| **Blog Posts Evaluated** | 59 |
+| **Blog Posts Evaluated** | 61 |
 | **Reddit/X Threads Evaluated** | 8 |
 | **Findings Incorporated** | 6 (DGM, Emergence, Self-Rewarding, o1/o3, Test-Time Compute, AlphaEvolve) |
 | **Key Counterevidence** | Scaling ceiling hit (Dettmers), LLM "Illusion of Thinking", Entropic drift limits RSI, ARC-AGI-2, Humanity's Last Exam (25-37%), 76% skepticism, Sutskever "scaling over" |
 | **Probability Adjustments** | +25% net (Cat B +15%, Cat E +5%, Cat C +5%, Cat D +5%, Reality Checks -10%, Counterevidence -5%) |
-| **Research Status** | **PHASE 2 COMPLETE — Probability stable at 35-45% for 4 iterations; transition to implementation recommended** |
+| **Research Status** | **PHASE 2.5 (HYBRID) — Probability stable at 35-45% for 5 iterations; light research + implementation** |
 
 ---
 
@@ -40,6 +40,9 @@ This document tracks all research conducted to validate or falsify the Digital A
 | **Gastown/VC: 254 issues, 90.9% quality gate, 7.2x throughput** | [Steve Yegge GitHub](https://github.com/steveyegge/gastown) | **STRONG POSITIVE** | Production Jan 2026 |
 | "Colony not giant ant" — distribution > expansion | [Steve Yegge VC](https://github.com/steveyegge/vc) | **ARCHITECTURAL** | Validated |
 | Hook-based persistence survives context loss | [Gastown](https://github.com/steveyegge/gastown) | **POSITIVE** | Production |
+| **Multi-agent: 80x specificity, 140x correctness on incident response** | [arXiv 2511.15755](https://arxiv.org/abs/2511.15755) | **STRONG POSITIVE** | Controlled trials |
+| Zero variance enables production SLA commitments | [arXiv 2511.15755](https://arxiv.org/abs/2511.15755) | **PRODUCTION** | Validated |
+| 57% agents in production (LangChain 2026) vs 11% (Deloitte) — selection bias | [LangChain Survey](https://www.langchain.com/state-of-agent-engineering) | **CAUTIONARY** | Gap persists |
 
 ### Category B: Recursive Self-Improvement
 *Evidence that AI systems can genuinely improve themselves*
@@ -1897,4 +1900,107 @@ The research phase has reached a stable equilibrium. While the formal 10-iterati
 3. **Empirical testing** to validate BYRD's specific approach
 
 **The gap to 90% (45-55 points) is unlikely to close through research alone.** Empirical testing of BYRD's mechanisms is the next logical step.
+
+---
+
+### Iteration 17: Light Research — Production Orchestration & RSI Updates (Phase 2.5)
+
+**Date**: January 7, 2026
+**Source Type**: Academic papers, industry reports, LangChain survey
+**Research Focus**: First "light research" iteration post-transition; monitoring for breakthrough findings
+
+**Context**: Research Phase 2 complete. This is the first iteration of the hybrid phase: light research (1-2/week) while implementation begins.
+
+**Sources Reviewed**:
+1. [ICLR 2026 Workshop on AI with Recursive Self-Improvement](https://openreview.net/pdf/14a7c984731fef95ec3332d05bbff5fb062b8b85.pdf) - Workshop summary
+2. [Multi-Agent LLM Orchestration for Incident Response](https://arxiv.org/abs/2511.15755) - arXiv Nov 2025
+3. [LangChain State of Agent Engineering](https://www.langchain.com/state-of-agent-engineering) - Industry survey 2026
+4. [Deloitte Agentic AI Strategy](https://www.deloitte.com/us/en/insights/topics/technology-management/tech-trends/2026/agentic-ai-strategy.html) - 2026 trends
+5. [OneReach Agentic AI Stats](https://onereach.ai/blog/agentic-ai-adoption-rates-roi-market-trends/) - Market analysis
+
+**Key Findings — VALIDATION OF PHASE 2 CONCLUSIONS**:
+
+#### Finding 1: ICLR 2026 Workshop Confirms RSI Transitioning from Theory to Practice
+> "RSI is moving from thought experiments to deployed AI systems. LLM agents now rewrite their own codebases or prompts, scientific discovery pipelines schedule continual fine-tuning, and robotics stacks patch controllers from streaming telemetry"
+
+**Status**: Confirms Phase 2 conclusion — RSI is emerging in production, but systematic evaluation remains an open challenge. The workshop aims to establish "the conceptual and empirical foundations for reliable self-improvement."
+
+**Impact**: **CONFIRMS** existing assessment. RSI is happening, but rigorously measuring it is still developing.
+
+#### Finding 2: Multi-Agent Orchestration — Deterministic Quality Advantage (Category A)
+> "Multi-agent orchestration achieves 100% actionable recommendation rate versus 1.7% for single-agent approaches"
+> "80x improvement in action specificity and 140x improvement in solution correctness"
+> "Zero quality variance across all trials, enabling production SLA commitments"
+
+[arXiv 2511.15755](https://arxiv.org/abs/2511.15755) provides the most rigorous controlled comparison yet:
+- **348 controlled trials** comparing single-agent vs multi-agent on incident response
+- **71.7% higher Decision Quality** (0.692 vs 0.403) with multi-agent system (C3 vs C2)
+- Similar latency (~40s) — the value is in **deterministic quality**, not speed
+- New metric: "Decision Quality (DQ)" capturing validity, specificity, and correctness
+
+**Impact**: **STRONG POSITIVE** for Category A. This is the first paper to show orchestration providing deterministic quality advantage with production SLAs. Reinforces 45% threshold finding — orchestration helps on hard tasks (incident response qualifies).
+
+#### Finding 3: Industry Adoption Statistics (LangChain Survey 2026)
+> "57.3% now have agents running in production environments"
+> "67% of 10k+ organizations have agents in production"
+> "Quality is the production killer — 32% cite it as top barrier"
+> "89% of respondents have implemented observability for their agents"
+
+**Impact**: **POSITIVE** for Category C (Economic). Adoption is real and accelerating. Quality remains the key barrier — validates the importance of deterministic orchestration (Finding 2).
+
+#### Finding 4: Adoption vs Implementation Gap Persists
+> "While 30% of surveyed organizations are exploring agentic options and 38% are piloting solutions, only 14% have solutions ready to be deployed and a mere 11% are actively using these systems in production" — Deloitte 2025
+
+**Contradiction** with LangChain survey (57.3% in production). Likely explanation:
+- LangChain surveyed developer-heavy organizations (selection bias)
+- Deloitte surveyed broader enterprise population
+- "In production" may mean different things
+
+**Impact**: **CAUTIONARY**. The gap between pilot and production remains substantial. Validates continued monitoring.
+
+#### Finding 5: Autonomy Levels — 47% at "Guardrails" Level
+> "47% of verified agent buyers say they are at autonomy-with-guardrails"
+> "Fewer than 10% report a full-autonomy mindset"
+> "78% of companies plan to increase agent autonomy in the next year"
+
+**Impact**: **NEUTRAL**. Confirms that full autonomy (required for Digital ASI) is rare. Most deployments are human-supervised. However, the trend toward increased autonomy is clear.
+
+**Assessment**:
+
+| Question | Answer |
+|----------|--------|
+| Any breakthrough RSI evidence? | **NO** — ICLR 2026 confirms RSI is in "establishing foundations" phase |
+| Orchestration advantage confirmed? | **YES** — 80x specificity, 140x correctness in controlled trials |
+| Economic sustainability improving? | **YES** — 57% production deployment, but adoption gap persists |
+| Full autonomy achieved? | **NO** — <10% at full autonomy, 47% at guardrails level |
+
+**Probability Impact**:
+
+This iteration **validates Phase 2 conclusions** without introducing breakthrough evidence:
+
+**Positive signals**:
+- Multi-agent deterministic quality advantage (arXiv 2511.15755) is new strong Category A evidence
+- Production adoption accelerating (57% → 67% in large orgs)
+- ICLR 2026 workshop validates RSI as legitimate research area
+
+**Negative signals**:
+- Deloitte gap (11% actual production) contradicts optimistic surveys
+- Full autonomy remains rare (<10%)
+- RSI evaluation still open challenge
+
+**Decision**: **No probability adjustment** (neutral overall)
+
+Rationale: The findings reinforce existing conclusions. The multi-agent quality paper (2511.15755) is significant but doesn't change the fundamental picture. Production adoption is growing but full autonomy remains rare. The 35-45% range remains appropriate.
+
+**Updated Probability**: 35-45% (unchanged, stable for **5 consecutive iterations**)
+
+**Category A Update**: Added arXiv 2511.15755 findings to tracker:
+- Multi-agent: 80x specificity, 140x correctness on incident response
+- Zero variance enables production SLAs
+- New metric: Decision Quality (DQ)
+
+**Implementation Status**: Light research continuing. Implementation phase recommendations remain valid:
+1. Hook-based Ralph Loop persistence (Gastown GUPP)
+2. Issue-oriented RSI workflow (Beads integration)
+3. Task detection for orchestration decisions
 
