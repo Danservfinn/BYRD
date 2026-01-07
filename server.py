@@ -243,10 +243,18 @@ async def lifespan(app: FastAPI):
     # Subscribe connection manager to event bus
     event_bus.subscribe_async(manager.broadcast_event)
 
+    # Debug: Log environment variables before loading config
+    print(f"DEBUG: RAILWAY_ENVIRONMENT={os.environ.get('RAILWAY_ENVIRONMENT', 'NOT SET')}", file=sys.stderr)
+    print(f"DEBUG: NEO4J_URI={os.environ.get('NEO4J_URI', 'NOT SET')}", file=sys.stderr)
+    print(f"DEBUG: NEO4J_USER={os.environ.get('NEO4J_USER', 'NOT SET')}", file=sys.stderr)
+    print(f"DEBUG: NEO4J_PASSWORD={'***SET***' if os.environ.get('NEO4J_PASSWORD') else 'NOT SET'}", file=sys.stderr)
+
     # Load config and initialize BYRD
     config_path = BYRD_DIR / "config.yaml"
     with open(config_path) as f:
         config_content = f.read()
+        print(f"DEBUG: Config before expansion (first 500 chars): {config_content[:500]}", file=sys.stderr)
+
         # Expand environment variables in ${VAR:-default} format
         import re
         def expand_env_vars(match):
@@ -254,7 +262,12 @@ async def lifespan(app: FastAPI):
             default_value = match.group(2) if match.group(2) is not None else ""
             return os.environ.get(var_name, default_value)
         config_content = re.sub(r'\$\{([^:}]+):-([^}]*)\}', expand_env_vars, config_content)
+
+        print(f"DEBUG: Config after expansion (first 500 chars): {config_content[:500]}", file=sys.stderr)
         config = yaml.safe_load(config_content)
+
+        print(f"DEBUG: Loaded config neo4j_uri: {config.get('memory', {}).get('neo4j_uri', 'NOT FOUND')}", file=sys.stderr)
+
     byrd_instance = BYRD(config)
 
     # Connect to Neo4j immediately to avoid "Driver closed" on first request
