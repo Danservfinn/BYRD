@@ -1,6 +1,6 @@
 ---
 active: true
-iteration: 21
+iteration: 22
 max_iterations: 0
 completion_promise: "COMPLETED"
 started_at: "2026-01-07T04:02:03Z"
@@ -521,16 +521,16 @@ Next step would be empirical testing of the architecture.
 ## CURRENT STATUS
 
 ```
-Iteration: 21 (PHASE 2.5 HYBRID - Light Research + Implementation)
+Iteration: 22 (PHASE 2.5 HYBRID - Light Research + Implementation)
 Architecture.md version: 18.0
-Current Digital ASI Probability: 35-45% (stable 2 iterations, orchestration ceiling validated)
+Current Digital ASI Probability: 35-45% (stable 3 iterations, Categories A/B/C ceiling-validated)
 Target Probability: 90%
 Gap: 45-55 percentage points
 
 Research Progress (Phase 2.5 HYBRID):
-• Papers reviewed: 72
+• Papers reviewed: 74
 • GitHub repos analyzed: 5 (+ Gastown, VC)
-• Blog posts evaluated: 70
+• Blog posts evaluated: 73
 • Reddit posts evaluated: 8
 • X/Twitter threads evaluated: 8
 • Findings incorporated: 7 (DGM, Emergence, Self-Rewarding, o1/o3, Test-Time Compute, AlphaEvolve, OSWorld)
@@ -586,9 +586,15 @@ Key negative findings:
 ✗ 68% production systems limit agents to ≤10 steps
 ✗ 80% use human-designed workflows, not autonomous
 ✗ Emergence debate unresolved — some discontinuities real, some metric artifacts
+✗ **Zero unbounded RSI instances after 60 years** (arXiv 2512.04119)
+✗ 77% decline in capability gains despite 4.8x R&D increase
+✗ 5% expert probability estimate for intelligence explosion
+✗ **69% of AI projects fail to reach production**
+✗ 78% don't trust agents to work autonomously
+✗ 56% report "very low tangible value"
 
 Phase 2.5 Status:
-1. **Probability stable** — 35-45% (2 iterations, orchestration ceiling validated)
+1. **Probability stable** — 35-45% (3 iterations, Categories A/B/C ceiling-validated)
 2. **L5 autonomy gap** — <10% at full autonomy, key blocker identified
 3. **Light research continues** (1-2 iterations/week)
 4. **Implementation phase active** — Gastown patterns actionable

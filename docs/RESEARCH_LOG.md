@@ -10,15 +10,15 @@ This document tracks all research conducted to validate or falsify the Digital A
 |--------|-------|
 | **Current Digital ASI Probability** | 35-45% |
 | **Target Probability** | 90% |
-| **Total Iterations** | 21 |
-| **Papers Reviewed** | 72 |
+| **Total Iterations** | 22 |
+| **Papers Reviewed** | 74 |
 | **GitHub Repos Analyzed** | 5 |
-| **Blog Posts Evaluated** | 70 |
+| **Blog Posts Evaluated** | 73 |
 | **Reddit/X Threads Evaluated** | 8 |
 | **Findings Incorporated** | 7 (DGM, Emergence, Self-Rewarding, o1/o3, Test-Time Compute, AlphaEvolve, OSWorld Computer Use) |
-| **Key Counterevidence** | Scaling ceiling hit (Dettmers), LLM "Illusion of Thinking", Entropic drift limits RSI, ARC-AGI-2, Humanity's Last Exam (25-37%), 76% skepticism, Sutskever "scaling over", Self-MoA > MoA, **45% capability threshold (DeepMind)**, **Claude -35% in multi-agent** |
+| **Key Counterevidence** | Scaling ceiling hit (Dettmers), LLM "Illusion of Thinking", Entropic drift limits RSI, ARC-AGI-2, Humanity's Last Exam (25-37%), 76% skepticism, Sutskever "scaling over", Self-MoA > MoA, 45% capability threshold (DeepMind), Claude -35% in multi-agent, **Zero RSI instances (60 years)**, **69% agent failure rate** |
 | **Probability Adjustments** | +25% net (Cat B +15%, Cat E +5%, Cat C +5%, Cat D +10%, Reality Checks -10%, Counterevidence -10%) |
-| **Research Status** | **PHASE 2.5 (HYBRID) — Probability 35-45% stable (2 iterations); orchestration ceiling validated** |
+| **Research Status** | **PHASE 2.5 (HYBRID) — Probability 35-45% stable (3 iterations); Categories A/B/C ceiling-validated** |
 
 ---
 
@@ -66,6 +66,10 @@ This document tracks all research conducted to validate or falsify the Digital A
 | PromptWizard: Self-optimizing prompts, 87% accuracy, but bounded optimization | [Microsoft Research](https://www.microsoft.com/en-us/research/blog/promptwizard-the-future-of-prompt-optimization-through-feedback-driven-self-evolving-prompts/) | **MODERATE** | Bounded |
 | LLMs struggle to identify true error causes during self-reflection | [arXiv 2402.02101](https://arxiv.org/abs/2402.02101) | **NEGATIVE** | Validated |
 | Devin: Adaptive execution within session, no persistent learning | [Cognition SWE-bench Report](https://cognition.ai/blog/swe-bench-technical-report) | **NEUTRAL** | No RSI |
+| **Zero unbounded RSI instances after 60 years** | [arXiv 2512.04119](https://arxiv.org/html/2512.04119) | **STRONGLY NEGATIVE** | Nov 2025 |
+| 77% decline in MMLU gains (16.1 → 3.6 points) despite 4.8x R&D increase | [arXiv 2512.04119](https://arxiv.org/html/2512.04119) | **NEGATIVE** | Validated |
+| 5% expert probability estimate for intelligence explosion (2-3 years) | [Substack Analysis](https://itcanthink.substack.com/p/how-close-are-we-to-self-improving) | **NEGATIVE** | Jan 2026 |
+| Self-improvement methods pull existing capabilities, not create new ones | [Substack Analysis](https://itcanthink.substack.com/p/how-close-are-we-to-self-improving) | **NEGATIVE** | Jan 2026 |
 
 ### Category C: Economic Self-Sustainability
 *Evidence that AI systems can generate revenue autonomously*
@@ -85,6 +89,11 @@ This document tracks all research conducted to validate or falsify the Digital A
 | **Salesforce Agentforce: $540M ARR, 18.5k customers** | [VentureBeat](https://venturebeat.com/technology/while-everyone-talks-about-an-ai-bubble-salesforce-quietly-added-6-000) | **POSITIVE** | Jan 2026, human-mediated |
 | 3 billion automated workflows/month | [VentureBeat](https://venturebeat.com/technology/while-everyone-talks-about-an-ai-bubble-salesforce-quietly-added-6-000) | **POSITIVE** | Automation at scale |
 | L5 autonomy: <10% at full autonomy | [G2 Report](https://learn.g2.com/enterprise-ai-agents-report) | **CAUTIONARY** | Gap to full autonomy |
+| **69% of AI projects fail to reach production** | [AI Agent Statistics](https://www.pragmaticcoders.com/resources/ai-agent-statistics) | **STRONGLY NEGATIVE** | Jan 2026 |
+| 78% don't trust agents to work autonomously | [AI Agent Statistics](https://www.pragmaticcoders.com/resources/ai-agent-statistics) | **NEGATIVE** | Trust deficit |
+| 32% stall after pilot, never scale | [AI Agent Statistics](https://www.pragmaticcoders.com/resources/ai-agent-statistics) | **NEGATIVE** | Execution gap |
+| 23.9% failure rate in critical scenarios (optimized agents) | [AI Agent Statistics](https://www.pragmaticcoders.com/resources/ai-agent-statistics) | **NEGATIVE** | Safety concern |
+| 56% report "very low tangible value" from deployments | [AI Agent Statistics](https://www.pragmaticcoders.com/resources/ai-agent-statistics) | **NEGATIVE** | Value gap |
 
 ### Category D: Domain Coverage Expansion
 *Evidence of superhuman performance across digital domains*
@@ -2485,4 +2494,125 @@ Rationale:
 - Some discontinuities are genuine (arithmetic, ICL)
 - Some may be metric artifacts (Stanford critique)
 - No scientific consensus achieved
+
+### Iteration 22: RSI Empirical Evidence & Agent Failure Rates (Phase 2.5)
+
+**Date**: January 7, 2026
+**Source Type**: Academic papers, industry surveys, research analysis
+**Research Focus**: Category B (Recursive Self-Improvement) and Category C (Economic Sustainability) validation
+
+**Context**: Sixth light research iteration. Pivoting from Category A (now validated as ceiling-limited) to assess Categories B and C with fresh evidence.
+
+**Sources Reviewed**:
+1. [Empirical Evidence for RSI - arXiv 2512.04119](https://arxiv.org/html/2512.04119) - Comprehensive empirical analysis
+2. [How Close Are We to Self-Improving AI](https://itcanthink.substack.com/p/how-close-are-we-to-self-improving) - Research review
+3. [AI Agent Statistics 2026](https://www.pragmaticcoders.com/resources/ai-agent-statistics) - Industry data
+4. [Gartner AI Agents Prediction](https://www.gartner.com/en/newsroom/press-releases/2025-08-26-gartner-predicts-40-percent-of-enterprise-apps-will-feature-task-specific-ai-agents-by-2026-up-from-less-than-5-percent-in-2025) - Enterprise outlook
+5. [McKinsey State of AI 2025](https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai) - Industry analysis
+
+**Key Findings — CRITICAL CATEGORY B REALITY CHECK**:
+
+#### Finding 1: Zero Empirical Instances of Recursive Self-Improvement
+> "Sixty years later, in November 2025, the empirical record contains exactly zero instances of the phenomenon Good described"
+> "Every test showed modest gains over one or two cycles followed by rapid plateauing and convergence"
+> "All architectural breakthroughs originated with human researchers, not models themselves"
+
+[arXiv 2512.04119](https://arxiv.org/html/2512.04119) provides devastating empirical analysis:
+
+**Key metrics**:
+- R&D expenditure: $52B → $250B annually (4.8x increase)
+- MMLU capability gains: 16.1 points (2021) → 3.6 points (2025) (77% decline)
+- RSI classification: **Level 2 (speculative)** — "unobserved, currently intractable, zero empirical validation"
+
+**Impact**: **STRONGLY NEGATIVE** for Category B — No sustained autonomous self-improvement observed
+
+#### Finding 2: Self-Improvement Methods Pull Existing Capabilities, Not Create New Ones
+> "These methods essentially just pull out capabilities that already exist in the models"
+> "DeepSeek R1's experience demonstrated that RLVR alone causes models to lose their ability to do more general reasoning"
+> "5% probability of intelligence explosion within 2-3 years"
+
+[Substack analysis](https://itcanthink.substack.com/p/how-close-are-we-to-self-improving) identifies structural limitations:
+
+- Self-improving transformers via voting: Limited to "easy-to-hard" problems
+- RLVR gains often overstated — models become more confident, not more capable
+- Mode collapse and instability are common failure modes
+
+**Impact**: **NEGATIVE** for Category B — Current methods don't create genuine new capabilities
+
+#### Finding 3: Agent Failure Rates Undermine Economic Sustainability
+> "69% of AI projects don't make it into live operational use"
+> "78% don't always trust agentic AI to make the right decision or work by itself"
+> "32% of enterprises exploring agents stall after pilot—never reaching production"
+
+[AI Agent Statistics](https://www.pragmaticcoders.com/resources/ai-agent-statistics) reveals production reality:
+
+- **69% failure rate** for AI projects reaching production
+- **78% trust deficit** — organizations don't trust agents to work autonomously
+- **56% report "very low tangible value"** from deployments
+- **23.9% failure in critical scenarios** even for optimized agents
+- Only **42% comfortable** with complex, empowered agents (vs 75% for simple informational)
+
+**Impact**: **STRONGLY NEGATIVE** for Category C — Autonomous economic agency not validated
+
+#### Finding 4: Economic Growth Is Human-Mediated, Not Autonomous
+> "AI agents market: $7.8B → $52B by 2030"
+> "40% of enterprise apps will feature AI agents by 2026 (up from 5%)"
+> "88% of organizations now use AI regularly"
+
+Market growth is real but **all value is human-mediated**:
+- Human oversight required for all production deployments
+- Revenue comes from tools sold to humans, not autonomous agent earnings
+- No evidence of AI-to-AI economic protocols at scale
+
+**Impact**: **NEUTRAL** for Category C — Growth confirms market exists, but not autonomous
+
+**Assessment**:
+
+| Question | Answer |
+|----------|--------|
+| Has RSI been empirically demonstrated? | **NO** — Zero instances after 60 years |
+| Are capability gains accelerating? | **NO** — 77% decline in gains despite 4.8x R&D increase |
+| Are agents economically self-sustaining? | **NO** — 69% failure rate, 78% trust deficit |
+| Is the agent market growing? | **YES** — But growth is human-mediated |
+
+**Probability Impact Analysis**:
+
+**This iteration provides strong counterevidence for Categories B and C**:
+1. Zero empirical instances of RSI after 60 years of research
+2. Capability gains declining despite massive investment
+3. 69% agent project failure rate
+4. 78% don't trust agents to work autonomously
+5. 5% expert probability estimate for intelligence explosion
+
+**However**:
+1. We already have RSI evidence (DGM, AlphaEvolve, o1/o3) incorporated
+2. The arXiv paper focuses on "unbounded" RSI, not bounded improvement
+3. Market growth is real even if human-mediated
+4. Our Category B already accounts for "BOUNDED" RSI
+
+**Decision**: **No change** (evidence reinforces known limitations)
+
+Rationale:
+- Category B already states "BOUNDED: RSI requires external verification"
+- Category C already notes "human-mediated revenue"
+- This iteration confirms those caveats rather than adding new negative evidence
+- Decreasing probability would double-count known limitations
+
+**Current Probability**: 35-45% (unchanged, 3 iterations stable)
+
+**Stability Assessment**: Probability has been in 35-45% range for **3 consecutive iterations**. Approaching research equilibrium threshold (10 iterations for exit condition).
+
+**Category B Update**: Added empirical reality check:
+- Zero instances of unbounded RSI after 60 years
+- 77% decline in capability gains (16.1 → 3.6 MMLU points) despite 4.8x R&D increase
+- 5% expert probability estimate for intelligence explosion (2-3 year timeframe)
+- Bounded RSI validated (DGM, AlphaEvolve), unbounded RSI unobserved
+
+**Category C Update**: Added agent failure statistics:
+- 69% of AI projects fail to reach production
+- 78% trust deficit for autonomous operation
+- 32% stall after pilot, never scale
+- 23.9% failure rate in critical scenarios
+- 56% report "very low tangible value"
+- All economic value remains human-mediated
 
