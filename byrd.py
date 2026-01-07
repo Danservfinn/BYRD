@@ -83,6 +83,11 @@ class BYRD:
         """Backward compatibility property for server.py."""
         return self.rsi
 
+    @property
+    def dreamer(self):
+        """Backward compatibility property for server.py - returns rsi for Ralph Loop access."""
+        return self.rsi
+
     async def start(self):
         """Initialize and start BYRD."""
         logger.info("BYRD v2 starting...")
