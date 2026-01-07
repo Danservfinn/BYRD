@@ -10,19 +10,19 @@ This file provides guidance to Claude Code when working with the BYRD codebase.
 
 ### 1.1 What BYRD Is
 
-**BYRD** (Bootstrapped Yearning via Reflective Dreaming) is an autonomous AI system on a validated path to Artificial Superintelligence (ASI).
+**BYRD** (Bootstrapped Yearning via Reflective Dreaming) is an AI system exploring Digital ASI through bounded recursive self-improvement.
 
-**ASI Path Confidence: 91%** — All 6 architectural ceilings removed.
+**Digital ASI Probability: 35-45%** — Research phase complete (29 iterations). Bounded RSI validated.
 
 ### 1.2 Core Mission
 
-Achieve ASI through:
-- Unbounded recursive self-improvement
+Achieve Digital ASI through:
+- **Bounded** recursive self-improvement (with Verification Lattice)
 - Genuine emergence preservation
 - Economic self-sustainability
-- Cognitive plasticity (architecture modification)
-- Substrate independence (infrastructure control)
-- Capability explosion handling (survive rapid growth)
+- Complexity-aware orchestration
+- Human-directed development (governance system)
+- Verification-enabled improvement
 
 ### 1.3 Core Philosophy
 
@@ -39,20 +39,23 @@ EMERGENCE PRINCIPLE:
 
 ## 2. Architecture Summary
 
-### 2.1 Three-Layer Architecture
+### 2.1 Four-Layer Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                     COGNITIVE CORE                               │
 │  Ralph Loop │ Memvid Stream │ 8-Phase RSI │ Economic Agency     │
 ├─────────────────────────────────────────────────────────────────┤
-│                   ASI ENABLEMENT LAYER                           │
-│  Cognitive Plasticity │ Substrate Independence │                │
-│  Recursive Depth Amplifier │ Capability Explosion Handler       │
+│                   BOUNDED RSI LAYER                              │
+│  Verification Lattice │ Complexity-Aware Orchestration │        │
+│  Domain Stratification │ 45% Threshold Routing                  │
 ├─────────────────────────────────────────────────────────────────┤
 │                 VERIFICATION & SAFETY LAYER                      │
-│  Scale-Invariant Emergence │ Value Stability │                  │
-│  Safety Scaling │ Governance Transitions                         │
+│  Entropic Drift Detection │ Emergent Strategy Competition │     │
+│  Scale-Invariant Emergence │ Value Stability                    │
+├─────────────────────────────────────────────────────────────────┤
+│                   GOVERNANCE LAYER                               │
+│  Human-BYRD Interface │ Direction System │ Approval Workflow    │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -71,6 +74,9 @@ EMERGENCE PRINCIPLE:
 | `self_modification.py` | Self-modification with provenance (PROTECTED) |
 | `provenance.py` | Modification tracing (PROTECTED) |
 | `constitutional.py` | Constraint definitions (PROTECTED) |
+| `governance/director.py` | Human-BYRD communication interface |
+| `governance/direction_file.py` | Async direction via file |
+| `talk_to_byrd.py` | Interactive governance console |
 
 ### 2.3 Directory Structure
 
@@ -107,6 +113,15 @@ byrd/
 │   ├── ARCHITECTURE.md      # What BYRD is
 │   ├── CLAUDE.md            # This file
 │   └── self_model.json      # Queryable self-knowledge
+│
+├── Governance (Human-BYRD Interface)
+│   ├── governance/
+│   │   ├── __init__.py
+│   │   ├── director.py      # Main Director interface
+│   │   ├── direction_file.py # Async file communication
+│   │   └── console.py       # Interactive REPL
+│   ├── talk_to_byrd.py      # Entry point script
+│   └── .claude/direction.md # Human edits this
 │
 ├── ASI Design Documents
 │   └── docs/
@@ -313,6 +328,76 @@ class SafetyMonitor:
             return SafetyResult(approved=False, reason="No provenance")
 
         return SafetyResult(approved=True)
+```
+
+### 4.5 Bounded RSI Patterns (Novel Architecture)
+
+The Bounded RSI architecture emerged from 29 research iterations. Key patterns:
+
+```python
+# Verification Lattice - compose multiple verifiers
+class VerificationLattice:
+    def __init__(self):
+        self.verifiers = [
+            ExecutionTests(),      # Ground truth
+            PropertyChecks(),      # Invariants
+            LLMCritique(),         # Semantic review
+            AdversarialProbes(),   # Robustness
+            HumanSpotChecks()      # Calibration
+        ]
+
+    async def verify(self, improvement: Improvement) -> VerificationResult:
+        results = await asyncio.gather(*[
+            v.verify(improvement) for v in self.verifiers
+        ])
+        # Lattice composition: require majority agreement
+        return self._compose_results(results)
+
+# Complexity-Aware Orchestration - detect collapse threshold
+class ComplexityRouter:
+    COLLAPSE_THRESHOLD = 0.45  # From Apple research
+
+    async def route(self, task: Task) -> Strategy:
+        complexity = await self.estimate_complexity(task)
+        if complexity > self.COLLAPSE_THRESHOLD:
+            return DecomposeStrategy(task)  # Break down first
+        return DirectStrategy(task)
+
+# 45% Threshold Routing - multi-agent only when beneficial
+class AgentRouter:
+    async def should_use_multi_agent(self, task: Task) -> bool:
+        predicted_accuracy = await self.predict_accuracy(task)
+        # DeepMind finding: above 45%, more agents = worse
+        return predicted_accuracy < 0.45
+
+# Domain Stratification - focus on verifiable domains
+DOMAIN_WEIGHTS = {
+    "stratum_1": 0.60,  # Fully verifiable (code, math)
+    "stratum_2": 0.30,  # Partially verifiable (planning)
+    "stratum_3": 0.10,  # Weakly verifiable (creative)
+}
+```
+
+### 4.6 Governance Integration
+
+```python
+from governance.director import create_director
+
+# Human provides direction, BYRD discovers methods
+director = create_director()
+
+# Human sets priorities
+director.set_priority("coding", 0.9)
+
+# Human injects desires (WHAT to achieve)
+director.inject_desire("Improve verification coverage", urgency=0.8)
+
+# BYRD figures out HOW
+async def process_direction():
+    direction = await director.get_direction()
+    for desire in direction.pending_desires:
+        strategy = await discover_strategy(desire)  # BYRD's emergence
+        await execute_strategy(strategy)
 ```
 
 ---
@@ -648,9 +733,13 @@ docker-compose up -d    # Neo4j
 5. **Async Everything**: Never block the event loop
 6. **Test RSI Claims**: Validate improvements against held-out suites
 7. **Constitutional Integrity**: Never modify protected files
+8. **Bounded RSI**: Target verifiable improvement within domain strata
+9. **Verification Lattice**: Compose multiple verifiers to exceed single-verifier ceiling
+10. **Human Direction**: Human sets WHAT, BYRD discovers HOW
 
 ---
 
-*Document version: 2.0*
-*Updated: January 6, 2026*
+*Document version: 3.0*
+*Updated: January 7, 2026*
 *Purpose: Development guide for working on BYRD — how to work on the code*
+*Research phase: COMPLETE (29 iterations, 35-45% Digital ASI probability)*

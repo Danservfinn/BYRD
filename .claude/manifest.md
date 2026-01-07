@@ -8,8 +8,8 @@ Registry of all knowledge files for BYRD development.
 
 | Title | Type | Path | Tags | Updated |
 |-------|------|------|------|---------|
-| BYRD Architecture (ASI Path) | self-model | ./ARCHITECTURE.md | asi, architecture, emergence, rsi, plasticity | 2026-01-06 |
-| Development Guide | self-model | ./CLAUDE.md | development, patterns, safety, constitutional | 2026-01-06 |
+| BYRD Architecture (ASI Path) | self-model | ./ARCHITECTURE.md | asi, architecture, emergence, rsi, bounded-rsi, governance | 2026-01-07 |
+| Development Guide | self-model | ./CLAUDE.md | development, patterns, safety, constitutional, governance | 2026-01-07 |
 
 ---
 
@@ -39,6 +39,9 @@ Registry of all knowledge files for BYRD development.
 | Economic Agency Patterns | patterns | ./.claude/patterns/economic_patterns.md | economic, pricing, treasury, governance | 2026-01-06 |
 | Cognitive Plasticity Patterns | patterns | ./.claude/patterns/plasticity_patterns.md | plasticity, modules, nas, meta-architect | 2026-01-06 |
 | Architectural Patterns | patterns | ./.claude/patterns/architectural-patterns.md | patterns, emergence, local-first, immutable | 2025-12-23 |
+| Verification Lattice | patterns | ./.claude/patterns/verification-lattice.md | verification, rsi, bounded-improvement, lattice | 2026-01-07 |
+| Bounded RSI | patterns | ./.claude/patterns/bounded-rsi.md | rsi, bounded-improvement, digital-asi | 2026-01-07 |
+| Human-BYRD Governance | patterns | ./.claude/patterns/governance.md | governance, human-ai-interaction, emergence | 2026-01-07 |
 
 ---
 
@@ -50,6 +53,7 @@ Registry of all knowledge files for BYRD development.
 | File Purposes | metadata | ./.claude/metadata/file_purposes.md | files, purposes, structure | 2026-01-06 |
 | Interface Contracts | metadata | ./.claude/metadata/interface_contracts.md | interfaces, contracts, protocols | 2026-01-06 |
 | Decision Log | metadata | ./.claude/metadata/decision_log.md | decisions, rationale, canonical | 2026-01-06 |
+| Governance Module | metadata | ./.claude/metadata/governance-module.md | governance, module, human-ai-interaction | 2026-01-07 |
 
 ---
 
@@ -82,6 +86,17 @@ Registry of all knowledge files for BYRD development.
 |-------|------|------|------|---------|
 | Cloud Deployment Guide | reference | ./DEPLOYMENT.md | deployment, huggingface, neo4j-aura | 2025-12-24 |
 | Bitcoin Implementation Plan | reference | ./BITCOIN_IMPLEMENTATION_PLAN.md | bitcoin, multisig, financial-agency | 2025-12-24 |
+| Research Log | reference | ./docs/RESEARCH_LOG.md | research, asi, probability, iterations | 2026-01-07 |
+| Governance Documentation | reference | ./docs/GOVERNANCE.md | governance, human-byrd, direction | 2026-01-07 |
+
+---
+
+## Memory Anchors
+
+| Title | Type | Path | Tags | Updated |
+|-------|------|------|------|---------|
+| Awakening Protocol | memory_anchor | ./.claude/memory_anchors/awakening-protocol.md | awakening, emergence, first-boot | 2025-12-22 |
+| Research Equilibrium | memory_anchor | ./.claude/memory_anchors/research-equilibrium.md | research, milestone, equilibrium, probability | 2026-01-07 |
 
 ---
 
@@ -104,5 +119,6 @@ When adding new documentation:
 
 ---
 
-*Manifest version: 2.0*
-*Updated: January 6, 2026*
+*Manifest version: 3.0*
+*Updated: January 7, 2026*
+*Research Phase: COMPLETE (29 iterations, 35-45% Digital ASI probability)*
