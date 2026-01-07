@@ -751,18 +751,28 @@ async def get_status():
             except Exception as e:
                 print(f"Error getting AGI Runner status: {e}")
 
+        # Safely get dreamer attributes (may not be initialized)
+        dream_count = 0
+        recent_insights = []
+        if byrd_instance.dreamer is not None:
+            try:
+                dream_count = byrd_instance.dreamer.dream_count()
+                recent_insights = byrd_instance.dreamer.recent_insights()
+            except Exception:
+                pass  # Use default values if methods fail
+
         return StatusResponse(
             running=byrd_instance._running,
             started_at=started_at,
             memory_stats=stats,
-            dream_count=byrd_instance.dreamer.dream_count(),
+            dream_count=dream_count,
             seek_count=byrd_instance.seeker.seek_count(),
             unfulfilled_desires=[
                 {"description": d.get("description", ""), "type": d.get("type", ""), "intensity": d.get("intensity", 0)}
                 for d in desires
             ],
             capabilities=[c.get("name", "") for c in capabilities],
-            recent_insights=byrd_instance.dreamer.recent_insights(),
+            recent_insights=recent_insights,
             recent_reflections=[
                 {"keys": list(r.get("raw_output", {}).keys()) if isinstance(r.get("raw_output"), dict) else [],
                  "output": r.get("raw_output", {}),
