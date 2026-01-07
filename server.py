@@ -645,6 +645,7 @@ async def get_version():
     }
 
 @app.get("/health")
+@app.head("/health")
 async def health_check():
     """Simple health check for Railway - returns 200 if BYRD is initialized."""
     global byrd_instance
@@ -654,6 +655,7 @@ async def health_check():
         return {"status": "starting", "byrd_initialized": False}
 
 @app.get("/api/status", response_model=StatusResponse)
+@app.head("/api/status")
 async def get_status():
     """Get current BYRD status."""
     global byrd_instance
