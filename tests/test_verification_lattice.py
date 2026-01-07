@@ -15,6 +15,7 @@ from rsi.verification.lattice import (
     VerificationLattice,
     VerifierType,
     VerificationOutcome,
+    VerifierResult,
     LatticeResult,
     Improvement,
     BaseVerifier,
@@ -107,24 +108,23 @@ class TestExecutionVerifier:
 
     @pytest.fixture
     def verifier(self):
-        return ExecutionVerifier()
+        return ExecutionTestsVerifier()
 
     @pytest.fixture
     def sample_improvement(self):
         return Improvement(
             id="imp_test",
-            domain="code",
+            capability="code",
             description="Test improvement",
-            code_changes={"test.py": "def foo(): pass"},
-            metrics_before={"tests_passed": 8},
-            metrics_after={"tests_passed": 10},
+            code_changes=[{"file": "test.py", "content": "def foo(): pass"}],
+            test_results={"tests_passed": 10},
         )
 
     @pytest.mark.asyncio
     async def test_verify_returns_result(self, verifier, sample_improvement):
-        """Test that verify returns a VerificationResult."""
+        """Test that verify returns a VerifierResult."""
         result = await verifier.verify(sample_improvement)
-        assert isinstance(result, VerificationResult)
+        assert isinstance(result, VerifierResult)
         assert result.verifier_type == VerifierType.EXECUTION
 
     @pytest.mark.asyncio
@@ -139,13 +139,13 @@ class TestPropertyVerifier:
 
     @pytest.fixture
     def verifier(self):
-        return PropertyVerifier()
+        return PropertyChecksVerifier()
 
     @pytest.fixture
     def sample_improvement(self):
         return Improvement(
             id="imp_prop",
-            domain="logic",
+            capability="logic",
             description="Logic improvement",
             code_changes={},
             metrics_before={},
@@ -171,11 +171,10 @@ class TestVerificationLattice:
     def sample_improvement(self):
         return Improvement(
             id="imp_lattice",
-            domain="code",
+            capability="code",
             description="Lattice test improvement",
-            code_changes={"module.py": "improved code"},
-            metrics_before={"score": 0.7},
-            metrics_after={"score": 0.85},
+            code_changes=[{"file": "module.py", "content": "improved code"}],
+            test_results={"score_before": 0.7, "score_after": 0.85},
         )
 
     def test_lattice_has_default_threshold(self, lattice):
