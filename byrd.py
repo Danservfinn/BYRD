@@ -88,6 +88,11 @@ class BYRD:
         """Backward compatibility property for server.py - returns rsi for Ralph Loop access."""
         return self.rsi
 
+    @property
+    def seeker(self):
+        """Backward compatibility property for server.py - returns rsi for desire fulfillment access."""
+        return self.rsi
+
     async def start(self):
         """Initialize and start BYRD."""
         logger.info("BYRD v2 starting...")
