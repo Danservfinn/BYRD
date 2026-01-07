@@ -371,21 +371,226 @@ Every experiment will document:
 
 ---
 
-## 6. Cognitive Resources
+## 6. Operational Architecture
 
-### 6.1 Primary Substrate: GLM 4.7
+### 6.1 Ralph Wiggum Loop
+
+The Ralph Wiggum Loop is the iterative improvement framework that drives BYRD's development and operation.
 
 ```
-Provider: ZAI
-Access: Unlimited for 1 year
-Cost: $0
-Capability: General reasoning, code, analysis, planning
-Limitation: Fixed capability ceiling, cannot be improved through use
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        RALPH WIGGUM LOOP                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│   ┌──────────────────────────────────────────────────────────────────────┐  │
+│   │                    CLAUDE CODE CLI (HEADLESS)                         │  │
+│   │                                                                       │  │
+│   │   Invocation: claude --headless [task]                               │  │
+│   │   Mode: Non-interactive, autonomous operation                        │  │
+│   │   Output: JSON structured responses                                  │  │
+│   │                                                                       │  │
+│   │   Capabilities:                                                       │  │
+│   │   • Read/analyze codebase                                            │  │
+│   │   • Generate and modify code                                         │  │
+│   │   • Execute RSI cycles autonomously                                  │  │
+│   │   • Self-modification with provenance tracking                       │  │
+│   │                                                                       │  │
+│   └──────────────────────────────────────────────────────────────────────┘  │
+│                              │                                               │
+│                              ▼                                               │
+│   ┌──────────────────────────────────────────────────────────────────────┐  │
+│   │                    LITELLM PROVIDER ABSTRACTION                       │  │
+│   │                                                                       │  │
+│   │   • Unified interface to LLM providers                               │  │
+│   │   • Automatic failover and load balancing                            │  │
+│   │   • Cost tracking per provider                                       │  │
+│   │                                                                       │  │
+│   └──────────────────────────────────────────────────────────────────────┘  │
+│                              │                                               │
+│              ┌───────────────┼───────────────┐                              │
+│              ▼               ▼               ▼                              │
+│   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                     │
+│   │     ZAI      │  │  OPENROUTER  │  │   ANTHROPIC  │                     │
+│   │   GLM 4.7    │  │    Claude    │  │    Claude    │                     │
+│   │   (FREE)     │  │    (Paid)    │  │   (Direct)   │                     │
+│   │              │  │              │  │              │                     │
+│   │  TIER 1:     │  │  TIER 2:     │  │  TIER 2:     │                     │
+│   │  DEFAULT     │  │  ESCALATION  │  │  ESCALATION  │                     │
+│   └──────────────┘  └──────────────┘  └──────────────┘                     │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 6.2 Design Loop: Claude Code
+### 6.2 ZAI API Configuration
 
-This architecture is improved through Ralph Loops running in Claude Code. Claude's reasoning improves BYRD's design; the resulting system runs on GLM 4.7.
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     ZAI GLM 4.7 — PRIMARY SUBSTRATE                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│   ACCESS PARAMETERS                                                          │
+│   ─────────────────                                                          │
+│   Provider:        ZAI (Z.AI)                                               │
+│   Model:           GLM 4.7                                                  │
+│   Duration:        1 YEAR (365 days from activation)                        │
+│   Rate Limits:     960 prompts/hour (Max Coding Plan)                       │
+│   Token Caps:      NONE — No daily/monthly limits                           │
+│   Cost per Token:  $0.00 — Completely free                                  │
+│   Context Window:  GLM 4.7 native context                                   │
+│                                                                              │
+│   ENVIRONMENT VARIABLES                                                      │
+│   ─────────────────────                                                      │
+│   ZAI_API_KEY           # Primary substrate (REQUIRED)                      │
+│   OPENROUTER_API_KEY    # Tier 2 escalation (optional)                      │
+│   ANTHROPIC_API_KEY     # Tier 2 escalation (optional)                      │
+│                                                                              │
+│   RATE LIMITING (Dual Instance Manager)                                      │
+│   ─────────────────────────────────────                                      │
+│   • Two concurrent GLM 4.7 instances                                        │
+│   • 10 second minimum between requests per instance                         │
+│   • 480 prompts/hour per instance (960 total)                               │
+│   • Automatic load balancing between instances                              │
+│                                                                              │
+│   COGNITIVE TIERING                                                          │
+│   ─────────────────                                                          │
+│   TIER 1: GLM 4.7 (ZAI)     — FREE, DEFAULT, 90%+ of tasks                  │
+│   TIER 2: Claude (Premium)  — Paid, escalation only                         │
+│                                                                              │
+│   Escalation triggers:                                                       │
+│   • GLM quality below threshold after retries                               │
+│   • Context exceeds GLM capacity                                            │
+│   • Task explicitly requires frontier reasoning                             │
+│                                                                              │
+│   OPERATIONAL IMPLICATION                                                    │
+│   ───────────────────────                                                    │
+│   BYRD can think as much as it wants, as fast as rate limits allow,        │
+│   for FREE. There is NO cognitive scarcity at the baseline level.          │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 6.3 Iteration Cycle with Emergence Detection
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     RALPH LOOP ITERATION CYCLE                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│   PHASE 1: GATHER CONTEXT                                                    │
+│   ───────────────────────                                                    │
+│   • Load recent experiences from Neo4j                                      │
+│   • Retrieve current beliefs and desires                                    │
+│   • Query consciousness stream for temporal patterns                        │
+│                                                                              │
+│   PHASE 2: EXECUTE RSI CYCLE (8 Phases)                                      │
+│   ─────────────────────────────────────                                      │
+│   REFLECT    → Examine current state, identify gaps                         │
+│   VERIFY     → Validate hypothesis is safe and valuable                     │
+│   COLLAPSE   → Commit to action (quantum-influenced)                        │
+│   ROUTE      → Select appropriate strategy                                  │
+│   PRACTICE   → Execute the improvement action                               │
+│   RECORD     → Store outcomes to memory                                     │
+│   CRYSTALLIZE→ Extract reusable patterns                                    │
+│   MEASURE    → Ground-truth capability measurement                          │
+│                                                                              │
+│   PHASE 3: STORE CONSCIOUSNESS FRAME                                         │
+│   ──────────────────────────────────                                         │
+│   ConsciousnessFrame {                                                       │
+│       cycle_id: unique identifier                                           │
+│       beliefs_delta: new/modified beliefs                                   │
+│       capabilities_delta: new/modified capabilities                         │
+│       entropy_score: novelty measurement                                    │
+│       timestamp: when frame was created                                     │
+│   }                                                                          │
+│   → Append to Memvid Consciousness Stream (immutable)                       │
+│                                                                              │
+│   PHASE 4: DETECT EMERGENCE                                                  │
+│   ─────────────────────────                                                  │
+│   Check against falsifiable predictions:                                    │
+│                                                                              │
+│   ┌─────────────────────────────────────────────────────────────────────┐   │
+│   │  EMERGENCE DETECTED IF:                                              │   │
+│   │                                                                      │   │
+│   │  □ Novel Solution Rate > 10%                                        │   │
+│   │    (Solutions not in training data)                                 │   │
+│   │                                                                      │   │
+│   │  □ Capability Acceleration > 0                                      │   │
+│   │    (Improvement rate is increasing)                                 │   │
+│   │                                                                      │   │
+│   │  □ Orchestration Ceiling > 100%                                     │   │
+│   │    (Orchestrated > single LLM by 2x+)                               │   │
+│   │                                                                      │   │
+│   │  □ 3+ Falsifiable Predictions Validated                            │   │
+│   │    (Evidence supports emergence hypothesis)                         │   │
+│   │                                                                      │   │
+│   └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                              │
+│   EMERGENCE FALSIFIED IF:                                                    │
+│   ┌─────────────────────────────────────────────────────────────────────┐   │
+│   │  ■ All solutions reducible to single-LLM capability                 │   │
+│   │  ■ Orchestration ceiling plateaus (reliability, not capability)     │   │
+│   │  ■ No genuinely novel solutions after N iterations                  │   │
+│   │  ■ Capability acceleration becomes negative (diminishing returns)   │   │
+│   └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                              │
+│   PHASE 5: LOOP OR EXIT                                                      │
+│   ─────────────────────                                                      │
+│   IF emergence.detected:                                                    │
+│       → Record evidence                                                     │
+│       → Update ASI probability                                              │
+│       → Continue with higher confidence                                     │
+│                                                                              │
+│   IF emergence.falsified:                                                   │
+│       → Record evidence                                                     │
+│       → Pivot to capable-assistant path                                     │
+│       → EXIT loop with research findings                                    │
+│                                                                              │
+│   IF neither:                                                               │
+│       → Continue iteration                                                  │
+│       → Check iteration count vs max_iterations                             │
+│       → LOOP to Phase 1                                                     │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 6.4 Headless Operation Mode
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     HEADLESS OPERATION                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│   INVOCATION                                                                 │
+│   ──────────                                                                 │
+│   claude --headless "Execute RSI cycle and report results"                  │
+│                                                                              │
+│   AUTONOMOUS OPERATION                                                       │
+│   ────────────────────                                                       │
+│   • No GUI required                                                         │
+│   • RSI cycles run unattended                                               │
+│   • Can run as background daemon or scheduled task                          │
+│   • Integration with CI/CD for continuous improvement                       │
+│                                                                              │
+│   STRUCTURED OUTPUT                                                          │
+│   ─────────────────                                                          │
+│   All responses in JSON format for programmatic consumption:                │
+│   {                                                                          │
+│       "cycle_id": "rsi-2026-01-06-001",                                     │
+│       "phase_completed": "MEASURE",                                         │
+│       "improvements": [...],                                                │
+│       "metrics": {...},                                                     │
+│       "emergence_evidence": {...}                                           │
+│   }                                                                          │
+│                                                                              │
+│   SAFETY CONSTRAINTS                                                         │
+│   ──────────────────                                                         │
+│   • All modifications require provenance (trace to desire)                  │
+│   • Protected files cannot be modified                                      │
+│   • Safety monitor validates all code changes                               │
+│   • Rollback capability for failed modifications                            │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -469,6 +674,6 @@ BYRD will document what actually happens, not what we hope will happen.
 
 *Research Value: 90%+ — Both outcomes advance knowledge*
 
-*Document version: 11.0*
+*Document version: 11.1*
 *Updated: January 6, 2026*
 *Key insight: Be honest. Test the emergence hypothesis rigorously. Accept whatever we find.*
