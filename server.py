@@ -3,9 +3,11 @@ BYRD FastAPI Server
 Provides REST API and WebSocket streaming for the visualization UI.
 """
 
-# Load .env file before any other imports
+# Load .env file before any other imports (only if not in production/Railway)
 from dotenv import load_dotenv
-load_dotenv()
+import os
+if not os.environ.get('RAILWAY_ENVIRONMENT'):
+    load_dotenv()
 
 # Fix SSL certificates for Neo4j Aura on macOS
 import os
