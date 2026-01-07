@@ -34,7 +34,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col overflow-hidden w-full">
-        <Header toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+        <Header />
         <main className="flex-1 overflow-auto p-4 lg:p-6">
           {children}
         </main>
