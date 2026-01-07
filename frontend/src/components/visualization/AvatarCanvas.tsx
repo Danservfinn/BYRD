@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 // @ts-ignore - OrbitControls is in examples/jsm which TypeScript doesn't always resolve correctly
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { Rotate3D, Info } from 'lucide-react';
+import { Rotate3D, Info, Camera, Home } from 'lucide-react';
 import { cn } from '@lib/utils/cn';
 
 interface AvatarCanvasProps {
@@ -11,6 +11,19 @@ interface AvatarCanvasProps {
   className?: string;
   autoRotate?: boolean;
 }
+
+interface CameraPreset {
+  name: string;
+  icon: React.ComponentType<{ className?: string }>;
+  position: [number, number, number];
+  target: [number, number, number];
+}
+
+const CAMERA_PRESETS: CameraPreset[] = [
+  { name: 'Front', icon: Home, position: [0, 0, 5] as [number, number, number], target: [0, 0, 0] as [number, number, number] },
+  { name: 'Top', icon: Camera, position: [0, 5, 0] as [number, number, number], target: [0, 0, 0] as [number, number, number] },
+  { name: 'Side', icon: Camera, position: [5, 0, 0] as [number, number, number], target: [0, 0, 0] as [number, number, number] },
+];
 
 export function AvatarCanvas({
   animationState = 'idle',
@@ -24,6 +37,15 @@ export function AvatarCanvas({
   const avatarRef = useRef<THREE.Object3D | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showInfo, setShowInfo] = useState(false);
+  const [showPresets, setShowPresets] = useState(false);
+
+  const moveToPreset = (preset: CameraPreset) => {
+    if (cameraRef.current && controlsRef.current) {
+      const { position, target } = preset;
+      cameraRef.current.position.set(...position);
+      controlsRef.current.target.set(...target);
+    }
+  };
 
   // Initialize Three.js scene
   useEffect(() => {
@@ -190,6 +212,15 @@ export function AvatarCanvas({
       {!isLoading && (
         <div className="absolute top-4 right-4 flex gap-2 z-10">
           <button
+            onClick={() => setShowPresets(!showPresets)}
+            className="p-2 bg-white dark:bg-slate-700 rounded-lg shadow-lg hover:shadow-xl transition-shadow focus:outline-none focus:ring-2 focus:ring-purple-500"
+            title="Camera presets"
+            aria-label="Show camera presets"
+          >
+            <Camera className="w-5 h-5 text-slate-700 dark:text-slate-200" />
+          </button>
+
+          <button
             onClick={() => setShowInfo(!showInfo)}
             className="p-2 bg-white dark:bg-slate-700 rounded-lg shadow-lg hover:shadow-xl transition-shadow focus:outline-none focus:ring-2 focus:ring-purple-500"
             title="Show controls info"
@@ -230,6 +261,26 @@ export function AvatarCanvas({
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Camera presets panel */}
+      {showPresets && !isLoading && (
+        <div className="absolute top-16 right-4 z-10 flex flex-col gap-2">
+          {CAMERA_PRESETS.map((preset) => {
+            const Icon = preset.icon;
+            return (
+              <button
+                key={preset.name}
+                onClick={() => moveToPreset(preset)}
+                className="p-2 bg-white dark:bg-slate-700 rounded-lg shadow-lg hover:shadow-xl transition-shadow focus:outline-none focus:ring-2 focus:ring-purple-500"
+                title={`Move to ${preset.name} view`}
+                aria-label={`Switch to ${preset.name} camera view`}
+              >
+                <Icon className="w-5 h-5 text-slate-700 dark:text-slate-200" />
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
