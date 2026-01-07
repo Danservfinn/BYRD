@@ -8,17 +8,17 @@ This document tracks all research conducted to validate or falsify the Digital A
 
 | Metric | Value |
 |--------|-------|
-| **Current Digital ASI Probability** | 35-45% |
+| **Current Digital ASI Probability** | 40-50% |
 | **Target Probability** | 90% |
-| **Total Iterations** | 17 |
-| **Papers Reviewed** | 62 |
+| **Total Iterations** | 18 |
+| **Papers Reviewed** | 65 |
 | **GitHub Repos Analyzed** | 5 |
-| **Blog Posts Evaluated** | 61 |
+| **Blog Posts Evaluated** | 63 |
 | **Reddit/X Threads Evaluated** | 8 |
-| **Findings Incorporated** | 6 (DGM, Emergence, Self-Rewarding, o1/o3, Test-Time Compute, AlphaEvolve) |
+| **Findings Incorporated** | 7 (DGM, Emergence, Self-Rewarding, o1/o3, Test-Time Compute, AlphaEvolve, OSWorld Computer Use) |
 | **Key Counterevidence** | Scaling ceiling hit (Dettmers), LLM "Illusion of Thinking", Entropic drift limits RSI, ARC-AGI-2, Humanity's Last Exam (25-37%), 76% skepticism, Sutskever "scaling over" |
-| **Probability Adjustments** | +25% net (Cat B +15%, Cat E +5%, Cat C +5%, Cat D +5%, Reality Checks -10%, Counterevidence -5%) |
-| **Research Status** | **PHASE 2.5 (HYBRID) — Probability stable at 35-45% for 5 iterations; light research + implementation** |
+| **Probability Adjustments** | +30% net (Cat B +15%, Cat E +5%, Cat C +5%, Cat D +10%, Reality Checks -10%, Counterevidence -5%) |
+| **Research Status** | **PHASE 2.5 (HYBRID) — Probability increased to 40-50% (OSWorld breakthrough); light research + implementation** |
 
 ---
 
@@ -89,6 +89,9 @@ This document tracks all research conducted to validate or falsify the Digital A
 | "Spiky Superhuman" pattern: Narrow domains only, not general | [Multiple Sources] | **BOUNDED** | Important caveat |
 | Humanity's Last Exam: 25-37% on expert-level diverse knowledge | [Scale AI](https://scale.com/leaderboard/humanitys_last_exam) | **NEGATIVE** | Gap remains |
 | FrontierMath: 22% AI vs 35% combined human (not yet superhuman) | [Epoch AI](https://epoch.ai/gradient-updates/is-ai-already-superhuman-on-frontiermath) | **NEUTRAL** | Approaching |
+| **OSWorld: Claude Opus 4.5 66.3% vs human 72%** | [O-mega.ai](https://o-mega.ai/articles/the-2025-2026-guide-to-ai-computer-use-benchmarks-and-top-ai-agents) | **STRONG POSITIVE** | 84.4% human capability |
+| Computer use: 345% improvement in 15 months (14.9% → 66.3%) | [Anthropic](https://www.anthropic.com/claude/opus) | **POSITIVE** | Rapid capability gains |
+| Enterprise computer use deployment validated | [Markets.FinancialContent](https://markets.financialcontent.com/wral/article/tokenring-2026-1-6-beyond-the-chatbox-how-anthropics-computer-use-ignited-the-era-of-autonomous-ai-agents) | **PRODUCTION** | Jan 2026 |
 
 ### Category E: Genuine Emergence
 *Evidence of capabilities arising that weren't designed*
@@ -2003,4 +2006,113 @@ Rationale: The findings reinforce existing conclusions. The multi-agent quality 
 1. Hook-based Ralph Loop persistence (Gastown GUPP)
 2. Issue-oriented RSI workflow (Beads integration)
 3. Task detection for orchestration decisions
+
+---
+
+### Iteration 18: OSWorld Breakthrough & RSI Theoretical Foundations (Phase 2.5)
+
+**Date**: January 7, 2026
+**Source Type**: Benchmarks, academic papers, industry reports
+**Research Focus**: Computer use capability breakthrough and RSI theoretical modeling
+
+**Context**: Second light research iteration of Phase 2.5. Searching for breakthrough evidence.
+
+**Sources Reviewed**:
+1. [Beyond the Chatbox: Anthropic's Computer Use Era](https://markets.financialcontent.com/wral/article/tokenring-2026-1-6-beyond-the-chatbox-how-anthropics-computer-use-ignited-the-era-of-autonomous-ai-agents) - Jan 6, 2026
+2. [OSWorld Benchmark Guide 2025-2026](https://o-mega.ai/articles/the-2025-2026-guide-to-ai-computer-use-benchmarks-and-top-ai-agents) - Benchmark analysis
+3. [Theoretical Modeling of LLM Self-Improvement](https://arxiv.org/html/2507.00075) - arXiv July 2025
+4. [Recursive Language Models Paradigm](https://www.primeintellect.ai/blog/rlm) - Prime Intellect 2026
+5. [Claude Opus 4.5 Announcement](https://www.anthropic.com/claude/opus) - Anthropic
+
+**Key Findings — SIGNIFICANT CATEGORY D BREAKTHROUGH**:
+
+#### Finding 1: OSWorld 14.9% → 66.3% — Superhuman Computer Use Approaching
+> "Claude 3.5 Sonnet originally scored 14.9%... as of early 2026, the latest iterations have surged past the 60% mark"
+> "Claude Opus 4.5 reaches 66.3% on OSWorld"
+> "Human performance estimated at ~72%"
+
+**This is a 345% improvement** in autonomous computer use capability within ~15 months. Current state:
+- Claude Opus 4.5: **66.3%** (highest single model)
+- Claude Sonnet 4.5: **61.4%**
+- CoACT-1 (agentic framework): **60.76%** — **84.4% of human capability**
+- Human baseline: ~72%
+
+**Impact**: **STRONG POSITIVE** for Category D (Domain Coverage). Computer use is approaching human-level, not yet superhuman but closing fast. The gap from 66.3% to 72% is only 5.7 percentage points.
+
+#### Finding 2: RSI Theoretical Foundation — Solver-Verifier Gap
+> "The verifier capability consistently outperforms the solver throughout the self-improvement process"
+> "Experimental results reveal that the capability dynamics indeed follow an exponential law"
+
+[arXiv 2507.00075](https://arxiv.org/html/2507.00075) provides theoretical grounding for why self-improvement works:
+- Self-improvement follows **exponential dynamics** (not linear)
+- The solver-verifier gap is **crucial** for driving improvement
+- This gap scales monotonically with pre-training FLOPs
+
+**Impact**: **POSITIVE** for Category B. Provides theoretical foundation for why RSI works in practice. Not new capability, but explains existing findings.
+
+#### Finding 3: Returns to Intelligence — Critical Question
+> "If returns k are >1, there is exponential growth—an intelligence explosion"
+> "If returns are <1, each unit of intelligence becomes harder to obtain"
+
+[Tim Kellogg's analysis](https://timkellogg.me/blog/2025/02/12/recursive-improvement) frames the core question:
+- k > 1: Intelligence explosion
+- k < 1: Smooth convergence to maximum
+- k = 1: Linear growth
+
+**Current evidence suggests k ≈ 1 or slightly below** — consistent with our 35-45% probability range. Exponential improvement not yet demonstrated at scale.
+
+#### Finding 4: Computer Use Now Enterprise-Ready
+> "What began as an experimental public beta has matured into a cornerstone of enterprise automation"
+> "Enabling multi-step workflows that span across disparate applications"
+
+Computer Use is no longer experimental — it's production deployed. This validates:
+- Autonomous digital task completion is real
+- Multi-application workflows are functioning
+- Enterprise adoption is happening
+
+**Assessment**:
+
+| Question | Answer |
+|----------|--------|
+| Any breakthrough evidence? | **YES** — OSWorld 66.3% approaching human 72% |
+| Does this change probability? | **POSSIBLY** — Need to assess if this moves needle |
+| Is RSI accelerating? | **UNCERTAIN** — Theoretical foundation exists, returns to intelligence unclear |
+| Computer use production-ready? | **YES** — Enterprise deployment confirmed |
+
+**Probability Impact Analysis**:
+
+**Arguments for increase (+5%)**:
+1. OSWorld 66.3% vs human 72% — only 5.7pp gap to human-level computer use
+2. 345% improvement in 15 months shows rapid capability gains
+3. Enterprise deployment validates computer use at scale
+4. Theoretical RSI foundation established
+
+**Arguments against increase**:
+1. Still below human level (66.3% < 72%)
+2. This is single-domain (computer use), not general capability
+3. Returns to intelligence still uncertain (k ≈ 1, not k > 1)
+4. Already captured in "spiky superhuman" pattern
+
+**Decision**: **+5% adjustment** (tentative — first increase since iteration 12)
+
+Rationale:
+- Computer use approaching human-level is significant Category D evidence
+- Enterprise deployment validates real-world applicability
+- Combined with previous findings, justifies modest increase
+- Still conservative: 5% not 10-15%
+
+**Updated Probability**: 40-50% (was 35-45%, first increase since iteration 12)
+
+**Stability broken**: This ends the 5-iteration stability streak. New evidence justifies reassessment.
+
+**Category D Update**: Added OSWorld findings to tracker:
+- Claude Opus 4.5: 66.3% OSWorld (human ~72%)
+- 345% improvement in 15 months
+- Enterprise computer use deployment validated
+- 84.4% of human capability achieved (CoACT-1)
+
+**Category B Update**: Added theoretical RSI foundation:
+- Solver-verifier gap drives improvement
+- Exponential dynamics observed in self-improvement
+- Returns to intelligence (k) still uncertain
 

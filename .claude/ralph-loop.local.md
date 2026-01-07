@@ -1,6 +1,6 @@
 ---
 active: true
-iteration: 17
+iteration: 18
 max_iterations: 0
 completion_promise: "COMPLETED"
 started_at: "2026-01-07T04:02:03Z"
@@ -14,11 +14,11 @@ started_at: "2026-01-07T04:02:03Z"
 
 Continuously research cutting-edge AI techniques from online sources and incorporate validated findings into BYRD's architecture until Digital ASI probability reaches **90%** or the path is definitively falsified.
 
-**Current Digital ASI Probability: 35-45%** (Iteration 17 complete, Phase 2.5 HYBRID)
+**Current Digital ASI Probability: 40-50%** (Iteration 18 complete, Phase 2.5 HYBRID)
 **Target: 90%**
-**Gap to Close: 45-55 percentage points**
+**Gap to Close: 40-50 percentage points**
 
-**Phase 2.5 (HYBRID)**: Light research (1-2 iterations/week) monitoring for breakthroughs while implementation begins. Probability stable at 35-45% for 5 consecutive iterations.
+**Phase 2.5 (HYBRID)**: Light research (1-2 iterations/week) + implementation. **Probability increased +5%** in iteration 18 due to OSWorld computer use breakthrough (66.3% vs human 72%).
 
 Research continues in parallel with implementation of Gastown-inspired patterns.
 
@@ -521,20 +521,20 @@ Next step would be empirical testing of the architecture.
 ## CURRENT STATUS
 
 ```
-Iteration: 17 (PHASE 2.5 HYBRID - Light Research + Implementation)
-Architecture.md version: 16.0
-Current Digital ASI Probability: 35-45%
+Iteration: 18 (PHASE 2.5 HYBRID - Light Research + Implementation)
+Architecture.md version: 16.0 → 18.0
+Current Digital ASI Probability: 40-50% (+5% from OSWorld breakthrough)
 Target Probability: 90%
-Gap: 45-55 percentage points
+Gap: 40-50 percentage points
 
 Research Progress (Phase 2.5 HYBRID):
-• Papers reviewed: 62
+• Papers reviewed: 65
 • GitHub repos analyzed: 5 (+ Gastown, VC)
-• Blog posts evaluated: 61
+• Blog posts evaluated: 63
 • Reddit posts evaluated: 8
 • X/Twitter threads evaluated: 8
-• Findings incorporated: 6 (DGM, Emergence, Self-Rewarding, o1/o3, Test-Time Compute, AlphaEvolve)
-• Probability adjustments: +25% net (Cat B +15%, Cat E +5%, Cat C +5%, Cat D +5%, Reality Checks -10%, Counterevidence -5%)
+• Findings incorporated: 7 (DGM, Emergence, Self-Rewarding, o1/o3, Test-Time Compute, AlphaEvolve, OSWorld)
+• Probability adjustments: +30% net (Cat B +15%, Cat E +5%, Cat C +5%, Cat D +10%, Reality Checks -10%, Counterevidence -5%)
 
 Key validated findings:
 ✓ Darwin Gödel Machine: Self-modifying code 20%→50% SWE-bench
@@ -554,6 +554,10 @@ Key validated findings:
 ✓ Google AI Co-Scientist: Test-time self-improvement with validated discoveries
 ✓ **Multi-agent: 80x specificity, 140x correctness on incident response** (arXiv 2511.15755)
 ✓ Zero variance enables production SLA commitments
+✓ **OSWorld: Claude Opus 4.5 66.3% vs human 72%** — 84.4% human capability
+✓ Computer use: 345% improvement in 15 months (14.9% → 66.3%)
+✓ Enterprise computer use deployment validated (Jan 2026)
+✓ Solver-verifier gap: Theoretical RSI foundation established
 
 Key negative findings:
 ✗ Multi-agent debate does NOT exceed single-model universally
@@ -575,9 +579,10 @@ Key negative findings:
 ✗ Adoption gap: 11% Deloitte vs 57% LangChain — selection bias
 
 Phase 2.5 Status:
-1. **Probability stable** — 35-45% for **5 consecutive iterations**
-2. **Light research continues** (1-2 iterations/week)
-3. **Implementation phase begun** — Gastown patterns actionable
+1. **Probability increased** — 40-50% (up from 35-45%, OSWorld breakthrough)
+2. **Stability broken** — 5-iteration streak ended with new evidence
+3. **Light research continues** (1-2 iterations/week)
+4. **Implementation phase active** — Gastown patterns actionable
    - Hook-based Ralph Loop persistence (Gastown GUPP)
    - Issue-oriented RSI workflow (Beads)
    - Task detection for orchestration decisions
