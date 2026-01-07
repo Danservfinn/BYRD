@@ -50,7 +50,7 @@ function SystemStatusBadge() {
 
   return (
     <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${config.bg}`}>
-      <span className={`w-2 h-2 rounded-full ${config.dot} ${status === 'running' ? 'animate-pulse' : ''}`} />
+      <span className={`w-2 h-2 rounded-full ${config.dot} ${(status as string) === 'running' ? 'animate-pulse' : ''}`} />
       <span className={`text-xs font-medium ${config.text}`}>{config.label}</span>
     </div>
   );

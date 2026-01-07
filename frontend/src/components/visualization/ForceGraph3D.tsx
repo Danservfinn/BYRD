@@ -19,7 +19,7 @@ interface SimNode extends GraphNode {
 
 export function ForceGraph3D({ data, onNodeClick, typeColors }: ForceGraph3DProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationRef = useRef<number | undefined>();
+  const animationRef = useRef<number | undefined>(undefined);
   const nodesRef = useRef<SimNode[]>([]);
   const rotationRef = useRef({ x: 0, y: 0 });
   const isDragging = useRef(false);

@@ -29,7 +29,9 @@ export function CompositionGraph() {
         // Type assertion to ensure nodes match ModuleNode interface
         setNodes((result.graph.nodes || []).map(n => ({
           ...n,
-          type: (n.type as 'core' | 'emergent' | 'composed') || 'emergent'
+          type: (n.type as 'core' | 'emergent' | 'composed') || 'emergent',
+          x: n.x ?? 0,
+          y: n.y ?? 0
         })));
         setLinks(result.graph.links || []);
       }

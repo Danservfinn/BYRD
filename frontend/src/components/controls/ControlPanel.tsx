@@ -7,7 +7,7 @@ import { useByrdAPI } from '../../hooks/useByrdAPI';
 import { clsx } from 'clsx';
 
 export function ControlPanel() {
-  const { startRSICycle, stopRSICycle, resetSystem, getSystemStatus } = useByrdAPI();
+  const { startRSICycle, stopRSICycle, resetSystem } = useByrdAPI();
   const [systemState, setSystemState] = useState<'running' | 'stopped' | 'paused'>('stopped');
   const [loading, setLoading] = useState<string | null>(null);
 
