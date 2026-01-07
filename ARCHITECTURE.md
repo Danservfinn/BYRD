@@ -399,24 +399,22 @@ The Ralph Wiggum Loop is the iterative improvement framework that drives BYRD's 
 │                              │                                               │
 │                              ▼                                               │
 │   ┌──────────────────────────────────────────────────────────────────────┐  │
-│   │                    LITELLM PROVIDER ABSTRACTION                       │  │
+│   │                     ZAI GLM 4.7 (EXCLUSIVE)                           │  │
 │   │                                                                       │  │
-│   │   • Unified interface to LLM providers                               │  │
-│   │   • Automatic failover and load balancing                            │  │
-│   │   • Cost tracking per provider                                       │  │
+│   │   Single substrate — no escalation, no fallback                      │  │
+│   │   This is the fixed cognitive ceiling we're testing against          │  │
+│   │                                                                       │  │
+│   │   ┌────────────────────────────────────────────────────────────────┐ │  │
+│   │   │                                                                │ │  │
+│   │   │   ZAI_API_KEY ──────────► GLM 4.7 API ──────────► Response    │ │  │
+│   │   │                                                                │ │  │
+│   │   │   • All cognition flows through this single provider          │ │  │
+│   │   │   • No premium escalation (tests true substrate limits)       │ │  │
+│   │   │   • Unlimited for 1 year, completely free                     │ │  │
+│   │   │                                                                │ │  │
+│   │   └────────────────────────────────────────────────────────────────┘ │  │
 │   │                                                                       │  │
 │   └──────────────────────────────────────────────────────────────────────┘  │
-│                              │                                               │
-│              ┌───────────────┼───────────────┐                              │
-│              ▼               ▼               ▼                              │
-│   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                     │
-│   │     ZAI      │  │  OPENROUTER  │  │   ANTHROPIC  │                     │
-│   │   GLM 4.7    │  │    Claude    │  │    Claude    │                     │
-│   │   (FREE)     │  │    (Paid)    │  │   (Direct)   │                     │
-│   │              │  │              │  │              │                     │
-│   │  TIER 1:     │  │  TIER 2:     │  │  TIER 2:     │                     │
-│   │  DEFAULT     │  │  ESCALATION  │  │  ESCALATION  │                     │
-│   └──────────────┘  └──────────────┘  └──────────────┘                     │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -425,7 +423,7 @@ The Ralph Wiggum Loop is the iterative improvement framework that drives BYRD's 
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                     ZAI GLM 4.7 — PRIMARY SUBSTRATE                          │
+│                     ZAI GLM 4.7 — EXCLUSIVE SUBSTRATE                        │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │   ACCESS PARAMETERS                                                          │
@@ -438,11 +436,13 @@ The Ralph Wiggum Loop is the iterative improvement framework that drives BYRD's 
 │   Cost per Token:  $0.00 — Completely free                                  │
 │   Context Window:  GLM 4.7 native context                                   │
 │                                                                              │
-│   ENVIRONMENT VARIABLES                                                      │
-│   ─────────────────────                                                      │
-│   ZAI_API_KEY           # Primary substrate (REQUIRED)                      │
-│   OPENROUTER_API_KEY    # Tier 2 escalation (optional)                      │
-│   ANTHROPIC_API_KEY     # Tier 2 escalation (optional)                      │
+│   ENVIRONMENT VARIABLE                                                       │
+│   ────────────────────                                                       │
+│   ZAI_API_KEY           # The ONLY LLM provider (REQUIRED)                  │
+│                                                                              │
+│   No other API keys needed — GLM 4.7 is the exclusive substrate.           │
+│   This ensures we're testing true orchestration limits, not escalating     │
+│   to a more capable model when things get hard.                            │
 │                                                                              │
 │   RATE LIMITING (Dual Instance Manager)                                      │
 │   ─────────────────────────────────────                                      │
@@ -451,20 +451,23 @@ The Ralph Wiggum Loop is the iterative improvement framework that drives BYRD's 
 │   • 480 prompts/hour per instance (960 total)                               │
 │   • Automatic load balancing between instances                              │
 │                                                                              │
-│   COGNITIVE TIERING                                                          │
-│   ─────────────────                                                          │
-│   TIER 1: GLM 4.7 (ZAI)     — FREE, DEFAULT, 90%+ of tasks                  │
-│   TIER 2: Claude (Premium)  — Paid, escalation only                         │
+│   WHY SINGLE SUBSTRATE                                                       │
+│   ────────────────────                                                       │
+│   The emergence hypothesis asks: Can orchestration exceed substrate?        │
 │                                                                              │
-│   Escalation triggers:                                                       │
-│   • GLM quality below threshold after retries                               │
-│   • Context exceeds GLM capacity                                            │
-│   • Task explicitly requires frontier reasoning                             │
+│   If we escalate to Claude/GPT-4 when GLM fails, we're not testing         │
+│   orchestration — we're just using a better model.                          │
+│                                                                              │
+│   By constraining to GLM 4.7 exclusively:                                   │
+│   • We get a clean test of orchestration vs substrate                       │
+│   • Any improvement must come from orchestration, not model switching       │
+│   • We'll know definitively if we hit the substrate ceiling                 │
 │                                                                              │
 │   OPERATIONAL IMPLICATION                                                    │
 │   ───────────────────────                                                    │
 │   BYRD can think as much as it wants, as fast as rate limits allow,        │
 │   for FREE. There is NO cognitive scarcity at the baseline level.          │
+│   But there is a fixed cognitive CEILING — GLM 4.7's capability.           │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -674,6 +677,6 @@ BYRD will document what actually happens, not what we hope will happen.
 
 *Research Value: 90%+ — Both outcomes advance knowledge*
 
-*Document version: 11.1*
+*Document version: 11.2*
 *Updated: January 6, 2026*
 *Key insight: Be honest. Test the emergence hypothesis rigorously. Accept whatever we find.*
