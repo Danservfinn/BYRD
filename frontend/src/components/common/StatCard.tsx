@@ -12,6 +12,7 @@ interface StatCardProps {
   };
   color?: 'blue' | 'green' | 'amber' | 'rose' | 'purple';
   size?: 'sm' | 'md' | 'lg';
+  className?: string;
 }
 
 const colorClasses = {
@@ -41,9 +42,10 @@ export function StatCard({
   trend,
   color = 'blue',
   size = 'md',
+  className = '',
 }: StatCardProps) {
   return (
-    <GlassPanel padding="sm" glow={color === 'blue' ? 'blue' : 'none'} className="active:scale-[0.98] transition-transform">
+    <GlassPanel padding="sm" glow={color === 'blue' ? 'blue' : 'none'} className={`active:scale-[0.98] transition-transform ${className}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <p className="text-[10px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide truncate">
