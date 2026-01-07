@@ -73,6 +73,16 @@ class BYRD:
         """Backward compatibility property for server.py."""
         return self.quantum
 
+    @property
+    def agi_runner(self):
+        """Backward compatibility property for server.py."""
+        return self.rsi
+
+    @property
+    def rsi_engine(self):
+        """Backward compatibility property for server.py."""
+        return self.rsi
+
     async def start(self):
         """Initialize and start BYRD."""
         logger.info("BYRD v2 starting...")
