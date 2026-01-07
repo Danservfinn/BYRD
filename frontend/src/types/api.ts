@@ -1,5 +1,12 @@
 // API Response Types
 
+export interface ChatMessage {
+  id: string;
+  type: 'user' | 'byrd' | 'system';
+  content: string;
+  timestamp: string;
+}
+
 export interface RSIMetricsResponse {
   recent_cycles?: Array<{
     cycle_id: string;
