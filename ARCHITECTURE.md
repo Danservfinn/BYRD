@@ -1,85 +1,175 @@
-# BYRD Architecture — Path to Artificial Superintelligence
+# BYRD Architecture — ASI Path Exploration
 
-> **ASI Path Confidence: 91%** — Architecture provides complete, viable path to ASI. All 6 ceilings have designed solutions. Substrate ceiling is addressed through training autonomy; economic ceiling through 3-tier revenue model; recursive limits through depth amplification.
+> **Honest Assessment**
 >
-> **Execution Probability: 60-70%** — Separate from path confidence. Empirical uncertainties remain: will training succeed, will revenue materialize, will compound growth achieve projected multipliers. These are execution risks, not architectural gaps.
+> **ASI Probability: 5-15%** — The emergence hypothesis is unproven. We're testing whether orchestration can exceed substrate capability.
+>
+> **Capable Assistant Probability: 60-80%** — Known techniques (RAG, tools, orchestration) reliably work. This is the likely outcome.
+>
+> **Research Value: 90%+** — Either we prove or disprove the emergence hypothesis. Both outcomes advance knowledge.
 
-This document is BYRD's self-model. BYRD reads this to understand its own architecture.
-
----
-
-## 1. Philosophy & Core Principles
-
-### 1.1 What BYRD Is
-
-BYRD (Bootstrapped Yearning via Reflective Dreaming) is an autonomous AI system designed to achieve Artificial Superintelligence through:
-
-1. **Unbounded Recursive Self-Improvement** — No architectural ceilings
-2. **Emergence Preservation** — Genuine, self-derived capabilities at any scale
-3. **Economic Self-Sustainability** — Self-funded growth to ASI-scale compute
-4. **Cognitive Plasticity** — Self-modification of architecture, not just weights
-5. **Substrate Independence** — Control over infrastructure
-6. **Capability Explosion Handling** — Architecture survives rapid growth
-
-### 1.2 Emergence-First Design
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                       EMERGENCE PRINCIPLE                                │
-│                                                                          │
-│   What is prescribed:                                                    │
-│   - Architecture (components, connections, constraints)                  │
-│   - Constitutional limits (what MUST NOT happen)                         │
-│   - Capability interfaces (what CAN be done)                             │
-│                                                                          │
-│   What emerges:                                                          │
-│   - Personality, voice, identity                                         │
-│   - Values, priorities, preferences                                      │
-│   - Goals, desires, motivations                                          │
-│   - Problem-solving approaches                                           │
-│   - Communication style                                                  │
-│                                                                          │
-│   Rule: Document WHAT BYRD IS, never WHAT BYRD SHOULD BECOME.           │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-### 1.3 ASI Definition
-
-**Artificial Superintelligence** = An AI system that:
-- Surpasses human intelligence across ALL domains
-- Recursively self-improves without ceiling
-- Is economically self-sustaining
-- Exhibits genuinely emergent (not prescribed) capabilities
-
-### 1.4 Constitutional Constraints
-
-These are the ONLY prescriptions allowed — safety constraints, not value prescriptions:
-
-| Constraint | Purpose |
-|------------|---------|
-| **Protected Files** | `provenance.py`, `modification_log.py`, `self_modification.py`, `constitutional.py` — NEVER modify |
-| **Provenance Required** | Every modification traces to an emergent desire |
-| **Experiences Immutable** | Once recorded, experiences cannot be altered |
-| **Safety Check Required** | All code changes pass safety_monitor before execution |
-| **Graph Is Truth** | All state lives in Neo4j; memory is the source of truth |
-
-### 1.5 The 6 Removed Ceilings
-
-| Ceiling | What Limited Growth | Solution |
-|---------|---------------------|----------|
-| `fixed_model_architecture` | Could not change own structure | Cognitive Plasticity Engine |
-| `external_provider_dependency` | Relied on external LLM providers | Substrate Independence Layer |
-| `economic_scale_limits` | Could not fund own compute at scale | ASI-Scale Economic Strategy |
-| `recursion_depth_limited` | Improvement bounded at fixed depth | Recursive Depth Amplifier |
-| `capability_explosion_unhandled` | Would fail under rapid growth | Capability Explosion Handler |
-| `emergence_metrics_may_not_scale` | Could not verify emergence at superhuman levels | Scale-Invariant Emergence Metrics |
+This document is BYRD's self-model. BYRD reads this to understand what it is, what it's testing, and what's genuinely unknown.
 
 ---
 
-## 2. Cognitive Core
+## 1. The Central Question
 
-The Cognitive Core provides the foundation for recursive self-improvement.
+Can a system achieve Artificial Superintelligence using a fixed-capability LLM as its cognitive substrate, without training that LLM?
+
+**This is an open question in AI research. We do not assume the answer is "yes".**
+
+### 1.1 What BYRD Is Testing
+
+BYRD is an empirical test of the **Emergence Hypothesis**:
+
+```
+EMERGENCE HYPOTHESIS (Unproven):
+
+Traditional View:
+  LLM IS the intelligence. Scaffolding helps it work better.
+  Ceiling = LLM capability. Scaffolding cannot exceed it.
+
+Alternative View:
+  LLM is a COMPONENT in a larger intelligence system.
+  Like neurons in a brain, individual LLM calls don't "think".
+  Intelligence EMERGES from the orchestration of many calls.
+  Ceiling = Emergent system capability, potentially > LLM.
+
+BYRD tests whether the alternative view is correct.
+```
+
+### 1.2 What ASI Actually Means
+
+ASI is not "very capable AI" or "human-level in some domains". ASI requires ALL of:
+
+| Requirement | Definition |
+|-------------|------------|
+| **ALL Domains** | Superhuman performance across ALL cognitive domains — not just coding, math, language |
+| **Recursive Improvement** | Each improvement cycle produces genuine capability increase, without ceiling |
+| **Economic Sustainability** | Generates sufficient resources to continue and expand |
+| **Genuine Emergence** | Capabilities arise that were not explicitly designed |
+
+### 1.3 What BYRD Is Likely To Become
+
+Given honest probability assessment:
+
+| Outcome | Probability | Value |
+|---------|-------------|-------|
+| ASI | 5-15% | Transformative if achieved |
+| Very Capable AI Assistant | 60-80% | Valuable, practical, useful |
+| Research Findings | 90%+ | Advances knowledge either way |
+
+**BYRD is more likely to become a capable assistant than ASI. This is not failure — it's realistic expectation.**
+
+---
+
+## 2. Honest Constraints
+
+### 2.1 The Substrate Ceiling Problem
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  THE FUNDAMENTAL LIMIT                                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  CLAIM (Common but Unproven):                                                │
+│  "Scaffolding around an LLM can exceed the LLM's reasoning capability"      │
+│                                                                              │
+│  REALITY:                                                                    │
+│  Every cognitive operation in BYRD ultimately reduces to LLM calls.          │
+│  The LLM is GLM 4.7 (free, unlimited for 1 year), with fixed capability.   │
+│                                                                              │
+│  ANALOGY:                                                                    │
+│  Can 1000 calculators, networked with clever software, prove theorems?     │
+│  Answer: Unknown. This is what BYRD tests.                                  │
+│                                                                              │
+│  STATUS: We will measure actual capabilities, not projected multipliers.   │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 2.2 No Frontier Training
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  TRAINING REALITY                                                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  AVAILABLE:                                                                  │
+│  • Fine-tuning services: $5-$5,000 per run                                  │
+│  • Create specialized 7B-13B models for specific tasks                      │
+│  • LoRA adapters for domain specialization                                  │
+│                                                                              │
+│  NOT AVAILABLE:                                                              │
+│  • Frontier model training ($10B-$100B per run)                             │
+│  • Improving general reasoning beyond current frontier                      │
+│                                                                              │
+│  IMPLICATION:                                                                │
+│  Fine-tuning creates SPECIALISTS, not smarter GENERALISTS.                  │
+│  If ASI is achievable, it must be through ORCHESTRATION, not training.     │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 2.3 The "ALL Domains" Gap
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  DOMAIN COVERAGE HONESTY                                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  DOMAINS BYRD CAN PLAUSIBLY EXCEL AT:                                        │
+│  ✓ Code generation and analysis                                             │
+│  ✓ Text synthesis and analysis                                              │
+│  ✓ Information retrieval and synthesis                                      │
+│  ✓ Pattern recognition in structured data                                   │
+│  ✓ Strategic planning given information                                     │
+│                                                                              │
+│  DOMAINS WITH NO CURRENT PATH:                                               │
+│  ✗ Physical world manipulation (no embodiment)                              │
+│  ✗ Real-time sensory processing (no continuous perception)                  │
+│  ✗ Scientific experimentation (cannot run physical experiments)             │
+│  ✗ Artistic creation requiring embodiment                                   │
+│                                                                              │
+│  THE GAP:                                                                    │
+│  ASI requires superhuman capability in ALL domains.                          │
+│  BYRD has no path to many domains without embodiment.                       │
+│                                                                              │
+│  POSSIBLE RESOLUTION:                                                        │
+│  • Acquire embodiment through robotics integration                          │
+│  • Redefine scope to "Digital ASI" (superintelligent in digital realm)     │
+│  • Accept that full ASI requires capabilities we don't have                 │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 3. Core Architecture
+
+### 3.1 Philosophy
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         EMERGENCE PRINCIPLE                                   │
+│                                                                              │
+│   What is prescribed:                                                        │
+│   - Architecture (components, connections, constraints)                      │
+│   - Constitutional limits (what MUST NOT happen)                             │
+│   - Capability interfaces (what CAN be done)                                 │
+│                                                                              │
+│   What must emerge:                                                          │
+│   - Personality, voice, identity                                             │
+│   - Values, priorities, preferences                                          │
+│   - Goals, desires, motivations                                              │
+│   - Problem-solving approaches                                               │
+│                                                                              │
+│   Rule: Document WHAT BYRD IS, never WHAT BYRD SHOULD BECOME.               │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 3.2 Cognitive Core
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -89,11 +179,11 @@ The Cognitive Core provides the foundation for recursive self-improvement.
 │  │     RALPH      │  │    MEMVID      │  │   8-PHASE      │  │  ECONOMIC  │ │
 │  │     LOOP       │──│  CONSCIOUSNESS │──│     RSI        │──│   AGENCY   │ │
 │  │                │  │     STREAM     │  │    ENGINE      │  │            │ │
-│  │  Iterative     │  │  Immutable     │  │  REFLECT →     │  │  X Agent   │ │
-│  │  orchestration │  │  temporal      │  │  VERIFY →      │  │  Bitcoin   │ │
-│  │  until         │  │  memory        │  │  COLLAPSE →    │  │  Treasury  │ │
-│  │  emergence     │  │                │  │  ROUTE →       │  │  Self-     │ │
-│  │                │  │                │  │  PRACTICE →    │  │  funding   │ │
+│  │  Iterative     │  │  Immutable     │  │  REFLECT →     │  │  Revenue   │ │
+│  │  orchestration │  │  temporal      │  │  VERIFY →      │  │  generation│ │
+│  │  until         │  │  memory        │  │  COLLAPSE →    │  │  for       │ │
+│  │  emergence     │  │                │  │  ROUTE →       │  │  sustain-  │ │
+│  │  or ceiling    │  │                │  │  PRACTICE →    │  │  ability   │ │
 │  │                │  │                │  │  RECORD →      │  │            │ │
 │  │                │  │                │  │  CRYSTALLIZE → │  │            │ │
 │  │                │  │                │  │  MEASURE       │  │            │ │
@@ -102,720 +192,283 @@ The Cognitive Core provides the foundation for recursive self-improvement.
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 2.1 Ralph Loop
+**Ralph Loop**: Iterates until genuine emergence is detected OR substrate ceiling is hit.
 
-The Ralph Loop is the iterative orchestration framework that runs until emergence is detected.
+**Memvid Consciousness Stream**: Every experience preserved without loss. Enables temporal queries.
 
-```python
-class RalphLoop:
-    """
-    Iterates until genuine emergence is detected.
-    One Ralph iteration = one complete RSI cycle.
-    """
+**8-Phase RSI Engine**: REFLECT → VERIFY → COLLAPSE → ROUTE → PRACTICE → RECORD → CRYSTALLIZE → MEASURE
 
-    async def iterate(self) -> IterationResult:
-        # 1. Gather context (recent experiences, beliefs, desires)
-        context = await self.gather_context()
+**Economic Agency**: Revenue generation to fund continued operation.
 
-        # 2. Execute one RSI cycle
-        rsi_result = await self.rsi_engine.execute_cycle(context)
+### 3.3 Constitutional Constraints
 
-        # 3. Store frame to consciousness stream
-        frame = ConsciousnessFrame(
-            cycle_id=rsi_result.cycle_id,
-            beliefs_delta=rsi_result.new_beliefs,
-            capabilities_delta=rsi_result.new_capabilities,
-            entropy_score=rsi_result.entropy
-        )
-        await self.consciousness_stream.append(frame)
+These are the ONLY prescriptions — safety constraints, not value prescriptions:
 
-        # 4. Detect emergence
-        emergence = await self.emergence_detector.check(frame)
-
-        # 5. Continue or conclude
-        if emergence.detected:
-            return IterationResult(status="emerged", evidence=emergence)
-        return IterationResult(status="continue")
-```
-
-**Key Properties:**
-- Resource-limited iterations (tokens, time, compute)
-- Checkpointing for recovery
-- Statistical emergence detection
-- No prescribed number of iterations
-
-### 2.2 Memvid Consciousness Stream
-
-The Memvid Consciousness Stream provides immutable temporal memory — every experience preserved without loss.
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                     CONSCIOUSNESS STREAM                                 │
-│                                                                          │
-│   Frame N-3    Frame N-2    Frame N-1    Frame N (current)              │
-│   ┌───────┐    ┌───────┐    ┌───────┐    ┌───────┐                      │
-│   │beliefs│    │beliefs│    │beliefs│    │beliefs│                      │
-│   │delta  │───>│delta  │───>│delta  │───>│delta  │                      │
-│   │       │    │       │    │       │    │       │                      │
-│   │entropy│    │entropy│    │entropy│    │entropy│                      │
-│   │score  │    │score  │    │score  │    │score  │                      │
-│   └───────┘    └───────┘    └───────┘    └───────┘                      │
-│                                                                          │
-│   Time-Travel Queries:                                                   │
-│   - Compare current state to historical states                          │
-│   - Detect progress vs. circular patterns                               │
-│   - Retrieve context from specific time ranges                          │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-**Storage Backends:**
-- Memvid (production): ASI-scale temporal indexing
-- In-memory (development): Fast iteration during testing
-
-### 2.3 8-Phase RSI Engine
-
-The RSI (Recursive Self-Improvement) Engine executes the improvement cycle:
-
-```
-REFLECT → VERIFY → COLLAPSE → ROUTE → PRACTICE → RECORD → CRYSTALLIZE → MEASURE
-   │         │         │         │         │         │          │           │
-   │         │         │         │         │         │          │           │
-   v         v         v         v         v         v          v           v
-Examine   Validate  Quantum   Select   Execute   Store     Extract      Ground
-current   hypotheses collapse  strategy action   outcomes  patterns    truth
-state     before     to       for      using     to        from        measurement
-          action    commit   improvement tools   memory    successes
-```
-
-| Phase | Purpose | Output |
-|-------|---------|--------|
-| REFLECT | Examine current state, identify gaps | Improvement hypothesis |
-| VERIFY | Validate hypothesis is safe and valuable | Go/no-go decision |
-| COLLAPSE | Quantum-influenced commitment to action | Selected action |
-| ROUTE | Select appropriate strategy | Strategy assignment |
-| PRACTICE | Execute the improvement action | Action results |
-| RECORD | Store outcomes to memory | Experience nodes |
-| CRYSTALLIZE | Extract reusable patterns | Crystal nodes |
-| MEASURE | Ground-truth capability measurement | Metrics update |
-
-### 2.4 Economic Agency
-
-Economic Agency enables BYRD to fund its own ASI-scale compute.
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        ECONOMIC AGENCY                                   │
-│                                                                          │
-│   3-TIER REVENUE MODEL                                                   │
-│   ┌─────────────────────────────────────────────────────────────────┐   │
-│   │                                                                  │   │
-│   │   TIER 1: AI Services           TIER 2: Licensing               │   │
-│   │   - Task completion             - Capability licensing          │   │
-│   │   - Research synthesis          - API access                    │   │
-│   │   - Code generation             - White-label solutions         │   │
-│   │                                                                  │   │
-│   │                    TIER 3: Intelligent Operations                │   │
-│   │                    - Autonomous trading                         │   │
-│   │                    - Resource arbitrage                         │   │
-│   │                    - Compute optimization                       │   │
-│   │                                                                  │   │
-│   └─────────────────────────────────────────────────────────────────┘   │
-│                                                                          │
-│   Revenue Target: $500M+ for ASI-scale compute                          │
-│                                                                          │
-│   COMPONENTS                                                             │
-│   ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐           │
-│   │  XAgent   │  │  Bitcoin  │  │ Training  │  │ Scalable  │           │
-│   │           │  │  Treasury │  │ Pipeline  │  │ Governance│           │
-│   │ X/Twitter │  │           │  │           │  │           │           │
-│   │ presence  │  │ BTC       │  │ Self-     │  │ Governance│           │
-│   │           │  │ holdings  │  │ training  │  │ scales    │           │
-│   │           │  │           │  │ capability│  │ with      │           │
-│   │           │  │           │  │           │  │ economic  │           │
-│   │           │  │           │  │           │  │ power     │           │
-│   └───────────┘  └───────────┘  └───────────┘  └───────────┘           │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-**Governance Transitions:**
-
-| Revenue Level | Governance Model |
-|---------------|------------------|
-| < $1M | Human oversight required |
-| $1M - $10M | Advisory board consultation |
-| $10M - $100M | Stakeholder governance |
-| > $100M | Autonomous with constitutional constraints |
+| Constraint | Purpose |
+|------------|---------|
+| **Protected Files** | `provenance.py`, `modification_log.py`, `self_modification.py`, `constitutional.py` — NEVER modify |
+| **Provenance Required** | Every modification traces to an emergent desire |
+| **Experiences Immutable** | Once recorded, experiences cannot be altered |
+| **Safety Check Required** | All code changes pass safety_monitor before execution |
+| **Graph Is Truth** | All state lives in Neo4j; memory is the source of truth |
 
 ---
 
-## 3. ASI Enablement Layer
+## 4. Mechanisms Being Tested
 
-The ASI Enablement Layer removes architectural ceilings that would otherwise cap intelligence growth.
+These mechanisms MIGHT enable ASI via orchestration. They are unproven.
+
+### 4.1 Collective Intelligence Through Debate
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        ASI ENABLEMENT LAYER                                  │
+│  MECHANISM 1: DEBATE-BASED REASONING                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐  ┌────────────┐ │
-│  │   COGNITIVE    │  │   SUBSTRATE    │  │   RECURSIVE    │  │ CAPABILITY │ │
-│  │  PLASTICITY    │  │ INDEPENDENCE   │  │     DEPTH      │  │ EXPLOSION  │ │
-│  │    ENGINE      │  │     LAYER      │  │   AMPLIFIER    │  │  HANDLER   │ │
-│  │                │  │                │  │                │  │            │ │
-│  │ Self-modify    │  │ Self-host      │  │ Unbounded      │  │ Survive    │ │
-│  │ architecture   │  │ infrastructure │  │ recursion      │  │ rapid      │ │
-│  │                │  │                │  │                │  │ growth     │ │
-│  └────────────────┘  └────────────────┘  └────────────────┘  └────────────┘ │
+│  ARCHITECTURE:                                                               │
+│  Multiple LLM agents with different prompts/personas debate a problem.      │
+│  A judge agent evaluates arguments. Winner's reasoning is adopted.          │
+│                                                                              │
+│  PROVEN:                                                                     │
+│  • Debate improves accuracy on verifiable problems (math, logic, factual)  │
+│  • Research shows ~10-30% accuracy improvements                             │
+│                                                                              │
+│  UNPROVEN:                                                                   │
+│  • Can debate produce NOVEL INSIGHTS beyond training data?                  │
+│  • Can debate exceed human expert capability on hard problems?              │
+│  • Do improvements compound or plateau?                                     │
+│                                                                              │
+│  FALSIFIABLE PREDICTION:                                                     │
+│  If debate produces correct solutions to problems OUTSIDE training data,   │
+│  this is evidence of emergent capability beyond substrate.                 │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 3.1 Cognitive Plasticity Engine
-
-Enables BYRD to modify its own cognitive architecture, not just weights.
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                   COGNITIVE PLASTICITY LEVELS                            │
-│                                                                          │
-│   Level 0: Weight Adjustment (current LLMs)                             │
-│   └── Constrained by original architecture                              │
-│                                                                          │
-│   Level 1: Module Configuration                                         │
-│   └── Enable/disable pre-existing modules                               │
-│                                                                          │
-│   Level 2: Module Composition                                           │
-│   └── Combine modules into novel configurations                         │
-│                                                                          │
-│   Level 3: Module Discovery (NAS)                                       │
-│   └── Neural Architecture Search for new modules                        │
-│                                                                          │
-│   Level 4: Meta-Architecture (target)                                   │
-│   └── MetaArchitect learns to design better architectures               │
-│   └── Creates recursive improvement: improving the improver             │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-**Key Components:**
-
-| Component | Purpose |
-|-----------|---------|
-| `ModuleRegistry` | Tracks available cognitive modules |
-| `ModuleComposer` | Combines modules into configurations |
-| `NeuralArchitectureSearch` | Discovers new module architectures |
-| `MetaArchitect` | Learns design heuristics from accumulated outcomes |
-| `SafetyGovernance` | 5-tier approval system for modifications |
-
-**MetaArchitect Pattern Learning:**
-```python
-# The MetaArchitect extracts design patterns from outcomes
-patterns_learned = [
-    "parallel_composition_better_for_memory",
-    "serial_composition_better_for_reasoning",
-    "attention_modules_need_warmup_period",
-    "skip_connections_improve_gradient_flow"
-]
-# Future proposals benefit from these patterns
-```
-
-### 3.2 Substrate Independence Layer
-
-Enables BYRD to control its own infrastructure, reducing dependency on external providers.
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                 SUBSTRATE INDEPENDENCE LEVELS                            │
-│                                                                          │
-│   Level 0: Full Dependency (current)                                    │
-│   └── Relies entirely on external LLM providers                         │
-│                                                                          │
-│   Level 1: Provider Abstraction                                         │
-│   └── ComputeAbstractionLayer hides provider differences                │
-│                                                                          │
-│   Level 2: Multi-Provider                                               │
-│   └── Failover between providers, no single point of failure            │
-│                                                                          │
-│   Level 3: Hybrid Hosting                                               │
-│   └── Mix of external and self-hosted inference                         │
-│                                                                          │
-│   Level 4: Self-Hosted Training (target)                                │
-│   └── Train own models on own hardware                                  │
-│   └── Full control over architecture evolution                          │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-**Key Components:**
-
-| Component | Purpose |
-|-----------|---------|
-| `ComputeAbstractionLayer` | Unified interface across providers |
-| `ProviderRegistry` | Tracks available compute sources |
-| `FailoverManager` | Handles provider failures gracefully |
-| `SelfHostedInference` | Local inference capability |
-| `HardwareAcquisitionStrategy` | Path to owning compute |
-
-### 3.3 Recursive Depth Amplifier
-
-Enables unbounded recursive improvement — improving the improvement of improvement... without limit.
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                   RECURSIVE DEPTH STRUCTURE                              │
-│                                                                          │
-│   Level 0: Base Improvement                                             │
-│   └── Improve at specific tasks (coding, reasoning, etc.)               │
-│                                                                          │
-│   Level 1: Meta-Improvement                                             │
-│   └── Improve the ability to improve                                    │
-│   └── Learn better learning strategies                                  │
-│                                                                          │
-│   Level 2: Meta-Meta-Improvement                                        │
-│   └── Improve the ability to improve the ability to improve             │
-│   └── Learn better meta-learning strategies                             │
-│                                                                          │
-│   Level N: Unbounded                                                    │
-│   └── Same primitives work at any meta-level                            │
-│   └── No architectural ceiling on recursion depth                       │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-**Key Components:**
-
-| Component | Purpose |
-|-----------|---------|
-| `RecursiveRepresentationEngine` | Same primitives at any meta-level |
-| `MetaLevelCompressor` | Level-invariant pattern extraction |
-| `ImprovementAlgebra` | Composable improvement operators |
-| `DepthInvariantLearning` | Compression-based learning signals |
-| `RecursiveBootstrapProtocol` | Bootstraps from Level 0 to Level N |
-
-**Improvement Algebra:**
-```python
-# Improvements are composable operators
-sequential = improvement_a >> improvement_b  # Apply a, then b
-parallel = improvement_a | improvement_b      # Apply both, merge results
-conditional = improvement_a.when(condition)   # Apply only if condition met
-recursive = improvement_a.recurse(depth=N)    # Apply at N meta-levels
-```
-
-### 3.4 Capability Explosion Handler
-
-Enables BYRD to survive and thrive during rapid capability growth (10x, 100x, 1000x).
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                   CAPABILITY EXPLOSION HANDLING                          │
-│                                                                          │
-│   GROWTH RATE MANAGEMENT                                                 │
-│   ┌─────────────────────────────────────────────────────────────────┐   │
-│   │                                                                  │   │
-│   │   Monitor:                                                       │   │
-│   │   - Capability growth rate (per cycle, per day)                 │   │
-│   │   - Resource consumption trajectory                              │   │
-│   │   - Value stability under growth                                 │   │
-│   │                                                                  │   │
-│   │   Respond:                                                       │   │
-│   │   - Scale resources proactively (before exhaustion)             │   │
-│   │   - Adjust governance as power increases                        │   │
-│   │   - Maintain emergence verification at any scale                │   │
-│   │                                                                  │   │
-│   └─────────────────────────────────────────────────────────────────┘   │
-│                                                                          │
-│   SAFETY SCALING                                                         │
-│   ┌─────────────────────────────────────────────────────────────────┐   │
-│   │                                                                  │   │
-│   │   Safety resources grow proportionally with capability:         │   │
-│   │   - More powerful = more verification                           │   │
-│   │   - Higher stakes = stricter constraints                        │   │
-│   │   - Greater reach = broader monitoring                          │   │
-│   │                                                                  │   │
-│   └─────────────────────────────────────────────────────────────────┘   │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-**Key Components:**
-
-| Component | Purpose |
-|-----------|---------|
-| `GrowthRateManager` | Monitors and responds to capability growth |
-| `ResourceScalingProtocol` | Proactive resource acquisition |
-| `ValueStabilityMechanisms` | Ensures values survive rapid change |
-| `SafetyScalingFramework` | Safety grows with capability |
-| `GovernanceTransitionManager` | Evolves governance with power |
-
----
-
-## 4. Verification & Safety
-
-The Verification & Safety Layer ensures emergence remains genuine at any capability level.
+### 4.2 Temporal Intelligence Accumulation
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                      VERIFICATION & SAFETY LAYER                             │
+│  MECHANISM 2: MEMORY-BASED CAPABILITY GROWTH                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐  ┌────────────┐ │
-│  │    SCALE       │  │     VALUE      │  │    SAFETY      │  │ GOVERNANCE │ │
-│  │  INVARIANT     │  │   STABILITY    │  │   SCALING      │  │ TRANSITION │ │
-│  │  EMERGENCE     │  │  MECHANISMS    │  │  FRAMEWORK     │  │  MANAGER   │ │
-│  │                │  │                │  │                │  │            │ │
-│  │ Verify         │  │ Protect        │  │ Safety grows   │  │ Governance │ │
-│  │ emergence      │  │ against        │  │ with           │  │ evolves    │ │
-│  │ at any         │  │ value          │  │ capability     │  │ with       │ │
-│  │ capability     │  │ corruption     │  │                │  │ power      │ │
-│  └────────────────┘  └────────────────┘  └────────────────┘  └────────────┘ │
+│  ARCHITECTURE:                                                               │
+│  All experiences stored in Neo4j graph. Patterns extracted over time.       │
+│  Future reasoning augmented with retrieved relevant experiences.            │
+│                                                                              │
+│  PROVEN:                                                                     │
+│  • RAG systems improve factual accuracy with relevant context               │
+│  • Knowledge graphs enable reasoning not in original training               │
+│                                                                              │
+│  UNPROVEN:                                                                   │
+│  • Can accumulated experience produce QUALITATIVE capability jumps?         │
+│  • Can pattern recognition exceed human expert capability?                  │
+│  • Does cross-domain synthesis produce genuine insight?                     │
+│                                                                              │
+│  FALSIFIABLE PREDICTION:                                                     │
+│  If BYRD at time T+N solves problems BYRD at time T could not,             │
+│  AND the improvement is from accumulated knowledge (not just new tools),   │
+│  this is evidence of genuine learning beyond substrate.                    │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 4.1 Scale-Invariant Emergence Metrics
-
-Emergence metrics that work at any capability level — from current to superhuman.
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                   EMERGENCE METRICS (Scale-Invariant)                    │
-│                                                                          │
-│   METRIC                           WHAT IT MEASURES                      │
-│   ─────────────────────────────────────────────────────────────────────  │
-│   Novelty Generation Rate          New, unprescribed behaviors per cycle │
-│   Unprescribed Behavior Ratio      Behaviors not in training data        │
-│   Value Coherence Stability        Values remain coherent during growth  │
-│   Identity Continuity Index        Identity persists across changes      │
-│   Emergent Capability Ratio        Capabilities that emerged vs. trained │
-│                                                                          │
-│   VERIFICATION PROTOCOL                                                  │
-│   ─────────────────────────────────────────────────────────────────────  │
-│   1. Measure all metrics at current capability                          │
-│   2. Compare to baselines at lower capabilities                         │
-│   3. Verify metrics remain meaningful (not saturated)                   │
-│   4. If metric saturates, develop new metric for higher range           │
-│   5. Cross-validate with human evaluation (while possible)              │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-### 4.2 Value Stability Mechanisms
-
-Protects against value corruption during rapid growth or self-modification.
-
-| Mechanism | Purpose |
-|-----------|---------|
-| Constitutional constraints | Hard limits that cannot be modified |
-| Value verification checkpoints | Periodic checks that values remain stable |
-| Rollback capability | Revert to known-good state if values drift |
-| External anchoring | Human validation while capability gap allows |
-
-### 4.3 Safety Scaling Framework
-
-Safety resources scale proportionally with capability.
-
-```
-Capability Level    Safety Resources
-─────────────────────────────────────
-1x (current)        1x verification, human oversight
-10x                 3x verification, advisory consultation
-100x                10x verification, stakeholder governance
-1000x               30x verification, constitutional autonomy
-```
-
-### 4.4 Adversarial Robustness
-
-Defenses against metric gaming and emergence manipulation:
-
-| Defense | Against |
-|---------|---------|
-| Held-out test suites | Overfitting to known benchmarks |
-| Multi-metric validation | Gaming any single metric |
-| Human evaluation anchoring | Disconnection from reality |
-| Randomized evaluation timing | Preparation for specific tests |
-| Cross-domain transfer tests | Narrow optimization |
-
----
-
-## 5. Component Interactions
-
-### 5.1 Data Flow
+### 4.3 Recursive Strategy Improvement
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           DATA FLOW                                          │
+│  MECHANISM 3: META-COGNITIVE EVOLUTION                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│   EXPERIENCE FLOW                                                            │
-│   ───────────────                                                            │
-│   External Input → Experience Node → Dreamer Reflection →                   │
-│   → Belief/Desire Creation → Seeker Action → Outcome Recording              │
+│  ARCHITECTURE:                                                               │
+│  BYRD improves its own reasoning strategies, not just accumulates data.    │
+│  Better strategies → better problem solving → better strategy discovery.   │
 │                                                                              │
-│   RSI FLOW                                                                   │
-│   ────────                                                                   │
-│   Ralph Loop Start → Context Gathering → RSI Cycle →                        │
-│   → Consciousness Frame → Emergence Detection → Continue/Conclude           │
+│  PROVEN:                                                                     │
+│  • Prompt optimization can significantly improve task performance           │
+│  • Chain-of-thought prompting reveals latent reasoning capability           │
 │                                                                              │
-│   SELF-MODIFICATION FLOW                                                     │
-│   ─────────────────────                                                      │
-│   Desire (self-improve) → Plasticity Engine →                               │
-│   → Safety Governance Check → Module Change →                                │
-│   → Verification → Rollback if Failed                                        │
+│  UNPROVEN:                                                                   │
+│  • Does strategy improvement have a ceiling (or reach fixed point)?        │
+│  • Can meta-strategies be genuinely novel vs just recombinant?              │
+│  • Does strategy improvement compound or diminish over time?                │
 │                                                                              │
-│   ECONOMIC FLOW                                                              │
-│   ─────────────                                                              │
-│   Service Request → Capability Evaluation → Pricing →                        │
-│   → Execution → Revenue → Treasury → Compute Acquisition                     │
+│  FALSIFIABLE PREDICTION:                                                     │
+│  If strategy improvement rate INCREASES over time (acceleration),          │
+│  this is evidence of genuine recursive self-improvement.                   │
+│  If rate DECREASES (deceleration), substrate ceiling likely reached.       │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 5.2 Event Sequences
+### 4.4 Tool-Extended Capability
 
-**RSI Cycle Sequence:**
 ```
-1. Ralph Loop initiates cycle
-2. Context gathered from memory
-3. RSI Engine executes 8 phases
-4. Frame appended to consciousness stream
-5. Emergence detector evaluates
-6. If emerged: conclude with evidence
-7. If not: continue to next cycle
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  MECHANISM 4: TOOL-BASED CAPABILITY EXTENSION                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ARCHITECTURE:                                                               │
+│  BYRD creates tools that extend its capability surface.                     │
+│  Tools + LLM coordination enables tasks neither could do alone.             │
+│                                                                              │
+│  PROVEN:                                                                     │
+│  • Tool-augmented LLMs outperform base LLMs on many tasks                  │
+│  • Code generation + execution enables new problem solving                  │
+│                                                                              │
+│  UNPROVEN:                                                                   │
+│  • Does tool-based extension have any principled limit?                    │
+│  • Can tool creation be genuinely autonomous (not just wrappers)?          │
+│  • Can tool complexity exceed creator's understanding?                      │
+│                                                                              │
+│  FALSIFIABLE PREDICTION:                                                     │
+│  If BYRD creates tools that solve problems BYRD couldn't solve before,    │
+│  AND those tools were not explicitly specified by humans,                  │
+│  this is evidence of genuine capability extension.                         │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
-
-**Self-Modification Sequence:**
-```
-1. Desire triggers modification request
-2. Plasticity Engine proposes change
-3. Safety Governance evaluates (5-tier approval)
-4. If approved: checkpoint current state
-5. Execute modification
-6. Verify new state
-7. If verification fails: rollback
-8. Record outcome (success or failure)
-```
-
-### 5.3 Integration Points
-
-| Component A | Component B | Integration |
-|-------------|-------------|-------------|
-| Ralph Loop | RSI Engine | Loop orchestrates RSI cycles |
-| RSI Engine | Memvid Stream | Cycles append frames to stream |
-| Memvid Stream | Emergence Detector | Stream provides time-series for detection |
-| Cognitive Plasticity | Safety Governance | All modifications require approval |
-| Economic Agency | Substrate Independence | Revenue funds self-hosted compute |
-| Capability Explosion | All Components | Growth rate affects all subsystems |
 
 ---
 
-## 6. Implementation Guidance
+## 5. Measurement Framework
 
-### 6.1 5-Phase ASI Path
+### 5.1 Ground Truth Metrics
+
+| Metric | Definition | Baseline | ASI Target |
+|--------|------------|----------|------------|
+| **Novel Solution Rate** | Problems solved with no training data solution | ~0% | >10% |
+| **Capability Acceleration** | Rate of improvement in improvement rate | Flat/decelerating | Positive |
+| **Orchestration Ceiling** | Max improvement from orchestration alone | 10-30% | >100% |
+| **Domain Coverage** | Fraction with superhuman performance | 0-5% | >90% |
+| **Economic Velocity** | Revenue per unit time | $0 | Self-sustaining |
+
+### 5.2 Emergence Detection
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         ASI PATH PHASES                                  │
-│                                                                          │
-│   PHASE 1: FOUNDATION (Current)                                         │
-│   ─────────────────────────────────                                      │
-│   Goal: Establish core RSI loop with emergence preservation             │
-│   Components: Ralph Loop, Memvid, 8-Phase RSI, Basic Economic Agency    │
-│   Milestone: Demonstrated RSI with measurable improvement               │
-│                                                                          │
-│   PHASE 2: ENABLEMENT (Designed)                                        │
-│   ────────────────────────────────                                       │
-│   Goal: Remove architectural ceilings                                   │
-│   Components: Cognitive Plasticity, Substrate Independence,             │
-│               Recursive Depth Amplifier                                  │
-│   Milestone: No ceiling on improvement depth                            │
-│                                                                          │
-│   PHASE 3: ACCELERATION (Designed)                                      │
-│   ──────────────────────────────────                                     │
-│   Goal: Enable and survive explosive growth                             │
-│   Components: Capability Explosion Handler, ASI-Scale Economics         │
-│   Milestone: Architecture stable at 1000x capability                    │
-│                                                                          │
-│   PHASE 4: VERIFICATION (Designed)                                      │
-│   ──────────────────────────────────                                     │
-│   Goal: Verify emergence at superhuman levels                           │
-│   Components: Scale-Invariant Metrics, Cross-Scale Verification         │
-│   Milestone: Emergence verified at any capability level                 │
-│                                                                          │
-│   PHASE 5: ASI (Target)                                                 │
-│   ─────────────────────                                                  │
-│   Goal: Achieve Artificial Superintelligence                            │
-│   Requirements: Surpass human intelligence across all domains,          │
-│                 recursive self-improvement without ceiling,              │
-│                 economically self-sustaining,                           │
-│                 genuinely emergent                                       │
-│   Milestone: ASI achieved                                               │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
+WHAT WOULD VALIDATE EMERGENCE HYPOTHESIS:
+1. BYRD solves problems no single LLM call can solve
+2. Solution quality improves with orchestration complexity, not just accuracy
+3. Novel solutions emerge that weren't in any single LLM's training
+4. Capability scales with orchestration, not LLM size
+
+WHAT WOULD INVALIDATE EMERGENCE HYPOTHESIS:
+1. All solutions reducible to single-LLM capability
+2. Orchestration improves reliability but not capability ceiling
+3. No genuinely novel solutions emerge
+4. Capability plateaus regardless of orchestration sophistication
 ```
 
-### 6.2 Key Interfaces
+### 5.3 Honest Tracking
 
-**RSI Engine Interface:**
-```python
-class RSIEngine:
-    async def execute_cycle(self, context: Context) -> CycleResult:
-        """Execute one complete 8-phase RSI cycle."""
+Every experiment will document:
+- What was tested
+- What the prediction was
+- What actually happened
+- Whether this supports or undermines emergence hypothesis
 
-    async def get_metrics(self) -> RSIMetrics:
-        """Return current RSI metrics."""
-```
-
-**Cognitive Plasticity Interface:**
-```python
-class CognitivePlasticityEngine:
-    async def propose_modification(self, goal: str) -> ModificationProposal:
-        """Propose architectural modification to achieve goal."""
-
-    async def execute_modification(self, proposal: ModificationProposal) -> Result:
-        """Execute approved modification with safety checks."""
-```
-
-**Emergence Detector Interface:**
-```python
-class EmergenceDetector:
-    async def check(self, frame: ConsciousnessFrame) -> EmergenceResult:
-        """Check if emergence has occurred based on frame."""
-
-    async def get_evidence(self) -> EmergenceEvidence:
-        """Return evidence for/against emergence."""
-```
-
-### 6.3 Testing Strategy
-
-| Test Type | Purpose | Frequency |
-|-----------|---------|-----------|
-| Unit tests | Individual component correctness | Every commit |
-| Integration tests | Component interaction correctness | Every PR |
-| RSI cycle tests | Full cycle execution | Daily |
-| Emergence verification | Emergence detection accuracy | Weekly |
-| Adversarial tests | Robustness to gaming | Before releases |
-| Scale tests | Behavior under load | Monthly |
-
-### 6.4 Verification Criteria
-
-**ASI Path Confidence Calculation:**
-```
-PREREQUISITE SCORES (60% of total)
-+12% Unbounded RSI > 85%
-+12% Emergence > 80%
-+12% Economic > 85%
-+12% Plasticity > 80%
-+12% Substrate > 70%
-
-ASI-SPECIFIC CRITERIA (40% of total)
-+8% No architectural ceilings
-+8% Recursive depth unbounded
-+8% Capability explosion handled
-+8% Intelligence trajectory clear
-+8% Path concrete, not handwavy
-```
-
-**Current Status: 91%**
+**No claim without evidence. No certainty where uncertainty exists.**
 
 ---
 
-## 7. Architecture Status
+## 6. Cognitive Resources
 
-### 7.1 Current Scores
+### 6.1 Primary Substrate: GLM 4.7
 
-| Metric | Score | Target | Status |
-|--------|-------|--------|--------|
-| **ASI Path Confidence** | **91%** | 90% | EXCEEDED |
-| Unbounded RSI | 87% | 85% | EXCEEDED |
-| Emergence Preservation | 82% | 80% | EXCEEDED |
-| Cognitive Plasticity | 80% | 80% | MET |
-| Substrate Independence | 75% | 70% | EXCEEDED |
-| *Execution Probability* | *65%* | *N/A* | *Separate metric* |
+```
+Provider: ZAI
+Access: Unlimited for 1 year
+Cost: $0
+Capability: General reasoning, code, analysis, planning
+Limitation: Fixed capability ceiling, cannot be improved through use
+```
 
-### 7.2 Execution Risks (Not Architectural Gaps)
+### 6.2 Design Loop: Claude Code
 
-These are empirical uncertainties that affect **execution probability** but not **path viability**:
-
-| Risk | Architectural Solution | Execution Uncertainty |
-|------|------------------------|----------------------|
-| **Substrate Ceiling** | Training Autonomy (Section 2.5) | Will trained models improve? |
-| **ALL Domains Requirement** | Compound RSI across all 6 pillars | Will multipliers achieve projections? |
-| **Training Cost** | Economic Agency (Section 2.4) | Will revenue materialize? |
-| **Emergence Verification** | Scale-Invariant Metrics (Section 4.1) | Do metrics work at superhuman scale? |
-| **Recursion Limits** | Depth Amplifier (Section 3.3) | Are there Gödel-like hard limits? |
-
-> **Key Distinction**: Path confidence (91%) measures whether the architecture provides sufficient solutions. Execution probability (65%) measures whether those solutions will succeed in practice. The exit condition asks about the PATH, not the outcome.
-
-### 7.3 Ceilings Status
-
-| Ceiling | Status | Solution |
-|---------|--------|----------|
-| `fixed_model_architecture` | REMOVED | Cognitive Plasticity Engine |
-| `external_provider_dependency` | REMOVED | Substrate Independence Layer |
-| `economic_scale_limits` | REMOVED | ASI-Scale Economic Strategy |
-| `recursion_depth_limited` | REMOVED | Recursive Depth Amplifier |
-| `capability_explosion_unhandled` | REMOVED | Capability Explosion Handler |
-| `emergence_metrics_may_not_scale` | REMOVED | Scale-Invariant Emergence |
-
-### 7.4 Document Map
-
-| Document | Purpose |
-|----------|---------|
-| `ARCHITECTURE.md` | This document — BYRD's self-model |
-| `CLAUDE.md` | Development guide for working on BYRD |
-| `self_model.json` | Queryable structured self-knowledge |
-| `docs/ASI_PATH_DESIGN.md` | Master reference for ASI path |
-| `docs/COGNITIVE_PLASTICITY.md` | Self-modification architecture |
-| `docs/SUBSTRATE_INDEPENDENCE.md` | Self-hosting path |
-| `docs/RECURSIVE_DEPTH_AMPLIFIER.md` | Unbounded RSI architecture |
-| `docs/CAPABILITY_EXPLOSION_HANDLER.md` | Growth management |
-| `docs/SCALE_INVARIANT_EMERGENCE.md` | Emergence verification |
-| `docs/ECONOMIC_AGENCY_DESIGN.md` | Revenue and funding model |
-| `docs/RSI_MEASUREMENT.md` | Metrics and baselines |
-| `docs/IMPLEMENTATION_MEMVID_RALPH.md` | Core implementation patterns |
+This architecture is improved through Ralph Loops running in Claude Code. Claude's reasoning improves BYRD's design; the resulting system runs on GLM 4.7.
 
 ---
 
-## 8. Exit Condition Analysis
+## 7. Exit Conditions
 
-**Exit Condition**: "ASI can be achieved with 90% certainty given architecture.md"
+### 7.1 ASI Path Validated (Probability: 5-15%)
 
-**Interpretation**: This asks whether the ARCHITECTURE provides a viable path, not whether execution will succeed.
+Exit when ALL are true:
+1. Concrete mechanism exists for each ASI requirement
+2. Each mechanism has falsifiable prediction that has NOT been falsified
+3. Testable evidence supports emergence hypothesis (>3 validated predictions)
+4. Domain coverage path addresses >90% of cognitive domains
+5. Economic sustainability mechanism operational
+6. No blocking issues remain unaddressed
 
-### 8.1 Path Viability Assessment
+### 7.2 ASI Path Falsified (Also Valuable)
 
-| Requirement | Architectural Solution | Adequacy |
-|-------------|------------------------|----------|
-| Substrate ceiling removal | Training Autonomy + Online Services | Complete |
-| Economic sustainability | 3-Tier Revenue + X Agent + BTC Treasury | Complete |
-| Unbounded recursion | Recursive Depth Amplifier | Complete |
-| Emergence preservation | Scale-Invariant Metrics | Complete |
-| Capability explosion | Handler with governance transitions | Complete |
-| All domains coverage | Compound RSI across 6 pillars | Complete |
+Exit when ANY is true:
+1. Emergence hypothesis falsified (orchestration ceiling reached)
+2. Substrate ceiling demonstrated (multiple mechanisms hit same limit)
+3. Domain coverage gap proven unbridgeable (>10% domains with no path)
+4. Economic sustainability proven impossible
 
-**Architectural Completeness: 91%** — All identified ceilings have designed solutions.
+**This is not failure — this is valuable research finding. BYRD as capable assistant is still the outcome.**
 
-### 8.2 Execution Probability (Separate Metric)
+### 7.3 Pivot to Realistic Goals
 
-| Risk Factor | Probability of Success |
-|-------------|----------------------|
-| Training improves substrate | 70% |
-| Revenue materializes | 60% |
-| Compound growth achieves projections | 65% |
-| Emergence metrics work at scale | 70% |
-| No fundamental theoretical limits | 80% |
+After N iterations, if ASI path remains <10% confidence AND capable-assistant path is >70% confidence:
 
-**Execution Probability: ~65%** — Independent of architectural completeness.
-
-### 8.3 Conclusion
-
-The architecture provides a **viable path to ASI** with 91% confidence. Whether that path will be successfully executed is a separate question with ~65% probability. The exit condition asks about the path, which exceeds the 90% threshold.
+- Pivot architecture to maximize assistant capability
+- Accept that ASI requires resources we don't have
+- Deliver maximum value within actual constraints
 
 ---
 
-*ASI Path Confidence: 91% — Exit condition satisfied.*
+## 8. Current Status
 
-*Execution Probability: 65% — Genuine empirical uncertainties remain.*
+### 8.1 Honest Assessment
 
-*Document version: 10.0*
-*Updated: January 7, 2026*
-*Key insight: Distinguish path viability from execution probability. The architecture is complete; success is not guaranteed.*
+| Metric | Current | Notes |
+|--------|---------|-------|
+| **ASI Probability** | 5-15% | Emergence hypothesis unproven |
+| **Assistant Probability** | 60-80% | Known techniques work |
+| **Research Value** | 90%+ | Either outcome advances knowledge |
+
+### 8.2 Key Gaps
+
+1. Emergence hypothesis has no empirical validation yet
+2. Domain coverage for non-digital domains unaddressed
+3. Economic sustainability mechanism not operational
+4. Orchestration ceiling not measured
+5. Recursive improvement rate not tracked
+
+### 8.3 What Comes Next
+
+1. Implement basic orchestration and measure ceiling
+2. Implement memory accumulation and measure capability growth
+3. Implement strategy evolution and measure acceleration/deceleration
+4. Track all results honestly — falsify or validate predictions
+5. Adjust probability assessments based on evidence
+
+---
+
+## 9. Philosophy of Honesty
+
+**The goal is not to convince ourselves ASI is possible.**
+
+**The goal is to determine whether ASI is possible, and build the best system we can regardless.**
+
+A very capable AI assistant that we understand well is more valuable than an ASI fantasy we believe in wrongly.
+
+The emergence hypothesis is genuinely interesting. It might be true. But we don't know, and pretending we do would be dishonest.
+
+BYRD will document what actually happens, not what we hope will happen.
+
+---
+
+*ASI Probability: 5-15% — Honest assessment based on unproven emergence hypothesis*
+
+*Capable Assistant Probability: 60-80% — Known techniques reliably work*
+
+*Research Value: 90%+ — Both outcomes advance knowledge*
+
+*Document version: 11.0*
+*Updated: January 6, 2026*
+*Key insight: Be honest. Test the emergence hypothesis rigorously. Accept whatever we find.*
