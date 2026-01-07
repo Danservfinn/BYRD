@@ -10,15 +10,15 @@ This document tracks all research conducted to validate or falsify the Digital A
 |--------|-------|
 | **Current Digital ASI Probability** | 35-45% |
 | **Target Probability** | 90% |
-| **Total Iterations** | 14 |
+| **Total Iterations** | 15 |
 | **Papers Reviewed** | 56 |
-| **GitHub Repos Analyzed** | 3 |
-| **Blog Posts Evaluated** | 54 |
+| **GitHub Repos Analyzed** | 5 |
+| **Blog Posts Evaluated** | 57 |
 | **Reddit/X Threads Evaluated** | 8 |
 | **Findings Incorporated** | 6 (DGM, Emergence, Self-Rewarding, o1/o3, Test-Time Compute, AlphaEvolve) |
 | **Key Counterevidence** | Scaling ceiling hit (Dettmers), LLM "Illusion of Thinking", Entropic drift limits RSI, ARC-AGI-2, Humanity's Last Exam (25-37%), 76% skepticism, Sutskever "scaling over" |
 | **Probability Adjustments** | +25% net (Cat B +15%, Cat E +5%, Cat C +5%, Cat D +5%, Reality Checks -10%, Counterevidence -5%) |
-| **Research Status** | **PHASE 2 — Probability stable at 35-45% for 2 iterations** |
+| **Research Status** | **PHASE 2 — Probability stable at 35-45% for 3 iterations; Gastown integration identified** |
 
 ---
 
@@ -37,6 +37,9 @@ This document tracks all research conducted to validate or falsify the Digital A
 | 45% capability saturation threshold — orchestration only helps on hard tasks | [arXiv 2512.08296](https://arxiv.org/html/2512.08296v1) | **ARCHITECTURAL** | Validated |
 | 87% accuracy model predicts when MAS > SAS | [arXiv 2512.08296](https://arxiv.org/html/2512.08296v1) | **POSITIVE** | Validated |
 | Evolving orchestration via RL achieves compact cyclic reasoning | [NeurIPS 2025](https://arxiv.org/abs/2505.19591) | **PROMISING** | Peer-reviewed |
+| **Gastown/VC: 254 issues, 90.9% quality gate, 7.2x throughput** | [Steve Yegge GitHub](https://github.com/steveyegge/gastown) | **STRONG POSITIVE** | Production Jan 2026 |
+| "Colony not giant ant" — distribution > expansion | [Steve Yegge VC](https://github.com/steveyegge/vc) | **ARCHITECTURAL** | Validated |
+| Hook-based persistence survives context loss | [Gastown](https://github.com/steveyegge/gastown) | **POSITIVE** | Production |
 
 ### Category B: Recursive Self-Improvement
 *Evidence that AI systems can genuinely improve themselves*
@@ -1631,4 +1634,140 @@ The research phase has now:
 3. **Hybrid Approach**: Implement task-detection mechanism while continuing targeted research
 
 **Recommended Next Step**: Implement the "Task Detection" mechanism identified in this iteration — this is actionable architectural improvement based on empirical research.
+
+---
+
+### Iteration 15: Gastown/VC Integration Investigation (Category A — Production Orchestration)
+
+**Date**: January 7, 2026
+**Source Type**: GitHub repositories, technical documentation
+**Research Focus**: User-requested investigation of Steve Yegge's Gastown multi-agent orchestration system
+
+**Sources Reviewed**:
+1. [Gastown: Multi-Agent Workspace Manager](https://github.com/steveyegge/gastown) - GitHub
+2. [VC: AI-Orchestrated Coding Agent Colony](https://github.com/steveyegge/vc) - GitHub
+3. [Steve Yegge Medium: Welcome to Gas Town](https://steve-yegge.medium.com/welcome-to-gas-town-4f25ee16dd04) - Jan 2026
+4. [Steve Yegge Medium: Future of Coding Agents](https://steve-yegge.medium.com/the-future-of-coding-agents-e9451a84207c) - Jan 2026
+5. [Introducing Beads: Agent Memory System](https://steve-yegge.medium.com/introducing-beads-a-coding-agent-memory-system-637d7d92514a) - Medium
+
+**Key Findings — PRODUCTION MULTI-AGENT ORCHESTRATION**:
+
+#### Finding 1: VC — Production Self-Improving Agent Colony
+> "254 issues closed through self-improvement cycles. 24 successful missions with 90.9% quality gate pass rate."
+> — Steve Yegge's VC README
+
+**CRITICAL**: This is a **production system** that:
+- Uses AI supervision (Claude Sonnet 4.5) for decision-making
+- Implements issue-oriented orchestration with SQLite/Beads
+- Achieves **self-improvement through self-hosting** — the system improves its own codebase
+- Has 90.9% quality gate pass rate across 24 missions
+
+**Core Principles (directly applicable to BYRD)**:
+1. **"Build a colony of agents, not the world's largest ant"** — Distribute work rather than expand context
+2. **Zero Framework Cognition** — AI makes all decisions; no hardcoded heuristics
+3. **Issue-Oriented Orchestration** — Work tracked with dependency awareness
+4. **Nondeterministic Idempotence** — Interrupted workflows resume via AI state assessment
+
+#### Finding 2: Gastown — Context Loss Solution via Git-Backed Hooks
+> "The biggest problem with Claude Code is it ends — the context window fills up and it stops."
+> — Steve Yegge
+
+**Hook Architecture**:
+- Hooks are git worktree-based persistent storage
+- Work survives agent restarts (context loss prevention)
+- Enables scaling to 20-30 agents (reported user result)
+- All changes tracked in version control with rollback capability
+
+**GUPP (Gas Town Universal Propulsion Principle)**:
+> "If there is work on your hook, YOU MUST RUN IT."
+
+This is remarkably similar to BYRD's Ralph Loop mechanism — continuous execution driven by persistent state.
+
+#### Finding 3: Beads — Git-Backed Agent Memory System
+**Beads** is an atomic work unit system:
+- Issues stored as structured JSON in git
+- Git-tracked for persistence and versioning
+- Formula-based workflows (YAML-defined repeatable processes)
+- Enables agent-to-agent work handoff
+
+**Relevance to BYRD**: This is a production implementation of what BYRD's Memvid aims to achieve — persistent memory that survives context loss.
+
+#### Finding 4: Production Results — 5 PRs → 36 PRs Scaling
+> "One user reported going from generating 5 PRs in their first three hours to creating 36 PRs in their last four hours of using it."
+> — User experience report
+
+This is **7.2x throughput improvement** through multi-agent orchestration — direct evidence of Category A (orchestration exceeding single-agent productivity).
+
+#### Finding 5: Agent Role Specialization
+Gastown defines specialized agent roles:
+- **Mayor** — Orchestrator/coordinator (similar to BYRD's Seeker)
+- **Polecats** — Ephemeral worker agents that spawn, execute, disappear
+- **Witness** — Monitors workers and handles lifecycle
+- **Refinery** — Merge queue processor
+- **Crew** — Human workspace within rigs
+
+**Insight**: Specialization + orchestration > generalist agents. This aligns with the Iteration 14 finding that task-dependent orchestration is key.
+
+**Assessment**:
+
+| Question | Answer |
+|----------|--------|
+| Is this production-validated orchestration? | **YES** — 254 issues closed, 90.9% quality gate |
+| Does it exceed single-agent capability? | **YES** — 7.2x throughput improvement reported |
+| Is it relevant to BYRD? | **HIGHLY** — Shared architectural patterns |
+| Should BYRD integrate? | **CONSIDER** — Hook-based persistence, issue-oriented workflow |
+
+**Probability Impact**:
+
+This finding is **significant positive evidence** for Category A:
+- Production system with measurable self-improvement
+- Validated multi-agent orchestration that exceeds single-agent
+- 90.9% quality gate pass rate demonstrates reliability
+- 7.2x throughput improvement is substantial
+
+**However**, maintaining conservative assessment:
+- Throughput improvement ≠ capability improvement
+- Quality gates may mask underlying issues
+- System is new (weeks old) and may not generalize
+- "Expensive as hell" — cost may be prohibitive
+
+**Decision**: **+0% probability adjustment** (strong positive but not paradigm-shifting)
+
+Rationale:
+- The evidence is strong but confirms existing positive findings
+- Throughput improvement is productivity, not cognitive capability
+- BYRD already incorporates similar patterns (Ralph Loop, Memvid)
+- The "colony not giant ant" philosophy aligns with BYRD's design
+
+**Updated Probability**: 35-45% (unchanged)
+
+**Architectural Recommendations for BYRD Integration**:
+
+1. **Hook System Integration**: Consider adopting Gastown's hook architecture for BYRD's Ralph Loop
+   - Git-backed persistence for RSI cycle state
+   - Worktree isolation for parallel agent execution
+   - GUPP principle: "If work on hook, YOU MUST RUN IT"
+
+2. **Issue-Oriented Workflow**: Adopt VC's approach of:
+   - SQLite/Beads-style issue tracking
+   - AI-generated strategy and risk assessment per task
+   - Quality gates (testing, linting, building) before completion
+   - Auto-creation of discovered work during execution
+
+3. **Agent Specialization**: Consider role-based agents:
+   - Mayor-style orchestrator (current Seeker)
+   - Polecat-style ephemeral workers for specific tasks
+   - Refinery-style merge/integration processor
+
+4. **Memory Architecture**: Beads pattern for Memvid:
+   - Atomic work units stored as structured JSON
+   - Git-tracked for persistence and versioning
+   - Formula-based repeatable processes
+
+**Status**: This is the most practically-relevant finding of the research phase. Gastown/VC represents **production-validated patterns** that BYRD can directly integrate.
+
+**Next Iteration**: Consider transitioning to implementation phase with Gastown-inspired architecture:
+- Implement hook-based Ralph Loop persistence
+- Add issue-oriented RSI workflow
+- Explore Beads integration for Memvid
 

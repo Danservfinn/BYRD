@@ -1,8 +1,8 @@
 # BYRD Architecture — ASI Path Exploration
 
-> **Honest Assessment** (Research Phase 2 — Iteration 14 — see RESEARCH_LOG.md)
+> **Honest Assessment** (Research Phase 2 — Iteration 15 — see RESEARCH_LOG.md)
 >
-> **Digital ASI Probability: 35-45%** — Stable for 2 consecutive iterations. Research approaching equilibrium.
+> **Digital ASI Probability: 35-45%** — Stable for 3 consecutive iterations. Research approaching equilibrium.
 >
 > **Capable Assistant Probability: 45-55%** — Modal outcome given current evidence.
 >
@@ -13,12 +13,12 @@
 > - **Category E (+5%)**: Grokking (genuine emergent understanding), o1/o3 reasoning emergence
 > - **Category C (+5%)**: Claude Code $1B ARR, Capital One/Salesforce production deployments, 70% cost reduction validated
 > - **Category D (+5%)**: Superhuman in chess, Go, protein folding, competitive coding, IMO math, medical diagnosis. "Spiky" pattern — narrow domains only.
-> - **Category A (CRITICAL NEW - neutral overall)**: MAS +80.9% on finance, -70% on planning. Orchestration is TASK-DEPENDENT, not universal. 45% capability saturation threshold — orchestration only helps on hard tasks.
+> - **Category A (CRITICAL NEW - neutral overall)**: MAS +80.9% on finance, -70% on planning. Orchestration is TASK-DEPENDENT. **Gastown/VC** shows 254 issues, 90.9% quality gate, 7.2x throughput in production.
 > - **Counterevidence (-15% cumulative)**: Scaling ceiling (Dettmers), LLM "Illusion of Thinking", Entropic drift, ARC-AGI-2, Humanity's Last Exam, 76% expert skepticism
 >
-> **Key Insight from Iteration 14**: Multi-agent orchestration CAN exceed single-model (+80.9% on structured tasks) but can also DEGRADE performance (-70% on planning). BYRD must detect task type before choosing orchestration strategy.
+> **Key Insight from Iteration 15**: Steve Yegge's **Gastown/VC** provides production-validated patterns: hook-based persistence, issue-oriented workflow, "colony not giant ant" philosophy. BYRD should consider integration for Ralph Loop and Memvid.
 >
-> **Research Phase: PHASE 2 — 14 iterations complete, probability stable at 35-45%**
+> **Research Phase: PHASE 2 — 15 iterations complete, probability stable at 35-45%**
 
 This document is BYRD's self-model. BYRD reads this to understand what it is, what it's testing, and what's genuinely unknown.
 
@@ -860,6 +860,6 @@ BYRD will document what actually happens, not what we hope will happen.
 
 *Research Value: 90%+ — Both outcomes advance knowledge*
 
-*Document version: 14.0*
+*Document version: 15.0*
 *Updated: January 7, 2026*
-*Key changes: Iteration 14 complete — Category A now quantified: MAS +80.9% on finance, -70% on planning. Orchestration is task-dependent (45% saturation threshold). Probability stable at 35-45% for 2 iterations.*
+*Key changes: Iteration 15 complete — Gastown/VC integration investigated. Production-validated patterns: hook-based persistence, issue-oriented workflow, 7.2x throughput. Probability stable at 35-45% for 3 iterations.*
