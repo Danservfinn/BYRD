@@ -10,15 +10,15 @@ This document tracks all research conducted to validate or falsify the Digital A
 |--------|-------|
 | **Current Digital ASI Probability** | 35-45% |
 | **Target Probability** | 90% |
-| **Total Iterations** | 13 |
-| **Papers Reviewed** | 52 |
+| **Total Iterations** | 14 |
+| **Papers Reviewed** | 56 |
 | **GitHub Repos Analyzed** | 3 |
-| **Blog Posts Evaluated** | 53 |
+| **Blog Posts Evaluated** | 54 |
 | **Reddit/X Threads Evaluated** | 8 |
 | **Findings Incorporated** | 6 (DGM, Emergence, Self-Rewarding, o1/o3, Test-Time Compute, AlphaEvolve) |
 | **Key Counterevidence** | Scaling ceiling hit (Dettmers), LLM "Illusion of Thinking", Entropic drift limits RSI, ARC-AGI-2, Humanity's Last Exam (25-37%), 76% skepticism, Sutskever "scaling over" |
 | **Probability Adjustments** | +25% net (Cat B +15%, Cat E +5%, Cat C +5%, Cat D +5%, Reality Checks -10%, Counterevidence -5%) |
-| **Research Status** | **PHASE 2 — Counterevidence incorporated, probability stabilizing** |
+| **Research Status** | **PHASE 2 — Probability stable at 35-45% for 2 iterations** |
 
 ---
 
@@ -33,6 +33,10 @@ This document tracks all research conducted to validate or falsify the Digital A
 | Debate success driven by intrinsic reasoning strength, not orchestration | [arXiv 2511.07784](https://arxiv.org/abs/2511.07784) | **NEGATIVE** | Validated |
 | Leeroo achieves +5.27% over Mixtral via routing, not emergence | [HuggingFace Blog](https://huggingface.co/blog/alirezamsh/leeroo-multi-model-system) | **NEUTRAL** | Routing ≠ emergence |
 | AgentVerse claims "greater-than-sum" but no metrics provided | [arXiv 2308.10848](https://arxiv.org/abs/2308.10848) | **UNPROVEN** | Needs quantification |
+| **MAS: +80.9% on finance, -70% on planning** (task-dependent) | [arXiv 2512.08296](https://arxiv.org/html/2512.08296v1) | **CRITICAL** | Dec 2025 |
+| 45% capability saturation threshold — orchestration only helps on hard tasks | [arXiv 2512.08296](https://arxiv.org/html/2512.08296v1) | **ARCHITECTURAL** | Validated |
+| 87% accuracy model predicts when MAS > SAS | [arXiv 2512.08296](https://arxiv.org/html/2512.08296v1) | **POSITIVE** | Validated |
+| Evolving orchestration via RL achieves compact cyclic reasoning | [NeurIPS 2025](https://arxiv.org/abs/2505.19591) | **PROMISING** | Peer-reviewed |
 
 ### Category B: Recursive Self-Improvement
 *Evidence that AI systems can genuinely improve themselves*
@@ -1495,4 +1499,136 @@ Rationale:
 - Memvid addresses continual learning
 
 **Next Iteration**: Test for diminishing returns — are we seeing the same findings repeatedly? Consider whether research phase should transition to implementation phase.
+
+---
+
+### Iteration 14: Diminishing Returns Assessment & Final Category A Evidence
+
+**Date**: January 7, 2026
+**Source Type**: Academic papers, industry reports
+**Research Question**: Are we seeing diminishing returns? Should research phase transition to implementation?
+
+**Sources Reviewed**:
+1. [Towards a Science of Scaling Agent Systems](https://arxiv.org/html/2512.08296v1) - arXiv December 2025
+2. [Multi-Agent Collaboration via Evolving Orchestration](https://arxiv.org/abs/2505.19591) - NeurIPS 2025
+3. [Stanford/Harvard: Why Agentic AI Falls Apart in Real Use](https://www.marktechpost.com/2025/12/24/this-ai-paper-from-stanford-and-harvard-explains-why-most-agentic-ai-systems-feel-impressive-in-demos-and-then-completely-fall-apart-in-real-use/)
+4. [Multi-Agent Collaboration Mechanisms Survey](https://arxiv.org/html/2501.06322v1) - January 2025
+5. [Deloitte: AI Agent Orchestration](https://www.deloitte.com/us/en/insights/industry/technology/technology-media-and-telecom-predictions/2026/ai-agent-orchestration.html) - November 2025
+
+**Key Findings — CRITICAL NEW EVIDENCE FOR CATEGORY A**:
+
+#### Finding 1: Multi-Agent Systems Do NOT Universally Outperform Single-Agent (DEFINITIVE)
+> "Multi-agent systems do not universally outperform single-agent systems. Performance varies dramatically by task: +80.9% improvement on financial reasoning versus -70% degradation on sequential planning."
+> — arXiv 2512.08296 (December 2025)
+
+**This is the most rigorous Category A evidence we've found.** Key metrics:
+- **Structured, decomposable tasks**: MAS substantially exceeds SAS (+80.9% on finance)
+- **Sequential constraint-satisfaction**: All MAS variants DEGRADE performance (-70% on planning)
+- **Tool-intensive domains**: Coordination overhead dominates benefits
+- **Optimal agent count**: Hard ceiling at 3-4 agents (superlinear turn count growth, exponent 1.724)
+- **Capability saturation**: Tasks exceeding 45% single-agent baseline accuracy see NEGATIVE returns
+
+**Critical Insight for BYRD**: The "Capability Saturation Threshold" means orchestration only helps on tasks the base model finds difficult. Tasks the base model can already do well (~45%+) get WORSE with multi-agent orchestration.
+
+#### Finding 2: Predictive Model for When Orchestration Works
+> "Cross-validated model achieves 87% accuracy predicting optimal architecture"
+
+This means we can now predict when multi-agent orchestration will help vs. hurt:
+- **MAS works**: Structured decomposition, parallel subtasks, financial reasoning
+- **MAS fails**: Sequential planning, tool-heavy tasks, constraint satisfaction
+- **Critical factor**: "Efficiency-tools interaction" (β = -0.330) shows tool-heavy tasks suffer most
+
+**Implication for BYRD**: The RSI Engine should detect task type and only use multi-agent orchestration where beneficial.
+
+#### Finding 3: Stanford/Harvard - Real Failure Modes
+> "Unreliable tool use, weak long horizon planning, and poor generalization" — Stanford/Harvard 2025
+
+Agentic AI fails because:
+- Tool use is unreliable in production
+- Long-horizon planning breaks down
+- Systems don't generalize from demos to real conditions
+
+**Proposed solution**: Component specialization (rare A1/A2 updates + frequent T1/T2 tool adaptation) rather than monolithic retraining.
+
+#### Finding 4: Evolving Orchestration Shows Promise (NeurIPS 2025)
+> "Superior performance with reduced computational costs... key improvements stem from emergence of more compact, cyclic reasoning structures under orchestrator's evolution."
+
+Puppeteer-style reinforcement learning orchestration:
+- Adapts to task complexity and agent numbers
+- Achieves "compact, cyclic reasoning structures"
+- Accepted at NeurIPS 2025 (peer-reviewed)
+
+**Potential for BYRD**: RSI Engine could incorporate adaptive orchestration learned via RL.
+
+#### Finding 5: Deloitte Reality Check
+> "Complex and autonomous agent orchestration spanning across multiple business domains has been limited, for the most part, to select industry leaders."
+
+Current state (2025):
+- Simple single-domain orchestration works (healthcare, finance)
+- Cross-domain orchestration is rare and limited to leaders
+- "Trillion-parameter multi-agent systems" being developed but not deployed
+
+**Diminishing Returns Assessment**:
+
+| Metric | Observation | Interpretation |
+|--------|-------------|----------------|
+| **Novel findings this iteration** | 4 new papers with empirical data | Research NOT exhausted |
+| **Finding type** | Quantitative Category A evidence | High value new data |
+| **Probability impact direction** | Neutral (confirms mixed picture) | Stable assessment |
+| **New search vectors identified** | Adaptive orchestration, RL puppeteers | Room for more research |
+| **Prior findings confirmed** | "Spiky" success pattern, orchestration limits | Convergent evidence |
+
+**Assessment — NOT Diminishing Returns Yet**:
+
+This iteration found NEW empirical evidence (December 2025 paper) that was not available in prior iterations. The "Towards a Science of Scaling Agent Systems" paper provides the most rigorous Category A analysis we've seen:
+- First paper to systematically measure when MAS > SAS
+- First to identify the 45% "capability saturation" threshold
+- First to provide 87% accurate predictive model
+
+**However**, the findings are **NEUTRAL for probability** because:
+- MAS exceeds SAS in specific domains (+80.9% on finance) — **POSITIVE**
+- MAS degrades performance on planning tasks (-70%) — **NEGATIVE**
+- Orchestration is task-dependent, not universal — **CONFIRMATORY**
+
+**Probability Impact**:
+
+**Decision**: **No probability adjustment** (neutral new evidence)
+
+Rationale:
+- The new evidence CONFIRMS our existing assessment: orchestration works in specific domains
+- The "spiky superhuman" pattern is validated empirically
+- BYRD's digital scope (code, text, APIs) aligns with MAS-beneficial domains
+- The 45% saturation threshold is a new architectural insight, not a probability modifier
+
+**Updated Probability**: 35-45% (unchanged)
+
+**Cumulative Status**:
+- Papers reviewed: 56 (was 52, +4 this iteration)
+- GitHub repos analyzed: 3
+- Blog posts evaluated: 54 (was 53, +1 this iteration)
+- Net probability adjustment: +25%
+
+**Key Architectural Insights for BYRD**:
+1. **Task Detection**: RSI Engine should detect task type before choosing single vs. multi-agent
+2. **Capability Saturation**: Don't use orchestration on tasks base model can already do (>45% accuracy)
+3. **Domain Focus**: Financial reasoning, code generation = MAS-beneficial; planning, tool-heavy = MAS-harmful
+4. **Adaptive Orchestration**: Consider RL-trained puppeteer for agent selection (NeurIPS 2025)
+5. **Component Specialization**: Frequent tool/memory adaptation, rare model updates (Stanford/Harvard)
+
+**Research Phase Status**:
+
+The research phase has now:
+- Explored all 5 evidence categories (A, B, C, D, E)
+- Conducted counterevidence search (Iteration 13)
+- Found convergent evidence across 56+ papers
+- Probability stabilized at 35-45% for 2 consecutive iterations
+
+**Recommendation**: The research phase is approaching stability but has not yet reached the 10-iteration stability threshold defined in the exit conditions. The discovery of new December 2025 papers shows academic research is still producing relevant findings. However, the probability is oscillating within a narrow band (35-50%) suggesting we're approaching equilibrium.
+
+**Next Iteration Options**:
+1. **Continue Research**: Search for genuine emergence evidence in structured domains (where MAS works)
+2. **Transition to Implementation**: Begin empirical testing of BYRD's mechanisms
+3. **Hybrid Approach**: Implement task-detection mechanism while continuing targeted research
+
+**Recommended Next Step**: Implement the "Task Detection" mechanism identified in this iteration — this is actionable architectural improvement based on empirical research.
 

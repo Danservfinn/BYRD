@@ -1,10 +1,10 @@
 # BYRD Architecture — ASI Path Exploration
 
-> **Honest Assessment** (Research Phase 2 — Iteration 13 — see RESEARCH_LOG.md)
+> **Honest Assessment** (Research Phase 2 — Iteration 14 — see RESEARCH_LOG.md)
 >
-> **Digital ASI Probability: 35-45%** — Adjusted down after counterevidence review. Fundamental barriers documented but not fatal to BYRD's approach.
+> **Digital ASI Probability: 35-45%** — Stable for 2 consecutive iterations. Research approaching equilibrium.
 >
-> **Capable Assistant Probability: 45-55%** — Slightly more likely outcome again after counterevidence.
+> **Capable Assistant Probability: 45-55%** — Modal outcome given current evidence.
 >
 > **Research Value: 90%+** — Either we prove or disprove the emergence hypothesis. Both outcomes advance knowledge.
 >
@@ -13,12 +13,12 @@
 > - **Category E (+5%)**: Grokking (genuine emergent understanding), o1/o3 reasoning emergence
 > - **Category C (+5%)**: Claude Code $1B ARR, Capital One/Salesforce production deployments, 70% cost reduction validated
 > - **Category D (+5%)**: Superhuman in chess, Go, protein folding, competitive coding, IMO math, medical diagnosis. "Spiky" pattern — narrow domains only.
-> - **Category A (neutral)**: Multi-agent debate does NOT exceed single-model; BUT orchestration NOT disproven as fundamental
+> - **Category A (CRITICAL NEW - neutral overall)**: MAS +80.9% on finance, -70% on planning. Orchestration is TASK-DEPENDENT, not universal. 45% capability saturation threshold — orchestration only helps on hard tasks.
 > - **Counterevidence (-15% cumulative)**: Scaling ceiling (Dettmers), LLM "Illusion of Thinking", Entropic drift, ARC-AGI-2, Humanity's Last Exam, 76% expert skepticism
 >
-> **Key Insight from Iteration 13**: Counterevidence is REAL AND SIGNIFICANT but not FATAL. Fundamental barriers apply to scaling-based AGI, not necessarily orchestration-based emergence. BYRD's mitigations (Memvid, external verification) address key gaps.
+> **Key Insight from Iteration 14**: Multi-agent orchestration CAN exceed single-model (+80.9% on structured tasks) but can also DEGRADE performance (-70% on planning). BYRD must detect task type before choosing orchestration strategy.
 >
-> **Research Phase: PHASE 2 — 13 iterations complete, probability stabilizing at 35-45%**
+> **Research Phase: PHASE 2 — 14 iterations complete, probability stable at 35-45%**
 
 This document is BYRD's self-model. BYRD reads this to understand what it is, what it's testing, and what's genuinely unknown.
 
@@ -860,6 +860,6 @@ BYRD will document what actually happens, not what we hope will happen.
 
 *Research Value: 90%+ — Both outcomes advance knowledge*
 
-*Document version: 12.4*
+*Document version: 14.0*
 *Updated: January 7, 2026*
-*Key changes: Iteration 12 complete — Category D now validated; superhuman in coding (Gemini gold medal), math (IMO), medical (AMIE)*
+*Key changes: Iteration 14 complete — Category A now quantified: MAS +80.9% on finance, -70% on planning. Orchestration is task-dependent (45% saturation threshold). Probability stable at 35-45% for 2 iterations.*
