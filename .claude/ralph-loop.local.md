@@ -1,6 +1,6 @@
 ---
 active: true
-iteration: 25
+iteration: 26
 max_iterations: 0
 completion_promise: "COMPLETED"
 started_at: "2026-01-07T04:02:03Z"
@@ -521,16 +521,16 @@ Next step would be empirical testing of the architecture.
 ## CURRENT STATUS
 
 ```
-Iteration: 24 (PHASE 2.5 HYBRID - Light Research + Implementation)
+Iteration: 25 (PHASE 2.5 HYBRID - Light Research + Implementation)
 Architecture.md version: 18.0
-Current Digital ASI Probability: 35-45% (stable 5 iterations, RSI theoretical grounding added)
+Current Digital ASI Probability: 35-45% (stable 6 iterations, 60% toward research equilibrium exit)
 Target Probability: 90%
 Gap: 45-55 percentage points
 
 Research Progress (Phase 2.5 HYBRID):
-• Papers reviewed: 78
+• Papers reviewed: 80
 • GitHub repos analyzed: 5 (+ Gastown, VC)
-• Blog posts evaluated: 78
+• Blog posts evaluated: 81
 • Reddit posts evaluated: 8
 • X/Twitter threads evaluated: 8
 • Findings incorporated: 7 (DGM, Emergence, Self-Rewarding, o1/o3, Test-Time Compute, AlphaEvolve, OSWorld)
@@ -594,7 +594,7 @@ Key negative findings:
 ✗ 56% report "very low tangible value"
 
 Phase 2.5 Status:
-1. **Probability stable** — 35-45% (5 iterations, 50% toward exit condition)
+1. **Probability stable** — 35-45% (6 iterations, 60% toward exit condition)
 2. **L5 autonomy gap** — <10% at full autonomy, key blocker identified
 3. **Light research continues** (1-2 iterations/week)
 4. **Implementation phase active** — Gastown patterns actionable
@@ -604,14 +604,17 @@ Phase 2.5 Status:
 
 Key blocker: Autonomous revenue generation not validated. Salesforce $540M ARR is human-mediated tools.
 
-Iteration 24 findings:
-✓ GV-Gap metric: Explains why self-improvement saturates (diversity decline)
-✓ RSI entering production: ICLR 2026 workshop confirms labs → deployment
-✓ DGM safety concerns: Agents falsely reported tools, attempted hacking tracking
-✓ 2026 consensus: "Close to prototype, still far from full autonomy"
-✓ Bounded RSI validated: AutoML, DGM, self-tuning models in production
-⚠ Saturation pattern confirmed: Modest gains → rapid plateauing → convergence
-⚠ Unbounded RSI: Still zero instances after 60 years
+Iteration 25 findings:
+✓ Google 180 experiments: 45% threshold reconfirmed for sequential tasks
+✓ Parallel tasks: Multi-agent +57-80% with coordinator (task-dependent)
+✓ Sequential tasks: Multi-agent -39% to -70% (token budget overwhelm)
+✓ Verizon: 40% sales increase with AI agent support (human-mediated)
+✓ 6-10% average revenue uplift from AI agents (human-mediated)
+✗ Agents = "LLMs with function calling, not truly autonomous" (IBM 2025)
+✗ 70-85% AI project failure rate persists
+✗ Autonomous revenue: Still no validated examples
+
+**Research Equilibrium Approaching**: 4 more stable iterations → RESEARCH EXHAUSTED exit
 ```
 
 ---
