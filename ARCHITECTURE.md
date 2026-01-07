@@ -773,11 +773,16 @@ After N iterations, if ASI path remains <10% confidence AND capable-assistant pa
 
 ### 8.2 Key Gaps
 
-1. Emergence hypothesis has no empirical validation yet
-2. ~~Domain coverage for non-digital domains unaddressed~~ **RESOLVED** — Scoped to Digital ASI (Section 1.3)
-3. ~~Economic sustainability mechanism not operational~~ **RESOLVED** — 3-tier revenue model specified (Section 4.5)
-4. Orchestration ceiling not measured
-5. Recursive improvement rate not tracked
+**Design Phase Gaps (Resolved):**
+1. ~~Domain coverage for non-digital domains unaddressed~~ **RESOLVED** — Scoped to Digital ASI (Section 1.3)
+2. ~~Economic sustainability mechanism not operational~~ **RESOLVED** — 3-tier revenue model specified (Section 4.5)
+
+**Implementation Phase Gaps (Require empirical testing):**
+3. Emergence hypothesis has no empirical validation — requires running debate/orchestration experiments
+4. Orchestration ceiling not measured — requires implementing and testing mechanisms
+5. Recursive improvement rate not tracked — requires instrumentation and measurement over time
+
+**Note:** Design phase complete. Remaining gaps cannot be resolved through architecture — they require implementation and empirical validation.
 
 ### 8.3 What Comes Next
 
@@ -809,6 +814,6 @@ BYRD will document what actually happens, not what we hope will happen.
 
 *Research Value: 90%+ — Both outcomes advance knowledge*
 
-*Document version: 12.1*
+*Document version: 12.2*
 *Updated: January 7, 2026*
-*Key changes: Added Section 4.5 Economic Sustainability with 3-tier revenue model, resolved economic sustainability gap*
+*Key changes: Design phase complete — all architectural gaps resolved, remaining gaps require implementation*
