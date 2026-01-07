@@ -18,7 +18,7 @@ import type {
   RSIStatusResponse,
 } from '../types/api';
 
-const API_BASE = '/api';
+const API_BASE = 'https://byrd-api-production.up.railway.app/api';
 const BACKEND_CHECK_KEY = 'byrd_backend_available';
 
 export function useByrdAPI() {
