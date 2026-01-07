@@ -20,6 +20,9 @@ WORKDIR $HOME/app
 COPY --chown=user requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
+# Clear any Python cache from previous builds
+RUN find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+
 # Cache bust (updated on each deploy) - increment to force rebuild
 ARG CACHEBUST=45
 
