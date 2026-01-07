@@ -246,7 +246,15 @@ async def lifespan(app: FastAPI):
     # Load config and initialize BYRD
     config_path = BYRD_DIR / "config.yaml"
     with open(config_path) as f:
-        config = yaml.safe_load(f)
+        config_content = f.read()
+        # Expand environment variables in ${VAR:-default} format
+        import re
+        def expand_env_vars(match):
+            var_name = match.group(1)
+            default_value = match.group(2) if match.group(2) is not None else ""
+            return os.environ.get(var_name, default_value)
+        config_content = re.sub(r'\$\{([^:}]+):-([^}]*)\}', expand_env_vars, config_content)
+        config = yaml.safe_load(config_content)
     byrd_instance = BYRD(config)
 
     # Connect to Neo4j immediately to avoid "Driver closed" on first request
