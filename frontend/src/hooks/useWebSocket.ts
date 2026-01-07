@@ -24,8 +24,8 @@ export function useWebSocket() {
       return;
     }
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/events`;
+    // Connect to Railway backend WebSocket (not relative to current page)
+    const wsUrl = 'wss://byrd-api-production.up.railway.app/ws/events';
 
     try {
       ws.current = new WebSocket(wsUrl);
