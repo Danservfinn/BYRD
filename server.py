@@ -735,7 +735,7 @@ async def get_status():
         agi_runner_status = None
         if byrd_instance.agi_runner:
             try:
-                metrics = byrd_instance.agi_runner.get_metrics()
+                metrics = await byrd_instance.agi_runner.get_metrics()
                 bootstrap_metrics = metrics.get("bootstrap_metrics", {})
                 agi_runner_status = AGIRunnerStatus(
                     enabled=True,
