@@ -3178,9 +3178,9 @@ class Memory:
             MATCH (c:Capability)
             WHERE $active_only = false OR c.active = true
             RETURN c
-            ORDER BY c.acquired_at DESC
+            ORDER BY c.name ASC
         """
-        
+
         async with self.driver.session() as session:
             result = await session.run(query, active_only=active_only)
             records = await result.data()
