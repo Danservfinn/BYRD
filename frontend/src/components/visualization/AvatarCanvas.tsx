@@ -1,6 +1,8 @@
 import { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
-import { Rotate3D } from 'lucide-react';
+// @ts-ignore - OrbitControls is in examples/jsm which TypeScript doesn't always resolve correctly
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { Rotate3D, Info } from 'lucide-react';
 import { cn } from '@lib/utils/cn';
 
 interface AvatarCanvasProps {
@@ -18,9 +20,10 @@ export function AvatarCanvas({
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
   const avatarRef = useRef<THREE.Object3D | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showControls] = useState(true);
+  const [showInfo, setShowInfo] = useState(false);
 
   // Initialize Three.js scene
   useEffect(() => {
@@ -49,6 +52,16 @@ export function AvatarCanvas({
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
+    // OrbitControls
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.enableZoom = true;
+    controls.minDistance = 2;
+    controls.maxDistance = 10;
+    controls.enablePan = false;
+    controlsRef.current = controls;
+
     // Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
     scene.add(ambientLight);
@@ -75,6 +88,9 @@ export function AvatarCanvas({
     let animationFrameId: number;
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
+
+      // Update controls for damping
+      controls.update();
 
       // Simple animation based on state
       if (avatarRef.current) {
@@ -113,12 +129,21 @@ export function AvatarCanvas({
     return () => {
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(animationFrameId);
+      controls.dispose();
       if (rendererRef.current && container.contains(rendererRef.current.domElement)) {
         container.removeChild(rendererRef.current.domElement);
       }
       rendererRef.current?.dispose();
     };
   }, [animationState]);
+
+  // Auto-hide info after 5 seconds
+  useEffect(() => {
+    if (showInfo) {
+      const timer = setTimeout(() => setShowInfo(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showInfo]);
 
   function createProceduralAvatar(scene: THREE.Scene) {
     // Create a simple box as placeholder avatar
@@ -161,21 +186,50 @@ export function AvatarCanvas({
         </div>
       )}
 
-      {/* Camera controls overlay */}
-      {showControls && !isLoading && (
+      {/* Controls overlay */}
+      {!isLoading && (
         <div className="absolute top-4 right-4 flex gap-2 z-10">
           <button
+            onClick={() => setShowInfo(!showInfo)}
+            className="p-2 bg-white dark:bg-slate-700 rounded-lg shadow-lg hover:shadow-xl transition-shadow focus:outline-none focus:ring-2 focus:ring-purple-500"
+            title="Show controls info"
+            aria-label="Show controls info"
+          >
+            <Info className="w-5 h-5 text-slate-700 dark:text-slate-200" />
+          </button>
+
+          <button
             onClick={() => {
-              if (cameraRef.current) {
+              if (cameraRef.current && controlsRef.current) {
                 cameraRef.current.position.set(0, 0, 5);
-                cameraRef.current.lookAt(0, 0, 0);
+                controlsRef.current.target.set(0, 0, 0);
               }
             }}
-            className="p-2 bg-white dark:bg-slate-700 rounded-lg shadow-lg hover:shadow-xl transition-shadow"
+            className="p-2 bg-white dark:bg-slate-700 rounded-lg shadow-lg hover:shadow-xl transition-shadow focus:outline-none focus:ring-2 focus:ring-purple-500"
             title="Reset view"
+            aria-label="Reset camera view"
           >
             <Rotate3D className="w-5 h-5 text-slate-700 dark:text-slate-200" />
           </button>
+        </div>
+      )}
+
+      {/* Info panel */}
+      {showInfo && !isLoading && (
+        <div className="absolute top-4 left-4 z-10 max-w-xs">
+          <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-lg shadow-lg p-3 text-xs space-y-2">
+            <h3 className="font-semibold text-slate-900 dark:text-slate-100">Controls</h3>
+            <div className="space-y-1 text-slate-600 dark:text-slate-400">
+              <p>🖱️ <strong>Drag</strong> to rotate</p>
+              <p>🤏 <strong>Pinch</strong> to zoom</p>
+              <p>✋ <strong>Two-finger</strong> to pan (disabled)</p>
+            </div>
+            <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+              <p className="text-[10px] text-slate-500 dark:text-slate-500">
+                Current: Procedural avatar (cat.glb coming soon)
+              </p>
+            </div>
+          </div>
         </div>
       )}
     </div>
