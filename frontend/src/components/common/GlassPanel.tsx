@@ -21,9 +21,9 @@ const glowColors = {
 
 const paddingClasses = {
   none: '',
-  sm: 'p-3',
-  md: 'p-4',
-  lg: 'p-6',
+  sm: 'p-2 lg:p-3',
+  md: 'p-3 lg:p-4',
+  lg: 'p-4 lg:p-6',
 };
 
 export function GlassPanel({
