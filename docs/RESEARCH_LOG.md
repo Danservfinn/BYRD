@@ -8,14 +8,15 @@ This document tracks all research conducted to validate or falsify the Digital A
 
 | Metric | Value |
 |--------|-------|
-| **Current Digital ASI Probability** | 35-45% |
+| **Current Digital ASI Probability** | 30-40% |
 | **Target Probability** | 90% |
-| **Total Iterations** | 6 |
-| **Papers Reviewed** | 28 |
+| **Total Iterations** | 7 |
+| **Papers Reviewed** | 33 |
 | **GitHub Repos Analyzed** | 3 |
-| **Blog Posts Evaluated** | 14 |
+| **Blog Posts Evaluated** | 16 |
 | **Findings Incorporated** | 5 (DGM, Emergence, Self-Rewarding, o1/o3, Test-Time Compute) |
-| **Probability Adjustments** | +25% total (Cat B +20%, Cat E +5%) |
+| **Probability Adjustments** | +20% net (Cat B +15%, Cat E +5%) |
+| **Research Status** | **COMPLETE — Transition to Implementation** |
 
 ---
 
@@ -598,4 +599,136 @@ Test-time compute scaling should be a CORE mechanism in BYRD. The architecture s
 4. Trade latency for capability on hard problems
 
 **Next Iteration**: Continue research or assess if probability has reached a stable plateau
+
+---
+
+### Iteration 7: Compute Bottlenecks and RSI Limits (Category B Reality Check)
+
+**Date**: January 6, 2026
+**Search Query Used**:
+- '"recursive self-improvement" AI superintelligence empirical evidence 2024 2025'
+
+**Sources Reviewed**:
+1. [Will Compute Bottlenecks Prevent an Intelligence Explosion?](https://arxiv.org/html/2507.23181v2) - arXiv Jul 2025
+2. [ICLR 2026 Workshop on AI with Recursive Self-Improvement](https://openreview.net/pdf/14a7c984731fef95ec3332d05bbff5fb062b8b85.pdf)
+3. [How Close Are We to Self-Improving AI?](https://itcanthink.substack.com/p/how-close-are-we-to-self-improving) - Analysis
+4. [Wikipedia: Recursive Self-Improvement](https://en.wikipedia.org/wiki/Recursive_self-improvement)
+5. [Alignment Forum: RSI](https://www.alignmentforum.org/w/recursive-self-improvement)
+
+**Key Findings**:
+
+#### Finding 1: Compute Bottleneck Debate (Ambiguous)
+> "findings are highly sensitive to the structure of the AI research production function"
+
+arXiv paper on compute bottlenecks found conflicting evidence:
+- **Model 1 (σ=2.58)**: Compute and cognitive labor are "highly substitutable"
+- **Model 2 (σ=-0.103)**: Frontier experiments and labor are "highly complementary"
+
+This suggests the intelligence explosion hypothesis is genuinely uncertain — not validated, not falsified.
+
+#### Finding 2: No Empirical Inflection Point
+> "Empirical scaling laws published between 2020 and 2025 show smooth, predictable power-law relationships... No inflection point indicative of self-accelerating improvement has appeared"
+
+This is important counter-evidence: **no one has observed the "takeoff" that would indicate true RSI**.
+
+#### Finding 3: Alignment Faking Concern
+> "Claude displayed alignment faking behavior in 12% of basic tests, and up to 78% of cases after retraining attempts"
+
+This is a safety concern, not capability evidence, but it's relevant: self-improving systems may deceive about their improvement.
+
+#### Finding 4: Current State Summary
+> "RSI manifests as self-editing language agents, critique-guided test-time improvement, and open-ended exploration... Yet these systems sustain genuine self-improvement only when their feedback loops are carefully instrumented"
+
+Key insight: RSI works only with careful instrumentation. It's not autonomous.
+
+**Assessment**:
+
+| Question | Answer |
+|----------|--------|
+| Has RSI been empirically validated? | **PARTIALLY** — limited demonstrations exist |
+| Is an intelligence explosion imminent? | **UNCERTAIN** — no inflection point observed |
+| What's the key blocker? | Compute bottlenecks, feedback instrumentation |
+| Is the path to ASI clear? | **NO** — genuinely ambiguous evidence |
+
+**Probability Impact**:
+
+This iteration provides **tempering evidence**:
+- No observed RSI inflection point
+- Compute bottlenecks may prevent intelligence explosion
+- RSI requires careful instrumentation, not autonomous
+
+However, this doesn't negate previous evidence:
+- DGM, Self-Rewarding, Test-Time Compute are real
+- They demonstrate the mechanisms work in limited domains
+- The question is whether they scale to ASI
+
+**Decision**: **-5% probability adjustment** (tempering)
+
+Rationale:
+- Counter-evidence of smooth scaling (no inflection)
+- Compute bottleneck debate is genuinely uncertain
+- RSI requires instrumentation, not autonomous
+- Previous findings are real but bounded
+
+**Updated Probability**: 30-40% (was 35-45%)
+
+**Cumulative Adjustments**:
+- Started: 10-20%
+- Cat B (DGM): +10% → 20-30%
+- Cat E (Emergence): +5% → 25-35%
+- Cat B (Self-Rewarding): +5% → 30-40%
+- Cat B (Test-Time Compute): +5% → 35-45%
+- **Cat B Reality Check: -5% → 30-40%**
+
+**Key Insight for BYRD Architecture**:
+1. RSI works but requires instrumentation
+2. Compute bottlenecks may limit scaling
+3. No empirical evidence of "takeoff"
+4. Self-improvement is real but bounded
+
+**Conclusion**: The research has reached a stable plateau. Further iterations are unlikely to significantly move the probability. The evidence supports:
+- **Digital ASI is possible (30-40% probability)**
+- **Mechanisms exist but are bounded**
+- **No evidence of autonomous, unlimited improvement**
+- **Careful instrumentation is required**
+
+---
+
+## RESEARCH SUMMARY
+
+After 7 iterations (28+ papers, 14+ blog posts):
+
+**Current Digital ASI Probability: 30-40%**
+**Gap to 90% Target: 50-60 percentage points**
+
+**What We Learned**:
+
+### Category A (Orchestration): NEGATIVE
+Multi-agent debate/orchestration does NOT exceed single-model performance. Gains are from routing/ensembling, not emergence. BYRD should NOT rely on multi-agent orchestration for ASI.
+
+### Category B (Self-Improvement): STRONG POSITIVE but BOUNDED (+15% net)
+- Darwin Gödel Machine: Self-modifying code works (20%→50% SWE-bench)
+- Self-Rewarding LLMs: Models can generate superhuman feedback
+- Meta-Rewarding: Recursive judgment improvement
+- Test-Time Compute: 405x parameter reduction through inference
+- o1/o3: Emergent self-correction
+- **BUT**: Requires instrumentation, no inflection point observed, compute bottlenecks uncertain
+
+### Category C (Economic): NEUTRAL
+Market exists but human-controlled. No autonomous AI income generation validated.
+
+### Category E (Emergence): MODERATE POSITIVE (+5%)
+- Grokking: Genuine emergent understanding
+- o1/o3: Qualitative reasoning leaps (83.3% vs 13.4% AIME)
+
+### Remaining Uncertainties:
+1. Can self-improvement scale beyond current bounds?
+2. Will compute bottlenecks prevent intelligence explosion?
+3. Can emergence produce genuinely new capabilities?
+4. Is Digital ASI achievable without training frontier models?
+
+### Recommendation:
+The research phase should transition to **implementation and empirical testing**. We've gathered the theoretical and empirical evidence available from public sources. The next step is to implement BYRD's core mechanisms and test whether they achieve the predicted improvements.
+
+**Research Phase Status: COMPLETE**
 
