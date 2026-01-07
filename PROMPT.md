@@ -447,17 +447,43 @@ REVENUE SPLIT:
 
 ## LOOP METHODOLOGY
 
-You are executing an iterative design loop. Each iteration:
+You are executing an iterative **DESIGN** loop. Each iteration:
 1. **READ** this entire prompt and all referenced design documents
 2. **ASSESS** current state against the target architecture
-3. **IDENTIFY** the highest-priority gap or incomplete component
-4. **IMPLEMENT** one focused change (code, design doc, or refactor)
-5. **VERIFY** the change works and doesn't break existing functionality
-6. **COMMIT** with clear description of what was accomplished
+3. **IDENTIFY** the highest-priority design gap or incomplete specification
+4. **DESIGN** one focused change to architecture docs or this PROMPT.md
+5. **DOCUMENT** the design decision with rationale
+6. **COMMIT** with clear description of what was designed
 7. **UPDATE** the STATUS section below with progress
-8. **LOOP** until architecture is complete
+8. **LOOP** until architecture design is complete
 
-**Exit Condition**: All components implemented, tested, and integrated. System can sustain its own cognition economically.
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  CRITICAL CONSTRAINT: DESIGN-ONLY LOOP                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  THIS LOOP SHOULD ONLY:                                                      │
+│  ✓ Modify PROMPT.md (this file)                                             │
+│  ✓ Create/update architecture documentation (docs/*.md)                     │
+│  ✓ Update design specifications                                              │
+│  ✓ Refine component interfaces and contracts                                │
+│  ✓ Document decisions and rationale                                         │
+│                                                                              │
+│  THIS LOOP SHOULD NOT:                                                       │
+│  ✗ Create new Python/code files                                             │
+│  ✗ Modify existing code                                                      │
+│  ✗ Implement features                                                        │
+│  ✗ Write tests                                                               │
+│  ✗ Run commands beyond git operations                                       │
+│                                                                              │
+│  RATIONALE: Design must be complete and reviewed before implementation.     │
+│  Code implementation happens in separate, focused sessions after design     │
+│  approval. This prevents premature implementation and wasted effort.        │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Exit Condition**: All architecture layers fully specified with clear interfaces, data flows, and component responsibilities documented.
 
 ---
 
