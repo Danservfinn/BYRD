@@ -24,7 +24,7 @@ RUN pip install --no-cache-dir --user -r requirements.txt
 RUN find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 
 # Cache bust (updated on each deploy) - increment to force rebuild
-ARG CACHEBUST=45
+ARG CACHEBUST=46
 
 # Copy application code
 COPY --chown=user . .
