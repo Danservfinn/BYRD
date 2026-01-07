@@ -202,6 +202,75 @@ API-Only (Now) → Revenue → Cloud Inference → Local Hardware → True Indep
 > └─────────────────────────────────────────────────────────────────────────────┘
 > ```
 
+### Operational Interface: Claude Code CLI + LiteLLM
+
+> **BYRD's Development Interface**: **Claude Code CLI (Headless Mode)**
+>
+> BYRD development and operation runs through Claude Code CLI in headless mode,
+> enabling autonomous code generation, analysis, and self-improvement without
+> requiring human GUI interaction.
+>
+> ```
+> ┌─────────────────────────────────────────────────────────────────────────────┐
+> │  OPERATIONAL ARCHITECTURE                                                   │
+> ├─────────────────────────────────────────────────────────────────────────────┤
+> │                                                                              │
+> │  ┌─────────────────────────────────────────────────────────────────────┐   │
+> │  │  CLAUDE CODE CLI (HEADLESS)                                          │   │
+> │  │                                                                       │   │
+> │  │  • Autonomous operation without GUI                                  │   │
+> │  │  • RSI cycles can run unattended                                     │   │
+> │  │  • Code generation, analysis, refactoring                            │   │
+> │  │  • Self-modification with provenance tracking                        │   │
+> │  │  • Integration with BYRD's memory and learning systems               │   │
+> │  │                                                                       │   │
+> │  │  Usage: claude --headless [task]                                     │   │
+> │  └─────────────────────────────────────────────────────────────────────┘   │
+> │                              │                                              │
+> │                              ▼                                              │
+> │  ┌─────────────────────────────────────────────────────────────────────┐   │
+> │  │  LITELLM PROVIDER ABSTRACTION                                        │   │
+> │  │                                                                       │   │
+> │  │  • Unified interface to 100+ LLM providers                          │   │
+> │  │  • Automatic failover and load balancing                             │   │
+> │  │  • Cost tracking per provider                                        │   │
+> │  │  • Consistent API across ZAI, OpenRouter, Anthropic, OpenAI          │   │
+> │  │                                                                       │   │
+> │  │  Configuration: litellm.api_key = os.environ["ZAI_API_KEY"]         │   │
+> │  └─────────────────────────────────────────────────────────────────────┘   │
+> │                              │                                              │
+> │         ┌────────────────────┼────────────────────┐                        │
+> │         ▼                    ▼                    ▼                        │
+> │  ┌─────────────┐      ┌─────────────┐      ┌─────────────┐                │
+> │  │    ZAI      │      │ OPENROUTER  │      │  ANTHROPIC  │                │
+> │  │  GLM 4.7    │      │   Claude    │      │   Claude    │                │
+> │  │  (FREE)     │      │   (Paid)    │      │   (Direct)  │                │
+> │  └─────────────┘      └─────────────┘      └─────────────┘                │
+> │                                                                              │
+> │  ENVIRONMENT VARIABLES (Required):                                          │
+> │  ┌───────────────────────────────────────────────────────────────────────┐ │
+> │  │ ZAI_API_KEY           # GLM 4.7 access (Tier 1 - FREE)               │ │
+> │  │ OPENROUTER_API_KEY    # Premium models via OpenRouter (Tier 2)       │ │
+> │  │ ANTHROPIC_API_KEY     # Direct Claude access (Tier 2/3)              │ │
+> │  │ LITELLM_LOG           # Optional: debug logging                       │ │
+> │  └───────────────────────────────────────────────────────────────────────┘ │
+> │                                                                              │
+> │  WHY LITELLM:                                                               │
+> │  • Provider-agnostic code (switch providers without code changes)          │
+> │  • Built-in retry logic and error handling                                 │
+> │  • Streaming support for real-time responses                               │
+> │  • Cost tracking and usage analytics                                       │
+> │  • Easy integration with cognitive tiering system                          │
+> │                                                                              │
+> │  WHY HEADLESS:                                                              │
+> │  • Enables autonomous RSI cycles without human presence                    │
+> │  • Can run as background daemon or scheduled task                          │
+> │  • Integration with CI/CD for continuous improvement                       │
+> │  • Reduced resource overhead (no GUI rendering)                            │
+> │                                                                              │
+> └─────────────────────────────────────────────────────────────────────────────┘
+> ```
+
 ### Architectural Constraints (Fixed)
 
 > **Constraint 1**: No local LLM capability — All cognition flows through external API providers
@@ -1416,6 +1485,28 @@ Iteration 6: 2026-01-06 - rsi/cognition/ - Phase 0.2 Cognitive Tiering - 7b5f52d
   • TieredLLMClient wrapper working ✓
 
   NEXT: Phase 0.1 (actual GLM 4.7 API integration) or Phase 0.3 (revenue API)
+
+Iteration 7: 2026-01-06 - PROMPT.md - Operational Interface Documentation
+  ████████████████████████████████████████████████████████████████████
+  █  OPERATIONAL ARCHITECTURE: Claude Code CLI + LiteLLM              █
+  ████████████████████████████████████████████████████████████████████
+
+  NEW CONTENT:
+  • Added "Operational Interface: Claude Code CLI + LiteLLM" section
+  • Documented Claude Code CLI headless mode for autonomous operation
+  • Specified LiteLLM as the provider abstraction layer
+  • Listed required environment variables (ZAI_API_KEY, etc.)
+  • Explained benefits of provider-agnostic design
+
+  KEY POINTS:
+  • Claude Code CLI headless enables autonomous RSI cycles
+  • LiteLLM provides unified interface to 100+ LLM providers
+  • Environment variables keep credentials secure (not in code)
+  • Architecture supports seamless provider switching
+
+  SECURITY NOTE:
+  • API keys stored in environment variables, never in code
+  • ZAI_API_KEY provides access to unlimited GLM 4.7 for 1 year
 ```
 
 ### Blockers
