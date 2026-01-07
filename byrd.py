@@ -63,6 +63,11 @@ class BYRD:
         self._running = False
         self._continuous = False
 
+    @property
+    def llm_client(self):
+        """Backward compatibility property for server.py."""
+        return self.llm
+
     async def start(self):
         """Initialize and start BYRD."""
         logger.info("BYRD v2 starting...")
