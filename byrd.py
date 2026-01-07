@@ -55,7 +55,7 @@ class BYRD:
             config: Configuration dict (typically from config.yaml)
         """
         self.config = config
-        self.memory = Memory(config)
+        self.memory = Memory(config.get("memory", {}))
         self.llm = create_llm_client(config)
         self.rsi: Optional[RSIEngine] = None
         self.quantum = None  # Will be initialized if quantum is enabled
