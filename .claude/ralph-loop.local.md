@@ -1,6 +1,6 @@
 ---
 active: true
-iteration: 20
+iteration: 21
 max_iterations: 0
 completion_promise: "COMPLETED"
 started_at: "2026-01-07T04:02:03Z"
@@ -521,16 +521,16 @@ Next step would be empirical testing of the architecture.
 ## CURRENT STATUS
 
 ```
-Iteration: 20 (PHASE 2.5 HYBRID - Light Research + Implementation)
+Iteration: 21 (PHASE 2.5 HYBRID - Light Research + Implementation)
 Architecture.md version: 18.0
-Current Digital ASI Probability: 35-45% (decreased after Self-MoA counterevidence)
+Current Digital ASI Probability: 35-45% (stable 2 iterations, orchestration ceiling validated)
 Target Probability: 90%
 Gap: 45-55 percentage points
 
 Research Progress (Phase 2.5 HYBRID):
-• Papers reviewed: 69
+• Papers reviewed: 72
 • GitHub repos analyzed: 5 (+ Gastown, VC)
-• Blog posts evaluated: 68
+• Blog posts evaluated: 70
 • Reddit posts evaluated: 8
 • X/Twitter threads evaluated: 8
 • Findings incorporated: 7 (DGM, Emergence, Self-Rewarding, o1/o3, Test-Time Compute, AlphaEvolve, OSWorld)
@@ -579,9 +579,16 @@ Key negative findings:
 ✗ Adoption gap: 11% Deloitte vs 57% LangChain — selection bias
 ✗ **Self-MoA > MoA by 6.6%** — Mixing different LLMs may introduce noise (arXiv 2502.00674)
 ✗ "Quality trumps diversity" — Intra-model > inter-model diversity
+✗ **45% accuracy threshold** — above this, more agents = worse (DeepMind, 180 experiments)
+✗ **Claude -35% in multi-agent** — SOTA model degrades when orchestrated (PlanCraft)
+✗ 17.2x error amplification in multi-agent voting (5% → 86%)
+✗ 2-6x efficiency penalty for tool-heavy tasks (>10 tools)
+✗ 68% production systems limit agents to ≤10 steps
+✗ 80% use human-designed workflows, not autonomous
+✗ Emergence debate unresolved — some discontinuities real, some metric artifacts
 
 Phase 2.5 Status:
-1. **Probability decreased** — 35-45% (Self-MoA challenges emergence hypothesis)
+1. **Probability stable** — 35-45% (2 iterations, orchestration ceiling validated)
 2. **L5 autonomy gap** — <10% at full autonomy, key blocker identified
 3. **Light research continues** (1-2 iterations/week)
 4. **Implementation phase active** — Gastown patterns actionable

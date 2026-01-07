@@ -10,15 +10,15 @@ This document tracks all research conducted to validate or falsify the Digital A
 |--------|-------|
 | **Current Digital ASI Probability** | 35-45% |
 | **Target Probability** | 90% |
-| **Total Iterations** | 20 |
-| **Papers Reviewed** | 69 |
+| **Total Iterations** | 21 |
+| **Papers Reviewed** | 72 |
 | **GitHub Repos Analyzed** | 5 |
-| **Blog Posts Evaluated** | 68 |
+| **Blog Posts Evaluated** | 70 |
 | **Reddit/X Threads Evaluated** | 8 |
 | **Findings Incorporated** | 7 (DGM, Emergence, Self-Rewarding, o1/o3, Test-Time Compute, AlphaEvolve, OSWorld Computer Use) |
-| **Key Counterevidence** | Scaling ceiling hit (Dettmers), LLM "Illusion of Thinking", Entropic drift limits RSI, ARC-AGI-2, Humanity's Last Exam (25-37%), 76% skepticism, Sutskever "scaling over", **Self-MoA > MoA (ensembling, not emergence)** |
+| **Key Counterevidence** | Scaling ceiling hit (Dettmers), LLM "Illusion of Thinking", Entropic drift limits RSI, ARC-AGI-2, Humanity's Last Exam (25-37%), 76% skepticism, Sutskever "scaling over", Self-MoA > MoA, **45% capability threshold (DeepMind)**, **Claude -35% in multi-agent** |
 | **Probability Adjustments** | +25% net (Cat B +15%, Cat E +5%, Cat C +5%, Cat D +10%, Reality Checks -10%, Counterevidence -10%) |
-| **Research Status** | **PHASE 2.5 (HYBRID) — Probability 35-45% (Self-MoA counterevidence); light research + implementation** |
+| **Research Status** | **PHASE 2.5 (HYBRID) — Probability 35-45% stable (2 iterations); orchestration ceiling validated** |
 
 ---
 
@@ -45,6 +45,12 @@ This document tracks all research conducted to validate or falsify the Digital A
 | 57% agents in production (LangChain 2026) vs 11% (Deloitte) — selection bias | [LangChain Survey](https://www.langchain.com/state-of-agent-engineering) | **CAUTIONARY** | Gap persists |
 | **Self-MoA > MoA by 6.6%** — Mixing different LLMs may introduce noise | [arXiv 2502.00674](https://arxiv.org/abs/2502.00674) | **NEGATIVE** | Challenges emergence hypothesis |
 | "Quality trumps diversity" — Intra-model > inter-model diversity | [arXiv 2502.00674](https://arxiv.org/abs/2502.00674) | **NEGATIVE** | Ensembling, not emergence |
+| **45% accuracy threshold — above this, more agents = worse** | [DeepMind arXiv 2512.08296](https://arxiv.org/html/2512.08296v1) | **STRONGLY NEGATIVE** | 180 experiments |
+| **Claude -35% in multi-agent setup (PlanCraft)** | [DEV Community](https://dev.to/imaginex/the-ai-agent-scaling-problem-why-more-isnt-better-9nh) | **STRONGLY NEGATIVE** | SOTA model degrades |
+| 17.2x error amplification in multi-agent voting | [DEV Community](https://dev.to/imaginex/the-ai-agent-scaling-problem-why-more-isnt-better-9nh) | **NEGATIVE** | 5% → 86% error |
+| 2-6x efficiency penalty for tool-heavy tasks (>10 tools) | [VentureBeat](https://venturebeat.com/orchestration/research-shows-more-agents-isnt-a-reliable-path-to-better-enterprise-ai) | **NEGATIVE** | Coordination overhead |
+| 68% production systems limit agents to ≤10 steps | [DEV Community](https://dev.to/imaginex/the-ai-agent-scaling-problem-why-more-isnt-better-9nh) | **CAUTIONARY** | Autonomy constrained |
+| 80% use human-designed workflows, not autonomous | [DEV Community](https://dev.to/imaginex/the-ai-agent-scaling-problem-why-more-isnt-better-9nh) | **CAUTIONARY** | Not true autonomy |
 
 ### Category B: Recursive Self-Improvement
 *Evidence that AI systems can genuinely improve themselves*
@@ -2343,4 +2349,140 @@ Rationale:
 - Intra-model diversity > inter-model diversity
 - Quality trumps diversity — mixing introduces noise
 - MoA gains may be ensembling, NOT emergence
+
+### Iteration 21: DeepMind MAS Validation & Emergence Survey (Phase 2.5)
+
+**Date**: January 7, 2026
+**Source Type**: Academic papers, industry analysis, surveys
+**Research Focus**: Multi-agent orchestration ceiling validation and emergence consensus
+
+**Context**: Fifth light research iteration. Following up on Self-MoA findings with broader MAS evidence.
+
+**Sources Reviewed**:
+1. [Beyond the Strongest LLM: Multi-Turn Multi-Agent Orchestration vs. Single LLMs](https://arxiv.org/abs/2509.23537) - arXiv Sep 2025
+2. [More Agents Isn't Reliable Path to Better Enterprise AI](https://venturebeat.com/orchestration/research-shows-more-agents-isnt-a-reliable-path-to-better-enterprise-ai) - VentureBeat Dec 2025
+3. [The AI Agent Scaling Problem](https://dev.to/imaginex/the-ai-agent-scaling-problem-why-more-isnt-better-9nh) - DEV Community 2025
+4. [Emergent Abilities in LLMs: A Survey](https://arxiv.org/html/2503.05788v2) - arXiv Mar 2025
+5. [What's Next for AI in 2026](https://www.technologyreview.com/2026/01/05/1130662/whats-next-for-ai-in-2026/) - MIT Technology Review Jan 2026
+
+**Key Findings — CRITICAL MAS CEILING VALIDATION**:
+
+#### Finding 1: 45% Accuracy Threshold — Orchestration Only Helps Below Ceiling
+> "Once a single-agent baseline exceeds 45% accuracy, adding more agents typically yields diminishing or negative returns"
+> "Google DeepMind's paper tested 180 controlled experiments and proved [more agents better] wrong"
+
+[VentureBeat](https://venturebeat.com/orchestration/research-shows-more-agents-isnt-a-reliable-path-to-better-enterprise-ai) and DeepMind's "Towards a Science of Scaling Agent Systems" establish a critical threshold:
+
+**Implication**: If single-agent can solve 45%+ of a task, orchestration provides **no value or negative value**.
+
+This is **devastating** for emergence hypothesis — it means orchestration doesn't exceed substrate, it just compensates for substrate weakness on hard tasks.
+
+**Impact**: **STRONGLY NEGATIVE** for Category A
+
+#### Finding 2: Claude Performance Drop of 35% in Multi-Agent Setup
+> "When Anthropic's Claude model was put into a multi-agent setup, performance dropped by 35%"
+> "Error amplification factor of 17.2" — 5% single-agent error → 86% multi-agent error
+
+[DEV Community analysis](https://dev.to/imaginex/the-ai-agent-scaling-problem-why-more-isnt-better-9nh) quantifies coordination overhead:
+
+- Claude **loses 35%** performance when orchestrated (PlanCraft benchmark)
+- Error amplification is **17.2x** in independent voting systems
+- 68% of production systems restrict agents to ≤10 steps
+- 80% use human-designed workflows, not autonomous planning
+
+**Impact**: **STRONGLY NEGATIVE** for Category A — Orchestration can *degrade* SOTA models
+
+#### Finding 3: Tool-Heavy Tasks Suffer 2-6x Efficiency Penalty
+> "For tool-heavy integrations with more than approximately 10 tools, single-agent systems are likely preferable"
+> "2 to 6x efficiency penalty for multi-agent variants in these scenarios"
+
+Multi-agent coordination overhead compounds with environmental complexity:
+- Token budget fragmentation reduces per-agent context
+- Coordination consumes cognitive bandwidth
+- Simpler architectures paradoxically outperform complex ones
+
+**Impact**: **NEGATIVE** for Category A — Orchestration overhead is structural
+
+#### Finding 4: Emergence Debate Remains Unresolved
+> "The debate remains unresolved... emergence is partially real but partially metric-dependent"
+> "There is no unified consensus"
+
+[arXiv Emergence Survey](https://arxiv.org/html/2503.05788v2) summarizes 2025 state of knowledge:
+
+**Genuine emergence evidence**:
+- Three-digit addition: 8% (13B) → 80% (175B) discontinuous jump
+- In-context learning, chain-of-thought reasoning
+- Theory of Mind capabilities
+
+**Emergence skepticism**:
+- Stanford: "just a consequence of how researchers measure performance"
+- Discontinuities may be metric artifacts (binary vs linear)
+- Smooth scaling when measured with continuous metrics
+
+**Key insight**: Scientific community **has not converged** on whether emergence is real or artifact.
+
+**Impact**: **NEUTRAL** for Category E — No new evidence either way
+
+#### Finding 5: 2026 Is Consolidation, Not Breakthrough
+> "LLMs won't discover anything by themselves. But LLMs do still have the potential to extend the bounds of human knowledge"
+> "Progress appears incremental—refining existing systems, expanding deployment, and improving efficiency"
+
+[MIT Technology Review 2026](https://www.technologyreview.com/2026/01/05/1130662/whats-next-for-ai-in-2026/) characterizes 2026 as consolidation:
+
+- Reasoning models are "new paradigm" but within existing capability bounds
+- Innovation is deployment/efficiency, not fundamental capability
+- LLMs require human direction for meaningful contributions
+
+**Impact**: **NEUTRAL** — Confirms no breakthrough imminent
+
+**Assessment**:
+
+| Question | Answer |
+|----------|--------|
+| Does orchestration exceed substrate ceiling? | **NO** — 45% threshold + 35% Claude drop prove ceiling exists |
+| Is emergence real? | **UNRESOLVED** — Scientific debate continues |
+| Is 2026 bringing breakthroughs? | **NO** — Consolidation year, not capability year |
+| Does this change probability? | **POSSIBLY** — 45% threshold is strong counterevidence |
+
+**Probability Impact Analysis**:
+
+**Strong counterevidence this iteration**:
+1. 45% accuracy threshold proven by DeepMind (180 experiments)
+2. Claude 35% performance drop in multi-agent setup
+3. 17.2x error amplification factor
+4. 2-6x efficiency penalty for tool-heavy tasks
+5. 68% of production systems limit agents to ≤10 steps
+6. 80% use human-designed workflows (not autonomous)
+
+**However**:
+1. Task-specific benefits remain (finance +80.9%, incident response +80x)
+2. 45% threshold means orchestration CAN help on hard tasks
+3. Emergence debate is unresolved, not falsified
+4. Gastown/VC production results still valid
+
+**Decision**: **No change** (evidence reinforces existing position)
+
+Rationale:
+- This iteration strongly reinforces iteration 20 findings
+- But we already adjusted probability -5% for Self-MoA
+- The 45% threshold and Claude drop are **consistent with** Self-MoA findings
+- No new *type* of counterevidence, just more of same type
+- Further decrease would be double-counting
+
+**Current Probability**: 35-45% (unchanged from iteration 20)
+
+**Stability Assessment**: Probability has been in 35-45% range for 2 iterations. This may indicate we're approaching research equilibrium for Category A.
+
+**Category A Update**: Added orchestration ceiling evidence:
+- 45% accuracy threshold — above this, more agents = worse
+- Claude 35% drop in multi-agent (PlanCraft)
+- 17.2x error amplification factor
+- 2-6x efficiency penalty for tool-heavy tasks
+- 68% production systems limit to ≤10 agent steps
+- 80% use human-designed workflows
+
+**Category E Update**: Emergence debate remains unresolved:
+- Some discontinuities are genuine (arithmetic, ICL)
+- Some may be metric artifacts (Stanford critique)
+- No scientific consensus achieved
 
