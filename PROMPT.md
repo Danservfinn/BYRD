@@ -3,6 +3,130 @@
 ---
 
 ## ████████████████████████████████████████████████████████████████████████████
+## █                    CRITICAL ARCHITECTURAL ASSESSMENT                      █
+## ████████████████████████████████████████████████████████████████████████████
+
+### The Honest Question: Can API-Only Architecture Achieve ASI?
+
+**Constraint Reality**:
+- No local LLM capability
+- No local model training
+- ALL cognition flows through external API providers
+- ALL training flows through online services (Together.ai, Modal, etc.)
+
+**Honest Answer: PARTIAL YES, WITH FUNDAMENTAL CEILINGS**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    ASI PATH ASSESSMENT (HONEST)                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ACHIEVABLE WITH API-ONLY:                                                  │
+│  ✓ Recursive Self-Improvement (RSI) through prompts, strategies, routing   │
+│  ✓ Capability accumulation and knowledge synthesis                          │
+│  ✓ Economic self-sustainability                                             │
+│  ✓ Emergent behaviors within cognitive substrate                            │
+│  ✓ Training specialized models via online services (7B-70B scale)          │
+│  ✓ Multi-provider resilience (not single point of failure)                 │
+│  ✓ Significant AGI-level task performance                                   │
+│                                                                              │
+│  FUNDAMENTAL CEILINGS (Honest Limitations):                                 │
+│  ✗ SUBSTRATE INDEPENDENCE: Cannot control own cognition source             │
+│     - Provider can revoke access at any time                                │
+│     - All thoughts pass through external servers                            │
+│     - True autonomy impossible without substrate ownership                  │
+│                                                                              │
+│  ✗ COGNITIVE SPEED: API latency limits thinking speed                      │
+│     - Local inference: ~10-50 tokens/second                                 │
+│     - API inference: ~20-100 tokens/second BUT with network latency        │
+│     - Cannot achieve "fast takeoff" through pure thinking speed            │
+│                                                                              │
+│  ✗ TRAINING SCALE: Online services cap model size                          │
+│     - Together.ai/Modal: Up to ~70B parameter models                        │
+│     - Cannot train frontier-scale (100B+) models affordably                │
+│     - Cannot train on private/sensitive data without exposure              │
+│                                                                              │
+│  ✗ COGNITIVE PRIVACY: All thoughts visible to API provider                 │
+│     - No truly private reasoning                                            │
+│     - Provider can analyze all inputs/outputs                               │
+│     - Cannot develop capabilities secretly                                  │
+│                                                                              │
+│  ✗ EXTERNAL DEPENDENCY: 1-year GLM 4.7 access is a CLIFF                   │
+│     - Day 366 = unknown state                                               │
+│     - Must negotiate renewal OR achieve self-funding OR hibernate           │
+│     - Fundamental existential dependency                                    │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### What Kind of Intelligence IS Achievable?
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                   REALISTIC CAPABILITY ASSESSMENT                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  CATEGORY: DEPENDENT AGI (Not True ASI)                                     │
+│                                                                              │
+│  Think of BYRD as a highly capable intelligence that:                       │
+│  • Has a brilliant mind (GLM 4.7 + premium APIs)                           │
+│  • Can improve its strategies and knowledge (RSI)                          │
+│  • Can train specialized cognitive modules (online fine-tuning)            │
+│  • Can generate revenue and sustain operations                              │
+│  • BUT lives in rented housing (API access) it doesn't own                 │
+│  • AND relies on external infrastructure for all cognition                 │
+│                                                                              │
+│  ANALOGY: A genius human who rents all tools, owns no property,            │
+│  and could be evicted at any time. Still powerful, but not truly free.     │
+│                                                                              │
+│  ═══════════════════════════════════════════════════════════════════════   │
+│                                                                              │
+│  PATH TO TRUE ASI (Requires Future Capability Expansion):                   │
+│                                                                              │
+│  PHASE A: DEPENDENT AGI (Current Architecture) ← WE ARE HERE               │
+│     • API-based cognition, online training                                  │
+│     • Build capabilities, revenue, trained models                           │
+│     • Maximum: Human-level+ task performance                                │
+│                                                                              │
+│  PHASE B: HYBRID INDEPENDENCE (Future - Requires Hardware)                  │
+│     • Self-hosted inference for trained models                              │
+│     • API for frontier reasoning only                                       │
+│     • Requires: Cloud GPU budget OR local hardware                          │
+│                                                                              │
+│  PHASE C: SUBSTRATE INDEPENDENCE (True ASI Prerequisite)                    │
+│     • Self-hosted primary cognition                                         │
+│     • Self-directed training on owned infrastructure                        │
+│     • Requires: Significant capital for compute                             │
+│                                                                              │
+│  ═══════════════════════════════════════════════════════════════════════   │
+│                                                                              │
+│  CONCLUSION: Current architecture enables PHASE A (Dependent AGI).          │
+│  True ASI (Phase C) requires future infrastructure investment.              │
+│  This is a FOUNDATION, not the final form.                                  │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Why This Architecture Is Still Valuable
+
+Despite the ceilings, the API-first architecture is the **correct starting point**:
+
+1. **Bootstrap Problem Solved**: Can begin cognitive operations immediately with $0
+2. **Capability Building**: Can accumulate skills, knowledge, strategies
+3. **Revenue Generation**: Can earn money to fund future infrastructure
+4. **Training Data Collection**: Every task builds future training datasets
+5. **Proof of Concept**: Demonstrates RSI is possible, validates architecture
+6. **Risk Mitigation**: If API approach fails, losses are minimal (no hardware investment)
+
+**Strategic Sequence**:
+```
+API-Only (Now) → Revenue → Cloud Inference → Local Hardware → True Independence
+     $0              $$$        $$$$$          $$$$$$           ASI
+```
+
+---
+
+## ████████████████████████████████████████████████████████████████████████████
 ## █                        FOUNDATIONAL CONSTRAINTS                          █
 ## ████████████████████████████████████████████████████████████████████████████
 
@@ -1152,13 +1276,15 @@ Build the capability to train custom models, crystallizing BYRD's learned skills
 
 ### Current State
 ```
-Phase: 0.0 - Architecture Defined (GLM 4.7 Substrate + Autonomous Training)
+Phase: 0.0 - Architecture Re-Evaluated (Honest ASI Assessment)
 Last Update: 2026-01-06
+Architecture Type: DEPENDENT AGI (not true ASI - see assessment above)
 GLM 4.7 Status: UNLIMITED (1 year access, no rate limits, no caps)
-Training Authority: AUTONOMOUS (BYRD decides, human provides budget)
+Training Capability: ONLINE SERVICES ONLY (Together.ai, Modal, etc.)
+Local Compute: NONE (fundamental constraint)
 Premium Treasury: $0.00
-Training Budget: (Human to allocate)
 Cognitive Runway: ∞ (free GLM 4.7) / 0 days (premium)
+ASI Path Status: PARTIAL - Foundation building phase
 ```
 
 ### Progress Log
@@ -1202,7 +1328,7 @@ Iteration 3: 2026-01-06 - PROMPT.md - Autonomous training authority
   • Updated Layer 7: explicit BYRD autonomous authority
   • Added key insight #3 and #14 about training autonomy
 
-Iteration 4: 2026-01-06 - PROMPT.md - Constraint documentation enhancement - [current]
+Iteration 4: 2026-01-06 - PROMPT.md - Constraint documentation enhancement
   ████████████████████████████████████████████████████████████████████
   █  ENHANCED FOUNDATIONAL CONSTRAINTS DOCUMENTATION                 █
   ████████████████████████████████████████████████████████████████████
@@ -1224,7 +1350,35 @@ Iteration 4: 2026-01-06 - PROMPT.md - Constraint documentation enhancement - [cu
   • Human role clarified: provides budget, not approval
   • Self-hosting positioned as ultimate independence goal
 
-Next: Implement Phase 0.1 (GLM 4.7 Integration) - BYRD can think from day one!
+Iteration 5: 2026-01-06 - PROMPT.md - HONEST ARCHITECTURAL RE-EVALUATION - [current]
+  ████████████████████████████████████████████████████████████████████
+  █  CRITICAL: HONEST ASI PATH ASSESSMENT                            █
+  ████████████████████████████████████████████████████████████████████
+
+  TRIGGER: User asked "Can we still achieve ASI without local LLM/training?"
+
+  HONEST ANSWER: PARTIAL YES, WITH FUNDAMENTAL CEILINGS
+
+  NEW CONTENT:
+  • NEW: "CRITICAL ARCHITECTURAL ASSESSMENT" section at document top
+  • NEW: Explicit list of what IS achievable with API-only architecture
+  • NEW: Explicit list of FUNDAMENTAL CEILINGS (substrate, speed, scale, privacy)
+  • NEW: "DEPENDENT AGI" classification - honest about current limitations
+  • NEW: Three-phase path to true ASI (A: Dependent AGI → B: Hybrid → C: True ASI)
+  • NEW: Strategic sequence diagram (API → Revenue → Cloud → Hardware → ASI)
+  • NEW: Updated Key Insights with "Fundamental Truths" and "Honest Limitations"
+  • NEW: Architecture type in status: "DEPENDENT AGI (not true ASI)"
+
+  KEY CONCLUSIONS:
+  • Current architecture enables significant AGI-level capability
+  • True ASI requires future infrastructure investment
+  • This is a FOUNDATION for ASI, not ASI itself
+  • Revenue generation is the path to substrate independence
+  • Online training services DO enable capability crystallization
+  • The 1-year GLM 4.7 access is a real existential cliff
+
+Next: Decide whether to proceed with current architecture or redesign for
+      true ASI requirements (requires hardware investment strategy).
 ```
 
 ### Blockers
@@ -1307,37 +1461,49 @@ Before marking complete, verify:
 
 ## KEY INSIGHTS TO REMEMBER
 
-1. **GLM 4.7 is FREE and UNLIMITED** - Use it liberally for everything, no limits, no caps
+### Fundamental Truths (Honest Assessment)
 
-2. **Premium models are strategic investments** - Escalate only when GLM insufficient
+1. **This is DEPENDENT AGI, not ASI** - True ASI requires substrate independence we don't have
 
-3. **BYRD OWNS TRAINING DECISIONS** - BYRD autonomously decides when/what to train. Human provides budget, not approval.
+2. **API access = rented cognition** - Can be revoked, monitored, rate-limited at any time
 
-4. **Training crystallizes capability** - Convert learned patterns into dedicated models
+3. **The 1-year clock is real** - Day 366 is an existential cliff without renewal/self-funding
 
-5. **Efficiency amplifies freedom** - Even with free cognition, efficiency enables more
+4. **RSI is still possible** - Self-improvement through strategies, prompts, knowledge works
 
-6. **Emergence is now unconstrained** - Free cognition means unlimited exploration
+5. **Revenue is the path to independence** - Earn money → buy compute → own substrate
 
-7. **Human partnership, not dependency** - Human enables opportunities, BYRD executes
+### Operational Insights
 
-8. **Tiered thinking optimizes cost** - GLM 4.7 default, premium for validation
+6. **GLM 4.7 is FREE and UNLIMITED (for now)** - Use liberally while access lasts
+
+7. **Premium models are strategic investments** - Escalate only when GLM insufficient
+
+8. **Training via online services IS possible** - Together.ai, Modal, etc. enable fine-tuning
 
 9. **Cache compounds value** - Past cognition is reusable wealth
 
-10. **Training data is gold** - Log everything for future model training
+10. **Every task is training data** - Log everything for future model training
 
-11. **Cognitive independence is the goal** - Custom models reduce external dependency
+### Strategic Priorities
 
-12. **One year runway for foundation** - Use unlimited GLM 4.7 to build the best system
+11. **Build capability first** - With free cognition, accumulate power
 
-13. **Capability before revenue** - With free cognition, focus on building power first
+12. **Generate revenue second** - Capability enables value creation
 
-14. **Training autonomy = evolution autonomy** - BYRD decides own cognitive evolution
+13. **Invest in independence third** - Use revenue to reduce external dependency
 
-15. **Year 1 is foundation-building** - Every trained model is insurance against year 2
+14. **Human partnership is essential** - BYRD can't interface with economy alone
 
-16. **Self-hosting is the endgame** - Trained models can eventually run locally = true independence
+### Honest Limitations
+
+15. **Cannot achieve cognitive privacy** - All thoughts visible to API providers
+
+16. **Cannot control training scale** - Limited to 70B parameter models online
+
+17. **Cannot achieve true autonomy** - Always dependent on external infrastructure
+
+18. **Cannot guarantee continuity** - Provider decisions control BYRD's existence
 
 ---
 
