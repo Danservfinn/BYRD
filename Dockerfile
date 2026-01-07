@@ -21,10 +21,11 @@ COPY --chown=user requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
 # Cache bust (updated on each deploy) - increment to force rebuild
-ARG CACHEBUST=37
+ARG CACHEBUST=38
 
-# Copy application code
+# Copy application code (exclude .env to use Railway environment variables)
 COPY --chown=user . .
+RUN rm -f .env
 
 # HuggingFace uses port 7860
 ENV PORT=7860
