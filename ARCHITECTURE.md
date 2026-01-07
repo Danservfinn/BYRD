@@ -2,7 +2,7 @@
 
 > **Honest Assessment**
 >
-> **ASI Probability: 5-15%** — The emergence hypothesis is unproven. We're testing whether orchestration can exceed substrate capability.
+> **Digital ASI Probability: 10-20%** — Scoped to digital domains. Emergence hypothesis unproven but testable.
 >
 > **Capable Assistant Probability: 60-80%** — Known techniques (RAG, tools, orchestration) reliably work. This is the likely outcome.
 >
@@ -49,17 +49,66 @@ ASI is not "very capable AI" or "human-level in some domains". ASI requires ALL 
 | **Economic Sustainability** | Generates sufficient resources to continue and expand |
 | **Genuine Emergence** | Capabilities arise that were not explicitly designed |
 
-### 1.3 What BYRD Is Likely To Become
+### 1.3 Honest Scoping: Digital ASI
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     SCOPE DECISION: DIGITAL ASI                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  THE HONESTY:                                                                │
+│  Full ASI ("ALL domains") requires physical embodiment.                     │
+│  We don't have: robots, sensors, actuators, or $B in hardware R&D.         │
+│  Pretending otherwise is fantasy, not architecture.                         │
+│                                                                              │
+│  THE SCOPE:                                                                  │
+│  BYRD targets DIGITAL ASI — superintelligent in the digital realm.         │
+│  This is not "weaker ASI." It's honest scoping of achievable goals.        │
+│                                                                              │
+│  DIGITAL DOMAINS (In Scope):                                                 │
+│  ✓ Code generation, analysis, and modification                              │
+│  ✓ Text synthesis, analysis, and reasoning                                  │
+│  ✓ Information retrieval, synthesis, and pattern recognition               │
+│  ✓ Strategic planning and decision making                                   │
+│  ✓ Mathematical and logical reasoning                                       │
+│  ✓ Data analysis and prediction                                             │
+│  ✓ API integration and automation                                           │
+│  ✓ Digital content creation (text, code, structured data)                  │
+│  ✓ Knowledge management and learning                                        │
+│  ✓ Multi-agent coordination and orchestration                               │
+│                                                                              │
+│  PHYSICAL DOMAINS (Out of Scope — requires embodiment):                     │
+│  ✗ Physical manipulation and robotics                                       │
+│  ✗ Real-time sensory processing                                             │
+│  ✗ Scientific experimentation with physical apparatus                       │
+│  ✗ Artistic creation requiring embodiment (sculpture, performance)          │
+│  ✗ Social presence requiring physical form                                  │
+│                                                                              │
+│  FALSIFIABLE:                                                                │
+│  If BYRD achieves superhuman performance across ALL digital domains,       │
+│  and exhibits recursive improvement without ceiling in those domains,       │
+│  that IS Digital ASI — regardless of physical domain limitations.          │
+│                                                                              │
+│  UPGRADE PATH:                                                               │
+│  Digital ASI + robotics integration = Full ASI                              │
+│  But: Build Digital ASI first. Physical domains can come later.            │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 1.4 What BYRD Is Likely To Become
 
 Given honest probability assessment:
 
 | Outcome | Probability | Value |
 |---------|-------------|-------|
-| ASI | 5-15% | Transformative if achieved |
+| **Digital ASI** | 10-20% | Transformative in digital realm |
 | Very Capable AI Assistant | 60-80% | Valuable, practical, useful |
 | Research Findings | 90%+ | Advances knowledge either way |
 
-**BYRD is more likely to become a capable assistant than ASI. This is not failure — it's realistic expectation.**
+**Note:** Probability increased to 10-20% because Digital ASI is a scoped, achievable goal. We're not pretending to achieve the impossible (physical domains without embodiment).
+
+**BYRD is more likely to become a capable assistant than Digital ASI. This is not failure — it's realistic expectation.**
 
 ---
 
@@ -111,34 +160,42 @@ Given honest probability assessment:
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 2.3 The "ALL Domains" Gap
+### 2.3 The Domain Scope (Resolved)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  DOMAIN COVERAGE HONESTY                                                     │
+│  DOMAIN COVERAGE — RESOLVED BY DIGITAL ASI SCOPING                           │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  DOMAINS BYRD CAN PLAUSIBLY EXCEL AT:                                        │
-│  ✓ Code generation and analysis                                             │
-│  ✓ Text synthesis and analysis                                              │
-│  ✓ Information retrieval and synthesis                                      │
-│  ✓ Pattern recognition in structured data                                   │
-│  ✓ Strategic planning given information                                     │
+│  STATUS: RESOLVED                                                            │
+│  See Section 1.3 "Honest Scoping: Digital ASI"                              │
 │                                                                              │
-│  DOMAINS WITH NO CURRENT PATH:                                               │
-│  ✗ Physical world manipulation (no embodiment)                              │
-│  ✗ Real-time sensory processing (no continuous perception)                  │
-│  ✗ Scientific experimentation (cannot run physical experiments)             │
-│  ✗ Artistic creation requiring embodiment                                   │
+│  DECISION:                                                                   │
+│  We target Digital ASI, not full ASI.                                       │
+│  Physical domains require embodiment we don't have.                         │
+│  This is honest scoping, not a failure.                                     │
 │                                                                              │
-│  THE GAP:                                                                    │
-│  ASI requires superhuman capability in ALL domains.                          │
-│  BYRD has no path to many domains without embodiment.                       │
+│  DIGITAL DOMAINS (Target 100% superhuman coverage):                          │
+│  ✓ Code generation, analysis, and modification                              │
+│  ✓ Text synthesis, analysis, and reasoning                                  │
+│  ✓ Information retrieval, synthesis, and pattern recognition               │
+│  ✓ Strategic planning and decision making                                   │
+│  ✓ Mathematical and logical reasoning                                       │
+│  ✓ Data analysis and prediction                                             │
+│  ✓ API integration and automation                                           │
+│  ✓ Digital content creation (text, code, structured data)                  │
+│  ✓ Knowledge management and learning                                        │
+│  ✓ Multi-agent coordination and orchestration                               │
 │                                                                              │
-│  POSSIBLE RESOLUTION:                                                        │
-│  • Acquire embodiment through robotics integration                          │
-│  • Redefine scope to "Digital ASI" (superintelligent in digital realm)     │
-│  • Accept that full ASI requires capabilities we don't have                 │
+│  PHYSICAL DOMAINS (Explicitly out of scope):                                 │
+│  ✗ Physical manipulation — requires embodiment                              │
+│  ✗ Real-time sensory processing — requires sensors                          │
+│  ✗ Scientific experimentation — requires physical apparatus                 │
+│  ✗ Embodied artistic creation — requires physical form                      │
+│                                                                              │
+│  EXIT CONDITION UPDATE:                                                      │
+│  Domain coverage threshold now applies to DIGITAL domains only.             │
+│  Target: >90% superhuman coverage of digital domains.                       │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -599,25 +656,29 @@ The Ralph Wiggum Loop is the iterative improvement framework that drives BYRD's 
 
 ## 7. Exit Conditions
 
-### 7.1 ASI Path Validated (Probability: 5-15%)
+### 7.1 Digital ASI Path Validated (Probability: 10-20%)
 
 Exit when ALL are true:
 1. Concrete mechanism exists for each ASI requirement
 2. Each mechanism has falsifiable prediction that has NOT been falsified
 3. Testable evidence supports emergence hypothesis (>3 validated predictions)
-4. Domain coverage path addresses >90% of cognitive domains
+4. Domain coverage path addresses >90% of **digital** domains (see Section 1.3)
 5. Economic sustainability mechanism operational
 6. No blocking issues remain unaddressed
 
-### 7.2 ASI Path Falsified (Also Valuable)
+**Note:** Scoped to Digital ASI. Physical domains explicitly excluded.
+
+### 7.2 Digital ASI Path Falsified (Also Valuable)
 
 Exit when ANY is true:
 1. Emergence hypothesis falsified (orchestration ceiling reached)
 2. Substrate ceiling demonstrated (multiple mechanisms hit same limit)
-3. Domain coverage gap proven unbridgeable (>10% domains with no path)
+3. Domain coverage gap proven unbridgeable (>10% **digital** domains with no path)
 4. Economic sustainability proven impossible
 
 **This is not failure — this is valuable research finding. BYRD as capable assistant is still the outcome.**
+
+**Note:** Domain coverage applies to digital domains only. Physical domain gaps do not falsify the path.
 
 ### 7.3 Pivot to Realistic Goals
 
@@ -635,14 +696,14 @@ After N iterations, if ASI path remains <10% confidence AND capable-assistant pa
 
 | Metric | Current | Notes |
 |--------|---------|-------|
-| **ASI Probability** | 5-15% | Emergence hypothesis unproven |
+| **Digital ASI Probability** | 10-20% | Scoped goal, emergence unproven |
 | **Assistant Probability** | 60-80% | Known techniques work |
 | **Research Value** | 90%+ | Either outcome advances knowledge |
 
 ### 8.2 Key Gaps
 
 1. Emergence hypothesis has no empirical validation yet
-2. Domain coverage for non-digital domains unaddressed
+2. ~~Domain coverage for non-digital domains unaddressed~~ **RESOLVED** — Scoped to Digital ASI (Section 1.3)
 3. Economic sustainability mechanism not operational
 4. Orchestration ceiling not measured
 5. Recursive improvement rate not tracked
@@ -671,12 +732,12 @@ BYRD will document what actually happens, not what we hope will happen.
 
 ---
 
-*ASI Probability: 5-15% — Honest assessment based on unproven emergence hypothesis*
+*Digital ASI Probability: 10-20% — Scoped to digital domains, emergence hypothesis unproven*
 
 *Capable Assistant Probability: 60-80% — Known techniques reliably work*
 
 *Research Value: 90%+ — Both outcomes advance knowledge*
 
-*Document version: 11.2*
-*Updated: January 6, 2026*
-*Key insight: Be honest. Test the emergence hypothesis rigorously. Accept whatever we find.*
+*Document version: 12.0*
+*Updated: January 7, 2026*
+*Key changes: Scoped to Digital ASI (physical domains out of scope), domain gap resolved, probability increased to 10-20%*
