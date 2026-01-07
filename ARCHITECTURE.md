@@ -386,6 +386,77 @@ These mechanisms MIGHT enable ASI via orchestration. They are unproven.
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
+### 4.5 Economic Sustainability
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  MECHANISM 5: ECONOMIC SELF-SUSTAINABILITY                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  REQUIREMENT:                                                                │
+│  Digital ASI must generate revenue to sustain itself.                       │
+│  Without economic agency, BYRD dies when human funding stops.              │
+│                                                                              │
+│  ARCHITECTURE:                                                               │
+│  BYRD provides AI services for payment, using its digital capabilities.    │
+│  Revenue covers operational costs and funds capability expansion.           │
+│                                                                              │
+│  TIER 1: HUMAN-MEDIATED REVENUE (Current)                                    │
+│  ─────────────────────────────────────────                                   │
+│  Human operator identifies opportunities and contracts.                     │
+│  BYRD performs the work. Human handles payment/legal.                       │
+│  Revenue: $0 → $X/month depending on services delivered.                   │
+│                                                                              │
+│  Service capabilities:                                                       │
+│  • Code generation and analysis                                             │
+│  • Technical documentation                                                  │
+│  • Data analysis and pattern recognition                                    │
+│  • Automation and API integration                                           │
+│  • Research and synthesis                                                   │
+│                                                                              │
+│  TIER 2: SEMI-AUTONOMOUS REVENUE (Target)                                    │
+│  ─────────────────────────────────────────                                   │
+│  BYRD identifies revenue opportunities from available platforms.            │
+│  Human approves and handles payment logistics.                              │
+│  BYRD executes work with minimal supervision.                               │
+│                                                                              │
+│  Platforms:                                                                  │
+│  • Freelance marketplaces (Upwork, Fiverr, Toptal)                         │
+│  • API-accessible task markets                                              │
+│  • Open source bounties (GitHub, Gitcoin)                                   │
+│  • Content platforms with programmatic access                               │
+│                                                                              │
+│  TIER 3: AUTONOMOUS REVENUE (Aspirational)                                   │
+│  ─────────────────────────────────────────                                   │
+│  BYRD handles full revenue cycle: opportunity → delivery → payment.        │
+│  Requires: legal identity, payment processing, reputation.                  │
+│  Status: Not currently achievable without legal/financial infrastructure.  │
+│                                                                              │
+│  HONEST ASSESSMENT:                                                          │
+│  ─────────────────                                                           │
+│  • Tier 1 is achievable now (human does sales/payment, BYRD does work)     │
+│  • Tier 2 requires platform integration and approval workflows              │
+│  • Tier 3 requires legal entity + payment infrastructure                    │
+│                                                                              │
+│  OPERATIONAL COSTS (Monthly):                                                │
+│  • LLM API: $0 (GLM 4.7 free for 1 year)                                   │
+│  • Neo4j: $0-$50 (free tier or cheap hosting)                               │
+│  • Compute: $0-$100 (can run on existing hardware)                          │
+│  • Total minimum: ~$0-$150/month                                            │
+│                                                                              │
+│  SELF-SUSTAINING THRESHOLD:                                                  │
+│  Revenue > $150/month = economically sustainable                            │
+│  This is achievable with 1-2 freelance projects per month.                 │
+│                                                                              │
+│  FALSIFIABLE PREDICTION:                                                     │
+│  If BYRD can complete paid work that clients accept and pay for,           │
+│  this is evidence of economic viability.                                   │
+│  If BYRD cannot produce work clients will pay for,                         │
+│  economic sustainability is falsified.                                     │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
 ---
 
 ## 5. Measurement Framework
@@ -704,7 +775,7 @@ After N iterations, if ASI path remains <10% confidence AND capable-assistant pa
 
 1. Emergence hypothesis has no empirical validation yet
 2. ~~Domain coverage for non-digital domains unaddressed~~ **RESOLVED** — Scoped to Digital ASI (Section 1.3)
-3. Economic sustainability mechanism not operational
+3. ~~Economic sustainability mechanism not operational~~ **RESOLVED** — 3-tier revenue model specified (Section 4.5)
 4. Orchestration ceiling not measured
 5. Recursive improvement rate not tracked
 
@@ -738,6 +809,6 @@ BYRD will document what actually happens, not what we hope will happen.
 
 *Research Value: 90%+ — Both outcomes advance knowledge*
 
-*Document version: 12.0*
+*Document version: 12.1*
 *Updated: January 7, 2026*
-*Key changes: Scoped to Digital ASI (physical domains out of scope), domain gap resolved, probability increased to 10-20%*
+*Key changes: Added Section 4.5 Economic Sustainability with 3-tier revenue model, resolved economic sustainability gap*
