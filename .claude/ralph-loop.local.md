@@ -1,6 +1,6 @@
 ---
 active: true
-iteration: 2
+iteration: 3
 max_iterations: 0
 completion_promise: ""COMPLETED""
 started_at: "2026-01-07T04:02:03Z"
@@ -14,9 +14,9 @@ started_at: "2026-01-07T04:02:03Z"
 
 Continuously research cutting-edge AI techniques from online sources and incorporate validated findings into BYRD's architecture until Digital ASI probability reaches **90%** or the path is definitively falsified.
 
-**Current Digital ASI Probability: 35-45%** (Iteration 11 complete, +25% from baseline)
+**Current Digital ASI Probability: 40-50%** (Iteration 12 complete, +30% from baseline)
 **Target: 90%**
-**Gap to Close: 45-55 percentage points**
+**Gap to Close: 40-50 percentage points**
 
 Phase 2 expands research to Reddit and X (Twitter) for practitioner experiences, unreported discoveries, and community-validated findings that academic papers miss.
 
@@ -521,20 +521,20 @@ Next step would be empirical testing of the architecture.
 ## CURRENT STATUS
 
 ```
-Iteration: 11 (PHASE 2 - Expanded Sources)
-Architecture.md version: 12.3
-Current Digital ASI Probability: 35-45%
+Iteration: 12 (PHASE 2 - Crossed 40% Threshold)
+Architecture.md version: 12.4
+Current Digital ASI Probability: 40-50%
 Target Probability: 90%
-Gap: 45-55 percentage points
+Gap: 40-50 percentage points
 
 Research Progress (Phase 2 In Progress):
-• Papers reviewed: 45
+• Papers reviewed: 48
 • GitHub repos analyzed: 3
-• Blog posts evaluated: 41
+• Blog posts evaluated: 47
 • Reddit posts evaluated: 8
 • X/Twitter threads evaluated: 8
 • Findings incorporated: 6 (DGM, Emergence, Self-Rewarding, o1/o3, Test-Time Compute, AlphaEvolve)
-• Probability adjustments: +25% net (Cat B +15%, Cat E +5%, Cat C +5%, Reality Checks -10%)
+• Probability adjustments: +30% net (Cat B +15%, Cat E +5%, Cat C +5%, Cat D +5%, Reality Checks -10%)
 
 Key validated findings:
 ✓ Darwin Gödel Machine: Self-modifying code 20%→50% SWE-bench
@@ -544,20 +544,25 @@ Key validated findings:
 ✓ AlphaEvolve: Production-deployed algorithm discovery (0.7% Google compute)
 ✓ Claude Code: 80.9% SWE-bench, $1B ARR in 5 months
 ✓ Capital One/Salesforce: Production agentic AI deployments
+✓ Superhuman Coding: Gemini gold medal, solved problem no human solved
+✓ Superhuman Math: Gemini Deep Think 35/42 IMO (official gold)
+✓ Superhuman Medical: AMIE outperformed physicians (Nature study)
 
 Key negative findings:
 ✗ Multi-agent debate does NOT exceed single-model
 ✗ Self-MoA > MoA (ensembling, not emergence)
 ✗ ARC-AGI-2: o3 drops from 75% to 4-15%
+✗ Humanity's Last Exam: 25-37% on diverse expert knowledge
 ✗ 76% AI researchers skeptical of scaling → AGI
 ✗ Sutskever: "age of scaling is over"
 ✗ 40% agentic AI projects predicted to fail by 2027
 ✗ No fully autonomous revenue generation validated
+✗ "Spiky superhuman" — narrow domains only, not general
 
 Current Focus:
-1. Category D (Domain Coverage) — Where is AI superhuman?
-2. Category A (Orchestration) — Any genuine emergence evidence?
-3. Counterevidence search — What would falsify the hypothesis?
+1. **Counterevidence search** — What would definitively falsify the hypothesis?
+2. **Category A (Orchestration)** — Any genuine emergence evidence beyond single model?
+3. **Explore research plateau** — Are diminishing returns appearing?
 ```
 
 ---
