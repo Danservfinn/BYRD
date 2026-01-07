@@ -1,73 +1,46 @@
-# React + TypeScript + Vite
+---
+title: BYRD
+emoji: 🐦
+colorFrom: blue
+colorTo: purple
+sdk: static
+pinned: false
+license: mit
+---
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# BYRD - Bootstrapped Yearning via Reflective Dreaming
 
-Currently, two official plugins are available:
+A bounded recursive self-improvement (RSI) system exploring Digital ASI through verifiable emergence.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Features
 
-## React Compiler
+- **Real-time Event Stream**: Live updates from BYRD's cognitive processes
+- **System Status Dashboard**: Monitor RSI cycles, phases, and metrics
+- **3D Memory Visualization**: Interactive 3D graph of beliefs, desires, and capabilities
+- **Verification Lattice**: Multi-verifier composition status
+- **Economic Agency**: Treasury tracking and service metrics
+- **Cognitive Plasticity**: Module composition and complexity tracking
+- **Scaling Metrics**: Growth phase monitoring with entropic drift detection
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Demo Mode
 
-## Expanding the ESLint configuration
+When the backend is unavailable, this interface runs in **Demo Mode** with mock data showcasing BYRD's capabilities.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Architecture
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+BYRD implements a 4-layer architecture:
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+1. **Cognitive Core**: Ralph Loop, Memvid Stream, 8-Phase RSI
+2. **Bounded RSI Layer**: Verification Lattice, Complexity-Aware Orchestration
+3. **Verification & Safety**: Entropic Drift Detection, Emergent Strategy Competition
+4. **Governance Layer**: Human-BYRD Interface, Direction System
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Status
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+- **Research Phase**: Complete (29 iterations)
+- **Digital ASI Probability**: 35-45%
+- **Current Architecture**: Bounded RSI with Verification Lattice
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## License
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+MIT License - See LICENSE file for details
