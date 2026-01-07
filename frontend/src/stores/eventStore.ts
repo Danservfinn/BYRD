@@ -26,7 +26,9 @@ export const useEventStore = create<EventStore>((set, get) => ({
     }));
   },
 
-  setConnected: (connected) => set({ connected }),
+  setConnected: (connected) => {
+    set({ connected });
+  },
 
   clearEvents: () => set({ events: [], lastEventTime: null }),
 

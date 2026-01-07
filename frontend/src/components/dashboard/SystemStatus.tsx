@@ -8,9 +8,13 @@ export function SystemStatus() {
 
   useEffect(() => {
     const fetchStatus = async () => {
-      const result = await getRSIStatus();
-      if (result) {
-        setStatus(result);
+      try {
+        const result = await getRSIStatus();
+        if (result) {
+          setStatus(result);
+        }
+      } catch (error) {
+        console.error('Failed to fetch RSI status:', error);
       }
     };
 
@@ -19,13 +23,17 @@ export function SystemStatus() {
     return () => clearInterval(interval);
   }, [getRSIStatus]);
 
+  const cycleCount = status?.cycle_number || status?.total_cycles || 0;
+
   return (
     <GlassPanel glow="blue" padding="lg" className="h-full">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
           System Status
         </h2>
-        <StatusBadge status={status?.running ? 'running' : 'idle'} />
+        <div className="flex items-center gap-2">
+          <StatusBadge status={status?.current_phase ? 'running' : 'idle'} />
+        </div>
       </div>
 
       {loading && !status ? (
@@ -63,10 +71,10 @@ export function SystemStatus() {
 
           {/* Stats Grid */}
           <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-            <MiniStat label="Cycles" value={status?.cycle_count || 0} />
-            <MiniStat label="Heuristics" value={status?.heuristics_count || 0} />
-            <MiniStat label="Beliefs" value={status?.beliefs_count || 0} />
-            <MiniStat label="Capabilities" value={status?.capabilities_count || 0} />
+            <MiniStat label="Cycles" value={cycleCount} />
+            <MiniStat label="Heuristics" value={status?.desires_selected || 0} />
+            <MiniStat label="Beliefs" value={status?.desires_verified || 0} />
+            <MiniStat label="Capabilities" value={status?.desires_generated || 0} />
           </div>
         </div>
       )}
