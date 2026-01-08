@@ -4923,6 +4923,82 @@ async def get_rsi_phases():
         return {"error": str(e)}
 
 
+@app.get("/api/rsi/status")
+async def get_rsi_status():
+    """
+    Get RSI (Recursive Self-Improvement) cycle status.
+
+    Returns current phase, completed phases, and cycle stats for the PhaseTracker component.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        return {
+            "current_phase": None,
+            "completed_phases": [],
+            "cycle_number": 0,
+            "total_cycles": 0,
+            "desires_selected": 0,
+            "desires_verified": 0,
+            "desires_generated": 0,
+        }
+
+    try:
+        # Check if RSI engine is available
+        if hasattr(byrd_instance, 'rsi_engine') and byrd_instance.rsi_engine:
+            engine = byrd_instance.rsi_engine
+
+            # Get cycle history from engine
+            cycle_count = getattr(engine, '_cycle_count', 0)
+            cycle_history = getattr(engine, '_cycle_history', [])
+
+            # Get the most recent cycle to determine current phase
+            current_phase = None
+            completed_phases = []
+
+            if cycle_history:
+                latest_cycle = cycle_history[-1]
+                current_phase = getattr(latest_cycle, 'current_phase', None)
+                completed_phases = getattr(latest_cycle, 'completed_phases', [])
+
+            # Get metrics for desires stats
+            metrics = await engine.get_metrics()
+            rsi_metrics = metrics.get("rsi_metrics", {})
+
+            return {
+                "current_phase": current_phase,
+                "completed_phases": completed_phases,
+                "cycle_number": cycle_count,
+                "total_cycles": cycle_count,
+                "desires_selected": rsi_metrics.get("emergent_desires", 0),
+                "desires_verified": int(rsi_metrics.get("activation_rate", 0) * rsi_metrics.get("emergent_desires", 0)),
+                "desires_generated": rsi_metrics.get("total_reflections", 0),
+            }
+        else:
+            # Fallback: return idle status when RSI engine not initialized
+            return {
+                "current_phase": None,
+                "completed_phases": [],
+                "cycle_number": 0,
+                "total_cycles": 0,
+                "desires_selected": 0,
+                "desires_verified": 0,
+                "desires_generated": 0,
+            }
+    except Exception as e:
+        logger.warning(f"Failed to get RSI status: {e}")
+        # Return safe default on error
+        return {
+            "current_phase": None,
+            "completed_phases": [],
+            "cycle_number": 0,
+            "total_cycles": 0,
+            "desires_selected": 0,
+            "desires_verified": 0,
+            "desires_generated": 0,
+        }
+
+
 @app.get("/api/rsi/lattice")
 async def get_verification_lattice_status():
     """Get verification lattice status."""
