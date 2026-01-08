@@ -4,6 +4,23 @@ import type { ByrdEvent } from '../types/events';
 
 const WS_CHECK_KEY = 'byrd_websocket_available';
 
+// Safe localStorage access with fallback for iframe contexts
+const safeGetStorage = (key: string): string | null => {
+  try {
+    return localStorage.getItem(key);
+  } catch (e) {
+    return null;
+  }
+};
+
+const safeSetStorage = (key: string, value: string): void => {
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    // Silently fail in contexts where localStorage is not available
+  }
+};
+
 export function useWebSocket() {
   const ws = useRef<WebSocket | null>(null);
   const reconnectAttempts = useRef(0);
@@ -15,7 +32,7 @@ export function useWebSocket() {
 
   const connect = useCallback(() => {
     // Check if we've already determined WebSocket is unavailable
-    const wsUnavailable = localStorage.getItem(WS_CHECK_KEY) === 'false';
+    const wsUnavailable = safeGetStorage(WS_CHECK_KEY) === 'false';
     if (wsUnavailable && reconnectAttempts.current >= maxReconnectAttempts) {
       if (!hasLoggedRef.current) {
         console.log('🟡 BYRD Demo Mode: WebSocket not available. Real-time events disabled.');
@@ -34,7 +51,7 @@ export function useWebSocket() {
         console.log('🟢 WebSocket connected');
         setConnected(true);
         reconnectAttempts.current = 0;
-        localStorage.setItem(WS_CHECK_KEY, 'true');
+        safeSetStorage(WS_CHECK_KEY, 'true');
       };
 
       ws.current.onmessage = (event) => {
@@ -68,7 +85,7 @@ export function useWebSocket() {
           }, delay);
         } else {
           // Mark WebSocket as unavailable after max attempts
-          localStorage.setItem(WS_CHECK_KEY, 'false');
+          safeSetStorage(WS_CHECK_KEY, 'false');
           if (!hasLoggedRef.current) {
             console.log('🟡 BYRD Demo Mode: WebSocket unavailable after connection attempts. Real-time events disabled.');
             hasLoggedRef.current = true;
@@ -81,7 +98,7 @@ export function useWebSocket() {
       };
     } catch (e) {
       console.error('Failed to create WebSocket:', e);
-      localStorage.setItem(WS_CHECK_KEY, 'false');
+      safeSetStorage(WS_CHECK_KEY, 'false');
     }
   }, [addEvent, setConnected]);
 

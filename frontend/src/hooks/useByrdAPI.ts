@@ -21,6 +21,23 @@ import type {
 const API_BASE = 'https://byrd-api-production.up.railway.app/api';
 const BACKEND_CHECK_KEY = 'byrd_backend_available';
 
+// Safe localStorage access with fallback for iframe contexts
+const safeGetStorage = (key: string): string | null => {
+  try {
+    return localStorage.getItem(key);
+  } catch (e) {
+    return null;
+  }
+};
+
+const safeSetStorage = (key: string, value: string): void => {
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    // Silently fail in contexts where localStorage is not available
+  }
+};
+
 export function useByrdAPI() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +55,7 @@ export function useByrdAPI() {
 
         const available = response.ok;
         setBackendAvailable(available);
-        localStorage.setItem(BACKEND_CHECK_KEY, available.toString());
+        safeSetStorage(BACKEND_CHECK_KEY, available.toString());
 
         if (!available && !hasLoggedRef.current) {
           console.log('🟡 BYRD Demo Mode: Backend not available. Running in demo mode.');
@@ -49,7 +66,7 @@ export function useByrdAPI() {
         }
       } catch {
         setBackendAvailable(false);
-        localStorage.setItem(BACKEND_CHECK_KEY, 'false');
+        safeSetStorage(BACKEND_CHECK_KEY, 'false');
 
         if (!hasLoggedRef.current) {
           console.log('🟡 BYRD Demo Mode: Backend not available. Running in demo mode.');
@@ -59,7 +76,7 @@ export function useByrdAPI() {
     };
 
     // Check localStorage first to avoid unnecessary requests
-    const cached = localStorage.getItem(BACKEND_CHECK_KEY);
+    const cached = safeGetStorage(BACKEND_CHECK_KEY);
     if (cached !== null) {
       setBackendAvailable(cached === 'true');
     }
@@ -95,7 +112,7 @@ export function useByrdAPI() {
       // If 404 or network error, mark backend as unavailable
       if (message.includes('404') || message.includes('Failed to fetch')) {
         setBackendAvailable(false);
-        localStorage.setItem(BACKEND_CHECK_KEY, 'false');
+        safeSetStorage(BACKEND_CHECK_KEY, 'false');
       }
 
       // Only log errors once per session type
