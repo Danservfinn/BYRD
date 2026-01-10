@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { MobileLayout } from './components/layout/MobileLayout';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useByrdAPI } from './hooks/useByrdAPI';
+import { useTheme } from './hooks/useTheme';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
 import { DemoModeBanner } from './components/common/DemoModeBanner';
 import './index.css';
@@ -18,13 +19,16 @@ const MorePage = lazy(() => import('./components/more/MorePage').then(m => ({ de
 // Loading fallback component
 function PageLoader() {
   return (
-    <div className="flex items-center justify-center h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="flex items-center justify-center h-screen bg-[var(--obs-bg-base)]">
       <LoadingSpinner size="lg" />
     </div>
   );
 }
 
 function AppContent() {
+  // Initialize theme (defaults to dark for Observatory aesthetic)
+  useTheme();
+
   // Initialize WebSocket connection and check backend availability
   const { isConnected } = useWebSocket();
   const { backendAvailable } = useByrdAPI();
