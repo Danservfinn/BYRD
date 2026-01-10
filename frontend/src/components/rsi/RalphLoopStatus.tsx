@@ -1,10 +1,23 @@
+/**
+ * RalphLoopStatus - Observatory Style Ralph Loop Monitor
+ */
+
 import { useEffect, useState } from 'react';
-import { GlassPanel } from '../common/GlassPanel';
+import { ObservatoryPanel, MetricReadout, StatusIndicator } from '../common/ObservatoryPanel';
 import { useByrdAPI } from '../../hooks/useByrdAPI';
 
 export function RalphLoopStatus() {
   const { getRalphLoopStatus } = useByrdAPI();
-  const [status, setStatus] = useState<any>(null);
+  const [status, setStatus] = useState<{
+    running?: boolean;
+    iterations_completed?: number;
+    total_time_seconds?: number;
+    total_tokens?: number;
+    total_cost_usd?: number;
+    last_emergence?: { confidence?: number };
+    terminated?: boolean;
+    reason?: string;
+  } | null>(null);
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -17,67 +30,85 @@ export function RalphLoopStatus() {
     return () => clearInterval(interval);
   }, [getRalphLoopStatus]);
 
-  return (
-    <GlassPanel glow="purple" padding="lg">
-      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
-        Ralph Loop
-      </h2>
+  const panelStatus = status?.running ? 'nominal' : status?.terminated ? 'caution' : 'inactive';
 
+  return (
+    <ObservatoryPanel title="RALPH LOOP" status={panelStatus} padding="lg">
       <div className="space-y-4">
         {/* Status Indicator */}
-        <div className="flex items-center gap-3">
-          <span className={`w-3 h-3 rounded-full ${status?.running ? 'bg-green-500 animate-pulse' : 'bg-slate-400'}`} />
-          <span className="text-slate-700 dark:text-slate-300">
-            {status?.running ? 'Running' : 'Stopped'}
-          </span>
+        <div className="flex items-center justify-between">
+          <StatusIndicator
+            status={status?.running ? 'nominal' : 'inactive'}
+            label={status?.running ? 'RUNNING' : 'STOPPED'}
+            size="md"
+          />
+          {status?.terminated && (
+            <span className="obs-label text-[9px] px-2 py-1 rounded bg-[var(--status-caution)]/20 text-[var(--status-caution)]">
+              TERMINATED
+            </span>
+          )}
         </div>
 
         {/* Statistics Grid */}
         <div className="grid grid-cols-2 gap-4">
-          <StatItem label="Iterations" value={status?.iterations_completed || 0} />
-          <StatItem label="Total Time" value={formatDuration(status?.total_time_seconds || 0)} />
-          <StatItem label="Tokens Used" value={formatNumber(status?.total_tokens || 0)} />
-          <StatItem label="Cost" value={`$${(status?.total_cost_usd || 0).toFixed(2)}`} />
+          <MetricReadout
+            label="ITERATIONS"
+            value={status?.iterations_completed?.toString() || '0'}
+            size="md"
+            status={status?.running ? 'nominal' : 'inactive'}
+          />
+          <MetricReadout
+            label="RUNTIME"
+            value={formatDuration(status?.total_time_seconds || 0)}
+            size="md"
+          />
+          <MetricReadout
+            label="TOKENS"
+            value={formatNumber(status?.total_tokens || 0)}
+            size="md"
+          />
+          <MetricReadout
+            label="COST"
+            value={`$${(status?.total_cost_usd || 0).toFixed(2)}`}
+            size="md"
+            status={(status?.total_cost_usd || 0) > 10 ? 'caution' : undefined}
+          />
         </div>
 
         {/* Emergence Confidence */}
-        <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+        <div className="pt-4 border-t border-[var(--obs-border)]">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-slate-500">Emergence Confidence</span>
-            <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+            <span className="obs-label text-[10px] text-[var(--obs-text-tertiary)]">
+              EMERGENCE CONFIDENCE
+            </span>
+            <span className="obs-metric text-sm" style={{ color: 'var(--cat-eye-gold)' }}>
               {((status?.last_emergence?.confidence || 0) * 100).toFixed(1)}%
             </span>
           </div>
-          <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+          <div className="h-2 bg-[var(--obs-bg-elevated)] rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500"
-              style={{ width: `${(status?.last_emergence?.confidence || 0) * 100}%` }}
+              className="h-full transition-all duration-500"
+              style={{
+                width: `${(status?.last_emergence?.confidence || 0) * 100}%`,
+                background: `linear-gradient(90deg, var(--rsi-reflect), var(--cat-eye-gold))`,
+              }}
             />
           </div>
         </div>
 
         {/* Termination Reason (if stopped) */}
-        {status?.terminated && (
-          <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-            <span className="text-xs text-slate-500 uppercase tracking-wide">
-              Termination Reason
+        {status?.terminated && status?.reason && (
+          <div className="pt-4 border-t border-[var(--obs-border)]">
+            <span className="obs-label text-[9px] text-[var(--obs-text-tertiary)]">
+              TERMINATION REASON
             </span>
-            <p className="text-sm text-slate-700 dark:text-slate-300 mt-1">
-              {formatTerminationReason(status?.reason)}
+            <p className="text-xs text-[var(--obs-text-secondary)] mt-1">
+              {formatTerminationReason(status.reason)}
             </p>
           </div>
         )}
       </div>
-    </GlassPanel>
-  );
-}
-
-function StatItem({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div>
-      <div className="text-xs text-slate-500 uppercase tracking-wide">{label}</div>
-      <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">{value}</div>
-    </div>
+    </ObservatoryPanel>
   );
 }
 
@@ -104,3 +135,5 @@ function formatTerminationReason(reason: string): string {
   };
   return reasons[reason] || reason;
 }
+
+export default RalphLoopStatus;

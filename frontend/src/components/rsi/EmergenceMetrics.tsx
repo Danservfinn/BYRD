@@ -1,15 +1,33 @@
+/**
+ * EmergenceMetrics - Observatory Style Emergence Monitor
+ */
+
 import { useEffect, useState } from 'react';
-import { GlassPanel } from '../common/GlassPanel';
+import { ObservatoryPanel, MetricReadout } from '../common/ObservatoryPanel';
 import { useByrdAPI } from '../../hooks/useByrdAPI';
+
+interface RSIMetricsData {
+  activation_rate?: number;
+  trajectory_success_rate?: number;
+  direction_variance?: number;
+  emergent_desires?: number;
+  trajectories_stored?: number;
+  heuristics_crystallized?: number;
+  domain_distribution?: Record<string, number>;
+}
 
 export function EmergenceMetrics() {
   const { getRSIMetrics } = useByrdAPI();
-  const [metrics, setMetrics] = useState<any>(null);
+  const [rsiMetrics, setRsiMetrics] = useState<RSIMetricsData>({});
 
   useEffect(() => {
     const fetchMetrics = async () => {
       const result = await getRSIMetrics();
-      if (result) setMetrics(result);
+      if (result) {
+        // The API may return rsi_metrics or direct metrics
+        const metricsData = (result as unknown as { rsi_metrics?: RSIMetricsData }).rsi_metrics || {};
+        setRsiMetrics(metricsData);
+      }
     };
 
     fetchMetrics();
@@ -17,128 +35,135 @@ export function EmergenceMetrics() {
     return () => clearInterval(interval);
   }, [getRSIMetrics]);
 
-  const rsiMetrics = metrics?.rsi_metrics || {};
+  const activationRate = rsiMetrics.activation_rate || 0;
 
   return (
-    <GlassPanel glow="green" padding="lg">
-      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
-        Emergence Metrics
-      </h2>
-
+    <ObservatoryPanel
+      title="EMERGENCE METRICS"
+      status={activationRate > 0.5 ? 'nominal' : activationRate > 0 ? 'caution' : 'inactive'}
+      padding="lg"
+    >
       <div className="space-y-4">
-        {/* Key Metrics */}
-        <MetricBar
-          label="Activation Rate"
+        {/* Key Metrics Bars */}
+        <EmergenceBar
+          label="ACTIVATION RATE"
           value={rsiMetrics.activation_rate || 0}
-          color="green"
+          color="var(--status-nominal)"
           description="Rate of emergent desire activation"
         />
-        <MetricBar
-          label="Trajectory Success"
+        <EmergenceBar
+          label="TRAJECTORY SUCCESS"
           value={rsiMetrics.trajectory_success_rate || 0}
-          color="blue"
+          color="var(--data-stream)"
           description="Practice trajectory success rate"
         />
-        <MetricBar
-          label="Direction Variance"
+        <EmergenceBar
+          label="DIRECTION VARIANCE"
           value={Math.min(1, (rsiMetrics.direction_variance || 0) * 2)}
-          color="amber"
+          color="var(--cat-eye-gold)"
           description="Diversity of improvement directions"
         />
 
         {/* Counts */}
-        <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+        <div className="pt-4 border-t border-[var(--obs-border)]">
           <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                {rsiMetrics.emergent_desires || 0}
-              </div>
-              <div className="text-xs text-slate-500">Desires</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                {rsiMetrics.trajectories_stored || 0}
-              </div>
-              <div className="text-xs text-slate-500">Trajectories</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                {rsiMetrics.heuristics_crystallized || 0}
-              </div>
-              <div className="text-xs text-slate-500">Heuristics</div>
-            </div>
+            <MetricReadout
+              label="DESIRES"
+              value={rsiMetrics.emergent_desires?.toString() || '0'}
+              size="md"
+              status="nominal"
+            />
+            <MetricReadout
+              label="TRAJECTORIES"
+              value={rsiMetrics.trajectories_stored?.toString() || '0'}
+              size="md"
+            />
+            <MetricReadout
+              label="HEURISTICS"
+              value={rsiMetrics.heuristics_crystallized?.toString() || '0'}
+              size="md"
+              status={
+                (rsiMetrics.heuristics_crystallized || 0) > 0 ? 'nominal' : undefined
+              }
+            />
           </div>
         </div>
 
         {/* Domain Distribution */}
-        {rsiMetrics.domain_distribution && Object.keys(rsiMetrics.domain_distribution).length > 0 && (
-          <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-            <span className="text-xs text-slate-500 uppercase tracking-wide">
-              Domain Distribution
-            </span>
-            <div className="flex gap-2 mt-2 flex-wrap">
-              {Object.entries(rsiMetrics.domain_distribution).map(([domain, count]) => (
-                <DomainBadge key={domain} domain={domain} count={count as number} />
-              ))}
+        {rsiMetrics.domain_distribution &&
+          Object.keys(rsiMetrics.domain_distribution).length > 0 && (
+            <div className="pt-4 border-t border-[var(--obs-border)]">
+              <span className="obs-label text-[9px] text-[var(--obs-text-tertiary)]">
+                DOMAIN DISTRIBUTION
+              </span>
+              <div className="flex gap-2 mt-2 flex-wrap">
+                {Object.entries(rsiMetrics.domain_distribution).map(
+                  ([domain, count]) => (
+                    <DomainBadge key={domain} domain={domain} count={count} />
+                  )
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
       </div>
-    </GlassPanel>
+    </ObservatoryPanel>
   );
 }
 
-function MetricBar({
-  label,
-  value,
-  color,
-  description,
-}: {
+interface EmergenceBarProps {
   label: string;
   value: number;
-  color: 'green' | 'blue' | 'amber' | 'purple';
+  color: string;
   description: string;
-}) {
-  const colorClasses = {
-    green: 'from-green-400 to-green-600',
-    blue: 'from-blue-400 to-blue-600',
-    amber: 'from-amber-400 to-amber-600',
-    purple: 'from-purple-400 to-purple-600',
-  };
+}
 
+function EmergenceBar({ label, value, color, description }: EmergenceBarProps) {
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
-        <span className="text-sm text-slate-700 dark:text-slate-300">{label}</span>
-        <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+        <span className="obs-label text-[10px] text-[var(--obs-text-tertiary)]">{label}</span>
+        <span className="obs-metric text-sm" style={{ color }}>
           {(value * 100).toFixed(1)}%
         </span>
       </div>
-      <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+      <div className="h-2 bg-[var(--obs-bg-elevated)] rounded-full overflow-hidden">
         <div
-          className={`h-full bg-gradient-to-r ${colorClasses[color]} transition-all duration-500`}
-          style={{ width: `${Math.min(100, value * 100)}%` }}
+          className="h-full transition-all duration-500"
+          style={{
+            width: `${Math.min(100, value * 100)}%`,
+            backgroundColor: color,
+            boxShadow: value > 0.5 ? `0 0 8px ${color}` : 'none',
+          }}
         />
       </div>
-      <p className="text-xs text-slate-400 mt-1">{description}</p>
+      <p className="text-[9px] text-[var(--obs-text-tertiary)] mt-1">{description}</p>
     </div>
   );
 }
 
 function DomainBadge({ domain, count }: { domain: string; count: number }) {
   const domainColors: Record<string, string> = {
-    code: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-    math: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-    logic: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-    planning: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-    creative: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
+    code: 'var(--rsi-practice)',
+    math: 'var(--status-nominal)',
+    logic: 'var(--rsi-reflect)',
+    planning: 'var(--cat-eye-gold)',
+    creative: 'var(--rsi-collapse)',
   };
+
+  const color = domainColors[domain] || 'var(--obs-text-tertiary)';
 
   return (
     <span
-      className={`px-2 py-1 rounded text-xs font-medium ${domainColors[domain] || 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400'}`}
+      className="obs-label text-[10px] px-2 py-1 rounded"
+      style={{
+        backgroundColor: `color-mix(in srgb, ${color} 20%, transparent)`,
+        color: color,
+        border: `1px solid ${color}40`,
+      }}
     >
-      {domain}: {count}
+      {domain.toUpperCase()}: {count}
     </span>
   );
 }
+
+export default EmergenceMetrics;

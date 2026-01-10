@@ -22,7 +22,22 @@ export default {
           900: '#4c1d95',
           950: '#2e1065',
         },
-        // Functional colors
+        // Observatory Design System
+        obs: {
+          base: '#050508',
+          surface: '#0a0c12',
+          elevated: '#12151f',
+          accent: '#1a1e2e',
+        },
+        // Status colors - Mission Control
+        nominal: '#00ff88',
+        caution: '#ffaa00',
+        critical: '#ff3366',
+        // Data stream cyan
+        stream: '#00ffff',
+        // Cat eye gold
+        'cat-gold': '#d4af37',
+        // Functional colors (preserved)
         success: {
           50: '#ecfdf5',
           500: '#10b981',
@@ -32,11 +47,6 @@ export default {
           50: '#fffbeb',
           500: '#f59e0b',
           600: '#d97706',
-        },
-        critical: {
-          50: '#fef2f2',
-          500: '#f43f5e',
-          600: '#e11d48',
         },
       },
       fontFamily: {
@@ -68,6 +78,15 @@ export default {
         'slide-in-right': 'slideInRight 0.3s ease-out',
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'spin-slow': 'spin 3s linear infinite',
+        // Observatory animations
+        'emergence-pulse': 'emergencePulse 3s ease-in-out infinite',
+        'status-beacon': 'statusBeacon 2s ease-in-out infinite',
+        'scanner': 'scannerRotate 8s linear infinite',
+        'metric-pulse': 'metricPulse 2s ease-in-out infinite',
+        'eye-glow': 'eyeGlow 3s ease-in-out infinite',
+        'data-flow': 'dataFlow 2s linear infinite',
+        'float-up': 'floatUp 4s ease-out infinite',
+        'breathe': 'breathe 4s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
@@ -85,6 +104,39 @@ export default {
         slideInRight: {
           '0%': { transform: 'translateX(100%)' },
           '100%': { transform: 'translateX(0)' },
+        },
+        // Observatory keyframes
+        emergencePulse: {
+          '0%, 100%': { boxShadow: '0 0 20px rgba(0, 255, 255, 0.2)' },
+          '50%': { boxShadow: '0 0 40px rgba(0, 255, 255, 0.4), 0 0 60px rgba(0, 255, 255, 0.1)' },
+        },
+        statusBeacon: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.4' },
+        },
+        scannerRotate: {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        },
+        metricPulse: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.85' },
+        },
+        eyeGlow: {
+          '0%, 100%': { filter: 'drop-shadow(0 0 8px #d4af37)', opacity: '0.8' },
+          '50%': { filter: 'drop-shadow(0 0 20px #d4af37)', opacity: '1' },
+        },
+        dataFlow: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(200%)' },
+        },
+        floatUp: {
+          '0%': { transform: 'translateY(0) scale(1)', opacity: '0.8' },
+          '100%': { transform: 'translateY(-100px) scale(0.5)', opacity: '0' },
+        },
+        breathe: {
+          '0%, 100%': { transform: 'scaleY(1)' },
+          '50%': { transform: 'scaleY(1.05)' },
         },
       },
     },

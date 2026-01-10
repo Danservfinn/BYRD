@@ -1,32 +1,48 @@
+/**
+ * EconomicPage - Observatory Style Economic Agency Dashboard
+ */
+
 import { TreasuryStatus } from './TreasuryStatus';
 import { RevenueChart } from './RevenueChart';
 import { MarketplaceListings } from './MarketplaceListings';
+import { StatusIndicator } from '../common/ObservatoryPanel';
 
 export function EconomicPage() {
   return (
-    <div className="space-y-4 lg:space-y-6 animate-fade-in pb-20">
-      {/* Header */}
-      <div className="px-4">
-        <h1 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-slate-100">
-          Economic Agency
-        </h1>
-        <p className="text-xs lg:text-sm text-slate-500 dark:text-slate-400">
-          Self-sustaining economic operations
-        </p>
-      </div>
-
-      {/* Treasury and Revenue Chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 px-4">
-        <TreasuryStatus />
-        <div className="lg:col-span-2">
-          <RevenueChart />
+    <div className="min-h-screen bg-[var(--obs-bg-base)] obs-grid-bg animate-fade-in pb-20">
+      {/* Observatory Header */}
+      <div className="px-4 py-4 border-b border-[var(--obs-border)]">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h1 className="obs-label text-sm tracking-widest text-[var(--obs-text-primary)]">
+              ECONOMIC AGENCY
+            </h1>
+            <StatusIndicator
+              status="nominal"
+              label="ACTIVE"
+            />
+          </div>
+          <span className="obs-label text-[10px] text-[var(--obs-text-tertiary)]">
+            SELF-SUSTAINING OPERATIONS
+          </span>
         </div>
       </div>
 
-      {/* Marketplace Listings */}
-      <div className="px-4">
+      {/* Main Content */}
+      <div className="p-4 space-y-4 lg:space-y-6">
+        {/* Treasury and Revenue Chart */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+          <TreasuryStatus />
+          <div className="lg:col-span-2">
+            <RevenueChart />
+          </div>
+        </div>
+
+        {/* Marketplace Listings */}
         <MarketplaceListings />
       </div>
     </div>
   );
 }
+
+export default EconomicPage;

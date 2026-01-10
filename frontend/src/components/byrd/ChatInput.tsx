@@ -1,3 +1,7 @@
+/**
+ * ChatInput - Observatory Style Message Input
+ */
+
 import { useState, useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import { useByrdStore } from '../../stores/byrdStore';
@@ -44,11 +48,11 @@ export function ChatInput() {
     <form
       onSubmit={handleSubmit}
       className={cn(
-        'flex-shrink-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 p-4',
-        isFocused && 'shadow-lg'
+        'flex-shrink-0 bg-[var(--obs-bg-base)] border-t border-[var(--obs-border)] p-4',
+        isFocused && 'shadow-[0_-4px_20px_rgba(0,255,255,0.1)]'
       )}
     >
-      <div className="flex items-end gap-2 max-w-4xl mx-auto">
+      <div className="flex items-end gap-3 max-w-4xl mx-auto">
         {/* Input */}
         <div className="flex-1 relative">
           <textarea
@@ -57,17 +61,24 @@ export function ChatInput() {
             onChange={(e) => setInput(e.target.value)}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
-            placeholder="Type to BYRD..."
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit(e);
+              }
+            }}
+            placeholder="Transmit to BYRD..."
             rows={1}
             className={cn(
-              'w-full px-4 py-3 pr-2 rounded-xl resize-none',
-              'bg-slate-100 dark:bg-slate-800',
-              'border border-transparent',
-              'focus:bg-white dark:focus:bg-slate-700',
-              'focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20',
-              'text-slate-900 dark:text-slate-100 placeholder-slate-400',
+              'w-full px-4 py-3 rounded resize-none',
+              'bg-[var(--obs-bg-surface)]',
+              'border border-[var(--obs-border)]',
+              'focus:bg-[var(--obs-bg-elevated)]',
+              'focus:border-[var(--data-stream)] focus:ring-1 focus:ring-[var(--data-stream)]/20',
+              'text-[var(--obs-text-primary)] placeholder-[var(--obs-text-tertiary)]',
               'transition-all duration-200',
-              'max-h-48 overflow-y-auto'
+              'max-h-48 overflow-y-auto',
+              'text-sm font-mono'
             )}
             disabled={isTyping}
           />
@@ -78,15 +89,27 @@ export function ChatInput() {
           type="submit"
           disabled={!input.trim() || isTyping}
           className={cn(
-            'p-3 rounded-xl transition-all duration-200',
-            'bg-purple-600 hover:bg-purple-700 text-white',
-            'disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:cursor-not-allowed',
-            'active:scale-95'
+            'p-3 rounded transition-all duration-200',
+            'bg-[var(--data-stream)] hover:bg-[var(--data-stream-hover)] text-[var(--obs-bg-base)]',
+            'disabled:bg-[var(--obs-bg-elevated)] disabled:text-[var(--obs-text-tertiary)] disabled:cursor-not-allowed',
+            'active:scale-95',
+            'shadow-[0_0_12px_rgba(0,255,255,0.3)]',
+            'disabled:shadow-none'
           )}
+          aria-label="Send message"
         >
           <Send className="w-5 h-5" />
         </button>
       </div>
+
+      {/* Transmission indicator */}
+      <div className="flex justify-center mt-2">
+        <span className="obs-label text-[8px] text-[var(--obs-text-tertiary)]">
+          {isTyping ? 'RECEIVING TRANSMISSION...' : 'READY TO TRANSMIT'}
+        </span>
+      </div>
     </form>
   );
 }
+
+export default ChatInput;

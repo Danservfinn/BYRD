@@ -1,3 +1,7 @@
+/**
+ * SystemLogs - Observatory Style Event Telemetry Modal
+ */
+
 import { X, AlertCircle, Info, AlertTriangle, Bug, Copy, Trash2 } from 'lucide-react';
 import { cn } from '@lib/utils/cn';
 import { useState } from 'react';
@@ -63,27 +67,27 @@ const MOCK_LOGS: LogEntry[] = [
 const LEVEL_CONFIG = {
   info: {
     icon: Info,
-    label: 'Info',
-    color: 'text-blue-600 dark:text-blue-400',
-    bgColor: 'bg-blue-100 dark:bg-blue-900/30',
+    label: 'INFO',
+    color: 'var(--data-stream)',
+    bgColor: 'rgba(0, 255, 255, 0.1)',
   },
   warning: {
     icon: AlertTriangle,
-    label: 'Warning',
-    color: 'text-amber-600 dark:text-amber-400',
-    bgColor: 'bg-amber-100 dark:bg-amber-900/30',
+    label: 'WARN',
+    color: 'var(--status-caution)',
+    bgColor: 'rgba(255, 170, 0, 0.1)',
   },
   error: {
     icon: AlertCircle,
-    label: 'Error',
-    color: 'text-red-600 dark:text-red-400',
-    bgColor: 'bg-red-100 dark:bg-red-900/30',
+    label: 'ERROR',
+    color: 'var(--status-critical)',
+    bgColor: 'rgba(255, 51, 102, 0.1)',
   },
   debug: {
     icon: Bug,
-    label: 'Debug',
-    color: 'text-slate-600 dark:text-slate-400',
-    bgColor: 'bg-slate-100 dark:bg-slate-700/50',
+    label: 'DEBUG',
+    color: 'var(--obs-text-tertiary)',
+    bgColor: 'rgba(107, 114, 128, 0.1)',
   },
 };
 
@@ -116,85 +120,60 @@ export function SystemLogs({ onClose }: SystemLogsProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
-      <div className="w-full sm:max-w-2xl bg-white dark:bg-slate-800 rounded-t-2xl sm:rounded-2xl shadow-2xl animate-slide-up max-h-[85vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in">
+      <div className="w-full sm:max-w-2xl bg-[var(--obs-bg-elevated)] rounded-t-lg sm:rounded-lg shadow-2xl animate-slide-up max-h-[85vh] flex flex-col border border-[var(--obs-border)]">
         {/* Header */}
-        <div className="flex-shrink-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
+        <div className="flex-shrink-0 bg-[var(--obs-bg-elevated)] border-b border-[var(--obs-border)] px-4 py-3 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-              System Logs
+            <h2 className="obs-label text-sm tracking-widest text-[var(--obs-text-primary)]">
+              SYSTEM TELEMETRY
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Real-time system events and debugging information
+            <p className="text-[10px] text-[var(--obs-text-tertiary)]">
+              Real-time event stream monitoring
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="p-2 hover:bg-[var(--obs-bg-surface)] rounded transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--data-stream)]"
             aria-label="Close logs"
           >
-            <X className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+            <X className="w-5 h-5 text-[var(--obs-text-tertiary)]" />
           </button>
         </div>
 
         {/* Filters */}
-        <div className="flex-shrink-0 border-b border-slate-200 dark:border-slate-700 px-4 py-2">
+        <div className="flex-shrink-0 border-b border-[var(--obs-border)] px-4 py-2">
           <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-            <button
+            <FilterButton
+              active={selectedLevel === 'all'}
               onClick={() => setSelectedLevel('all')}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors",
-                selectedLevel === 'all'
-                  ? "bg-purple-600 text-white"
-                  : "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
-              )}
-            >
-              All ({logCounts.all})
-            </button>
-            <button
+              color="var(--obs-text-primary)"
+              label={`ALL (${logCounts.all})`}
+            />
+            <FilterButton
+              active={selectedLevel === 'info'}
               onClick={() => setSelectedLevel('info')}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors",
-                selectedLevel === 'info'
-                  ? "bg-blue-600 text-white"
-                  : "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
-              )}
-            >
-              Info ({logCounts.info})
-            </button>
-            <button
+              color="var(--data-stream)"
+              label={`INFO (${logCounts.info})`}
+            />
+            <FilterButton
+              active={selectedLevel === 'warning'}
               onClick={() => setSelectedLevel('warning')}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors",
-                selectedLevel === 'warning'
-                  ? "bg-amber-600 text-white"
-                  : "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
-              )}
-            >
-              Warnings ({logCounts.warning})
-            </button>
-            <button
+              color="var(--status-caution)"
+              label={`WARN (${logCounts.warning})`}
+            />
+            <FilterButton
+              active={selectedLevel === 'error'}
               onClick={() => setSelectedLevel('error')}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors",
-                selectedLevel === 'error'
-                  ? "bg-red-600 text-white"
-                  : "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
-              )}
-            >
-              Errors ({logCounts.error})
-            </button>
-            <button
+              color="var(--status-critical)"
+              label={`ERROR (${logCounts.error})`}
+            />
+            <FilterButton
+              active={selectedLevel === 'debug'}
               onClick={() => setSelectedLevel('debug')}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors",
-                selectedLevel === 'debug'
-                  ? "bg-slate-600 text-white"
-                  : "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
-              )}
-            >
-              Debug ({logCounts.debug})
-            </button>
+              color="var(--obs-text-tertiary)"
+              label={`DEBUG (${logCounts.debug})`}
+            />
           </div>
         </div>
 
@@ -202,14 +181,20 @@ export function SystemLogs({ onClose }: SystemLogsProps) {
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
           {filteredLogs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-4">
-                <Info className="w-8 h-8 text-slate-400" />
+              <div
+                className="w-16 h-16 rounded flex items-center justify-center mb-4"
+                style={{
+                  backgroundColor: 'var(--obs-bg-surface)',
+                  border: '1px solid var(--obs-border)',
+                }}
+              >
+                <Info className="w-8 h-8" style={{ color: 'var(--obs-text-tertiary)' }} />
               </div>
-              <p className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-1">
-                No logs found
+              <p className="obs-label text-xs text-[var(--obs-text-primary)] mb-1">
+                NO EVENTS RECORDED
               </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {selectedLevel === 'all' ? 'No system events recorded yet' : `No ${selectedLevel} logs to display`}
+              <p className="text-[10px] text-[var(--obs-text-tertiary)]">
+                {selectedLevel === 'all' ? 'Awaiting system telemetry...' : `No ${selectedLevel.toUpperCase()} events in buffer`}
               </p>
             </div>
           ) : (
@@ -220,38 +205,44 @@ export function SystemLogs({ onClose }: SystemLogsProps) {
               return (
                 <div
                   key={log.id}
-                  className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors group"
+                  className="bg-[var(--obs-bg-surface)] rounded p-3 hover:bg-[var(--obs-bg-base)] transition-colors group border border-[var(--obs-border)]"
                 >
                   <div className="flex items-start gap-3">
-                    <div className={cn("p-1.5 rounded-lg", config.bgColor)}>
-                      <Icon className={cn("w-4 h-4", config.color)} />
+                    <div
+                      className="p-1.5 rounded"
+                      style={{ backgroundColor: config.bgColor }}
+                    >
+                      <Icon className="w-4 h-4" style={{ color: config.color }} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className={cn("text-xs font-medium", config.color)}>
+                        <span
+                          className="obs-label text-[9px]"
+                          style={{ color: config.color }}
+                        >
                           {config.label}
                         </span>
-                        <span className="text-xs text-slate-400">•</span>
-                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                        <span className="text-[8px] text-[var(--obs-text-tertiary)]">•</span>
+                        <span className="obs-label text-[9px] text-[var(--obs-text-tertiary)]">
                           {log.source}
                         </span>
                       </div>
-                      <p className="text-sm text-slate-700 dark:text-slate-300 mb-2">
+                      <p className="text-xs text-[var(--obs-text-secondary)] mb-2 font-mono">
                         {log.message}
                       </p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500">
+                      <p className="text-[9px] text-[var(--obs-text-tertiary)] font-mono">
                         {new Date(log.timestamp).toLocaleString()}
                       </p>
                     </div>
                     <button
                       onClick={() => handleCopy(log)}
                       className={cn(
-                        "p-2 rounded-lg transition-all opacity-0 group-hover:opacity-100",
+                        "p-2 rounded transition-all opacity-0 group-hover:opacity-100",
                         copiedId === log.id
-                          ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
-                          : "hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500"
+                          ? "bg-[var(--status-nominal)]/20 text-[var(--status-nominal)]"
+                          : "hover:bg-[var(--obs-bg-elevated)] text-[var(--obs-text-tertiary)]"
                       )}
-                      aria-label={`Copy log entry`}
+                      aria-label="Copy log entry"
                     >
                       <Copy className="w-4 h-4" />
                     </button>
@@ -263,23 +254,47 @@ export function SystemLogs({ onClose }: SystemLogsProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex-shrink-0 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 px-4 py-3 flex gap-2">
+        <div className="flex-shrink-0 bg-[var(--obs-bg-elevated)] border-t border-[var(--obs-border)] px-4 py-3 flex gap-2">
           <button
             onClick={handleClear}
             disabled={logs.length === 0}
-            className="flex-1 py-2.5 px-4 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 dark:text-slate-300 font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 flex items-center justify-center gap-2"
+            className="flex-1 py-2.5 px-4 bg-[var(--obs-bg-surface)] hover:bg-[var(--obs-bg-base)] disabled:opacity-50 disabled:cursor-not-allowed text-[var(--obs-text-secondary)] font-medium rounded transition-all focus:outline-none focus:ring-1 focus:ring-[var(--data-stream)] flex items-center justify-center gap-2 border border-[var(--obs-border)] obs-label text-[10px] tracking-wider"
           >
             <Trash2 className="w-4 h-4" />
-            Clear Logs
+            CLEAR BUFFER
           </button>
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 px-4 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="flex-1 py-2.5 px-4 bg-[var(--data-stream)] hover:brightness-110 text-[var(--obs-bg-base)] font-medium rounded transition-all focus:outline-none focus:ring-2 focus:ring-[var(--data-stream)] obs-label text-[10px] tracking-wider"
           >
-            Close
+            CLOSE
           </button>
         </div>
       </div>
     </div>
+  );
+}
+
+interface FilterButtonProps {
+  active: boolean;
+  onClick: () => void;
+  color: string;
+  label: string;
+}
+
+function FilterButton({ active, onClick, color, label }: FilterButtonProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "px-3 py-1.5 rounded text-[10px] font-medium whitespace-nowrap transition-all obs-label",
+        active
+          ? "shadow-[0_0_8px_var(--data-stream)]"
+          : "bg-[var(--obs-bg-surface)] text-[var(--obs-text-tertiary)] hover:bg-[var(--obs-bg-base)] border border-[var(--obs-border)]"
+      )}
+      style={active ? { backgroundColor: color, color: 'var(--obs-bg-base)' } : {}}
+    >
+      {label}
+    </button>
   );
 }

@@ -1,3 +1,7 @@
+/**
+ * MessageBubble - Observatory Style Chat Message
+ */
+
 import { User, Bot, AlertCircle } from 'lucide-react';
 import type { ChatMessage } from '../../types/api';
 import { formatRelativeTime } from '@lib/utils/format';
@@ -13,9 +17,9 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   if (isSystem) {
     return (
       <div className="flex justify-center animate-fade-in">
-        <div className="flex items-center gap-2 px-4 py-2 bg-amber-100 dark:bg-amber-900/30 rounded-full">
-          <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-          <span className="text-sm font-medium text-amber-900 dark:text-amber-100">
+        <div className="flex items-center gap-2 px-4 py-2 observatory-panel rounded-full">
+          <AlertCircle className="w-4 h-4 text-[var(--status-caution)]" />
+          <span className="obs-label text-[10px] text-[var(--status-caution)]">
             {message.content}
           </span>
         </div>
@@ -28,23 +32,31 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       <div className={cn('flex gap-3 max-w-[85%]', isUser ? 'flex-row-reverse' : 'flex-row')}>
         {/* Avatar */}
         <div className={cn(
-          'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center',
-          isUser ? 'bg-blue-600 text-white' : 'bg-purple-600 dark:bg-purple-500 text-white'
+          'flex-shrink-0 w-8 h-8 rounded flex items-center justify-center',
+          isUser
+            ? 'bg-[var(--data-stream)] text-[var(--obs-bg-base)]'
+            : 'observatory-panel text-[var(--cat-eye-gold)]'
         )}>
-          {isUser ? <User className="w-5 h-5" /> : <Bot className="w-5 h-5" />}
+          {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
         </div>
 
         {/* Message content */}
         <div className={cn('flex flex-col', isUser ? 'items-end' : 'items-start')}>
+          {/* Sender label */}
+          <span className="obs-label text-[8px] text-[var(--obs-text-tertiary)] mb-1 px-1">
+            {isUser ? 'OPERATOR' : 'BYRD'}
+          </span>
+
           <div className={cn(
-            'px-4 py-2.5 rounded-2xl text-sm leading-relaxed',
+            'px-4 py-3 rounded text-sm leading-relaxed',
             isUser
-              ? 'bg-blue-600 text-white rounded-br-sm'
-              : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-bl-sm'
+              ? 'bg-[var(--data-stream)] text-[var(--obs-bg-base)]'
+              : 'observatory-panel text-[var(--obs-text-primary)]'
           )}>
             {message.content}
           </div>
-          <span className="text-xs text-slate-400 dark:text-slate-500 mt-1 px-1">
+
+          <span className="obs-label text-[8px] text-[var(--obs-text-tertiary)] mt-1 px-1">
             {formatRelativeTime(message.timestamp)}
           </span>
         </div>
@@ -56,3 +68,5 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 function cn(...classes: (string | boolean | undefined | null)[]) {
   return classes.filter(Boolean).join(' ');
 }
+
+export default MessageBubble;

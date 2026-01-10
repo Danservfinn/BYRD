@@ -3,12 +3,13 @@
 @tailwind utilities;
 
 /* ==========================================================================
-   BYRD Mobile-First ASI Control Panel - Design Tokens
+   BYRD Emergence Observatory - Design Tokens
+   CERN/NASA Mission Control Inspired Interface
    ========================================================================== */
 
 /* CSS Variables - Design Tokens */
 :root {
-  /* Colors - Light Mode */
+  /* Colors - Light Mode (preserved for compatibility) */
   --color-bg-base: 255 255 255;           /* white */
   --color-bg-surface: 248 250 252;        /* slate-50 */
   --color-bg-elevated: 241 245 249;       /* slate-100 */
@@ -48,19 +49,61 @@
   --rsi-record: #3b82f6;
   --rsi-crystallize: #06b6d4;
   --rsi-measure: #84cc16;
+
+  /* Observatory Design System - Mission Control */
+  --obs-bg-base: #050508;
+  --obs-bg-surface: #0a0c12;
+  --obs-bg-elevated: #12151f;
+  --obs-bg-accent: #1a1e2e;
+
+  --obs-text-primary: #f8fafc;
+  --obs-text-secondary: #94a3b8;
+  --obs-text-tertiary: #64748b;
+
+  --obs-border: rgba(0, 255, 255, 0.1);
+  --obs-border-active: rgba(0, 255, 255, 0.3);
+
+  /* Status Colors - Mission Control */
+  --status-nominal: #00ff88;
+  --status-nominal-glow: rgba(0, 255, 136, 0.3);
+  --status-caution: #ffaa00;
+  --status-caution-glow: rgba(255, 170, 0, 0.3);
+  --status-critical: #ff3366;
+  --status-critical-glow: rgba(255, 51, 102, 0.3);
+  --status-inactive: #64748b;
+
+  /* Data Stream / Active Elements */
+  --data-stream: #00ffff;
+  --data-stream-dim: rgba(0, 255, 255, 0.6);
+  --data-stream-glow: rgba(0, 255, 255, 0.2);
+
+  /* Cat Eye Gold */
+  --cat-eye-gold: #d4af37;
+  --cat-eye-glow: rgba(212, 175, 55, 0.8);
 }
 
-/* Dark Mode */
+/* Dark Mode - Observatory Theme (Default) */
 .dark {
-  --color-bg-base: 15 23 42;              /* slate-900 */
-  --color-bg-surface: 30 41 59;           /* slate-800 */
-  --color-bg-elevated: 51 65 85;          /* slate-700 */
+  --color-bg-base: 5 5 8;                 /* obs-bg-base */
+  --color-bg-surface: 10 12 18;           /* obs-bg-surface */
+  --color-bg-elevated: 18 21 31;          /* obs-bg-elevated */
 
   --color-text-primary: 248 250 252;      /* slate-50 */
-  --color-text-secondary: 203 213 225;    /* slate-300 */
+  --color-text-secondary: 148 163 184;    /* slate-400 */
   --color-text-tertiary: 100 116 139;     /* slate-500 */
 
-  --color-border-base: 51 65 85;          /* slate-700 */
+  --color-border-base: 26 30 46;          /* obs-bg-accent */
+}
+
+/* Observatory Theme Class */
+.observatory {
+  --color-bg-base: 5 5 8;
+  --color-bg-surface: 10 12 18;
+  --color-bg-elevated: 18 21 31;
+  --color-text-primary: 248 250 252;
+  --color-text-secondary: 148 163 184;
+  --color-text-tertiary: 100 116 139;
+  --color-border-base: 26 30 46;
 }
 
 /* Base Styles */
@@ -140,6 +183,62 @@ canvas {
   }
 }
 
+/* ==========================================================================
+   Mobile-First Observatory Enhancements
+   ========================================================================== */
+
+/* Touch-friendly tap targets (44x44px minimum) */
+@media (max-width: 640px) {
+  .observatory-panel button,
+  .observatory-panel a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Optimize spacing for mobile */
+  .obs-label {
+    letter-spacing: 0.08em;
+  }
+
+  /* Reduce padding on smaller screens */
+  .observatory-panel {
+    padding: 0.75rem;
+  }
+
+  /* Compact metrics on mobile */
+  .obs-metric {
+    font-size: 1.25rem;
+  }
+}
+
+/* Large phone / small tablet adjustments */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .obs-metric {
+    font-size: 1.5rem;
+  }
+}
+
+/* Safe area insets for notched devices */
+.pb-safe-bottom {
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+}
+
+/* Smooth scrolling with performance optimization */
+.smooth-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Hide scrollbars but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Glass Panel Effect (preserve existing) */
 .glass-panel {
   background: rgba(255, 255, 255, 0.9);
@@ -155,4 +254,306 @@ canvas {
 .dark .glass-panel {
   background: rgba(30, 41, 59, 0.9);
   border: 1px solid rgba(100, 116, 139, 0.3);
+}
+
+/* ==========================================================================
+   Observatory Panel System - Mission Control UI
+   ========================================================================== */
+
+.observatory-panel {
+  background: linear-gradient(
+    135deg,
+    rgba(10, 12, 18, 0.95) 0%,
+    rgba(18, 21, 31, 0.9) 100%
+  );
+  border: 1px solid var(--obs-border);
+  border-radius: 4px;
+  box-shadow:
+    0 0 30px var(--data-stream-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Scanline overlay effect */
+.observatory-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 255, 255, 0.01) 2px,
+    rgba(0, 255, 255, 0.01) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Corner accent marks */
+.observatory-panel::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  border-left: 2px solid var(--obs-border-active);
+  border-top: 2px solid var(--obs-border-active);
+  pointer-events: none;
+}
+
+/* Bottom-right corner accent */
+.observatory-panel-corners::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  border-right: 2px solid var(--obs-border-active);
+  border-bottom: 2px solid var(--obs-border-active);
+  pointer-events: none;
+}
+
+/* Active/glowing panel state */
+.observatory-panel.active {
+  border-color: var(--obs-border-active);
+  box-shadow:
+    0 0 40px var(--data-stream-glow),
+    0 0 80px rgba(0, 255, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Status-specific panel glows */
+.observatory-panel.status-nominal {
+  border-color: rgba(0, 255, 136, 0.2);
+  box-shadow: 0 0 30px var(--status-nominal-glow);
+}
+
+.observatory-panel.status-caution {
+  border-color: rgba(255, 170, 0, 0.2);
+  box-shadow: 0 0 30px var(--status-caution-glow);
+}
+
+.observatory-panel.status-critical {
+  border-color: rgba(255, 51, 102, 0.2);
+  box-shadow: 0 0 30px var(--status-critical-glow);
+}
+
+/* ==========================================================================
+   Observatory Animations - Slow, Deliberate, Technical
+   ========================================================================== */
+
+/* Emergence pulse - for active systems */
+@keyframes emergence-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px var(--data-stream-glow);
+  }
+  50% {
+    box-shadow: 0 0 40px var(--data-stream-glow), 0 0 60px rgba(0, 255, 255, 0.1);
+  }
+}
+
+.animate-emergence-pulse {
+  animation: emergence-pulse 3s ease-in-out infinite;
+}
+
+/* Status beacon - pulsing indicator */
+@keyframes status-beacon {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.animate-status-beacon {
+  animation: status-beacon 2s ease-in-out infinite;
+}
+
+/* Data stream flow - horizontal animated bar */
+@keyframes data-flow {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+.data-stream-bar {
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--data-stream) 50%,
+    transparent 100%
+  );
+  animation: data-flow 2s linear infinite;
+}
+
+/* Cat eye glow animation */
+@keyframes eye-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px var(--cat-eye-gold));
+    opacity: 0.8;
+  }
+  50% {
+    filter: drop-shadow(0 0 20px var(--cat-eye-gold));
+    opacity: 1;
+  }
+}
+
+.animate-eye-glow {
+  animation: eye-glow 3s ease-in-out infinite;
+}
+
+/* Scanner ring rotation */
+@keyframes scanner-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-scanner {
+  animation: scanner-rotate 8s linear infinite;
+}
+
+/* Metric pulse - subtle value pulsing */
+@keyframes metric-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
+.animate-metric-pulse {
+  animation: metric-pulse 2s ease-in-out infinite;
+}
+
+/* Float animation for particles */
+@keyframes float-up {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-100px) scale(0.5);
+    opacity: 0;
+  }
+}
+
+.animate-float-up {
+  animation: float-up 4s ease-out infinite;
+}
+
+/* ==========================================================================
+   Observatory Typography & Labels
+   ========================================================================== */
+
+.obs-label {
+  font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--obs-text-tertiary);
+}
+
+.obs-metric {
+  font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 10px currentColor;
+}
+
+.obs-metric-lg {
+  font-size: 2.5rem;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.obs-metric-xl {
+  font-size: 3.5rem;
+  font-weight: 200;
+  line-height: 1;
+}
+
+/* Status text colors */
+.text-status-nominal {
+  color: var(--status-nominal);
+  text-shadow: 0 0 10px var(--status-nominal-glow);
+}
+
+.text-status-caution {
+  color: var(--status-caution);
+  text-shadow: 0 0 10px var(--status-caution-glow);
+}
+
+.text-status-critical {
+  color: var(--status-critical);
+  text-shadow: 0 0 10px var(--status-critical-glow);
+}
+
+.text-data-stream {
+  color: var(--data-stream);
+  text-shadow: 0 0 10px var(--data-stream-glow);
+}
+
+/* ==========================================================================
+   Observatory Status Indicators
+   ========================================================================== */
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: status-beacon 2s ease-in-out infinite;
+}
+
+.status-dot-nominal {
+  background: var(--status-nominal);
+  box-shadow: 0 0 8px var(--status-nominal-glow);
+}
+
+.status-dot-caution {
+  background: var(--status-caution);
+  box-shadow: 0 0 8px var(--status-caution-glow);
+}
+
+.status-dot-critical {
+  background: var(--status-critical);
+  box-shadow: 0 0 8px var(--status-critical-glow);
+}
+
+.status-dot-inactive {
+  background: var(--status-inactive);
+  animation: none;
+}
+
+/* ==========================================================================
+   Observatory Grid Background
+   ========================================================================== */
+
+.obs-grid-bg {
+  background-image:
+    linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Radial gradient overlay for depth */
+.obs-vignette {
+  background: radial-gradient(
+    ellipse at center,
+    transparent 0%,
+    rgba(5, 5, 8, 0.5) 70%,
+    rgba(5, 5, 8, 0.8) 100%
+  );
+}
+
+/* ==========================================================================
+   Reduced Motion Support
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-emergence-pulse,
+  .animate-status-beacon,
+  .animate-eye-glow,
+  .animate-scanner,
+  .animate-metric-pulse,
+  .animate-float-up,
+  .data-stream-bar {
+    animation: none;
+  }
 }

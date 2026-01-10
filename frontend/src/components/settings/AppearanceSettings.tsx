@@ -1,5 +1,8 @@
+/**
+ * AppearanceSettings - Observatory Style Theme Configuration Modal
+ */
+
 import { X, Moon, Sun, Monitor, Check } from 'lucide-react';
-import { GlassPanel } from '../common/GlassPanel';
 import { useTheme } from '../../hooks/useTheme';
 import { cn } from '@lib/utils/cn';
 
@@ -13,51 +16,54 @@ export function AppearanceSettings({ onClose }: AppearanceSettingsProps) {
   const themes = [
     {
       id: 'light' as const,
-      name: 'Light',
-      description: 'Clean and bright',
+      name: 'DIURNAL',
+      description: 'Standard illumination',
       icon: Sun,
+      color: 'var(--status-caution)',
     },
     {
       id: 'dark' as const,
-      name: 'Dark',
-      description: 'Easy on the eyes',
+      name: 'OBSERVATORY',
+      description: 'Deep space optimized',
       icon: Moon,
+      color: 'var(--data-stream)',
     },
     {
       id: 'system' as const,
-      name: 'System',
-      description: 'Follows your device',
+      name: 'ADAPTIVE',
+      description: 'Follows system clock',
       icon: Monitor,
+      color: 'var(--rsi-reflect)',
     },
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
-      <div className="w-full sm:max-w-md bg-white dark:bg-slate-800 rounded-t-2xl sm:rounded-2xl shadow-2xl animate-slide-up max-h-[80vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in">
+      <div className="w-full sm:max-w-md bg-[var(--obs-bg-elevated)] rounded-t-lg sm:rounded-lg shadow-2xl animate-slide-up max-h-[80vh] overflow-y-auto border border-[var(--obs-border)]">
         {/* Header */}
-        <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
+        <div className="sticky top-0 bg-[var(--obs-bg-elevated)] border-b border-[var(--obs-border)] px-4 py-3 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-              Appearance
+            <h2 className="obs-label text-sm tracking-widest text-[var(--obs-text-primary)]">
+              APPEARANCE
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Customize your visual experience
+            <p className="text-[10px] text-[var(--obs-text-tertiary)]">
+              Visual configuration module
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="p-2 hover:bg-[var(--obs-bg-surface)] rounded transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--data-stream)]"
             aria-label="Close settings"
           >
-            <X className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+            <X className="w-5 h-5 text-[var(--obs-text-tertiary)]" />
           </button>
         </div>
 
         {/* Theme Selection */}
         <div className="p-4 space-y-4">
           <div>
-            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
-              Color Theme
+            <h3 className="obs-label text-[10px] text-[var(--obs-text-tertiary)] mb-3">
+              COLOR SCHEME
             </h3>
             <div className="space-y-2">
               {themes.map((themeOption) => {
@@ -69,35 +75,46 @@ export function AppearanceSettings({ onClose }: AppearanceSettingsProps) {
                     key={themeOption.id}
                     onClick={() => setTheme(themeOption.id)}
                     className={cn(
-                      "w-full flex items-center justify-between p-4 rounded-lg border-2 transition-all",
+                      "w-full flex items-center justify-between p-4 rounded border transition-all",
                       isActive
-                        ? "border-purple-600 dark:border-purple-400 bg-purple-50 dark:bg-purple-900/20"
-                        : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
+                        ? "border-[var(--data-stream)] bg-[var(--obs-bg-surface)]"
+                        : "border-[var(--obs-border)] hover:border-[var(--obs-text-tertiary)] hover:bg-[var(--obs-bg-surface)]"
                     )}
                     aria-label={`Select ${themeOption.name} theme`}
                     aria-pressed={isActive}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "p-2 rounded-lg",
-                        isActive ? "bg-purple-600 dark:bg-purple-400" : "bg-slate-100 dark:bg-slate-700"
-                      )}>
-                        <Icon className={cn(
-                          "w-5 h-5",
-                          isActive ? "text-white" : "text-slate-600 dark:text-slate-400"
-                        )} />
+                      <div
+                        className={cn(
+                          "w-10 h-10 rounded flex items-center justify-center transition-all",
+                          isActive ? "shadow-[0_0_12px_var(--data-stream)]" : ""
+                        )}
+                        style={{
+                          backgroundColor: isActive ? 'var(--obs-bg-base)' : 'var(--obs-bg-surface)',
+                          border: isActive ? `1px solid ${themeOption.color}` : '1px solid var(--obs-border)',
+                        }}
+                      >
+                        <Icon
+                          className="w-5 h-5"
+                          style={{ color: isActive ? themeOption.color : 'var(--obs-text-tertiary)' }}
+                        />
                       </div>
                       <div className="text-left">
-                        <span className="block text-sm font-medium text-slate-900 dark:text-slate-100">
+                        <span className="obs-label text-[11px] text-[var(--obs-text-primary)] block">
                           {themeOption.name}
                         </span>
-                        <span className="block text-xs text-slate-500 dark:text-slate-400">
+                        <span className="text-[10px] text-[var(--obs-text-tertiary)]">
                           {themeOption.description}
                         </span>
                       </div>
                     </div>
                     {isActive && (
-                      <Check className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                      <div
+                        className="w-6 h-6 rounded flex items-center justify-center"
+                        style={{ backgroundColor: 'var(--data-stream)' }}
+                      >
+                        <Check className="w-4 h-4 text-[var(--obs-bg-base)]" />
+                      </div>
                     )}
                   </button>
                 );
@@ -106,34 +123,39 @@ export function AppearanceSettings({ onClose }: AppearanceSettingsProps) {
           </div>
 
           {/* Info Panel */}
-          <GlassPanel padding="sm">
+          <div className="bg-[var(--obs-bg-surface)] rounded p-4 border border-[var(--obs-border)]">
             <div className="flex gap-3">
               <div className="flex-shrink-0">
-                <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                  <Monitor className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <div
+                  className="w-8 h-8 rounded flex items-center justify-center"
+                  style={{
+                    backgroundColor: 'var(--obs-bg-base)',
+                    border: '1px solid var(--data-stream)',
+                  }}
+                >
+                  <Monitor className="w-4 h-4" style={{ color: 'var(--data-stream)' }} />
                 </div>
               </div>
               <div className="flex-1">
-                <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-1">
-                  About themes
+                <h4 className="obs-label text-[10px] text-[var(--obs-text-primary)] mb-1">
+                  THEME PERSISTENCE
                 </h4>
-                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Your theme preference is saved automatically and will persist across sessions.
-                  The System theme automatically switches between light and dark based on your
-                  device settings.
+                <p className="text-[10px] text-[var(--obs-text-tertiary)] leading-relaxed">
+                  Configuration is preserved in local storage.
+                  ADAPTIVE mode synchronizes with your operating system preferences.
                 </p>
               </div>
             </div>
-          </GlassPanel>
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 px-4 py-3">
+        <div className="sticky bottom-0 bg-[var(--obs-bg-elevated)] border-t border-[var(--obs-border)] px-4 py-3">
           <button
             onClick={onClose}
-            className="w-full py-2.5 px-4 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+            className="w-full py-2.5 px-4 bg-[var(--data-stream)] hover:brightness-110 text-[var(--obs-bg-base)] font-medium rounded transition-all focus:outline-none focus:ring-2 focus:ring-[var(--data-stream)] focus:ring-offset-2 focus:ring-offset-[var(--obs-bg-elevated)] obs-label text-xs tracking-wider"
           >
-            Done
+            CONFIRM
           </button>
         </div>
       </div>
