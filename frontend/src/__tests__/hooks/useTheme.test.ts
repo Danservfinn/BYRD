@@ -85,12 +85,17 @@ describe('useTheme', () => {
       expect(mockSetTheme).toHaveBeenCalledWith('dark')
     })
 
-    it('should not set theme if localStorage returns invalid value', () => {
+    it('should default to dark theme if localStorage returns invalid value', () => {
       localStorageMock.getItem.mockReturnValue('invalid-theme')
 
       renderHook(() => useTheme())
 
-      expect(mockSetTheme).not.toHaveBeenCalled()
+      // When localStorage has an invalid value, we default to dark (Observatory aesthetic)
+      expect(mockSetTheme).toHaveBeenCalledWith('dark')
+      expect(localStorageMock.setItem).toHaveBeenCalledWith(
+        THEME_STORAGE_KEY,
+        'dark'
+      )
     })
 
     it('should accept light theme from localStorage', () => {

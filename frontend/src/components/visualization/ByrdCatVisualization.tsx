@@ -37,58 +37,177 @@ interface CatModelProps {
   systemState: string;
 }
 
+// Procedural fallback cat when GLTF model fails to load
+function ProceduralCat({ rsiPhase, systemState }: CatModelProps) {
+  const catRef = useRef<THREE.Group>(null);
+  const leftEyeRef = useRef<THREE.Mesh>(null);
+  const rightEyeRef = useRef<THREE.Mesh>(null);
+
+  const eyeColor = RSI_PHASE_COLORS[rsiPhase] || RSI_PHASE_COLORS.idle;
+
+  // Animation loop
+  useFrame((state) => {
+    if (!catRef.current) return;
+
+    const elapsed = state.clock.getElapsedTime();
+
+    // Breathing animation
+    const breathSpeed = systemState === 'dreaming' ? 0.3 : 0.5;
+    const breathAmount = systemState === 'dreaming' ? 0.02 : 0.015;
+    const breathPhase = Math.sin(elapsed * breathSpeed * Math.PI * 2);
+
+    catRef.current.position.y = breathPhase * breathAmount;
+
+    // Subtle idle sway
+    const idlePhase = elapsed * 0.3;
+    catRef.current.rotation.y = Math.sin(idlePhase) * 0.02;
+
+    // Eye glow pulse
+    const targetIntensity = getEyeIntensity(systemState, rsiPhase);
+    const glowPulse = targetIntensity + Math.sin(elapsed * 0.5) * 0.2;
+
+    [leftEyeRef.current, rightEyeRef.current].forEach((eye) => {
+      if (eye && eye.material) {
+        const mat = eye.material as THREE.MeshStandardMaterial;
+        mat.emissiveIntensity = glowPulse;
+      }
+    });
+  });
+
+  return (
+    <group ref={catRef} position={[0, 0, 0]}>
+      {/* Body - chonky cat shape */}
+      <mesh position={[0, 0.5, 0]} castShadow receiveShadow>
+        <capsuleGeometry args={[0.8, 1.5, 8, 16]} />
+        <meshStandardMaterial color="#0a0a0a" roughness={0.85} metalness={0.05} />
+      </mesh>
+
+      {/* Head */}
+      <mesh position={[0, 1.4, 0.2]} castShadow receiveShadow>
+        <sphereGeometry args={[0.5, 16, 16]} />
+        <meshStandardMaterial color="#0a0a0a" roughness={0.85} metalness={0.05} />
+      </mesh>
+
+      {/* Left eye */}
+      <mesh ref={leftEyeRef} position={[-0.2, 1.45, 0.55]} castShadow>
+        <sphereGeometry args={[0.08, 8, 8]} />
+        <meshStandardMaterial
+          color={eyeColor}
+          emissive={eyeColor}
+          emissiveIntensity={0.8}
+          roughness={0.2}
+          metalness={0.3}
+        />
+      </mesh>
+
+      {/* Right eye */}
+      <mesh ref={rightEyeRef} position={[0.2, 1.45, 0.55]} castShadow>
+        <sphereGeometry args={[0.08, 8, 8]} />
+        <meshStandardMaterial
+          color={eyeColor}
+          emissive={eyeColor}
+          emissiveIntensity={0.8}
+          roughness={0.2}
+          metalness={0.3}
+        />
+      </mesh>
+
+      {/* Ears */}
+      <mesh position={[-0.3, 1.8, 0.1]} rotation={[0, 0, -0.3]} castShadow>
+        <coneGeometry args={[0.2, 0.3, 3]} />
+        <meshStandardMaterial color="#0a0a0a" roughness={0.85} />
+      </mesh>
+      <mesh position={[0.3, 1.8, 0.1]} rotation={[0, 0, 0.3]} castShadow>
+        <coneGeometry args={[0.2, 0.3, 3]} />
+        <meshStandardMaterial color="#0a0a0a" roughness={0.85} />
+      </mesh>
+
+      {/* Tail */}
+      <mesh position={[0, 0.3, -0.8]} rotation={[0.3, 0, 0]} castShadow>
+        <capsuleGeometry args={[0.1, 1, 4, 8]} />
+        <meshStandardMaterial color="#0a0a0a" roughness={0.85} />
+      </mesh>
+    </group>
+  );
+}
+
 function CatModel({ rsiPhase, systemState }: CatModelProps) {
   const catRef = useRef<THREE.Group>(null);
   const eyeMeshesRef = useRef<THREE.Mesh[]>([]);
 
-  // Load the cat model
-  const { scene } = useGLTF('/models/cat.glb');
+  // Try to load the cat model with error handling
+  let scene: THREE.Group | null = null;
+  let hasError = false;
+
+  try {
+    const result = useGLTF('/models/cat.glb');
+    scene = result.scene;
+  } catch (e) {
+    // Model failed to load - will use procedural fallback
+    hasError = true;
+  }
+
+  // Fall back to procedural cat if model failed to load
+  if (hasError || !scene) {
+    return <ProceduralCat rsiPhase={rsiPhase} systemState={systemState} />;
+  }
 
   // Clone the scene to avoid mutation issues
   const catScene = useMemo(() => {
-    const cloned = scene.clone(true);
+    try {
+      const cloned = scene.clone(true);
 
-    // Create materials
-    const blackMaterial = new THREE.MeshStandardMaterial({
-      color: 0x0a0a0a,
-      roughness: 0.85,
-      metalness: 0.05,
-    });
+      // Create materials
+      const blackMaterial = new THREE.MeshStandardMaterial({
+        color: 0x0a0a0a,
+        roughness: 0.85,
+        metalness: 0.05,
+      });
 
-    const eyeColor = RSI_PHASE_COLORS[rsiPhase] || RSI_PHASE_COLORS.idle;
-    const eyeMaterial = new THREE.MeshStandardMaterial({
-      color: eyeColor,
-      emissive: eyeColor,
-      emissiveIntensity: 0.8,
-      roughness: 0.2,
-      metalness: 0.3,
-    });
+      const eyeColor = RSI_PHASE_COLORS[rsiPhase] || RSI_PHASE_COLORS.idle;
+      const eyeMaterial = new THREE.MeshStandardMaterial({
+        color: eyeColor,
+        emissive: eyeColor,
+        emissiveIntensity: 0.8,
+        roughness: 0.2,
+        metalness: 0.3,
+      });
 
-    // Reset eye meshes array
-    eyeMeshesRef.current = [];
+      // Reset eye meshes array
+      eyeMeshesRef.current = [];
 
-    // Apply materials
-    cloned.traverse((child) => {
-      if ((child as THREE.Mesh).isMesh) {
-        const mesh = child as THREE.Mesh;
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
+      // Apply materials
+      cloned.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh) {
+          const mesh = child as THREE.Mesh;
+          mesh.castShadow = true;
+          mesh.receiveShadow = true;
 
-        const name = mesh.name.toLowerCase();
-        if (name.includes('eye') && !name.includes('lid')) {
-          mesh.material = eyeMaterial.clone();
-          eyeMeshesRef.current.push(mesh);
-        } else {
-          mesh.material = blackMaterial.clone();
+          const name = mesh.name.toLowerCase();
+          if (name.includes('eye') && !name.includes('lid')) {
+            mesh.material = eyeMaterial.clone();
+            eyeMeshesRef.current.push(mesh);
+          } else {
+            mesh.material = blackMaterial.clone();
+          }
         }
-      }
-    });
+      });
 
-    // Scale for "chonky" proportions
-    cloned.scale.set(3, 2.4, 2.8);
+      // Scale for "chonky" proportions
+      cloned.scale.set(3, 2.4, 2.8);
 
-    return cloned;
+      return cloned;
+    } catch (e) {
+      // If processing fails, fall back to procedural
+      console.warn('Error processing GLTF scene, using procedural fallback:', e);
+      return null;
+    }
   }, [scene, rsiPhase]);
+
+  // If useMemo failed, use procedural
+  if (!catScene) {
+    return <ProceduralCat rsiPhase={rsiPhase} systemState={systemState} />;
+  }
 
   // Update eye color when RSI phase changes
   useEffect(() => {
@@ -303,8 +422,5 @@ export function ByrdCatVisualization({
     </div>
   );
 }
-
-// Preload the model
-useGLTF.preload('/models/cat.glb');
 
 export default ByrdCatVisualization;
