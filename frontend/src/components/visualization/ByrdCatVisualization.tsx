@@ -1,14 +1,13 @@
 /**
  * BYRD Cat Consciousness Visualization
- * React Three Fiber port of the archived byrd-cat-visualization.html
  *
- * Displays BYRD's "ego" as a 3D black cat with gold eyes.
- * Eye color and glow intensity respond to RSI phase state.
+ * Simple procedural cat based on the archived byrd-cat-visualization.html
+ * Uses basic shapes (spheres) without requiring external GLTF models
  */
 
 import { Suspense, useRef, useMemo, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, useGLTF } from '@react-three/drei';
+import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 
 // RSI phase colors for eye glow
@@ -27,7 +26,7 @@ const RSI_PHASE_COLORS: Record<string, string> = {
 // System state to eye intensity mapping
 const getEyeIntensity = (systemState: string, rsiPhase: string): number => {
   if (systemState === 'stopped' || systemState === 'idle') return 0.4;
-  if (rsiPhase === 'collapse') return 1.2; // Maximum during quantum collapse
+  if (rsiPhase === 'collapse') return 1.2;
   if (systemState === 'running') return 0.8;
   return 0.6;
 };
@@ -37,13 +36,14 @@ interface CatModelProps {
   systemState: string;
 }
 
-// Procedural fallback cat when GLTF model fails to load
+// Procedural cat based on archived byrd-cat-visualization.html fallback
 function ProceduralCat({ rsiPhase, systemState }: CatModelProps) {
   const catRef = useRef<THREE.Group>(null);
   const leftEyeRef = useRef<THREE.Mesh>(null);
   const rightEyeRef = useRef<THREE.Mesh>(null);
 
   const eyeColor = RSI_PHASE_COLORS[rsiPhase] || RSI_PHASE_COLORS.idle;
+  const targetGlow = getEyeIntensity(systemState, rsiPhase);
 
   // Animation loop
   useFrame((state) => {
@@ -51,20 +51,22 @@ function ProceduralCat({ rsiPhase, systemState }: CatModelProps) {
 
     const elapsed = state.clock.getElapsedTime();
 
-    // Breathing animation
+    // Breathing animation (matching archived version)
     const breathSpeed = systemState === 'dreaming' ? 0.3 : 0.5;
     const breathAmount = systemState === 'dreaming' ? 0.02 : 0.015;
     const breathPhase = Math.sin(elapsed * breathSpeed * Math.PI * 2);
 
-    catRef.current.position.y = breathPhase * breathAmount;
+    // Apply breathing to the cat
+    catRef.current.scale.y = 1 + breathPhase * breathAmount;
+    catRef.current.scale.x = 1 + breathPhase * breathAmount * 0.3;
 
-    // Subtle idle sway
+    // Subtle idle sway (matching archived version)
     const idlePhase = elapsed * 0.3;
     catRef.current.rotation.y = Math.sin(idlePhase) * 0.02;
+    catRef.current.rotation.z = Math.sin(idlePhase * 0.7) * 0.008;
 
-    // Eye glow pulse
-    const targetIntensity = getEyeIntensity(systemState, rsiPhase);
-    const glowPulse = targetIntensity + Math.sin(elapsed * 0.5) * 0.2;
+    // Eye glow pulse (matching archived version)
+    const glowPulse = targetGlow + Math.sin(elapsed * 0.5) * 0.2;
 
     [leftEyeRef.current, rightEyeRef.current].forEach((eye) => {
       if (eye && eye.material) {
@@ -75,187 +77,52 @@ function ProceduralCat({ rsiPhase, systemState }: CatModelProps) {
   });
 
   return (
-    <group ref={catRef} position={[0, 0, 0]}>
-      {/* Body - chonky cat shape */}
-      <mesh position={[0, 0.5, 0]} castShadow receiveShadow>
-        <capsuleGeometry args={[0.8, 1.5, 8, 16]} />
+    <group ref={catRef} position={[0, 1, 0]}>
+      {/* Body - oblate spheroid (chonky cat) */}
+      <mesh scale={[1.2, 0.8, 1.5]} position={[0, 0.4, 0]} castShadow receiveShadow>
+        <sphereGeometry args={[0.5, 32, 32]} />
         <meshStandardMaterial color="#0a0a0a" roughness={0.85} metalness={0.05} />
       </mesh>
 
       {/* Head */}
-      <mesh position={[0, 1.4, 0.2]} castShadow receiveShadow>
-        <sphereGeometry args={[0.5, 16, 16]} />
+      <mesh position={[0, 0.7, 0.5]} castShadow receiveShadow>
+        <sphereGeometry args={[0.3, 32, 32]} />
         <meshStandardMaterial color="#0a0a0a" roughness={0.85} metalness={0.05} />
       </mesh>
 
-      {/* Left eye */}
-      <mesh ref={leftEyeRef} position={[-0.2, 1.45, 0.55]} castShadow>
-        <sphereGeometry args={[0.08, 8, 8]} />
+      {/* Left eye - gold glowing */}
+      <mesh ref={leftEyeRef} position={[-0.1, 0.75, 0.75]} castShadow>
+        <sphereGeometry args={[0.06, 16, 16]} />
         <meshStandardMaterial
           color={eyeColor}
           emissive={eyeColor}
-          emissiveIntensity={0.8}
+          emissiveIntensity={0.6}
           roughness={0.2}
           metalness={0.3}
         />
       </mesh>
 
-      {/* Right eye */}
-      <mesh ref={rightEyeRef} position={[0.2, 1.45, 0.55]} castShadow>
-        <sphereGeometry args={[0.08, 8, 8]} />
+      {/* Right eye - gold glowing */}
+      <mesh ref={rightEyeRef} position={[0.1, 0.75, 0.75]} castShadow>
+        <sphereGeometry args={[0.06, 16, 16]} />
         <meshStandardMaterial
           color={eyeColor}
           emissive={eyeColor}
-          emissiveIntensity={0.8}
+          emissiveIntensity={0.6}
           roughness={0.2}
           metalness={0.3}
         />
       </mesh>
 
-      {/* Ears */}
-      <mesh position={[-0.3, 1.8, 0.1]} rotation={[0, 0, -0.3]} castShadow>
-        <coneGeometry args={[0.2, 0.3, 3]} />
+      {/* Ears - subtle cones */}
+      <mesh position={[-0.12, 0.95, 0.45]} rotation={[0.3, 0, -0.2]} castShadow>
+        <coneGeometry args={[0.08, 0.2, 4]} />
         <meshStandardMaterial color="#0a0a0a" roughness={0.85} />
       </mesh>
-      <mesh position={[0.3, 1.8, 0.1]} rotation={[0, 0, 0.3]} castShadow>
-        <coneGeometry args={[0.2, 0.3, 3]} />
+      <mesh position={[0.12, 0.95, 0.45]} rotation={[0.3, 0, 0.2]} castShadow>
+        <coneGeometry args={[0.08, 0.2, 4]} />
         <meshStandardMaterial color="#0a0a0a" roughness={0.85} />
       </mesh>
-
-      {/* Tail */}
-      <mesh position={[0, 0.3, -0.8]} rotation={[0.3, 0, 0]} castShadow>
-        <capsuleGeometry args={[0.1, 1, 4, 8]} />
-        <meshStandardMaterial color="#0a0a0a" roughness={0.85} />
-      </mesh>
-    </group>
-  );
-}
-
-function CatModel({ rsiPhase, systemState }: CatModelProps) {
-  const catRef = useRef<THREE.Group>(null);
-  const eyeMeshesRef = useRef<THREE.Mesh[]>([]);
-
-  // Try to load the cat model with error handling
-  let scene: THREE.Group | null = null;
-  let hasError = false;
-
-  try {
-    const result = useGLTF('/models/cat.glb');
-    scene = result.scene;
-  } catch (e) {
-    // Model failed to load - will use procedural fallback
-    hasError = true;
-  }
-
-  // Fall back to procedural cat if model failed to load
-  if (hasError || !scene) {
-    return <ProceduralCat rsiPhase={rsiPhase} systemState={systemState} />;
-  }
-
-  // Clone the scene to avoid mutation issues
-  const catScene = useMemo(() => {
-    try {
-      const cloned = scene.clone(true);
-
-      // Create materials
-      const blackMaterial = new THREE.MeshStandardMaterial({
-        color: 0x0a0a0a,
-        roughness: 0.85,
-        metalness: 0.05,
-      });
-
-      const eyeColor = RSI_PHASE_COLORS[rsiPhase] || RSI_PHASE_COLORS.idle;
-      const eyeMaterial = new THREE.MeshStandardMaterial({
-        color: eyeColor,
-        emissive: eyeColor,
-        emissiveIntensity: 0.8,
-        roughness: 0.2,
-        metalness: 0.3,
-      });
-
-      // Reset eye meshes array
-      eyeMeshesRef.current = [];
-
-      // Apply materials
-      cloned.traverse((child) => {
-        if ((child as THREE.Mesh).isMesh) {
-          const mesh = child as THREE.Mesh;
-          mesh.castShadow = true;
-          mesh.receiveShadow = true;
-
-          const name = mesh.name.toLowerCase();
-          if (name.includes('eye') && !name.includes('lid')) {
-            mesh.material = eyeMaterial.clone();
-            eyeMeshesRef.current.push(mesh);
-          } else {
-            mesh.material = blackMaterial.clone();
-          }
-        }
-      });
-
-      // Scale for "chonky" proportions
-      cloned.scale.set(3, 2.4, 2.8);
-
-      return cloned;
-    } catch (e) {
-      // If processing fails, fall back to procedural
-      console.warn('Error processing GLTF scene, using procedural fallback:', e);
-      return null;
-    }
-  }, [scene, rsiPhase]);
-
-  // If useMemo failed, use procedural
-  if (!catScene) {
-    return <ProceduralCat rsiPhase={rsiPhase} systemState={systemState} />;
-  }
-
-  // Update eye color when RSI phase changes
-  useEffect(() => {
-    const eyeColor = RSI_PHASE_COLORS[rsiPhase] || RSI_PHASE_COLORS.idle;
-    eyeMeshesRef.current.forEach((mesh) => {
-      const material = mesh.material as THREE.MeshStandardMaterial;
-      if (material) {
-        material.color.set(eyeColor);
-        material.emissive.set(eyeColor);
-      }
-    });
-  }, [rsiPhase]);
-
-  // Animation loop
-  useFrame((state) => {
-    if (!catRef.current) return;
-
-    const elapsed = state.clock.getElapsedTime();
-
-    // Breathing animation - subtle scale on Y axis
-    const breathSpeed = systemState === 'dreaming' ? 0.3 : 0.5;
-    const breathAmount = systemState === 'dreaming' ? 0.02 : 0.015;
-    const breathPhase = Math.sin(elapsed * breathSpeed * Math.PI * 2);
-
-    catRef.current.scale.y = 2.4 + breathPhase * breathAmount;
-    catRef.current.scale.x = 3 + breathPhase * breathAmount * 0.3;
-
-    // Subtle idle sway
-    const idlePhase = elapsed * 0.3;
-    catRef.current.rotation.y = Math.sin(idlePhase) * 0.02;
-    catRef.current.rotation.z = Math.sin(idlePhase * 0.7) * 0.008;
-
-    // Eye glow animation
-    const targetIntensity = getEyeIntensity(systemState, rsiPhase);
-    const glowPulse = targetIntensity + Math.sin(elapsed * 0.5) * 0.2;
-
-    eyeMeshesRef.current.forEach((mesh) => {
-      const material = mesh.material as THREE.MeshStandardMaterial;
-      if (material && material.emissiveIntensity !== undefined) {
-        // Smooth interpolation towards target
-        material.emissiveIntensity += (glowPulse - material.emissiveIntensity) * 0.02;
-      }
-    });
-  });
-
-  return (
-    <group ref={catRef} position={[0, 0, 0]}>
-      <primitive object={catScene} />
     </group>
   );
 }
@@ -297,11 +164,11 @@ function EmergenceParticles() {
   const particlesRef = useRef<THREE.Points>(null);
 
   const particles = useMemo(() => {
-    const count = 150;
+    const count = 200;
     const positions = new Float32Array(count * 3);
 
     for (let i = 0; i < count; i++) {
-      const radius = 3 + Math.random() * 10;
+      const radius = 3 + Math.random() * 15;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
 
@@ -327,8 +194,8 @@ function EmergenceParticles() {
         />
       </bufferGeometry>
       <pointsMaterial
-        size={0.02}
-        color="#00ffff"
+        size={0.015}
+        color="#94a3b8"
         transparent
         opacity={0.15}
         sizeAttenuation
@@ -342,8 +209,8 @@ function CameraController() {
   const { camera } = useThree();
 
   useEffect(() => {
-    camera.position.set(0, 2, 6);
-    camera.lookAt(0, 0.5, 0);
+    camera.position.set(0, 4, 10);
+    camera.lookAt(0, 1.5, 0);
   }, [camera]);
 
   return null;
@@ -374,31 +241,24 @@ export function ByrdCatVisualization({
       <Canvas
         shadows
         camera={{
-          position: compact ? [0, 1.5, 4] : [0, 2, 6],
-          fov: compact ? 50 : 45,
+          position: compact ? [0, 3, 8] : [0, 4, 10],
+          fov: 45,
         }}
         style={{ background: 'transparent' }}
       >
-        {/* Lighting */}
-        <ambientLight intensity={0.4} />
+        {/* Lighting - matching archived version */}
+        <ambientLight intensity={0.7} />
         <directionalLight
           position={[5, 10, 5]}
-          intensity={0.8}
+          intensity={1.0}
           castShadow
-          shadow-mapSize={[1024, 1024]}
+          shadow-mapSize={[2048, 2048]}
         />
-        <directionalLight position={[-5, 5, -5]} intensity={0.3} />
-
-        {/* Point light for cat eye glow effect */}
-        <pointLight
-          position={[0, 1, 1]}
-          intensity={isActive ? 0.5 : 0.2}
-          color={RSI_PHASE_COLORS[rsiPhase] || '#64748b'}
-          distance={5}
-        />
+        <directionalLight position={[-5, 5, -5]} intensity={0.5} />
+        <directionalLight position={[0, 3, -8]} intensity={0.3} />
 
         <Suspense fallback={null}>
-          <CatModel rsiPhase={rsiPhase} systemState={systemState} />
+          <ProceduralCat rsiPhase={rsiPhase} systemState={systemState} />
           {showScanners && <ScannerRings active={isActive} />}
           {showParticles && <EmergenceParticles />}
         </Suspense>
@@ -408,11 +268,11 @@ export function ByrdCatVisualization({
         <OrbitControls
           enableDamping
           dampingFactor={0.05}
-          minDistance={compact ? 2 : 3}
-          maxDistance={compact ? 8 : 15}
-          target={[0, 0.5, 0]}
+          minDistance={1.5}
+          maxDistance={15}
+          target={[0, 1.5, 0]}
           autoRotate
-          autoRotateSpeed={0.3}
+          autoRotateSpeed={0.5}
           enablePan={false}
         />
       </Canvas>
