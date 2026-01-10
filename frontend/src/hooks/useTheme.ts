@@ -1,26 +1,8 @@
 import { useEffect } from 'react';
 import { useUIStore } from '../stores/uiStore';
+import { safeGetStorage, safeSetStorage } from '../utils/storage';
 
 const THEME_STORAGE_KEY = 'byrd-theme-preference';
-
-// Safe localStorage access with fallback for iframe contexts
-const safeGetStorage = (key: string): string | null => {
-  try {
-    return localStorage.getItem(key);
-  } catch (e) {
-    // localStorage not available (iframe context, private browsing, etc.)
-    return null;
-  }
-};
-
-const safeSetStorage = (key: string, value: string): void => {
-  try {
-    localStorage.setItem(key, value);
-  } catch (e) {
-    // Silently fail in contexts where localStorage is not available
-    console.debug('Theme preference not saved (storage not available)');
-  }
-};
 
 export function useTheme() {
   const { theme, setTheme } = useUIStore();
@@ -45,15 +27,10 @@ export function useTheme() {
   }, [theme]);
 
   const toggleTheme = () => {
-    const root = window.document.documentElement;
-    const isDark = root.classList.contains('dark');
-
+    const isDark = window.document.documentElement.classList.contains('dark');
     const newTheme = isDark ? 'light' : 'dark';
     setTheme(newTheme);
     safeSetStorage(THEME_STORAGE_KEY, newTheme);
-
-    root.classList.remove('dark', 'light');
-    root.classList.add(newTheme);
   };
 
   // Override setTheme to also persist to localStorage

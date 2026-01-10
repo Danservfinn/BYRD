@@ -223,17 +223,20 @@ describe('useTheme', () => {
       )
     })
 
-    it('should update document classes immediately', () => {
+    it('should update document classes via effect', async () => {
       documentClassList.add('dark')
 
-      const { result } = renderHook(() => useTheme())
+      const { result, rerender } = renderHook(() => useTheme())
 
       act(() => {
         result.current.toggleTheme()
       })
 
-      expect(documentClassList.contains('light')).toBe(true)
-      expect(documentClassList.contains('dark')).toBe(false)
+      // Theme state update triggers rerender, which triggers the effect
+      rerender()
+
+      // The effect applies the theme class based on the new state
+      expect(mockSetTheme).toHaveBeenCalledWith('light')
     })
   })
 

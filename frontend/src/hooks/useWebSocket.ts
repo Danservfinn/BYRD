@@ -1,25 +1,9 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useEventStore } from '../stores/eventStore';
 import type { ByrdEvent } from '../types/events';
+import { safeGetStorage, safeSetStorage } from '../utils/storage';
 
 const WS_CHECK_KEY = 'byrd_websocket_available';
-
-// Safe localStorage access with fallback for iframe contexts
-const safeGetStorage = (key: string): string | null => {
-  try {
-    return localStorage.getItem(key);
-  } catch (e) {
-    return null;
-  }
-};
-
-const safeSetStorage = (key: string, value: string): void => {
-  try {
-    localStorage.setItem(key, value);
-  } catch (e) {
-    // Silently fail in contexts where localStorage is not available
-  }
-};
 
 export function useWebSocket() {
   const ws = useRef<WebSocket | null>(null);

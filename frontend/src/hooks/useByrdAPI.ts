@@ -17,26 +17,10 @@ import type {
   MemoryGraphResponse,
   RSIStatusResponse,
 } from '../types/api';
+import { safeGetStorage, safeSetStorage } from '../utils/storage';
 
 const API_BASE = 'https://byrd-api-production.up.railway.app/api';
 const BACKEND_CHECK_KEY = 'byrd_backend_available';
-
-// Safe localStorage access with fallback for iframe contexts
-const safeGetStorage = (key: string): string | null => {
-  try {
-    return localStorage.getItem(key);
-  } catch (e) {
-    return null;
-  }
-};
-
-const safeSetStorage = (key: string, value: string): void => {
-  try {
-    localStorage.setItem(key, value);
-  } catch (e) {
-    // Silently fail in contexts where localStorage is not available
-  }
-};
 
 export function useByrdAPI() {
   const [loading, setLoading] = useState(false);
