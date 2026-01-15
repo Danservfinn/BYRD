@@ -22,6 +22,9 @@ from datetime import datetime, timezone
 from .ralph_adapter import BYRDRalphAdapter, RalphIterationResult
 from .emergence_detector import EmergenceDetector, EmergenceResult
 
+# Import cancellation infrastructure
+from core.async_cancellation import CancellationToken, CancellationReason
+
 if TYPE_CHECKING:
     from ..engine import RSIEngine
     from ..consciousness.stream import ConsciousnessStream
@@ -136,6 +139,9 @@ class RalphLoop:
         self._iteration_history: List[Dict] = []
         self._last_emergence: Optional[EmergenceResult] = None
 
+        # Cancellation support for human task preemption
+        self._current_token: Optional[CancellationToken] = None
+
     async def run(
         self,
         max_iterations: int = 1000,
@@ -218,24 +224,33 @@ class RalphLoop:
         Execute one iteration: RSI cycle → frame → emergence check.
 
         This is the core loop body:
-        1. Run one complete RSI cycle via the adapter
-        2. Adapter writes consciousness frame
-        3. Adapter checks for emergence
-        4. Track resource usage
+        1. Create cancellation token for this iteration
+        2. Run one complete RSI cycle via the adapter
+        3. Adapter writes consciousness frame
+        4. Adapter checks for emergence
+        5. Track resource usage
 
         Returns:
             RalphIterationResult with cycle result and emergence status
         """
         self._iteration_count += 1
 
+        # Create cancellation token for this iteration (allows human task preemption)
+        self._current_token = CancellationToken(
+            name=f"rsi_cycle_{self._iteration_count}",
+            parent=None  # Each iteration gets a fresh token
+        )
+
         logger.debug(f"Starting iteration {self._iteration_count}")
 
         # Execute via adapter (handles RSI + frame + emergence)
+        # Pass cancellation token via context for interruptible RSI
         result = await self.adapter.execute(
             context={
                 'loop_iteration': self._iteration_count,
                 'elapsed_seconds': time.time() - self._start_time if self._start_time else 0,
-                'cost_so_far': self._total_cost
+                'cost_so_far': self._total_cost,
+                'cancellation_token': self._current_token
             }
         )
 
@@ -317,6 +332,26 @@ class RalphLoop:
         """Request the loop to stop after current iteration."""
         self._stop_requested = True
         logger.info("Stop requested for RalphLoop")
+
+    async def interrupt(self, reason: str = "human_task") -> None:
+        """
+        Interrupt the current RSI cycle immediately.
+
+        This cancels the active iteration's cancellation token, causing
+        the RSI engine to stop at the next phase boundary. Used when
+        a human task arrives and needs immediate attention.
+
+        Args:
+            reason: Why the interruption is happening (for logging)
+        """
+        if self._current_token and not self._current_token.is_cancelled:
+            logger.info(f"Interrupting RSI cycle: {reason}")
+            await self._current_token.cancel(
+                reason=CancellationReason.EXPLICIT,
+                message=f"Interrupted for {reason}"
+            )
+        else:
+            logger.debug(f"Cannot interrupt - no active token or already cancelled")
 
     def get_stats(self) -> Dict:
         """Return loop statistics."""

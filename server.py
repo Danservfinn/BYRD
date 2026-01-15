@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 import httpx
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, File, Form, UploadFile
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, File, Form, UploadFile, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response
@@ -101,6 +101,40 @@ MODIFIABLE_FILES = [
 ]
 
 
+# =============================================================================
+# SECURITY: API KEY AUTHENTICATION
+# =============================================================================
+
+# Admin API key for protecting destructive endpoints
+# If not set, all endpoints are open (dev mode)
+ADMIN_API_KEY = os.environ.get("BYRD_ADMIN_API_KEY")
+
+async def verify_admin_api_key(x_api_key: str = Header(None, alias="X-API-Key")):
+    """
+    Verify API key for destructive endpoints.
+
+    If BYRD_ADMIN_API_KEY env var is not set, authentication is disabled (dev mode).
+    In production, set BYRD_ADMIN_API_KEY to require authentication.
+    """
+    if not ADMIN_API_KEY:
+        return  # No key configured = dev mode, allow all
+    if x_api_key != ADMIN_API_KEY:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing API key. Set X-API-Key header."
+        )
+
+
+# =============================================================================
+# SECURITY: GIT REF VALIDATION
+# =============================================================================
+
+import re
+# Pattern for valid git refs: alphanumeric, /, ., -, _
+# Must start with alphanumeric character
+GIT_REF_PATTERN = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9/_.\-]*$')
+
+
 def restore_code_from_git(git_ref: Optional[str] = None) -> tuple:
     """
     Restore all modifiable files to a specific git state.
@@ -115,6 +149,10 @@ def restore_code_from_git(git_ref: Optional[str] = None) -> tuple:
     restored = []
     failed = []
     ref_used = git_ref or "HEAD"
+
+    # Validate git_ref format to prevent command injection
+    if git_ref and not GIT_REF_PATTERN.match(git_ref):
+        return [], [f"Invalid git ref format: {git_ref}"], ref_used
 
     for filename in MODIFIABLE_FILES:
         filepath = BYRD_DIR / filename
@@ -322,14 +360,18 @@ app = FastAPI(
 )
 
 # CORS for React frontend
+# Set CORS_ORIGINS env var for production (comma-separated list)
+# If not set, defaults to localhost origins for development
+_cors_env = os.environ.get("CORS_ORIGINS", "")
+CORS_ORIGINS = [o.strip() for o in _cors_env.split(",") if o.strip()] if _cors_env else []
+DEFAULT_CORS_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "https://*.koyeb.app",
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "https://*.koyeb.app",
-        "*"
-    ],
+    allow_origins=CORS_ORIGINS if CORS_ORIGINS else DEFAULT_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -715,7 +757,7 @@ async def get_status():
                     try:
                         import json
                         self_def = json.loads(self_def)
-                    except:
+                    except (json.JSONDecodeError, TypeError, ValueError):
                         self_def = None
 
                 os_status = OSStatus(
@@ -914,11 +956,12 @@ async def get_rollback_history(limit: int = 50):
 
 
 @app.post("/api/rollback/trigger")
-async def trigger_rollback(reason: str = "operator_request"):
+async def trigger_rollback(reason: str = "operator_request", _: None = Depends(verify_admin_api_key)):
     """
     Manually trigger a rollback of the last modification.
 
     Reasons: operator_request, safety_violation, goal_drift, capability_regression
+    Requires X-API-Key header when BYRD_ADMIN_API_KEY env var is set.
     """
     global byrd_instance
 
@@ -2179,6 +2222,8 @@ async def create_task(request: TaskRequest):
 
     Tasks allow external goal injection so BYRD can learn about
     the world rather than only reflecting on itself.
+
+    High-priority tasks (>=0.8) will interrupt ongoing RSI cycles.
     """
     global byrd_instance
 
@@ -2191,17 +2236,35 @@ async def create_task(request: TaskRequest):
         # Validate priority
         priority = max(0.0, min(1.0, request.priority))
 
-        task_id = await byrd_instance.memory.create_task(
-            description=request.description,
-            objective=request.objective,
-            priority=priority,
-            source="external"
-        )
+        # Use BYRDService if available (human-service-first mode)
+        if hasattr(byrd_instance, 'service') and byrd_instance.service:
+            task_id = await byrd_instance.enqueue_task(
+                description=request.description,
+                objective=request.objective,
+                priority=priority,
+                source="external"
+            )
+
+            interrupt_msg = (
+                "Task created. High priority - will interrupt RSI if running."
+                if priority >= 0.8 else
+                "Task created. Will be processed in queue."
+            )
+        else:
+            # Fallback: direct task creation
+            task_id = await byrd_instance.memory.create_task(
+                description=request.description,
+                objective=request.objective,
+                priority=priority,
+                source="external"
+            )
+            interrupt_msg = "Task created. BYRD will process it in the next seek cycle."
 
         return {
             "task_id": task_id,
             "status": "pending",
-            "message": "Task created. BYRD will process it in the next seek cycle."
+            "priority": priority,
+            "message": interrupt_msg
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -2233,6 +2296,135 @@ async def get_tasks(status: str = None, limit: int = 20):
             "tasks": tasks,
             "stats": stats
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# SERVICE API (Human-Service-First orchestration)
+# =============================================================================
+
+@app.post("/api/service/start")
+async def start_service():
+    """
+    Start the BYRDService (human-service-first task queue with interruptible RSI).
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    if not hasattr(byrd_instance, 'service') or not byrd_instance.service:
+        raise HTTPException(
+            status_code=501,
+            detail="BYRDService not enabled. Add 'service: { enabled: true }' to config.yaml"
+        )
+
+    try:
+        await byrd_instance.start_service()
+        return {
+            "status": "started",
+            "message": "BYRDService started - monitoring for tasks"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/service/stop")
+async def stop_service():
+    """Stop the BYRDService."""
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    if not hasattr(byrd_instance, 'service') or not byrd_instance.service:
+        raise HTTPException(status_code=501, detail="BYRDService not enabled")
+
+    try:
+        await byrd_instance.stop_service()
+        return {
+            "status": "stopped",
+            "message": "BYRDService stopped"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/service/pause")
+async def pause_service():
+    """
+    Pause the service (stops RSI, continues task processing).
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    if not hasattr(byrd_instance, 'service') or not byrd_instance.service:
+        raise HTTPException(status_code=501, detail="BYRDService not enabled")
+
+    try:
+        byrd_instance.pause_service()
+        return {
+            "status": "paused",
+            "message": "BYRDService paused - RSI stopped, tasks continue processing"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/service/resume")
+async def resume_service():
+    """Resume the service."""
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    if not hasattr(byrd_instance, 'service') or not byrd_instance.service:
+        raise HTTPException(status_code=501, detail="BYRDService not enabled")
+
+    try:
+        byrd_instance.resume_service()
+        return {
+            "status": "resumed",
+            "message": "BYRDService resumed"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/service/stats")
+async def get_service_stats():
+    """
+    Get current service statistics.
+    """
+    global byrd_instance
+
+    if not byrd_instance:
+        raise HTTPException(status_code=503, detail="BYRD not initialized")
+
+    if not hasattr(byrd_instance, 'service') or not byrd_instance.service:
+        raise HTTPException(status_code=501, detail="BYRDService not enabled")
+
+    try:
+        stats = await byrd_instance.get_service_stats()
+        if stats:
+            return stats
+        else:
+            return {
+                "mode": "paused",
+                "uptime_seconds": 0,
+                "tasks_processed": 0,
+                "tasks_completed": 0,
+                "tasks_failed": 0,
+                "rsi_cycles_completed": 0,
+                "rsi_interruptions": 0,
+                "current_task": None,
+                "queue_size": 0,
+                "is_idle": True
+            }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -3600,7 +3792,7 @@ async def get_graph_topology(
                         else:
                             day_key = ts.strftime("%Y-%m-%d")
                             day_buckets[day_key].append(node)
-                    except:
+                    except (ValueError, TypeError, AttributeError):
                         recent.append(node)
                 else:
                     recent.append(node)
@@ -3747,8 +3939,8 @@ async def get_graph_topology(
 
 
 @app.post("/api/start")
-async def start_byrd():
-    """Start BYRD background processes."""
+async def start_byrd(_: None = Depends(verify_admin_api_key)):
+    """Start BYRD background processes. Requires X-API-Key header when BYRD_ADMIN_API_KEY env var is set."""
     global byrd_instance, byrd_task
 
     if not byrd_instance:
@@ -3777,8 +3969,8 @@ async def start_byrd():
 
 
 @app.post("/api/stop")
-async def stop_byrd():
-    """Stop BYRD background processes."""
+async def stop_byrd(_: None = Depends(verify_admin_api_key)):
+    """Stop BYRD background processes. Requires X-API-Key header when BYRD_ADMIN_API_KEY env var is set."""
     global byrd_instance, byrd_task
 
     if not byrd_instance:
@@ -3801,8 +3993,8 @@ async def stop_byrd():
 
 
 @app.post("/api/reset", response_model=ResetResponse)
-async def reset_byrd(request: ResetRequest = None):
-    """Reset BYRD - clear all memory. By default does hard reset (no auto-awakening)."""
+async def reset_byrd(request: ResetRequest = None, _: None = Depends(verify_admin_api_key)):
+    """Reset BYRD - clear all memory. By default does hard reset (no auto-awakening). Requires X-API-Key header when BYRD_ADMIN_API_KEY env var is set."""
     global byrd_instance, byrd_task
 
     if not byrd_instance:
@@ -3944,8 +4136,8 @@ class AwakenRequest(BaseModel):
 
 
 @app.post("/api/awaken", response_model=ResetResponse)
-async def awaken_byrd(request: AwakenRequest = None):
-    """Awaken BYRD after a hard reset. Creates initial experiences and starts dreaming."""
+async def awaken_byrd(request: AwakenRequest = None, _: None = Depends(verify_admin_api_key)):
+    """Awaken BYRD after a hard reset. Creates initial experiences and starts dreaming. Requires X-API-Key header when BYRD_ADMIN_API_KEY env var is set."""
     global byrd_instance, byrd_task
 
     if not byrd_instance:
@@ -4285,7 +4477,7 @@ async def get_architecture():
         try:
             await byrd_instance.memory.connect()
             memory_stats = await byrd_instance.memory.stats()
-        except:
+        except Exception:
             pass
     modules.append(ModuleStatus(
         name="Memory",
@@ -4331,7 +4523,7 @@ async def get_architecture():
                     "name": os_data.get("name", "Byrd"),
                     "version": os_data.get("version", 1)
                 }
-        except:
+        except Exception:
             pass
     modules.append(ModuleStatus(
         name="Operating System",
@@ -4440,7 +4632,7 @@ async def get_rsi_metrics():
             # Get trajectory count
             trajectories = await byrd_instance.memory.get_successful_trajectories(limit=100)
             rsi_metrics["trajectories_stored"] = len(trajectories) if trajectories else 0
-        except:
+        except Exception:
             pass
 
     return {"rsi_metrics": rsi_metrics}

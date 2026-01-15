@@ -15,6 +15,9 @@ import logging
 from .emergence_detector import EmergenceDetector, EmergenceResult
 from .meta_awareness import MetaAwareness
 
+# Import cancellation infrastructure
+from core.async_cancellation import CancellationToken
+
 if TYPE_CHECKING:
     from ..engine import RSIEngine, CycleResult
     from ..consciousness.stream import ConsciousnessStream
@@ -127,9 +130,12 @@ class BYRDRalphAdapter:
                 context = {}
             context['meta_loop'] = meta_context
 
-        # Run RSI cycle
-        # Note: The RSI engine may optionally accept meta_context in future
-        cycle_result = await self.rsi.run_cycle()
+        # Run RSI cycle with optional cancellation token from context
+        cancellation_token = context.get('cancellation_token') if context else None
+        cycle_result = await self.rsi.run_cycle(
+            meta_context=meta_context,
+            cancellation_token=cancellation_token
+        )
 
         # Compute resource usage
         iteration_time = time.time() - iteration_start

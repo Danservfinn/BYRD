@@ -16,6 +16,7 @@ from .quantum_randomness import get_quantum_provider
 from .event_bus import event_bus, Event, EventType
 from .byrd_types import VoiceDesign, ReflectionOutput
 from .id_generator import generate_id
+from .byrd_service import BYRDService, create_byrd_service, ServiceMode, QueuedTask
 
 __all__ = [
     "Memory",
@@ -28,4 +29,8 @@ __all__ = [
     "VoiceDesign",
     "ReflectionOutput",
     "generate_id",
+    "BYRDService",
+    "create_byrd_service",
+    "ServiceMode",
+    "QueuedTask",
 ]

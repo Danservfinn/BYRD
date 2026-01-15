@@ -26,6 +26,10 @@ from .learning import (
 )
 from .crystallization import Crystallizer, BootstrapManager
 from .measurement import MetricsCollector
+from .preconditions import PreconditionChecker, create_precondition_checker
+
+# Import cancellation infrastructure for interruptible RSI cycles
+from core.async_cancellation import CancellationToken
 
 logger = logging.getLogger("rsi.engine")
 
@@ -85,6 +89,10 @@ class CycleResult:
     # Crystallization
     heuristic_crystallized: Optional[str] = None
 
+    # Interruption
+    interrupted: bool = False
+    cancellation_reason: Optional[str] = None
+
     # Errors
     error: Optional[str] = None
 
@@ -103,6 +111,8 @@ class CycleResult:
             "practice_attempted": self.practice_attempted,
             "practice_succeeded": self.practice_succeeded,
             "heuristic_crystallized": self.heuristic_crystallized,
+            "interrupted": self.interrupted,
+            "cancellation_reason": self.cancellation_reason,
             "error": self.error
         }
 
@@ -123,7 +133,9 @@ class RSIEngine:
         llm_client,
         quantum_provider=None,
         event_bus=None,
-        config: Optional[Dict] = None
+        config: Optional[Dict] = None,
+        coder=None,
+        precondition_checker=None
     ):
         """
         Initialize RSI Engine with all components.
@@ -134,12 +146,18 @@ class RSIEngine:
             quantum_provider: Optional quantum randomness provider
             event_bus: Optional event bus for visualization
             config: Optional configuration overrides
+            coder: Optional ClaudeCoder instance for CODE/MATH practice
+                   If provided, replaces TDDPractice for code domain
+            precondition_checker: Optional PreconditionChecker for validating
+                                 strategy dependencies before execution
         """
         self.memory = memory
         self.llm = llm_client
         self.quantum = quantum_provider
         self.event_bus = event_bus
         self.config = config or {}
+        self.coder = coder
+        self.precondition_checker = precondition_checker or create_precondition_checker(config)
 
         # Initialize components
         self.system_prompt = SystemPrompt()
@@ -191,9 +209,12 @@ class RSIEngine:
         self._cycle_count = 0
         self._cycle_history: List[CycleResult] = []
 
+        # Precondition violation tracking
+        self._precondition_violations: Dict[str, int] = {}
+
         logger.info("RSIEngine initialized with all components")
 
-    async def run_cycle(self, meta_context: Optional[Dict] = None) -> CycleResult:
+    async def run_cycle(self, meta_context: Optional[Dict] = None, cancellation_token: Optional[CancellationToken] = None) -> CycleResult:
         """
         Run one complete RSI cycle.
 
@@ -202,6 +223,9 @@ class RSIEngine:
                 If provided, this context is passed to the reflector and can
                 include information about the Ralph loop (iteration count,
                 entropy trends, time in loop, etc.) for meta-awareness.
+            cancellation_token: Optional cancellation token for interruptible
+                RSI cycles. If provided, the cycle can be cancelled at phase
+                boundaries when a human task arrives.
 
         Returns:
             CycleResult with details of what happened
@@ -229,6 +253,10 @@ class RSIEngine:
 
             logger.info(f"Generated {len(desires)} desires from reflection")
 
+            # Check for cancellation before VERIFY phase
+            if self._check_cancelled(result, cancellation_token, CyclePhase.VERIFY):
+                return self._finalize_result(result)
+
             # Phase 2: VERIFY
             result.phase_reached = CyclePhase.VERIFY
             await self._emit_event("RSI_PHASE", {"phase": "verify", "cycle": cycle_id})
@@ -253,6 +281,10 @@ class RSIEngine:
                 logger.info("No desires passed verification")
                 return self._finalize_result(result)
 
+            # Check for cancellation before COLLAPSE phase
+            if self._check_cancelled(result, cancellation_token, CyclePhase.COLLAPSE):
+                return self._finalize_result(result)
+
             # Phase 3: COLLAPSE
             result.phase_reached = CyclePhase.COLLAPSE
             await self._emit_event("RSI_PHASE", {"phase": "collapse", "cycle": cycle_id})
@@ -270,6 +302,10 @@ class RSIEngine:
 
             result.selected_desire = selected
             logger.info(f"Selected desire ({collapse_source}): {selected.get('description', '')[:80]}")
+
+            # Check for cancellation before ROUTE phase
+            if self._check_cancelled(result, cancellation_token, CyclePhase.ROUTE):
+                return self._finalize_result(result)
 
             # Phase 4: ROUTE
             result.phase_reached = CyclePhase.ROUTE
@@ -289,6 +325,10 @@ class RSIEngine:
             # Ensure bootstrap for this domain
             await self.bootstrap.ensure_bootstrap(classification.primary.value)
 
+            # Check for cancellation before PRACTICE phase (typically longest)
+            if self._check_cancelled(result, cancellation_token, CyclePhase.PRACTICE):
+                return self._finalize_result(result)
+
             # Phase 5: PRACTICE
             result.phase_reached = CyclePhase.PRACTICE
             await self._emit_event("RSI_PHASE", {"phase": "practice", "cycle": cycle_id})
@@ -304,6 +344,10 @@ class RSIEngine:
                     "success": practice_result.success,
                     "attempts": getattr(practice_result, 'attempts', 1)
                 }
+
+            # Check for cancellation before RECORD phase
+            if self._check_cancelled(result, cancellation_token, CyclePhase.RECORD):
+                return self._finalize_result(result)
 
             # Phase 6: RECORD
             result.phase_reached = CyclePhase.RECORD
@@ -323,6 +367,10 @@ class RSIEngine:
                         "difficulty": getattr(practice_result, 'difficulty', 'beginner')
                     }
                 )
+
+            # Check for cancellation before CRYSTALLIZE phase
+            if self._check_cancelled(result, cancellation_token, CyclePhase.CRYSTALLIZE):
+                return self._finalize_result(result)
 
             # Phase 7: CRYSTALLIZE (only if practice succeeded)
             if practice_result and practice_result.success:
@@ -344,6 +392,10 @@ class RSIEngine:
                     pruned = self.pruner.prune_if_needed()
                     if pruned > 0:
                         logger.info(f"Pruned {pruned} low-value heuristics")
+
+            # Check for cancellation before MEASURE phase
+            if self._check_cancelled(result, cancellation_token, CyclePhase.MEASURE):
+                return self._finalize_result(result)
 
             # Phase 8: MEASURE
             result.phase_reached = CyclePhase.MEASURE
@@ -368,6 +420,26 @@ class RSIEngine:
             result.error = str(e)
             return self._finalize_result(result)
 
+    def _check_cancelled(self, result: CycleResult, token: Optional[CancellationToken], phase: CyclePhase) -> bool:
+        """
+        Check if cancellation has been requested and return True if cycle should stop.
+
+        Args:
+            result: The cycle result to update
+            token: The cancellation token to check
+            phase: The phase we're about to enter (or just completed)
+
+        Returns:
+            True if cancelled, False otherwise
+        """
+        if token and token.is_cancelled:
+            result.interrupted = True
+            result.phase_reached = phase
+            result.cancellation_reason = token.cancellation_reason.value if token.cancellation_reason else "unknown"
+            logger.info(f"RSI cycle cancelled at {phase.value} phase: {result.cancellation_reason}")
+            return True
+        return False
+
     async def _run_practice(
         self,
         desire: Dict,
@@ -385,15 +457,19 @@ class RSIEngine:
         """
         try:
             if domain == Domain.CODE or domain == Domain.MATH:
-                # Use TDD practice
-                problem = await self.tdd_practice.generate_practice(desire)
-                if not problem:
-                    logger.warning("Failed to generate practice problem")
-                    return None
+                # Use ClaudeCoder if available, fallback to TDD practice
+                if self.coder and domain == Domain.CODE:
+                    return await self._run_coder_practice(desire)
+                else:
+                    # Use TDD practice
+                    problem = await self.tdd_practice.generate_practice(desire)
+                    if not problem:
+                        logger.warning("Failed to generate practice problem")
+                        return None
 
-                result = await self.tdd_practice.attempt_solution(problem)
-                await self.tdd_practice.record_outcome(domain.value, result)
-                return result
+                    result = await self.tdd_practice.attempt_solution(problem)
+                    await self.tdd_practice.record_outcome(domain.value, result)
+                    return result
 
             elif domain == Domain.LOGIC:
                 # Use consistency check
@@ -418,6 +494,90 @@ class RSIEngine:
         except Exception as e:
             logger.error(f"Practice error: {e}")
             return None
+
+    async def _run_coder_practice(self, desire: Dict) -> Optional[PracticeResult]:
+        """
+        Run coding practice using ClaudeCoder (Claude Agent SDK).
+
+        Args:
+            desire: The improvement desire
+
+        Returns:
+            PracticeResult with coder execution details
+        """
+        description = desire.get("description", "")
+        desire_id = desire.get("id", "")
+
+        logger.info(f"Running ClaudeCoder practice: {description[:80]}...")
+
+        # Check preconditions BEFORE attempting execution
+        precondition_result = await self.precondition_checker.check_strategy_preconditions(
+            strategy="claude_coder",
+            context={"task": description}
+        )
+
+        if not precondition_result.can_proceed:
+            # Preconditions not met - record violation and fail gracefully
+            violation_key = "claude_coder:" + list(precondition_result.details.get("blocking", ["unknown"]))[0]
+            self._precondition_violations[violation_key] = self._precondition_violations.get(violation_key, 0) + 1
+
+            logger.warning(f" ClaudeCoder preconditions not met: {precondition_result.message}")
+
+            # Record precondition failure to memory
+            try:
+                await self.memory.record_experience(
+                    content=f"[PRECONDITION_FAILURE] Strategy: claude_coder | Reason: {precondition_result.message} | Desire: {description[:100]}",
+                    type="precondition_violation"
+                )
+            except Exception:
+                pass  # Memory errors shouldn't block the cycle
+
+            return PracticeResult(
+                success=False,
+                solution="",
+                test_output=precondition_result.message,
+                tests_passed=0,
+                tests_total=1,
+                problem=description,
+                approach="ClaudeCoder preconditions not met",
+                attempts=0,
+                difficulty="intermediate"
+            )
+
+        # Check if coder can execute this task (constitutional constraints)
+        can_exec = await self.coder.can_execute(description)
+        if not can_exec.get("can_execute"):
+            logger.warning(f"Coder cannot execute: {can_exec.get('reason')}")
+            return PracticeResult(
+                success=False,
+                solution="",
+                test_output=can_exec.get("reason", "Unknown"),
+                tests_passed=0,
+                tests_total=1,
+                problem=description,
+                approach="ClaudeCoder blocked",
+                attempts=0,
+                difficulty="intermediate"
+            )
+
+        # Execute via ClaudeCoder
+        coder_result = await self.coder.execute(
+            prompt=description,
+            desire_id=desire_id
+        )
+
+        # Convert ClaudeCoderResult to PracticeResult
+        return PracticeResult(
+            success=coder_result.success,
+            solution=coder_result.output[:2000] if coder_result.output else "",
+            test_output=coder_result.error or "Execution completed",
+            tests_passed=1 if coder_result.success else 0,
+            tests_total=1,
+            problem=description,
+            approach=f"ClaudeCoder (files: {', '.join(coder_result.files_modified[:3])})" if coder_result.files_modified else "ClaudeCoder",
+            attempts=coder_result.turns_used,
+            difficulty="intermediate"
+        )
 
     async def _record_blocked_attempt(self, desire: Dict, domain: Domain):
         """Record that a desire was blocked by oracle constraint."""
@@ -474,7 +634,8 @@ class RSIEngine:
             "crystallization": crystallizer_stats,
             "bootstrap": bootstrap_status,
             "cycle_count": self._cycle_count,
-            "recent_cycles": [c.to_dict() for c in self._cycle_history[-10:]]
+            "recent_cycles": [c.to_dict() for c in self._cycle_history[-10:]],
+            "precondition_violations": self._precondition_violations.copy()
         }
 
     def get_system_prompt(self) -> str:
@@ -489,11 +650,14 @@ class RSIEngine:
         """Reset all RSI state."""
         self._cycle_count = 0
         self._cycle_history.clear()
+        self._precondition_violations.clear()
         self.metrics.reset()
         self.crystallizer.reset()
         self.bootstrap.reset()
         self.tdd_practice.reset()
         self.verifier.reset()
+        if self.precondition_checker:
+            self.precondition_checker.clear_cache()
         logger.info("RSIEngine reset complete")
 
     def get_domain_weight(self, domain: str) -> float:

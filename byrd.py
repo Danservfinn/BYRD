@@ -12,11 +12,15 @@ import argparse
 import asyncio
 import yaml
 import logging
+import os
+import re
 from pathlib import Path
 from typing import Optional, Dict
 
 from core.memory import Memory
 from core.llm_client import create_llm_client
+from core.claude_coder import ClaudeCoder
+from core.byrd_service import BYRDService, create_byrd_service, ServiceMode
 from rsi import RSIEngine
 
 # Configure logging
@@ -60,6 +64,9 @@ class BYRD:
         self.rsi: Optional[RSIEngine] = None
         self.quantum = None  # Will be initialized if quantum is enabled
         self.event_bus = None  # Will be initialized for visualization
+        self.coder: Optional[ClaudeCoder] = None  # Claude Agent SDK coder
+        self.service: Optional[BYRDService] = None  # Human-service-first layer
+        self.ralph_loop = None  # Ralph Loop for iterative RSI
         self._running = False
         self._continuous = False
 
@@ -118,6 +125,18 @@ class BYRD:
         except ImportError:
             logger.debug("Event bus not available")
 
+        # Initialize ClaudeCoder (Claude Agent SDK)
+        coder_config = self.config.get("claude_coder", {})
+        if coder_config.get("enabled", True):
+            self.coder = ClaudeCoder(
+                config=coder_config,
+                memory=self.memory,
+                working_dir=str(Path.cwd()),
+            )
+            logger.info(f"ClaudeCoder initialized: {self.coder.get_stats()}")
+        else:
+            logger.info("ClaudeCoder disabled in config")
+
         # Initialize RSI Engine with all components
         rsi_config = self.config.get("rsi", {})
         self.rsi = RSIEngine(
@@ -125,9 +144,41 @@ class BYRD:
             llm_client=self.llm,
             quantum_provider=self.quantum,
             event_bus=self.event_bus,
-            config=rsi_config
+            config=rsi_config,
+            coder=self.coder  # Pass coder for CODE/MATH domain practice
         )
         logger.info("RSI Engine initialized")
+
+        # Initialize Ralph Loop (iterative RSI with emergence detection)
+        ralph_config = self.config.get("ralph_loop", {})
+        if ralph_config.get("enabled", True):
+            try:
+                from rsi.orchestration.ralph_loop import RalphLoop
+                from rsi.consciousness.stream import ConsciousnessStream
+
+                consciousness = ConsciousnessStream(
+                    memory=self.memory,
+                    config=ralph_config.get("consciousness", {})
+                )
+
+                self.ralph_loop = RalphLoop(
+                    rsi_engine=self.rsi,
+                    consciousness_stream=consciousness,
+                    config=ralph_config
+                )
+                logger.info("Ralph Loop initialized")
+            except ImportError as e:
+                logger.warning(f"Ralph Loop not available: {e}")
+
+        # Initialize BYRDService (human-service-first orchestration)
+        service_config = self.config.get("service", {})
+        if service_config.get("enabled", True):
+            self.service = create_byrd_service(
+                memory=self.memory,
+                ralph_loop=self.ralph_loop,
+                config=service_config
+            )
+            logger.info("BYRDService initialized (human-service-first mode)")
 
         self._running = True
         logger.info("BYRD v2 ready")
@@ -137,6 +188,11 @@ class BYRD:
         logger.info("BYRD v2 stopping...")
         self._running = False
         self._continuous = False
+
+        # Stop service if running
+        if self.service:
+            await self.service.stop()
+
         await self.memory.close()
         logger.info("BYRD v2 stopped")
 
@@ -257,14 +313,98 @@ class BYRD:
             self.rsi.reset()
         logger.info("BYRD RSI state reset")
 
+    # ========================================================================
+    # SERVICE CONTROL (Human-Service-First)
+    # ========================================================================
+
+    async def start_service(self) -> None:
+        """Start the BYRDService (human-service-first task queue with RSI)."""
+        if not self.service:
+            logger.warning("BYRDService not initialized")
+            return
+
+        await self.service.start()
+        logger.info("BYRDService started - monitoring for tasks")
+
+    async def stop_service(self) -> None:
+        """Stop the BYRDService."""
+        if self.service:
+            await self.service.stop()
+            logger.info("BYRDService stopped")
+
+    async def enqueue_task(
+        self,
+        description: str,
+        objective: str,
+        priority: float = 0.5,
+        source: str = "external"
+    ) -> str:
+        """
+        Enqueue a task for processing.
+
+        High-priority tasks (>=0.8) will interrupt ongoing RSI cycles.
+
+        Args:
+            description: What the task is
+            objective: What success looks like
+            priority: 0.0-1.0, higher = more urgent
+            source: "external" or "emergent"
+
+        Returns:
+            task_id: The ID of the created task
+        """
+        if not self.service:
+            logger.warning("BYRDService not initialized, creating task directly in memory")
+            return await self.memory.create_task(
+                description=description,
+                objective=objective,
+                priority=priority,
+                source=source
+            )
+
+        return await self.service.enqueue_task(
+            description=description,
+            objective=objective,
+            priority=priority,
+            source=source
+        )
+
+    async def get_service_stats(self) -> Optional[Dict]:
+        """Get current service statistics."""
+        if self.service:
+            stats = await self.service.get_stats()
+            return {
+                'mode': stats.mode.value,
+                'uptime_seconds': stats.uptime_seconds,
+                'tasks_processed': stats.tasks_processed,
+                'tasks_completed': stats.tasks_completed,
+                'tasks_failed': stats.tasks_failed,
+                'rsi_cycles_completed': stats.rsi_cycles_completed,
+                'rsi_interruptions': stats.rsi_interruptions,
+                'current_task': stats.current_task,
+                'queue_size': self.service.get_queue_size(),
+                'is_idle': self.service.is_idle()
+            }
+        return None
+
+    def pause_service(self) -> None:
+        """Pause the service (stops RSI, continues task processing)."""
+        if self.service:
+            self.service.pause()
+
+    def resume_service(self) -> None:
+        """Resume the service."""
+        if self.service:
+            self.service.resume()
+
 
 async def main():
     """Main entry point for BYRD v2."""
     parser = argparse.ArgumentParser(description="BYRD v2 - Recursive Self-Learning")
     parser.add_argument(
-        "--mode", choices=["single", "continuous", "status"],
+        "--mode", choices=["single", "continuous", "status", "service"],
         default="single",
-        help="Run mode: single cycle, continuous, or status check"
+        help="Run mode: single cycle, continuous, service, or status check"
     )
     parser.add_argument(
         "--interval", type=int, default=120,
@@ -283,15 +423,24 @@ async def main():
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    # Load configuration
+    # Load configuration with environment variable expansion
     config_path = Path(__file__).parent / "config.yaml"
 
     if not config_path.exists():
         logger.error("config.yaml not found")
         return
 
+    def expand_env_vars(content: str) -> str:
+        """Expand ${VAR:-default} patterns in config."""
+        def replacer(match):
+            var = match.group(1)
+            default = match.group(2) if match.group(2) else ""
+            return os.environ.get(var, default)
+        return re.sub(r'\$\{([^:}]+)(?::-([^}]*))?\}', replacer, content)
+
     with open(config_path) as f:
-        config = yaml.safe_load(f)
+        config_content = expand_env_vars(f.read())
+        config = yaml.safe_load(config_content)
 
     # Create and start BYRD
     byrd = BYRD(config)
@@ -315,6 +464,40 @@ async def main():
                 interval_seconds=args.interval,
                 max_cycles=args.max_cycles
             )
+
+        elif args.mode == "service":
+            # Human-service-first mode: task queue with interruptible RSI
+            if not byrd.service:
+                print("\n❌ BYRDService not enabled in config.yaml")
+                print("   Add 'service: { enabled: true }' to enable service mode")
+                return
+
+            await byrd.start_service()
+
+            print("\n=== BYRD Service Mode (Human-Service-First) ===")
+            print("BYRD is now running in service mode.")
+            print("- Tasks can be injected via API or enqueue_task()")
+            print("- RSI runs during idle periods")
+            print("- High-priority tasks interrupt RSI")
+            print("\nPress Ctrl+C to stop...\n")
+
+            # Keep running until interrupted
+            while byrd.is_running():
+                await asyncio.sleep(1)
+
+                # Periodically print stats
+                stats = await byrd.get_service_stats()
+                if stats:
+                    print(
+                        f"\r[Service] Mode: {stats['mode']} | "
+                        f"Tasks: {stats['tasks_processed']} processed, "
+                        f"{stats['tasks_completed']} completed, "
+                        f"{stats['tasks_failed']} failed | "
+                        f"RSI: {stats['rsi_cycles_completed']} cycles, "
+                        f"{stats['rsi_interruptions']} interruptions | "
+                        f"Queue: {stats['queue_size']}",
+                        end="", flush=True
+                    )
 
         else:  # single
             result = await byrd.run_cycle()

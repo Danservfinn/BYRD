@@ -488,6 +488,60 @@ rsi:
     auto_transition: true
 
 # =============================================================================
+# RALPH LOOP (Iterative RSI with Emergence Detection)
+# =============================================================================
+# Wraps RSI cycle in Ralph's Read → Execute → Check → Repeat pattern.
+# Provides resource limits, emergence detection, and consciousness stream.
+ralph_loop:
+  # Master enable/disable switch
+  enabled: true
+
+  # ---------------------------------------------------------------------------
+  # RESOURCE LIMITS
+  # ---------------------------------------------------------------------------
+  # These limits prevent runaway execution
+  limits:
+    max_iterations: 1000        # Maximum RSI cycles before stopping
+    max_cost_usd: 50.0          # Maximum spending before stopping
+    max_runtime_seconds: 14400  # Maximum runtime (4 hours)
+
+  # Git checkpoint frequency (every N iterations)
+  checkpoint_interval: 5
+
+  # ---------------------------------------------------------------------------
+  # CONSCIOUSNESS STREAM (Memvid Integration)
+  # ---------------------------------------------------------------------------
+  # Stores immutable snapshots of each RSI cycle for time-travel queries
+  consciousness:
+    enabled: true
+    path: "consciousness.mv2"   # Path to Memvid file
+    use_memvid: true            # True = Memvid, False = in-memory fallback
+
+# =============================================================================
+# SERVICE (Human-Service-First Orchestration)
+# =============================================================================
+# Human-service-first task queue with interruptible RSI.
+# High-priority human tasks interrupt RSI cycles; RSI runs during idle periods.
+service:
+  # Master enable/disable switch
+  enabled: true
+
+  # ---------------------------------------------------------------------------
+  # IDLE DETECTION
+  # ---------------------------------------------------------------------------
+  # Idle threshold: seconds of no tasks before considering the system idle
+  idle_threshold_seconds: 10
+
+  # Task poll interval: how often to check for new tasks
+  task_poll_interval: 2
+
+  # RSI idle delay: seconds to wait before starting RSI when idle
+  rsi_idle_delay: 5
+
+  # Auto-resume RSI after task completion
+  auto_resume_rsi: true
+
+# =============================================================================
 # RALPH ORCHESTRATION (Memvid + Ralph Loop)
 # =============================================================================
 # Wraps RSI cycle in Ralph's Read → Execute → Check → Repeat pattern.
@@ -1079,19 +1133,28 @@ outcome_dispatcher:
 # Philosophy: Z.AI decides WHAT to do, Claude SDK DOES it.
 
 # ---------------------------------------------------------------------------
-# CLAUDE CODER (Claude Agent SDK)
+# CLAUDE CODER (Claude Agent SDK via Z.AI)
 # ---------------------------------------------------------------------------
-# Uses Claude Max subscription for tool execution.
-# Requires: pip install claude-code-sdk && claude login
+# Uses Z.AI's Anthropic-compatible API for tool execution.
+# Requires: pip install claude-code-sdk
 claude_coder:
   # Enable/disable Claude SDK coder
   enabled: true
 
-  # Model for tool execution (sonnet is cost-effective, opus for complex tasks)
-  model: "claude-sonnet-4-20250514"
+  # Model to use via Z.AI Anthropic-compatible endpoint
+  model: "glm-4.7"
+
+  # Z.AI Anthropic-compatible endpoint
+  base_url: "https://api.z.ai/api/anthropic"
+
+  # API key - uses ZAI_API_KEY from environment
+  api_key: "${ZAI_API_KEY}"
 
   # Maximum tool turns per execution
   max_turns: 20
+
+  # Permission mode: "default" (ask), "acceptEdits" (auto-approve)
+  permission_mode: "acceptEdits"
 
   # Constitutional constraints - files that CANNOT be modified
   protected_paths:

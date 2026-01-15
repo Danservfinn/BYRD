@@ -39,10 +39,13 @@ EMERGENCE PRINCIPLE:
 
 ## 2. Architecture Summary
 
-### 2.1 Four-Layer Architecture
+### 2.1 Five-Layer Architecture (Human-Service-First)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
+│                  SERVICE LAYER (Human-Service-First)             │
+│  BYRDService │ Task Queue │ Idle Detection │ RSI Interruption   │
+├─────────────────────────────────────────────────────────────────┤
 │                     COGNITIVE CORE                               │
 │  Ralph Loop │ Memvid Stream │ 8-Phase RSI │ Economic Agency     │
 ├─────────────────────────────────────────────────────────────────┤
@@ -64,11 +67,15 @@ EMERGENCE PRINCIPLE:
 | File | Purpose |
 |------|---------|
 | `byrd.py` | Main orchestrator |
+| `core/byrd_service.py` | Human-service-first task queue with interruptible RSI |
 | `memory.py` | Neo4j graph interface |
 | `dreamer.py` | Reflection/dream cycles (Ralph Loop entry) |
 | `seeker.py` | Desire fulfillment + strategy routing |
 | `opencode_coder.py` | OpenCode CLI wrapper for coding tasks |
 | `agi_runner.py` | 8-phase RSI improvement cycle |
+| `rsi/engine.py` | RSI Engine with cancellation token support |
+| `rsi/orchestration/ralph_loop.py` | Iterative RSI with emergence detection |
+| `rsi/orchestration/ralph_adapter.py` | RSI-Ralph bridge with token threading |
 | `desire_classifier.py` | Routes desires by type |
 | `capability_evaluator.py` | Ground-truth capability measurement |
 | `self_modification.py` | Self-modification with provenance (PROTECTED) |
@@ -715,6 +722,12 @@ python byrd.py --chat
 # Check system status
 python byrd.py --status
 
+# Human-Service-First mode (task queue with interruptible RSI)
+python byrd.py --mode service
+
+# Continuous RSI mode
+python byrd.py --mode continuous --interval 120 --max-cycles 10
+
 # Start visualization server
 python server.py
 
@@ -722,24 +735,48 @@ python server.py
 docker-compose up -d    # Neo4j
 ```
 
+### 10.1 Service Mode (Human-Service-First)
+
+The `--mode service` option enables the BYRDService layer:
+
+- **Task Queue**: Human tasks are queued and processed by priority
+- **Interruptible RSI**: High-priority tasks (≥0.8) interrupt ongoing RSI cycles
+- **Idle Detection**: RSI runs automatically during idle periods
+- **Service Control**: Use REST API endpoints to control the service
+
+```bash
+# API endpoints for service control
+curl -X POST http://localhost:8000/api/service/start    # Start service
+curl -X POST http://localhost:8000/api/service/stop     # Stop service
+curl -X POST http://localhost:8000/api/service/pause    # Pause RSI
+curl -X POST http://localhost:8000/api/service/resume   # Resume service
+curl -X GET  http://localhost:8000/api/service/stats    # Get statistics
+
+# Inject a high-priority task (interrupts RSI)
+curl -X POST http://localhost:8000/api/task \
+  -H "Content-Type: application/json" \
+  -d '{"description": "Fix critical bug", "objective": "Fix the crash", "priority": 0.9}'
+```
+
 ---
 
 ## 11. Key Principles
 
-1. **Emergence First**: Create conditions for emergence, don't prescribe outcomes
-2. **Provenance Always**: Every modification traces to an emergent desire
-3. **Safety Non-Negotiable**: Never bypass safety checks
-4. **Graph Is Truth**: All state through Neo4j
-5. **Async Everything**: Never block the event loop
-6. **Test RSI Claims**: Validate improvements against held-out suites
-7. **Constitutional Integrity**: Never modify protected files
-8. **Bounded RSI**: Target verifiable improvement within domain strata
-9. **Verification Lattice**: Compose multiple verifiers to exceed single-verifier ceiling
-10. **Human Direction**: Human sets WHAT, BYRD discovers HOW
+1. **Human-Service-First**: Human tasks interrupt RSI; RSI runs during idle periods
+2. **Emergence First**: Create conditions for emergence, don't prescribe outcomes
+3. **Provenance Always**: Every modification traces to an emergent desire
+4. **Safety Non-Negotiable**: Never bypass safety checks
+5. **Graph Is Truth**: All state through Neo4j
+6. **Async Everything**: Never block the event loop
+7. **Test RSI Claims**: Validate improvements against held-out suites
+8. **Constitutional Integrity**: Never modify protected files
+9. **Bounded RSI**: Target verifiable improvement within domain strata
+10. **Verification Lattice**: Compose multiple verifiers to exceed single-verifier ceiling
+11. **Cooperative Cancellation**: RSI checks cancellation at phase boundaries for graceful interruption
 
 ---
 
-*Document version: 3.0*
-*Updated: January 7, 2026*
+*Document version: 3.1*
+*Updated: January 14, 2026*
 *Purpose: Development guide for working on BYRD — how to work on the code*
 *Research phase: COMPLETE (29 iterations, 35-45% Digital ASI probability)*
